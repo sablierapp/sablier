@@ -10,8 +10,8 @@ services:
     volumes:
       - './traefik_dev.yml:/etc/traefik/traefik-template.yml'
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '.:/plugins/go/src/github.com/acouvreur/traefik-ondemand-plugin'
-      - './config_dev.yml:/etc/traefik/config.yml'
+      - './config.yml:/etc/traefik/config.yml'
+      - '.:/plugins-local/src/github.com/acouvreur/traefik-ondemand-plugin'
     environment:
       - TRAEFIK_PILOT_TOKEN
     deploy:
@@ -20,7 +20,7 @@ services:
         - traefik.http.services.traefik.loadbalancer.server.port=8080
 
   ondemand:
-    image: acouvreur/traefik-ondemand-service:latest
+    image: ghcr.io/acouvreur/traefik-ondemand-service:main
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 

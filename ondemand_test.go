@@ -21,7 +21,7 @@ func TestNewOndemand(t *testing.T) {
 			desc: "invalid Config",
 			config: &Config{
 				ServiceUrl: "",
-				Timeout:    10,
+				Timeout:    "1m",
 			},
 			expectedError: true,
 		},
@@ -30,7 +30,7 @@ func TestNewOndemand(t *testing.T) {
 			config: &Config{
 				Name:       "whoami",
 				ServiceUrl: "http://ondemand:1000",
-				Timeout:    10,
+				Timeout:    "1m",
 			},
 			expectedError: false,
 		},
@@ -93,7 +93,7 @@ func TestOndemand_ServeHTTP(t *testing.T) {
 			config := &Config{
 				Name:       "whoami",
 				ServiceUrl: mockServer.URL,
-				Timeout:    10,
+				Timeout:    "1m",
 			}
 			ondemand, err := New(context.Background(), next, config, "traefikTest")
 			require.NoError(t, err)

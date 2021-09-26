@@ -8,5 +8,5 @@ summary: 'Scale swarm services down to zero after a timeout and bring them back 
 testData:
   serviceUrl: http://ondemand:10000
   name: TRAEFIK_HACKATHON_whoami
-  timeout: 60
+  timeout: 1m
   

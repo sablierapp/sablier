@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/acouvreur/traefik-ondemand-plugin/pkg/pages"
 )
-
-const defaultDuration = time.Hour
 
 // Net client is a custom client to timeout after 2 seconds if the service is not ready
 var netClient = &http.Client{
@@ -20,15 +19,15 @@ var netClient = &http.Client{
 
 // Config the plugin configuration
 type Config struct {
-	Name       string
-	ServiceUrl string
-	Timeout    time.Duration
+	Name       string `yaml:"name"`
+	ServiceUrl string `yaml:"serviceurl"`
+	Timeout    string `yaml:"timeout"`
 }
 
 // CreateConfig creates a config with its default values
 func CreateConfig() *Config {
 	return &Config{
-		Timeout: defaultDuration,
+		Timeout: "1m",
 	}
 }
 
@@ -37,7 +36,7 @@ type Ondemand struct {
 	request string
 	name    string
 	next    http.Handler
-	config  *Config
+	timeout time.Duration
 }
 
 func buildRequest(url string, name string, timeout time.Duration) (string, error) {
@@ -48,14 +47,20 @@ func buildRequest(url string, name string, timeout time.Duration) (string, error
 // New function creates the configuration
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if len(config.ServiceUrl) == 0 {
-		return nil, fmt.Errorf("serviceUrl cannot be null")
+		return nil, fmt.Errorf("serviceurl cannot be null")
 	}
 
 	if len(config.Name) == 0 {
 		return nil, fmt.Errorf("name cannot be null")
 	}
 
-	request, err := buildRequest(config.ServiceUrl, config.Name, config.Timeout)
+	timeout, err := time.ParseDuration(config.Timeout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := buildRequest(config.ServiceUrl, config.Name, timeout)
 
 	if err != nil {
 		return nil, fmt.Errorf("error while building request")
@@ -63,16 +68,18 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	return &Ondemand{
 		next:    next,
-		name:    name,
+		name:    config.Name,
 		request: request,
-		config:  config,
+		timeout: timeout,
 	}, nil
 }
 
 // ServeHTTP retrieve the service status
 func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
+	log.Printf("Sending request: %s", e.request)
 	status, err := getServiceStatus(e.request)
+	log.Printf("Status: %s", status)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -86,7 +93,7 @@ func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else if status == "starting" {
 		// Service starting, notify client
 		rw.WriteHeader(http.StatusAccepted)
-		rw.Write([]byte(pages.GetLoadingPage(e.name, e.config.Timeout)))
+		rw.Write([]byte(pages.GetLoadingPage(e.name, e.timeout)))
 	} else {
 		// Error
 		rw.WriteHeader(http.StatusInternalServerError)

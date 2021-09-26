@@ -6,9 +6,9 @@ api:
   insecure: true
 
 experimental:
-  devPlugin:
-    goPath: /plugins/go
-    moduleName: github.com/acouvreur/traefik-ondemand-plugin
+  localPlugins:
+    ondemand:  
+      moduleName: github.com/acouvreur/traefik-ondemand-plugin
 
 entryPoints:
   http:
