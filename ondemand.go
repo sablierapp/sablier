@@ -7,13 +7,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/acouvreur/traefik-ondemand-plugin/pkg/pages"
 )
 
-const (
-	typeName = "Ondemand"
-)
-
-const defaultTimeoutSeconds = 60
+const defaultDuration = time.Hour
 
 // Net client is a custom client to timeout after 2 seconds if the service is not ready
 var netClient = &http.Client{
@@ -24,13 +22,13 @@ var netClient = &http.Client{
 type Config struct {
 	Name       string
 	ServiceUrl string
-	Timeout    uint64
+	Timeout    time.Duration
 }
 
 // CreateConfig creates a config with its default values
 func CreateConfig() *Config {
 	return &Config{
-		Timeout: defaultTimeoutSeconds,
+		Timeout: defaultDuration,
 	}
 }
 
@@ -39,11 +37,11 @@ type Ondemand struct {
 	request string
 	name    string
 	next    http.Handler
+	config  *Config
 }
 
-func buildRequest(url string, name string, timeout uint64) (string, error) {
-	// TODO: Check url validity
-	request := fmt.Sprintf("%s?name=%s&timeout=%d", url, name, timeout)
+func buildRequest(url string, name string, timeout time.Duration) (string, error) {
+	request := fmt.Sprintf("%s?name=%s&timeout=%s", url, name, timeout.String())
 	return request, nil
 }
 
@@ -67,6 +65,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		next:    next,
 		name:    name,
 		request: request,
+		config:  config,
 	}, nil
 }
 
@@ -77,7 +76,7 @@ func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		rw.Write([]byte(pages.GetErrorPage(e.name, err.Error())))
 	}
 
 	if status == "started" {
@@ -87,11 +86,11 @@ func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else if status == "starting" {
 		// Service starting, notify client
 		rw.WriteHeader(http.StatusAccepted)
-		rw.Write([]byte("Service is starting..."))
+		rw.Write([]byte(pages.GetLoadingPage(e.name, e.config.Timeout)))
 	} else {
 		// Error
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("Unexpected status answer from ondemand service"))
+		rw.Write([]byte(pages.GetErrorPage(e.name, status)))
 	}
 }
 
