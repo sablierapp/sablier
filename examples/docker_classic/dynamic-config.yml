@@ -1,0 +1,23 @@
+http:
+  middlewares:
+    ondemand:
+      plugin:
+        dev:
+          serviceUrl: http://ondemand:10000
+          name: TRAEFIK_HACKATHON_whoami
+          timeout: 10
+
+  services:
+    whoami:
+      loadBalancer:
+        servers:
+        - url: "http://whoami:80"
+
+  routers:
+    whoami:
+      rule: PathPrefix(`/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - ondemand
+      service: "whoami"

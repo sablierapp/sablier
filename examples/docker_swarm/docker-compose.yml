@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik
+    command:
+      - --api=true
+      - --api.insecure=true
+      - --pilot.token=$TRAEFIK_PILOT_TOKEN
+      - --experimental.plugins.traefik-ondemand-plugin.moduleName=github.com/acouvreur/traefik-ondemand-plugin
+      - --experimental.plugins.traefik-ondemand-plugin.version=v0.0.4
+      - --providers.docker=true
+      - --providers.docker.swarmmode=true
+      - --providers.file.filename=/etc/traefik/dynamic-config.yml
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - './traefik_dev.yml:/etc/traefik/traefik-template.yml'
+      - './config_dev.yml:/etc/traefik/config.yml'
+    
+  ondemand:
+    image: gchr.io/acouvreur/traefik-ondemand-service:latest
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    deploy:
+      labels:
+        - traefik.enable
+        - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.name=
+        - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.serviceUrl=http://ondemand:1000
+        - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.timeout=1m
+
+  whoami:
+    image: containous/whoami
+    deploy:
+      labels:
+        - traefik.enable
+        # If you do not use the swarm load balancer, traefik will evict the service from its pool
+        # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
+        - traefik.docker.lbswarm=true
+        - traefik.http.routers.whoami.middlewares=ondemand
+
+

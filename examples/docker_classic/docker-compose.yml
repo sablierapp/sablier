@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik
+    command:
+      - --api=true
+      - --api.insecure=true
+      - --pilot.token=$TRAEFIK_PILOT_TOKEN
+      - --experimental.plugins.traefik-ondemand-plugin.moduleName=github.com/acouvreur/traefik-ondemand-plugin
+      - --experimental.plugins.traefik-ondemand-plugin.version=v0.0.4
+      - --providers.docker=true
+      - --providers.file.filename=/etc/traefik/dynamic-config.yml
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - './traefik_dev.yml:/etc/traefik/traefik-template.yml'
+      - './config_dev.yml:/etc/traefik/config.yml'
+    labels:
+      - traefik.enable=true
+
+  ondemand:
+    image: gchr.io/acouvreur/traefik-ondemand-service:main
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    labels:
+      - traefik.enable
+      - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.name=who
+      - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.serviceUrl=http://ondemand:1000
+      - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.timeout=1m
+
+  whoami:
+    image: containous/whoami
+    # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
+    # The route doesn't exist anymore. Use dynamic-config.yml file instead.
+    # labels:
+    #  - traefik.enable
+    #  - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
+    #  - traefik.http.routers.whoami.middlewares=ondemand
