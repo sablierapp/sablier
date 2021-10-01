@@ -22,6 +22,7 @@
 
 - Support for Docker containers
 - Support for Docker swarm mode, scale services
+- Support for Kubernetes Deployments
 - Start your container/service on the first request
 - Automatic scale to zero after configured timeout upon last request the service received
 - Dynamic loading page (cloudflare or grafana cloud style)
@@ -60,6 +61,8 @@ The docker library that interacts with the docker deamon uses `unsafe` which mus
 
 ## Authors
 
-[Alexis Couvreur](https://www.linkedin.com/in/alexis-couvreur/) (left) and [Alexandre Hiltcher](https://www.linkedin.com/in/alexandre-hiltcher/) (right)
+[Alexis Couvreur](https://www.linkedin.com/in/alexis-couvreur/) (left)
+[Alexandre Hiltcher](https://www.linkedin.com/in/alexandre-hiltcher/) (middle)
+[Matthias Schneider](https://www.linkedin.com/in/matthias-schneider-18831baa/) (right)
 
-![Alexandre and Alexis](./img/gophers-traefik.png)
+![Alexandre, Alexis and Matthias](./img/gophers-traefik.png)
