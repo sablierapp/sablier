@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-ondemand-service
+  namespace: kube-system
+  labels:
+    app: traefik-ondemand-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-ondemand-service
+  template:
+    metadata:
+      labels:
+        app: traefik-ondemand-service
+    spec:
+      serviceAccountName: traefik-ondemand-service
+      serviceAccount: traefik-ondemand-service
+      containers:
+      - name: traefik-ondemand-service
+        #image: gchr.io/acouvreur/traefik-ondemand-service
+        image: docker.io/mschneider82/traefik-ondemand-service
+        args: ["--swarmMode=false", "--kubernetesMode=true"]
+        ports:
+        - containerPort: 10000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-ondemand-service
+  namespace: kube-system
+spec:
+  selector:
+    app: traefik-ondemand-service
+  ports:
+    - protocol: TCP
+      port: 10000
+      targetPort: 10000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ondemand-service
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: traefik-ondemand-service
+  namespace: kube-system
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - deployments/scale
+    verbs:
+      - patch
+      - get
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: traefik-ondemand-service
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-ondemand-service
+subjects:
+  - kind: ServiceAccount
+    name: traefik-ondemand-service
+    namespace: kube-system
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ondemand-whoami
+  namespace: default
+spec:
+  plugin:
+    traefik-ondemand-plugin:
+      name: deployment_default_whoami_1
+      serviceUrl: 'http://traefik-ondemand-service:10000'
+      timeout: 1m

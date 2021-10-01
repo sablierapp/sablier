@@ -1,0 +1,10 @@
+# traefik helm values
+additionalArguments:
+  - "--pilot.token=XXXXX_YOURTOKEN_XXXXXXXXXXXXXXXX"
+  - "--experimental.plugins.traefik-ondemand-plugin.modulename=github.com/acouvreur/traefik-ondemand-plugin"
+  - "--experimental.plugins.traefik-ondemand-plugin.version=v0.1.1"
+  - "--providers.kubernetesingress.allowEmptyServices=true"
+
+experimental:
+  plugins:
+    enabled: true
