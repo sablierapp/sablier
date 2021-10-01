@@ -3,7 +3,7 @@ type: middleware
 
 import: github.com/acouvreur/traefik-ondemand-plugin
 
-summary: 'Start your containers/services on the first request they recieve, and shut them down after a specified duration after the last request they received. Docker classic and docker swarm compatible.'
+summary: 'Start your containers/services on the first request they recieve, and shut them down after a specified duration after the last request they received. Kubernetes, Docker classic and docker swarm compatible.'
 
 testData:
   serviceUrl: http://ondemand:10000

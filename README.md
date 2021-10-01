@@ -57,6 +57,7 @@ The docker library that interacts with the docker deamon uses `unsafe` which mus
 - [Docker Classic](./examples/docker_classic/)
 - [Docker Swarm](./examples/docker_swarm/)
 - [Multiple Containers](./examples/multiple_containers/)
+- [Kubernetes](./examples/kubernetes/)
 
 ## Authors
 
