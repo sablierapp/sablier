@@ -1,6 +1,4 @@
-
 # Traefik Ondemand Plugin
-
 
 Traefik middleware to start containers on demand.
 
@@ -19,22 +17,43 @@ Traefik middleware to start containers on demand.
 - Dynamic loading page (cloudflare or grafana cloud style)
 
 ![Demo](./img/ondemand.gif)
+
 ## Usage
 
 ### Plugin configuration
+
+**Dynamic Strategy**
+
+*Serve an HTML page that self reload.*
 
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
   name: TRAEFIK_HACKATHON_whoami
   timeout: 1m
+  wait-ui: true
 ```
 
-| Parameter    | Type            | Example                    | Description                                                             |
-| ------------ | --------------- | -------------------------- | ----------------------------------------------------------------------- |
-| `serviceUrl` | `string`        | `http://ondemand:10000`    | The docker container name, or the swarm service name                    |
-| `name`       | `string`        | `TRAEFIK_HACKATHON_whoami` | The container/service to be stopped (docker ps                          | docker service ls) |
-| `timeout`    | `time.Duration` | `1m30s`                    | The duration after which the container/service will be scaled down to 0 |
+**Blocking Strategy**
+
+*Responds as soon as the service is up with a maximum waiting time of `blocking-delay`*
+
+```yml
+testData:
+  serviceUrl: http://ondemand:10000
+  name: TRAEFIK_HACKATHON_whoami
+  timeout: 1m
+  wait-ui: false
+  blocking-delay: 1m
+```
+
+| Parameter        | Type            | Example                    | Description                                                                            |
+| ---------------- | --------------- | -------------------------- | -------------------------------------------------------------------------------------- |
+| `serviceUrl`     | `string`        | `http://ondemand:10000`    | The docker container name, or the swarm service name                                   |
+| `name`           | `string`        | `TRAEFIK_HACKATHON_whoami` | The container/service to be stopped (docker ps docker service ls)                      |
+| `timeout`        | `time.Duration` | `1m30s`                    | The duration after which the container/service will be scaled down to 0                |
+| `wait-ui`        | `bool`          | `true`                     | Serves a self-refreshing html page when the service is scaled down to 0                |
+| `blocking-delay` | `time.Duration` | `1m30s`                    | When `wait-ui` is `false`, wait for the service to be scaled up before `blocking-delay` |
 
 ### Traefik-Ondemand-Service
 
