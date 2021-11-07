@@ -87,11 +87,12 @@ func (config *Config) getServeStrategy(request string, name string, next http.Ha
 		}
 
 		return &strategy.BlockingStrategy{
-			Request:    request,
-			Name:       name,
-			Next:       next,
-			Timeout:    timeout,
-			BlockDelay: blockDelay,
+			Request:            request,
+			Name:               name,
+			Next:               next,
+			Timeout:            timeout,
+			BlockDelay:         blockDelay,
+			BlockCheckInterval: 1 * time.Second,
 		}, nil
 	}
 }

@@ -10,17 +10,17 @@ import (
 )
 
 type BlockingStrategy struct {
-	Request    string
-	Name       string
-	Next       http.Handler
-	Timeout    time.Duration
-	BlockDelay time.Duration
+	Request            string
+	Name               string
+	Next               http.Handler
+	Timeout            time.Duration
+	BlockDelay         time.Duration
+	BlockCheckInterval time.Duration
 }
 
 // ServeHTTP retrieve the service status
 func (e *BlockingStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	// TODO: Wait for 
 	for start := time.Now(); time.Since(start) < e.BlockDelay; {
 		log.Printf("Sending request: %s", e.Request)
 		status, err := getServiceStatus(e.Request)
@@ -37,6 +37,7 @@ func (e *BlockingStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 			e.Next.ServeHTTP(rw, req)
 			return
 		}
+		time.Sleep(e.BlockCheckInterval)
 	}
 
 	rw.WriteHeader(http.StatusServiceUnavailable)
