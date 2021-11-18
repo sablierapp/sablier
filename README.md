@@ -13,7 +13,7 @@ Traefik middleware to start containers on demand.
 
 - Support for **Docker** containers
 - Support for **Docker swarm** mode, scale services
-- Support for **Kubernetes** Deployments
+- Support for **Kubernetes** Deployments and Statefulsets
 - Start your container/service on the first request
 - Automatic **scale to zero** after configured timeout upon last request the service received
 - Dynamic loading page (cloudflare or grafana cloud style)
