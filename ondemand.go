@@ -14,8 +14,8 @@ type Config struct {
 	Name       string `yaml:"name"`
 	ServiceUrl string `yaml:"serviceurl"`
 	Timeout    string `yaml:"timeout"`
-	WaitUi     bool   `yaml:"wait-ui"`
-	BlockDelay string `yaml:"block-delay"`
+	WaitUi     bool   `yaml:"waitUi"`
+	BlockDelay string `yaml:"blockDelay"`
 }
 
 // CreateConfig creates a config with its default values

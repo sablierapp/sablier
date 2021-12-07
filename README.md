@@ -31,20 +31,20 @@ testData:
   serviceUrl: http://ondemand:10000
   name: TRAEFIK_HACKATHON_whoami
   timeout: 1m
-  wait-ui: true
+  waitUi: true
 ```
 
 **Blocking Strategy**
 
-*Responds as soon as the service is up with a maximum waiting time of `blocking-delay`*
+*Responds as soon as the service is up with a maximum waiting time of `blockingDelay`*
 
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
   name: TRAEFIK_HACKATHON_whoami
   timeout: 1m
-  wait-ui: false
-  blocking-delay: 1m
+  waitUi: false
+  blockingDelay: 1m
 ```
 
 | Parameter        | Type            | Example                    | Description                                                                            |
@@ -52,8 +52,8 @@ testData:
 | `serviceUrl`     | `string`        | `http://ondemand:10000`    | The docker container name, or the swarm service name                                   |
 | `name`           | `string`        | `TRAEFIK_HACKATHON_whoami` | The container/service to be stopped (docker ps docker service ls)                      |
 | `timeout`        | `time.Duration` | `1m30s`                    | The duration after which the container/service will be scaled down to 0                |
-| `wait-ui`        | `bool`          | `true`                     | Serves a self-refreshing html page when the service is scaled down to 0                |
-| `blocking-delay` | `time.Duration` | `1m30s`                    | When `wait-ui` is `false`, wait for the service to be scaled up before `blocking-delay` |
+| `waitUi`        | `bool`          | `true`                     | Serves a self-refreshing html page when the service is scaled down to 0                |
+| `blockingDelay` | `time.Duration` | `1m30s`                    | When `waitUi` is `false`, wait for the service to be scaled up before `blockingDelay` |
 
 ### Traefik-Ondemand-Service
 
