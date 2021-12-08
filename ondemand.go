@@ -19,9 +19,11 @@ var netClient = &http.Client{
 
 // Config the plugin configuration
 type Config struct {
-	Name       string `yaml:"name"`
-	ServiceUrl string `yaml:"serviceurl"`
-	Timeout    string `yaml:"timeout"`
+	Name        string `yaml:"name"`
+	ServiceUrl  string `yaml:"serviceurl"`
+	Timeout     string `yaml:"timeout"`
+	ErrorPage   string `yaml:"errorpage"`
+	LoadingPage string `yaml:"loadingpage"`
 }
 
 // CreateConfig creates a config with its default values
@@ -33,10 +35,12 @@ func CreateConfig() *Config {
 
 // Ondemand holds the request for the on demand service
 type Ondemand struct {
-	request string
-	name    string
-	next    http.Handler
-	timeout time.Duration
+	request     string
+	name        string
+	next        http.Handler
+	timeout     time.Duration
+	errorpage   string
+	loadingpage string
 }
 
 func buildRequest(url string, name string, timeout time.Duration) (string, error) {
@@ -67,10 +71,12 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	return &Ondemand{
-		next:    next,
-		name:    config.Name,
-		request: request,
-		timeout: timeout,
+		next:        next,
+		name:        config.Name,
+		request:     request,
+		timeout:     timeout,
+		errorpage:   config.ErrorPage,
+		loadingpage: config.LoadingPage,
 	}, nil
 }
 
@@ -83,7 +89,7 @@ func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(pages.GetErrorPage(e.name, err.Error())))
+		rw.Write([]byte(pages.GetErrorPage(e.errorpage, e.name, err.Error())))
 	}
 
 	if status == "started" {
@@ -93,11 +99,11 @@ func (e *Ondemand) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	} else if status == "starting" {
 		// Service starting, notify client
 		rw.WriteHeader(http.StatusAccepted)
-		rw.Write([]byte(pages.GetLoadingPage(e.name, e.timeout)))
+		rw.Write([]byte(pages.GetLoadingPage(e.loadingpage, e.name, e.timeout)))
 	} else {
 		// Error
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(pages.GetErrorPage(e.name, status)))
+		rw.Write([]byte(pages.GetErrorPage(e.errorpage, e.name, status)))
 	}
 }
 

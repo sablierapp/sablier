@@ -175,15 +175,26 @@ type ErrorData struct {
 	Error string
 }
 
-func GetErrorPage(name string, e string) string {
-	tpl, err := template.New("error").Parse(errorPage)
+func GetErrorPage(path, name string, e string) string {
+	var tpl *template.Template
+	var err error
+	if template_path != "" {
+		tpl, err = template.New(path.Base(template_path)).ParseFiles(template_path)
+	} else {
+		tpl, err = template.New("loading").Parse(loadingPage)
+	}
 	if err != nil {
 		return err.Error()
 	}
+
 	b := bytes.Buffer{}
-	tpl.Execute(&b, ErrorData{
+	err = tpl.Execute(&b, ErrorData{
 		Name:  name,
 		Error: e,
 	})
+	if err != nil {
+		return err.Error()
+	}
+
 	return b.String()
 }
