@@ -23,18 +23,26 @@ Traefik middleware to start containers on demand.
 
 ### Plugin configuration
 
+**Custom landing/error pages**
+The `loadingpage` and `errorpage` keys in the plugin configuration can be used to override the default loading and error pages. The value should be a path where a template that can be parsed by Go's [html/template](https://pkg.go.dev/html/template) package can be found in the Traefik container. The plugin will default to the built-in loading and error pages if these fields are omitted.
+
+**Example Configuration**
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
   name: TRAEFIK_HACKATHON_whoami
   timeout: 1m
+  loadingpage: /opt/on-demand/loading.html
+  errorpage: /opt/on-demand/error.html
 ```
 
-| Parameter    | Type            | Example                    | Description                                                             |
-| ------------ | --------------- | -------------------------- | ----------------------------------------------------------------------- |
-| `serviceUrl` | `string`        | `http://ondemand:10000`    | The docker container name, or the swarm service name                    |
-| `name`       | `string`        | `TRAEFIK_HACKATHON_whoami` | The container/service to be stopped (docker ps                          | docker service ls) |
-| `timeout`    | `time.Duration` | `1m30s`                    | The duration after which the container/service will be scaled down to 0 |
+| Parameter    | Type            | Example                       | Description                                                             |
+| ------------ | --------------- | --------------------------    | ----------------------------------------------------------------------- |
+| `serviceUrl` | `string`        | `http://ondemand:10000`       | The docker container name, or the swarm service name                    |
+| `name`       | `string`        | `TRAEFIK_HACKATHON_whoami`    | The container/service to be stopped (docker ps                          | docker service ls) |
+| `timeout`    | `time.Duration` | `1m30s`                       | The duration after which the container/service will be scaled down to 0 |
+| `loadingpage`| `string`        | `/opt/on-demand/loading.html` | The path in the traefik container for the loading page template         |
+| `errorpage`  | `string`        | `/opt/on-demand/error.html`   | The path in the traefik container for the error page template           |
 
 ### Traefik-Ondemand-Service
 
