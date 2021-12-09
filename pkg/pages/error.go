@@ -3,6 +3,7 @@ package pages
 import (
 	"bytes"
 	"html/template"
+	"path"
 )
 
 var errorPage = `<!doctype html>
@@ -175,7 +176,7 @@ type ErrorData struct {
 	Error string
 }
 
-func GetErrorPage(path, name string, e string) string {
+func GetErrorPage(template_path string, name string, e string) string {
 	var tpl *template.Template
 	var err error
 	if template_path != "" {

@@ -252,7 +252,7 @@ type LoadingData struct {
 	Timeout string
 }
 
-func GetLoadingPage(template_path, name string, timeout time.Duration) string {
+func GetLoadingPage(template_path string, name string, timeout time.Duration) string {
 	var tpl *template.Template
 	var err error
 	if template_path != "" {
