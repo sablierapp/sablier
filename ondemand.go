@@ -11,19 +11,23 @@ import (
 
 // Config the plugin configuration
 type Config struct {
-	Name       string `yaml:"name"`
-	ServiceUrl string `yaml:"serviceurl"`
-	Timeout    string `yaml:"timeout"`
-	WaitUi     bool   `yaml:"waitUi"`
-	BlockDelay string `yaml:"blockDelay"`
+	Name        string `yaml:"name"`
+	ServiceUrl  string `yaml:"serviceurl"`
+	Timeout     string `yaml:"timeout"`
+	ErrorPage   string `yaml:"errorpage"`
+	LoadingPage string `yaml:"loadingpage"`
+	WaitUi      bool   `yaml:"waitUi"`
+	BlockDelay  string `yaml:"blockDelay"`
 }
 
 // CreateConfig creates a config with its default values
 func CreateConfig() *Config {
 	return &Config{
-		Timeout:    "1m",
-		WaitUi:     true,
-		BlockDelay: "1m",
+		Timeout:     "1m",
+		WaitUi:      true,
+		BlockDelay:  "1m",
+		ErrorPage:   "",
+		LoadingPage: "",
 	}
 }
 
@@ -73,10 +77,12 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 func (config *Config) getServeStrategy(request string, name string, next http.Handler, timeout time.Duration) (strategy.Strategy, error) {
 	if config.WaitUi {
 		return &strategy.DynamicStrategy{
-			Request: request,
-			Name:    name,
-			Next:    next,
-			Timeout: timeout,
+			Request:     request,
+			Name:        name,
+			Next:        next,
+			Timeout:     timeout,
+			ErrorPage:   config.ErrorPage,
+			LoadingPage: config.LoadingPage,
 		}, nil
 	} else {
 

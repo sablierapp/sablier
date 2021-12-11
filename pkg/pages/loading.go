@@ -2,6 +2,7 @@ package pages
 
 import (
 	"bytes"
+	"path"
 
 	"fmt"
 	"html/template"
@@ -251,16 +252,27 @@ type LoadingData struct {
 	Timeout string
 }
 
-func GetLoadingPage(name string, timeout time.Duration) string {
-	tpl, err := template.New("loading").Parse(loadingPage)
+func GetLoadingPage(template_path string, name string, timeout time.Duration) string {
+	var tpl *template.Template
+	var err error
+	if template_path != "" {
+		tpl, err = template.New(path.Base(template_path)).ParseFiles(template_path)
+	} else {
+		tpl, err = template.New("loading").Parse(loadingPage)
+	}
 	if err != nil {
 		return err.Error()
 	}
+
 	b := bytes.Buffer{}
-	tpl.Execute(&b, LoadingData{
+	err = tpl.Execute(&b, LoadingData{
 		Name:    name,
 		Timeout: humanizeDuration(timeout),
 	})
+	if err != nil {
+		return err.Error()
+	}
+
 	return b.String()
 }
 
