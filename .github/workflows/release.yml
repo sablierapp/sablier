@@ -22,4 +22,4 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release -b main -p "@semantic-release/commit-analyzer" -p "@semantic-release/release-notes-generator" -p "@semantic-release/github"
+        run: npx semantic-release -b main -b beta
