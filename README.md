@@ -15,6 +15,7 @@ Traefik middleware to start containers on demand.
 - Start your container/service on the first request
 - Automatic **scale to zero** after configured timeout upon last request the service received
 - Dynamic loading page (cloudflare or grafana cloud style)
+- Customize dynamic and loading pages
 
 ![Demo](./img/ondemand.gif)
 
