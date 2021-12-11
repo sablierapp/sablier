@@ -1,12 +1,11 @@
 package strategy
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/acouvreur/traefik-ondemand-plugin/pkg/pages"
 )
 
 type BlockingStrategy struct {
@@ -18,6 +17,11 @@ type BlockingStrategy struct {
 	BlockCheckInterval time.Duration
 }
 
+type InternalServerError struct {
+	ServiceName string
+	Error       string
+}
+
 // ServeHTTP retrieve the service status
 func (e *BlockingStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
@@ -27,8 +31,9 @@ func (e *BlockingStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		log.Printf("Status: %s", status)
 
 		if err != nil {
+			rw.Header().Set("Content-Type", "application/json")
 			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(pages.GetErrorPage(e.Name, err.Error())))
+			json.NewEncoder(rw).Encode(InternalServerError{ServiceName: e.Name, Error: err.Error()})
 			return
 		}
 
@@ -40,6 +45,7 @@ func (e *BlockingStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		time.Sleep(e.BlockCheckInterval)
 	}
 
+	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusServiceUnavailable)
-	rw.Write([]byte(pages.GetErrorPage(e.Name, fmt.Sprintf("Service was unreachable within %s", e.BlockDelay))))
+	json.NewEncoder(rw).Encode(InternalServerError{ServiceName: e.Name, Error: fmt.Sprintf("Service was unreachable within %s", e.BlockDelay)})
 }
