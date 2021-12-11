@@ -51,6 +51,8 @@ An example of both a loading page and an error page template can be found in the
 
 The plugin will default to the built-in loading and error pages if these fields are omitted.
 
+You must include `<meta http-equiv="refresh" content="5" />` inside your html page to get auto refresh.
+
 **Example Configuration**
 
 ```yml
