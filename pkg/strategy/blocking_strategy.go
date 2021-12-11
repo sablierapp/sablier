@@ -18,8 +18,8 @@ type BlockingStrategy struct {
 }
 
 type InternalServerError struct {
-	ServiceName string
-	Error       string
+	ServiceName string `json:"serviceName"`
+	Error       string `json:"error"`
 }
 
 // ServeHTTP retrieve the service status
