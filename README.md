@@ -89,6 +89,11 @@ The docker library that interacts with the docker deamon uses `unsafe` which mus
 - [Multiple Containers](./examples/multiple_containers/)
 - [Kubernetes](./examples/kubernetes/)
 
+## Development
+
+`export TRAEFIK_PILOT_TOKEN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+`docker stack deploy -c docker-compose.yml TRAEFIK_HACKATHON`
+
 ## Authors
 
 [Alexis Couvreur](https://www.linkedin.com/in/alexis-couvreur/) (left)
