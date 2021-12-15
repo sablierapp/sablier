@@ -182,7 +182,7 @@ func GetErrorPage(template_path string, name string, e string) string {
 	if template_path != "" {
 		tpl, err = template.New(path.Base(template_path)).ParseFiles(template_path)
 	} else {
-		tpl, err = template.New("loading").Parse(loadingPage)
+		tpl, err = template.New("error").Parse(errorPage)
 	}
 	if err != nil {
 		return err.Error()
