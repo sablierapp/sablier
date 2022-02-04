@@ -6,7 +6,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta http-equiv="refresh" content="5" />
 
 
   <link rel="shortcut icon"
@@ -214,17 +213,19 @@
   </header>
 
   <section class="panel">
-    <h2 class="headline" id="headline">{{ .Name }} is loading...</h2>
+    {{ range $name := .Names }}
+    <h2 class="headline" id="headline">{{ $name }} is loading...</h2>
+    {{ end }}
     <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
 
     <p class="message text" id="message">Your instance is loading, and will be
       ready shortly.</p>
 
-
+<!-- 
     <div class="support text">
       Your instance will shutdown automatically after {{ .Timeout }} of
       inactivity.
-    </div>
+    </div> -->
   </section>
 
   <footer class="footer text">

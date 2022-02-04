@@ -46,9 +46,9 @@ func TestDynamicStrategy_ServeHTTP(t *testing.T) {
 			defer mockServer.Close()
 
 			dynamicStrategy := &DynamicStrategy{
-				Name:    "whoami",
-				Request: mockServer.URL,
-				Next:    next,
+				Name:     "whoami",
+				Requests: []string{mockServer.URL},
+				Next:     next,
 			}
 
 			recorder := httptest.NewRecorder()

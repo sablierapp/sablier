@@ -56,7 +56,7 @@ func TestBlockingStrategy_ServeHTTP(t *testing.T) {
 
 			blockingStrategy := &BlockingStrategy{
 				Name:       "whoami",
-				Request:    mockServer.URL,
+				Requests:   []string{mockServer.URL},
 				Next:       next,
 				BlockDelay: 1 * time.Second,
 			}

@@ -226,17 +226,19 @@ var loadingPage = `<!doctype html>
   </header>
 
   <section class="panel">
-    <h2 class="headline" id="headline">{{ .Name }} is loading...</h2>
+    {{ range $index, $name := .Names }}
+    <h2 class="headline" id="headline">{{ $name }} is loading... Timeout : {{ index .Timeout $index }}</h2>
+    {{ end }}
     <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
 
     <p class="message text" id="message">Your instance is loading, and will be
       ready shortly.</p>
 
-
+<!--
     <div class="support text">
       Your instance will shutdown automatically after {{ .Timeout }} of
       inactivity.
-    </div>
+    </div> -->
   </section>
 
   <footer class="footer text">
@@ -248,11 +250,11 @@ var loadingPage = `<!doctype html>
 </html>`
 
 type LoadingData struct {
-	Name    string
-	Timeout string
+	Names    []string
+	Timeouts []string
 }
 
-func GetLoadingPage(template_path string, name string, timeout time.Duration) string {
+func GetLoadingPage(template_path string, names []string, timeouts []time.Duration) string {
 	var tpl *template.Template
 	var err error
 	if template_path != "" {
@@ -264,10 +266,16 @@ func GetLoadingPage(template_path string, name string, timeout time.Duration) st
 		return err.Error()
 	}
 
+	humanizedTimeouts := make([]string, len(timeouts))
+
+	for _, timeout := range timeouts {
+		humanizedTimeouts = append(humanizedTimeouts, humanizeDuration(timeout))
+	}
+
 	b := bytes.Buffer{}
 	err = tpl.Execute(&b, LoadingData{
-		Name:    name,
-		Timeout: humanizeDuration(timeout),
+		Names:    names,
+		Timeouts: humanizedTimeouts,
 	})
 	if err != nil {
 		return err.Error()
