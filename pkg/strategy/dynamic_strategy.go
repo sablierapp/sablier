@@ -21,7 +21,6 @@ type DynamicStrategy struct {
 func (e *DynamicStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	started := make([]bool, len(e.Requests))
 	notReadyCount := 0
-
 	for requestIndex, request := range e.Requests {
 		log.Printf("Sending request: %s", request)
 		status, err := getServiceStatus(request)
@@ -43,7 +42,6 @@ func (e *DynamicStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			rw.Write([]byte(pages.GetErrorPage(e.ErrorPage, e.Name, status)))
 		}
 	}
-
 	if notReadyCount == 0 {
 		// All services are ready, forward request
 		e.Next.ServeHTTP(rw, req)
