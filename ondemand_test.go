@@ -16,9 +16,41 @@ func TestNewOndemand(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			desc: "invalid Config",
+			desc: "Invalid Config (no name)",
 			config: &Config{
+				ServiceUrl: "http://ondemand:1000",
+				Timeout:    "1m",
+			},
+			expectedError: true,
+		},
+		{
+			desc: "Invalid Config (empty names)",
+			config: &Config{
+				Names:      []string{},
+				ServiceUrl: "http://ondemand:1000",
+				Timeout:    "1m",
+			},
+			expectedError: true,
+		},
+		{
+			desc: "Invalid Config (empty serviceUrl)",
+			config: &Config{
+				Name:       "whoami",
 				ServiceUrl: "",
+				Timeout:    "1m",
+			},
+			expectedError: true,
+		},
+		{
+			desc: "Invalid Config (name and names used simultaneously)",
+			config: &Config{
+				Names: []string{
+					"whoami-1", "whoami-2",
+				},
+				Name:       "whoami",
+				ServiceUrl: "http://ondemand:1000",
+				WaitUi:     true,
+				BlockDelay: "1m",
 				Timeout:    "1m",
 			},
 			expectedError: true,
@@ -39,6 +71,32 @@ func TestNewOndemand(t *testing.T) {
 				Name:       "whoami",
 				ServiceUrl: "http://ondemand:1000",
 				WaitUi:     false,
+				BlockDelay: "1m",
+				Timeout:    "1m",
+			},
+			expectedError: false,
+		},
+		{
+			desc: "valid Dynamic Multiple Config",
+			config: &Config{
+				Names: []string{
+					"whoami-1", "whoami-2",
+				},
+				ServiceUrl: "http://ondemand:1000",
+				WaitUi:     false,
+				BlockDelay: "1m",
+				Timeout:    "1m",
+			},
+			expectedError: false,
+		},
+		{
+			desc: "valid Blocking Multiple Config",
+			config: &Config{
+				Names: []string{
+					"whoami-1", "whoami-2",
+				},
+				ServiceUrl: "http://ondemand:1000",
+				WaitUi:     true,
 				BlockDelay: "1m",
 				Timeout:    "1m",
 			},
