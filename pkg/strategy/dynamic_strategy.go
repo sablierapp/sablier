@@ -9,7 +9,7 @@ import (
 )
 
 type DynamicStrategy struct {
-	Request     string
+	Requests    []string
 	Name        string
 	Next        http.Handler
 	Timeout     time.Duration
@@ -19,28 +19,35 @@ type DynamicStrategy struct {
 
 // ServeHTTP retrieve the service status
 func (e *DynamicStrategy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	started := make([]bool, len(e.Requests))
+	notReadyCount := 0
+	for requestIndex, request := range e.Requests {
+		log.Printf("Sending request: %s", request)
+		status, err := getServiceStatus(request)
+		log.Printf("Status: %s", status)
 
-	log.Printf("Sending request: %s", e.Request)
-	status, err := getServiceStatus(e.Request)
-	log.Printf("Status: %s", status)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(pages.GetErrorPage(e.ErrorPage, e.Name, err.Error())))
+		}
 
-	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(pages.GetErrorPage(e.ErrorPage, e.Name, err.Error())))
+		if status == "started" {
+			started[requestIndex] = true
+		} else if status == "starting" {
+			started[requestIndex] = false
+			notReadyCount++
+		} else {
+			// Error
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(pages.GetErrorPage(e.ErrorPage, e.Name, status)))
+		}
 	}
-
-	if status == "started" {
-		// Service started forward request
+	if notReadyCount == 0 {
+		// All services are ready, forward request
 		e.Next.ServeHTTP(rw, req)
-
-	} else if status == "starting" {
-		// Service starting, notify client
+	} else {
+		// Services still starting, notify client
 		rw.WriteHeader(http.StatusAccepted)
 		rw.Write([]byte(pages.GetLoadingPage(e.LoadingPage, e.Name, e.Timeout)))
-	} else {
-		// Error
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(pages.GetErrorPage(e.ErrorPage, e.Name, status)))
 	}
-
 }

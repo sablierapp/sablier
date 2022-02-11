@@ -9,30 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDynamicStrategy_ServeHTTP(t *testing.T) {
-	testCases := []struct {
-		desc     string
-		status   string
-		expected int
-	}{
-		{
-			desc:     "service is starting",
-			status:   "starting",
-			expected: 202,
-		},
-		{
-			desc:     "service is started",
-			status:   "started",
-			expected: 200,
-		},
-		{
-			desc:     "ondemand service is in error",
-			status:   "error",
-			expected: 500,
-		},
-	}
+func TestSingleDynamicStrategy_ServeHTTP(t *testing.T) {
 
-	for _, test := range testCases {
+	for _, test := range SingleServiceTestCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
@@ -40,15 +19,15 @@ func TestDynamicStrategy_ServeHTTP(t *testing.T) {
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprint(w, test.status)
+				fmt.Fprint(w, test.onDemandServiceResponses[0].body)
 			}))
 
 			defer mockServer.Close()
 
 			dynamicStrategy := &DynamicStrategy{
-				Name:    "whoami",
-				Request: mockServer.URL,
-				Next:    next,
+				Name:     "whoami",
+				Requests: []string{mockServer.URL},
+				Next:     next,
 			}
 
 			recorder := httptest.NewRecorder()
@@ -57,7 +36,42 @@ func TestDynamicStrategy_ServeHTTP(t *testing.T) {
 
 			dynamicStrategy.ServeHTTP(recorder, req)
 
-			assert.Equal(t, test.expected, recorder.Code)
+			assert.Equal(t, test.expected.dynamic, recorder.Code)
+		})
+	}
+}
+
+func TestMultipleDynamicStrategy_ServeHTTP(t *testing.T) {
+	for _, test := range MultipleServicesTestCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+			urls := make([]string, len(test.onDemandServiceResponses))
+			for responseIndex, response := range test.onDemandServiceResponses {
+				response := response
+				mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, response.body)
+				}))
+				defer mockServer.Close()
+
+				urls[responseIndex] = mockServer.URL
+			}
+			dynamicStrategy := &DynamicStrategy{
+				Name:     "whoami",
+				Requests: urls,
+				Next:     next,
+			}
+
+			recorder := httptest.NewRecorder()
+
+			req := httptest.NewRequest(http.MethodGet, "http://mydomain/whoami", nil)
+
+			dynamicStrategy.ServeHTTP(recorder, req)
+
+			assert.Equal(t, test.expected.dynamic, recorder.Code)
 		})
 	}
 }

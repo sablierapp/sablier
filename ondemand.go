@@ -11,13 +11,14 @@ import (
 
 // Config the plugin configuration
 type Config struct {
-	Name        string `yaml:"name"`
-	ServiceUrl  string `yaml:"serviceurl"`
-	Timeout     string `yaml:"timeout"`
-	ErrorPage   string `yaml:"errorpage"`
-	LoadingPage string `yaml:"loadingpage"`
-	WaitUi      bool   `yaml:"waitui"`
-	BlockDelay  string `yaml:"blockdelay"`
+	Name        string   `yaml:"name"`
+	Names       []string `yaml:"names"`
+	ServiceUrl  string   `yaml:"serviceurl"`
+	Timeout     string   `yaml:"timeout"`
+	ErrorPage   string   `yaml:"errorpage"`
+	LoadingPage string   `yaml:"loadingpage"`
+	WaitUi      bool     `yaml:"waitui"`
+	BlockDelay  string   `yaml:"blockdelay"`
 }
 
 // CreateConfig creates a config with its default values
@@ -47,8 +48,17 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("serviceurl cannot be null")
 	}
 
-	if len(config.Name) == 0 {
-		return nil, fmt.Errorf("name cannot be null")
+	if len(config.Name) != 0 && len(config.Names) != 0 {
+		return nil, fmt.Errorf("both name and names cannot be used simultaneously")
+	}
+	var serviceNames []string
+
+	if len(config.Name) != 0 {
+		serviceNames = append(serviceNames, config.Name)
+	} else if len(config.Names) != 0 {
+		serviceNames = config.Names
+	} else {
+		return nil, fmt.Errorf("both name and names cannot be null")
 	}
 
 	timeout, err := time.ParseDuration(config.Timeout)
@@ -56,14 +66,18 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	if err != nil {
 		return nil, err
 	}
+	var requests []string
 
-	request, err := buildRequest(config.ServiceUrl, config.Name, timeout)
+	for _, serviceName := range serviceNames {
+		request, err := buildRequest(config.ServiceUrl, serviceName, timeout)
 
-	if err != nil {
-		return nil, fmt.Errorf("error while building request")
+		if err != nil {
+			return nil, fmt.Errorf("error while building request for %s", serviceName)
+		}
+		requests = append(requests, request)
 	}
 
-	strategy, err := config.getServeStrategy(request, name, next, timeout)
+	strategy, err := config.getServeStrategy(requests, name, next, timeout)
 
 	if err != nil {
 		return nil, err
@@ -74,10 +88,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}, nil
 }
 
-func (config *Config) getServeStrategy(request string, name string, next http.Handler, timeout time.Duration) (strategy.Strategy, error) {
+func (config *Config) getServeStrategy(requests []string, name string, next http.Handler, timeout time.Duration) (strategy.Strategy, error) {
 	if config.WaitUi {
 		return &strategy.DynamicStrategy{
-			Request:     request,
+			Requests:    requests,
 			Name:        name,
 			Next:        next,
 			Timeout:     timeout,
@@ -93,7 +107,7 @@ func (config *Config) getServeStrategy(request string, name string, next http.Ha
 		}
 
 		return &strategy.BlockingStrategy{
-			Request:            request,
+			Requests:           requests,
 			Name:               name,
 			Next:               next,
 			Timeout:            timeout,

@@ -92,15 +92,16 @@ testData:
   errorpage: /etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html
 ```
 
-| Parameter     | Type            | Default | Required | Example                                                                 | Description                                                                        |
-| ------------- | --------------- | ------- | -------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `serviceUrl`  | `string`        | empty   | yes      | `http://ondemand:10000`                                                 | The docker container name, or the swarm service name                               |
-| `name`        | `string`        | empty   | yes      | `TRAEFIK_HACKATHON_whoami`                                              | The container/service to be stopped (docker ps docker service ls)                  |
-| `timeout`     | `time.Duration` | `1m`    | no       | `1m30s`                                                                 | The duration after which the container/service will be scaled down to 0            |
-| `waitui`      | `bool`          | `true`  | no       | `true`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0            |
-| `blockdelay`  | `time.Duration` | `1m`    | no       | `1m30s`                                                                 | When `waitui` is `false`, wait for the service to be scaled up before `blockdelay` |
-| `loadingpage` | `string`        | empty   | no       | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/loading.html` | The path in the traefik container for the **loading** page template                |
-| `errorpage`   | `string`        | empty   | no       | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html`   | The path in the traefik container for the **error** page template                  |
+| Parameter     | Type            | Default | Required                       | Example                                                                 | Description                                                                           |
+| ------------- | --------------- | ------- | --------                       | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `serviceUrl`  | `string`        | empty   | yes                            | `http://ondemand:10000`                                                 | The docker container name, or the swarm service name                                  |
+| `name`        | `string`        | empty   | yes (except if `names` is set) | `TRAEFIK_HACKATHON_whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
+| `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[TRAEFIK_HACKATHON_whoami-1, TRAEFIK_HACKATHON_whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
+| `timeout`     | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | The duration after which the container/service will be scaled down to 0               |
+| `waitui`      | `bool`          | `true`  | no                             | `true`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0               |
+| `blockdelay`  | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | When `waitui` is `false`, wait for the service to be scaled up before `blockdelay`    |
+| `loadingpage` | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/loading.html` | The path in the traefik container for the **loading** page template                   |
+| `errorpage`   | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html`   | The path in the traefik container for the **error** page template                     |
 
 ### Traefik-Ondemand-Service
 
