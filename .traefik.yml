@@ -7,6 +7,6 @@ summary: 'Start your containers/services on the first request they receive, and 
 
 testData:
   serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  name: whoami
   timeout: 1m
   

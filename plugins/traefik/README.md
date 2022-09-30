@@ -43,7 +43,7 @@ _Serve an HTML page that self reload._
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  name: whoami
   timeout: 1m
   waitui: true
 ```
@@ -59,7 +59,7 @@ The timeout is set by `blockdelay`.
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  name: whoami
   timeout: 1m
   waitui: false
   blockdelay: 1m
@@ -84,7 +84,7 @@ You must include `<meta http-equiv="refresh" content="5" />` inside your html pa
 ```yml
 testData:
   serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  name: whoami
   timeout: 1m
   waitui: false
   blockdelay: 1m
@@ -95,8 +95,8 @@ testData:
 | Parameter     | Type            | Default | Required                       | Example                                                                 | Description                                                                           |
 | ------------- | --------------- | ------- | --------                       | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `serviceUrl`  | `string`        | empty   | yes                            | `http://ondemand:10000`                                                 | The docker container name, or the swarm service name                                  |
-| `name`        | `string`        | empty   | yes (except if `names` is set) | `TRAEFIK_HACKATHON_whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
-| `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[TRAEFIK_HACKATHON_whoami-1, TRAEFIK_HACKATHON_whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
+| `name`        | `string`        | empty   | yes (except if `names` is set) | `whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
+| `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[whoami-1, whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
 | `timeout`     | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | The duration after which the container/service will be scaled down to 0               |
 | `waitui`      | `bool`          | `true`  | no                             | `true`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0               |
 | `displayname`      | `string`          | `the middleware name`  | no                             | `My App`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0               |
@@ -122,7 +122,7 @@ The docker library that interacts with the docker deamon uses `unsafe` which mus
 ## Development
 
 `export TRAEFIK_PILOT_TOKEN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-`docker stack deploy -c docker-compose.yml TRAEFIK_HACKATHON`
+`docker stack deploy -c docker-compose.yml DEV`
 
 ## Authors
 
