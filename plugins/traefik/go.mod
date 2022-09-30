@@ -1,4 +1,4 @@
-module github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik
+module github.com/acouvreur/sablier/plugins/traefik
 
 go 1.18
 

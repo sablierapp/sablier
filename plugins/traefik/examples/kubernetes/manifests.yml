@@ -80,7 +80,7 @@ metadata:
   namespace: default
 spec:
   plugin:
-    traefik-ondemand-plugin:
+    sablier:
       name: deployment_default_whoami_1
       serviceUrl: 'http://sablier:10000'
       timeout: 1m

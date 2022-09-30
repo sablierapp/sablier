@@ -6,8 +6,8 @@ Its important to set allowEmptyServices to true, otherwhise the scale up will
 not work because traefik cannot find the service if it was scaled down to zero.
 
       - "--pilot.token=xxxx"
-      - "--experimental.plugins.traefik-ondemand-plugin.modulename=github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik"
-      - "--experimental.plugins.traefik-ondemand-plugin.version=v0.1.1"
+      - "--experimental.plugins.sablier.modulename=github.com/acouvreur/sablier/plugins/traefik"
+      - "--experimental.plugins.sablier.version=v0.1.1"
       - "--providers.kubernetesingress.allowEmptyServices=true"
 
  If you are using the traefik helm chart its also important to set:
@@ -111,7 +111,7 @@ First we need to create a traefik middleware for that:
       namespace: kube-system
     spec:
       plugin:
-        traefik-ondemand-plugin:
+        sablier:
           name: deployment_codeserverns_code-server_1
           serviceUrl: 'http://sablier:10000'
           timeout: 10m

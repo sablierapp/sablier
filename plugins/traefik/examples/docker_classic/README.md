@@ -2,8 +2,8 @@
 
 ## Run the demo
 
-1. `git clone git@github.com:acouvreur/traefik-ondemand-plugin.git`
-2. `cd traefik-ondemand-plugin/examples/docker_classic`
+1. `git clone git@github.com:acouvreur/sablier.git`
+2. `cd sablier/plugins/traefik/examples/docker_classic`
 3. `export TRAEFIK_PILOT_TOKEN=...`
 4. `docker-compose up`
    
