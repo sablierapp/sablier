@@ -21,7 +21,7 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     
-  ondemand:
+  sablier:
     image: ghcr.io/acouvreur/sablier:1
     command:
       - --swarmMode=true
@@ -31,10 +31,10 @@ services:
       labels:
         - traefik.enable=true
         - traefik.http.middlewares.ondemand-nginx.plugin.sablier.name=DOCKER_SWARM_nginx
-        - traefik.http.middlewares.ondemand-nginx.plugin.sablier.serviceUrl=http://ondemand:10000
+        - traefik.http.middlewares.ondemand-nginx.plugin.sablier.serviceUrl=http://sablier:10000
         - traefik.http.middlewares.ondemand-nginx.plugin.sablier.timeout=5m
         - traefik.http.middlewares.ondemand-whoami.plugin.sablier.name=DOCKER_SWARM_whoami
-        - traefik.http.middlewares.ondemand-whoami.plugin.sablier.serviceUrl=http://ondemand:10000
+        - traefik.http.middlewares.ondemand-whoami.plugin.sablier.serviceUrl=http://sablier:10000
         - traefik.http.middlewares.ondemand-whoami.plugin.sablier.timeout=1m
         - traefik.http.services.ondemand.loadbalancer.server.port=10000
 

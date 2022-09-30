@@ -5,7 +5,7 @@ on:
 
 jobs:
   traefik:
-    name: Check that Ondemand build as Traefik middleware
+    name: Check that Sablier build as Traefik middleware
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.18

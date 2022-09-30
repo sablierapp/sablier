@@ -1,5 +1,16 @@
 # Sablier ![Github Actions](https://img.shields.io/github/workflow/status/acouvreur/sablier/Build?style=flat-square) ![Go Report](https://goreportcard.com/badge/github.com/acouvreur/sablier?style=flat-square) ![Go Version](https://img.shields.io/github/go-mod/go-version/acouvreur/sablier?style=flat-square) ![Latest Release](https://img.shields.io/github/release/acouvreur/sablier/all.svg?style=flat-square)
 
+## Getting started
+
+```bash
+docker run -d --name nginx nginx
+docker stop nginx
+docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest --swarmode=false
+curl 'http://localhost:10000/?name=nginx&timeout=1m'
+```
+
+## Plugins
+
 ## Features
 
 - Support for **Docker** containers
@@ -11,6 +22,8 @@
 - Customize dynamic and loading pages
 
 ## Usage
+
+`docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest --swarmode=true`
 
 ### CLI
 

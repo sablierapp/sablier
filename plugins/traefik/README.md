@@ -1,4 +1,4 @@
-# Traefik Ondemand Plugin
+# Traefik Sablier Plugin
 
 Traefik middleware to start containers on demand.
 
@@ -16,7 +16,7 @@ _Serve an HTML page that self reload._
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
+  serviceUrl: http://sablier:10000
   name: whoami
   timeout: 1m
   waitui: true
@@ -32,7 +32,7 @@ The timeout is set by `blockdelay`.
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
+  serviceUrl: http://sablier:10000
   name: whoami
   timeout: 1m
   waitui: false
@@ -57,7 +57,7 @@ You must include `<meta http-equiv="refresh" content="5" />` inside your html pa
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
+  serviceUrl: http://sablier:10000
   name: whoami
   timeout: 1m
   waitui: false
@@ -68,7 +68,7 @@ testData:
 
 | Parameter     | Type            | Default | Required                       | Example                                                                 | Description                                                                           |
 | ------------- | --------------- | ------- | --------                       | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `serviceUrl`  | `string`        | empty   | yes                            | `http://ondemand:10000`                                                 | The docker container name, or the swarm service name                                  |
+| `serviceUrl`  | `string`        | empty   | yes                            | `http://sablier:10000`                                                 | The docker container name, or the swarm service name                                  |
 | `name`        | `string`        | empty   | yes (except if `names` is set) | `whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
 | `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[whoami-1, whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
 | `timeout`     | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | The duration after which the container/service will be scaled down to 0               |

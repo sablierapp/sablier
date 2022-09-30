@@ -18,8 +18,8 @@ services:
         - traefik.enable=true
         - traefik.http.services.traefik.loadbalancer.server.port=8080
 
-  ondemand:
-    image: ghcr.io/acouvreur/sablier:1.7
+  sablier:
+    image: ghcr.io/acouvreur/sablier:feature-merge-repositories
     command:
       - --swarmMode=true
     volumes:
@@ -35,7 +35,7 @@ services:
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
         - traefik.docker.lbswarm=true
         - traefik.http.middlewares.ondemand_whoami.plugin.sablier.name=whoami
-        - traefik.http.middlewares.ondemand_whoami.plugin.sablier://ondemand:10000
+        - traefik.http.middlewares.ondemand_whoami.plugin.sablier://sablier:10000
         - traefik.http.middlewares.ondemand_whoami.plugin.sablier
         - traefik.http.routers.whoami.middlewares=ondemand_whoami@docker
         - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
@@ -57,7 +57,7 @@ services:
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
         - traefik.docker.lbswarm=true
         - traefik.http.middlewares.ondemand_nginx.plugin.sablier.name=nginx
-        - traefik.http.middlewares.ondemand_nginx.plugin.sablier.serviceurl=http://ondemand:10000
+        - traefik.http.middlewares.ondemand_nginx.plugin.sablier.serviceurl=http://sablier:10000
         - traefik.http.middlewares.ondemand_nginx.plugin.sablier.timeout=5m
         - traefik.http.middlewares.ondemand_nginx.plugin.sablier.waitui=false
         - traefik.http.routers.nginx.middlewares=ondemand_nginx@docker
