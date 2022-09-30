@@ -1,0 +1,12 @@
+displayName: Containers On Demand
+type: middleware
+
+import: github.com/acouvreur/sablier/plugins/traefik
+
+summary: 'Start your containers/services on the first request they receive, and shut them down after a specified duration after the last request they received. Kubernetes, Docker classic and docker swarm compatible.'
+
+testData:
+  serviceUrl: http://sablier:10000
+  name: whoami
+  timeout: 1m
+  

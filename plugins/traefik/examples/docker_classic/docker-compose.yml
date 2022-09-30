@@ -7,8 +7,8 @@ services:
       - --api=true
       - --api.insecure=true
       - --pilot.token=$TRAEFIK_PILOT_TOKEN
-      - --experimental.plugins.traefik-ondemand-plugin.moduleName=github.com/acouvreur/traefik-ondemand-plugin
-      - --experimental.plugins.traefik-ondemand-plugin.version=v1.2.0
+      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier/plugins/traefik
+      - --experimental.plugins.sablier.version=v1.2.0
       - --providers.docker=true
       - --providers.file.filename=/etc/traefik/dynamic-config.yml
       - --entrypoints.http.address=:80
@@ -23,17 +23,17 @@ services:
     labels:
       - traefik.enable=true
 
-  ondemand:
-    image: ghcr.io/acouvreur/traefik-ondemand-service:1
+  sablier:
+    image: ghcr.io/acouvreur/sablier:1
     command: 
       - --swarmMode=false
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     labels:
       - traefik.enable=true
-      - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.name=docker_classic_whoami_1
-      - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.serviceUrl=http://ondemand:10000
-      - traefik.http.middlewares.ondemand.plugin.traefik-ondemand-plugin.timeout=1m
+      - traefik.http.middlewares.ondemand.plugin.sablier.name=docker_classic_whoami_1
+      - traefik.http.middlewares.ondemand.plugin.sablier.serviceUrl=http://sablier:10000
+      - traefik.http.middlewares.ondemand.plugin.sablier.timeout=1m
       - traefik.http.services.ondemand.loadbalancer.server.port=10000
 
   whoami:

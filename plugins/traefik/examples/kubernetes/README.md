@@ -4,8 +4,8 @@
 
 # you need docker-compose, kubectl and helm (v3) installed
 
-1. `git clone git@github.com:acouvreur/traefik-ondemand-plugin.git`
-2. `cd traefik-ondemand-plugin/examples/kubernetes`
+1. `git clone git@github.com:acouvreur/sablier.git`
+2. `cd sablier/plugins/traefik/examples/kubernetes`
 3. `docker-compose up`
 4.  Wait 1 minute
 5. `export KUBECONFIG=./kubeconfig.yaml`

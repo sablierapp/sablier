@@ -1,32 +1,6 @@
-# Traefik Ondemand Plugin
+# Traefik Sablier Plugin
 
 Traefik middleware to start containers on demand.
-
-![Github Actions](https://img.shields.io/github/workflow/status/acouvreur/traefik-ondemand-plugin/Build?style=flat-square)
-![Go Report](https://goreportcard.com/badge/github.com/acouvreur/traefik-ondemand-plugin?style=flat-square)
-![Go Version](https://img.shields.io/github/go-mod/go-version/acouvreur/traefik-ondemand-plugin?style=flat-square)
-![Latest Release](https://img.shields.io/github/release/acouvreur/traefik-ondemand-plugin/all.svg?style=flat-square)
-
-- [Traefik Ondemand Plugin](#traefik-ondemand-plugin)
-  - [Features](#features)
-  - [Usage](#usage)
-    - [Plugin configuration](#plugin-configuration)
-      - [Strategies](#strategies)
-      - [Custom loading/error pages](#custom-loadingerror-pages)
-    - [Traefik-Ondemand-Service](#traefik-ondemand-service)
-  - [Examples](#examples)
-  - [Development](#development)
-  - [Authors](#authors)
-
-## Features
-
-- Support for **Docker** containers
-- Support for **Docker swarm** mode, scale services
-- Support for **Kubernetes** Deployments and Statefulsets
-- Start your container/service on the first request
-- Automatic **scale to zero** after configured timeout upon last request the service received
-- Dynamic loading page (cloudflare or grafana cloud style)
-- Customize dynamic and loading pages
 
 ![Demo](./img/ondemand.gif)
 
@@ -42,8 +16,8 @@ _Serve an HTML page that self reload._
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  serviceUrl: http://sablier:10000
+  name: whoami
   timeout: 1m
   waitui: true
 ```
@@ -58,8 +32,8 @@ The timeout is set by `blockdelay`.
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  serviceUrl: http://sablier:10000
+  name: whoami
   timeout: 1m
   waitui: false
   blockdelay: 1m
@@ -83,30 +57,30 @@ You must include `<meta http-equiv="refresh" content="5" />` inside your html pa
 
 ```yml
 testData:
-  serviceUrl: http://ondemand:10000
-  name: TRAEFIK_HACKATHON_whoami
+  serviceUrl: http://sablier:10000
+  name: whoami
   timeout: 1m
   waitui: false
   blockdelay: 1m
-  loadingpage: /etc/traefik/plugins/traefik-ondemand-plugin/custompages/loading.html
-  errorpage: /etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html
+  loadingpage: /etc/traefik/plugins/sablier/custompages/loading.html
+  errorpage: /etc/traefik/plugins/sablier/custompages/error.html
 ```
 
 | Parameter     | Type            | Default | Required                       | Example                                                                 | Description                                                                           |
 | ------------- | --------------- | ------- | --------                       | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `serviceUrl`  | `string`        | empty   | yes                            | `http://ondemand:10000`                                                 | The docker container name, or the swarm service name                                  |
-| `name`        | `string`        | empty   | yes (except if `names` is set) | `TRAEFIK_HACKATHON_whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
-| `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[TRAEFIK_HACKATHON_whoami-1, TRAEFIK_HACKATHON_whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
+| `serviceUrl`  | `string`        | empty   | yes                            | `http://sablier:10000`                                                 | The docker container name, or the swarm service name                                  |
+| `name`        | `string`        | empty   | yes (except if `names` is set) | `whoami`                                              | The container/service/kubernetes resource to be stopped (docker ps docker service ls) |
+| `names`       | `[]string`      | []      | yes (except if `name` is set)  | `[whoami-1, whoami-2]`              | The containers/services to be stopped (docker ps docker service ls)                   |
 | `timeout`     | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | The duration after which the container/service will be scaled down to 0               |
 | `waitui`      | `bool`          | `true`  | no                             | `true`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0               |
 | `displayname`      | `string`          | `the middleware name`  | no                             | `My App`                                                                  | Serves a self-refreshing html page when the service is scaled down to 0               |
 | `blockdelay`  | `time.Duration` | `1m`    | no                             | `1m30s`                                                                 | When `waitui` is `false`, wait for the service to be scaled up before `blockdelay`    |
-| `loadingpage` | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/loading.html` | The path in the traefik container for the **loading** page template                   |
-| `errorpage`   | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html`   | The path in the traefik container for the **error** page template                     |
+| `loadingpage` | `string`        | empty   | no                             | `/etc/traefik/plugins/sablier/custompages/loading.html` | The path in the traefik container for the **loading** page template                   |
+| `errorpage`   | `string`        | empty   | no                             | `/etc/traefik/plugins/sablier/custompages/error.html`   | The path in the traefik container for the **error** page template                     |
 
-### Traefik-Ondemand-Service
+### sablier
 
-The [traefik-ondemand-service](https://github.com/acouvreur/traefik-ondemand-service) must be used to bypass [Yaegi](https://github.com/traefik/yaegi) limitations.
+The [sablier](https://github.com/acouvreur/sablier) must be used to bypass [Yaegi](https://github.com/traefik/yaegi) limitations.
 
 Yaegi is the interpreter used by Traefik to load plugin and run them at runtime.
 
@@ -122,12 +96,4 @@ The docker library that interacts with the docker deamon uses `unsafe` which mus
 ## Development
 
 `export TRAEFIK_PILOT_TOKEN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-`docker stack deploy -c docker-compose.yml TRAEFIK_HACKATHON`
-
-## Authors
-
-[Alexis Couvreur](https://www.linkedin.com/in/alexis-couvreur/) (left)
-[Alexandre Hiltcher](https://www.linkedin.com/in/alexandre-hiltcher/) (middle)
-[Matthias Schneider](https://www.linkedin.com/in/matthias-schneider-18831baa/) (right)
-
-![Alexandre, Alexis and Matthias](./img/gophers-traefik.png)
+`docker stack deploy -c docker-compose.yml DEV`

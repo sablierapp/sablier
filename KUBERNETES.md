@@ -1,4 +1,4 @@
-# Kubernetes traefik-ondemand-service Howto
+# Kubernetes sablier Howto
 
 # Traefik parameters
 
@@ -6,8 +6,8 @@ Its important to set allowEmptyServices to true, otherwhise the scale up will
 not work because traefik cannot find the service if it was scaled down to zero.
 
       - "--pilot.token=xxxx"
-      - "--experimental.plugins.traefik-ondemand-plugin.modulename=github.com/acouvreur/traefik-ondemand-plugin"
-      - "--experimental.plugins.traefik-ondemand-plugin.version=v0.1.1"
+      - "--experimental.plugins.sablier.modulename=github.com/acouvreur/sablier/plugins/traefik"
+      - "--experimental.plugins.sablier.version=v0.1.1"
       - "--providers.kubernetesingress.allowEmptyServices=true"
 
  If you are using the traefik helm chart its also important to set:
@@ -18,30 +18,30 @@ not work because traefik cannot find the service if it was scaled down to zero.
 
 # Deployment
 
-In this example we will deploy the traefik-ondemand-service into the namespace kube-system
+In this example we will deploy the sablier into the namespace kube-system
 
     apiVersion: apps/v1
     kind: Deployment
     metadata:
-      name: traefik-ondemand-service
+      name: sablier
       namespace: kube-system
       labels:
-        app: traefik-ondemand-service
+        app: sablier
     spec:
       replicas: 1
       selector:
         matchLabels:
-          app: traefik-ondemand-service
+          app: sablier
       template:
         metadata:
           labels:
-            app: traefik-ondemand-service
+            app: sablier
         spec:
-          serviceAccountName: traefik-ondemand-service
-          serviceAccount: traefik-ondemand-service
+          serviceAccountName: sablier
+          serviceAccount: sablier
           containers:
-          - name: traefik-ondemand-service
-            image: gchr.io/acouvreur/traefik-ondemand-service
+          - name: sablier
+            image: gchr.io/acouvreur/sablier
             args: ["--swarmMode=false", "--kubernetesMode=true"]
             ports:
             - containerPort: 10000
@@ -49,28 +49,28 @@ In this example we will deploy the traefik-ondemand-service into the namespace k
     apiVersion: v1
     kind: Service
     metadata:
-      name: traefik-ondemand-service
+      name: sablier
       namespace: kube-system
     spec:
       selector:
-        app: traefik-ondemand-service
+        app: sablier
       ports:
         - protocol: TCP
           port: 10000
           targetPort: 10000
 
-We have to create RBAC to allow the traefik-ondemand-service to access the kubernetes API and get/update/patch the deployment resource
+We have to create RBAC to allow the sablier to access the kubernetes API and get/update/patch the deployment resource
 
     apiVersion: v1
     kind: ServiceAccount
     metadata:
-      name: traefik-ondemand-service
+      name: sablier
       namespace: kube-system
     ---
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     metadata:
-      name: traefik-ondemand-service
+      name: sablier
       namespace: kube-system
     rules:
       - apiGroups:
@@ -88,15 +88,15 @@ We have to create RBAC to allow the traefik-ondemand-service to access the kuber
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
     metadata:
-      name: traefik-ondemand-service
+      name: sablier
       namespace: kube-system
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
-      name: traefik-ondemand-service
+      name: sablier
     subjects:
       - kind: ServiceAccount
-        name: traefik-ondemand-service
+        name: sablier
         namespace: kube-system
 
 ## Creating a Middleware
@@ -111,9 +111,9 @@ First we need to create a traefik middleware for that:
       namespace: kube-system
     spec:
       plugin:
-        traefik-ondemand-plugin:
+        sablier:
           name: deployment_codeserverns_code-server_1
-          serviceUrl: 'http://traefik-ondemand-service:10000'
+          serviceUrl: 'http://sablier:10000'
           timeout: 10m
 
 The format of the `name:` section is `<KIND>_<NAMESPACE>_<NAME>_<REPLICACOUNT>` where `_` is the delimiter.

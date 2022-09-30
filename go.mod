@@ -1,4 +1,4 @@
-module github.com/acouvreur/traefik-ondemand-service
+module github.com/acouvreur/sablier
 
 go 1.18
 

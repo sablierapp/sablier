@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: traefik-ondemand-service
+  name: sablier
   namespace: kube-system
   labels:
-    app: traefik-ondemand-service
+    app: sablier
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: traefik-ondemand-service
+      app: sablier
   template:
     metadata:
       labels:
-        app: traefik-ondemand-service
+        app: sablier
     spec:
-      serviceAccountName: traefik-ondemand-service
-      serviceAccount: traefik-ondemand-service
+      serviceAccountName: sablier
+      serviceAccount: sablier
       containers:
-      - name: traefik-ondemand-service
-        image: ghcr.io/acouvreur/traefik-ondemand-service:1
+      - name: sablier
+        image: ghcr.io/acouvreur/sablier:1
         args: ["--swarmMode=false", "--kubernetesMode=true"]
         ports:
         - containerPort: 10000
@@ -27,11 +27,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: traefik-ondemand-service
+  name: sablier
   namespace: kube-system
 spec:
   selector:
-    app: traefik-ondemand-service
+    app: sablier
   ports:
     - protocol: TCP
       port: 10000
@@ -40,13 +40,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: traefik-ondemand-service
+  name: sablier
   namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: traefik-ondemand-service
+  name: sablier
   namespace: kube-system
 rules:
   - apiGroups:
@@ -62,15 +62,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: traefik-ondemand-service
+  name: sablier
   namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: traefik-ondemand-service
+  name: sablier
 subjects:
   - kind: ServiceAccount
-    name: traefik-ondemand-service
+    name: sablier
     namespace: kube-system
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -80,7 +80,7 @@ metadata:
   namespace: default
 spec:
   plugin:
-    traefik-ondemand-plugin:
+    sablier:
       name: deployment_default_whoami_1
-      serviceUrl: 'http://traefik-ondemand-service:10000'
+      serviceUrl: 'http://sablier:10000'
       timeout: 1m

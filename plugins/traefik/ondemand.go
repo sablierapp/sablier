@@ -1,4 +1,4 @@
-package traefik_ondemand_plugin
+package traefik
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/acouvreur/traefik-ondemand-plugin/pkg/strategy"
+	"github.com/acouvreur/sablier/plugins/traefik/pkg/strategy"
 )
 
 // Config the plugin configuration

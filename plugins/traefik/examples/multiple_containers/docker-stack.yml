@@ -7,8 +7,8 @@ services:
       - --api=true
       - --api.insecure=true
       - --pilot.token=$TRAEFIK_PILOT_TOKEN
-      - --experimental.plugins.traefik-ondemand-plugin.moduleName=github.com/acouvreur/traefik-ondemand-plugin
-      - --experimental.plugins.traefik-ondemand-plugin.version=v1.2.0
+      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier/plugins/traefik
+      - --experimental.plugins.sablier.version=v1.2.0
       - --providers.docker=true
       - --providers.docker.swarmmode=true
       - --providers.file.filename=/etc/traefik/dynamic-config.yml
@@ -21,8 +21,8 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     
-  ondemand:
-    image: ghcr.io/acouvreur/traefik-ondemand-service:1
+  sablier:
+    image: ghcr.io/acouvreur/sablier:1
     command:
       - --swarmMode=true
     volumes:
@@ -30,12 +30,12 @@ services:
     deploy:
       labels:
         - traefik.enable=true
-        - traefik.http.middlewares.ondemand-nginx.plugin.traefik-ondemand-plugin.name=DOCKER_SWARM_nginx
-        - traefik.http.middlewares.ondemand-nginx.plugin.traefik-ondemand-plugin.serviceUrl=http://ondemand:10000
-        - traefik.http.middlewares.ondemand-nginx.plugin.traefik-ondemand-plugin.timeout=5m
-        - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.name=DOCKER_SWARM_whoami
-        - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.serviceUrl=http://ondemand:10000
-        - traefik.http.middlewares.ondemand-whoami.plugin.traefik-ondemand-plugin.timeout=1m
+        - traefik.http.middlewares.ondemand-nginx.plugin.sablier.name=DOCKER_SWARM_nginx
+        - traefik.http.middlewares.ondemand-nginx.plugin.sablier.serviceUrl=http://sablier:10000
+        - traefik.http.middlewares.ondemand-nginx.plugin.sablier.timeout=5m
+        - traefik.http.middlewares.ondemand-whoami.plugin.sablier.name=DOCKER_SWARM_whoami
+        - traefik.http.middlewares.ondemand-whoami.plugin.sablier.serviceUrl=http://sablier:10000
+        - traefik.http.middlewares.ondemand-whoami.plugin.sablier.timeout=1m
         - traefik.http.services.ondemand.loadbalancer.server.port=10000
 
   nginx:

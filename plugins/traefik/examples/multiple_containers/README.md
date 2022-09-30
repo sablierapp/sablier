@@ -2,8 +2,8 @@
 
 ## Run the demo
 
-1. `git clone git@github.com:acouvreur/traefik-ondemand-plugin.git`
-2. `cd traefik-ondemand-plugin/examples/multiple_containers`
+1. `git clone git@github.com:acouvreur/sablier.git`
+2. `cd sablier/plugins/traefik/examples/multiple_containers`
 3. `docker swarm init`
 4. `export TRAEFIK_PILOT_TOKEN=...`
 5.  `docker stack deploy -c docker-stack.yml DOCKER_SWARM`
@@ -21,4 +21,4 @@ Due to Traefik plugin, the interface is to provide a config and a `ServeHTTP` re
 
 This function has no access to the Traefik configuration, thus no way to determine the container/service associated to the request.
 
-See https://github.com/acouvreur/traefik-ondemand-plugin/issues/8#issuecomment-931940533.
+See https://github.com/acouvreur/sablier/issues/8#issuecomment-931940533.

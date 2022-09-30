@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/acouvreur/traefik-ondemand-service/pkg/scaler/mocks"
+	"github.com/acouvreur/sablier/pkg/scaler/mocks"
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

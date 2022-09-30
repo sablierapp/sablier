@@ -3,16 +3,16 @@ FROM golang:1.18-alpine AS build
 ENV CGO_ENABLED=0
 ENV PORT 10000
 
-COPY . /go/src/ondemand-service
-WORKDIR /go/src/ondemand-service
+COPY . /go/src/sablier
+WORKDIR /go/src/sablier
 
 ARG TARGETOS
 ARG TARGETARCH
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false -o /go/bin/ondemand-service
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false -o /go/bin/sablier
 
 FROM alpine
 EXPOSE 10000
-COPY --from=build /go/bin/ondemand-service /go/bin/ondemand-service
+COPY --from=build /go/bin/sablier /go/bin/sablier
 
-ENTRYPOINT [ "/go/bin/ondemand-service" ]
+ENTRYPOINT [ "/go/bin/sablier" ]
 CMD [ "--swarmMode=true" ]

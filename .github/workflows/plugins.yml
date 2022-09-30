@@ -1,0 +1,23 @@
+name: Build Sablier plugins
+
+on:
+  - pull_request
+
+jobs:
+  traefik:
+    name: Build Sablier for Traefik middleware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: cd plugins/traefik && go build -v .
+
+      - name: Test
+        run: cd plugins/traefik && go test -v ./...

@@ -164,8 +164,8 @@ var errorPage = `<!doctype html>
   </section>
 
   <footer class="footer text">
-    <a href="https://github.com/acouvreur/traefik-ondemand-plugin"
-      target="_blank">acouvreur/traefik-ondemand-plugin</a>
+    <a href="https://github.com/acouvreur/sablier"
+      target="_blank">acouvreur/sablier</a>
   </footer>
 </body>
 

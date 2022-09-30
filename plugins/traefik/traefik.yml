@@ -7,8 +7,8 @@ api:
 
 experimental:
   plugins:
-    traefik-ondemand-plugin:
-      moduleName: "github.com/acouvreur/traefik-ondemand-plugin"
+    sablier:
+      moduleName: "github.com/acouvreur/sablier/plugins/traefik"
       version: "v0.1.1"
 
 entryPoints:

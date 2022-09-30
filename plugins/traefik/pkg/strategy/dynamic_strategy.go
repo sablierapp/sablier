@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/acouvreur/traefik-ondemand-plugin/pkg/pages"
+	"github.com/acouvreur/sablier/plugins/traefik/pkg/pages"
 )
 
 type DynamicStrategy struct {
