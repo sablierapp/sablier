@@ -1,11 +1,11 @@
-name: Build and validate Souin as plugins
+name: Build Sablier plugins
 
 on:
   - pull_request
 
 jobs:
   traefik:
-    name: Check that Sablier build as Traefik middleware
+    name: Build Sablier for Traefik middleware
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.18
