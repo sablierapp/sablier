@@ -6,7 +6,7 @@ Its important to set allowEmptyServices to true, otherwhise the scale up will
 not work because traefik cannot find the service if it was scaled down to zero.
 
       - "--pilot.token=xxxx"
-      - "--experimental.plugins.traefik-ondemand-plugin.modulename=github.com/acouvreur/traefik-ondemand-plugin"
+      - "--experimental.plugins.traefik-ondemand-plugin.modulename=github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik"
       - "--experimental.plugins.traefik-ondemand-plugin.version=v0.1.1"
       - "--providers.kubernetesingress.allowEmptyServices=true"
 

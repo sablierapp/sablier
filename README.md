@@ -3,7 +3,7 @@
   <br>Traefik Ondemand Service<br>
 </h1>
 
-<h4 align="center">Traefik Ondemand Service for <a href="https://github.com/acouvreur/traefik-ondemand-plugin">traefik-ondemand-plugin</a> to control containers and services.</h4>
+<h4 align="center">Traefik Ondemand Service for <a href="https://github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik">traefik-ondemand-plugin</a> to control containers and services.</h4>
 
 <p align="center">
   <a href="https://github.com/acouvreur/traefik-ondemand-service/actions">

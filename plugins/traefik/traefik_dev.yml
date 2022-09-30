@@ -8,7 +8,7 @@ api:
 experimental:
   localPlugins:
     traefik-ondemand-plugin:  
-      moduleName: github.com/acouvreur/traefik-ondemand-plugin
+      moduleName: github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik
 
 entryPoints:
   http:

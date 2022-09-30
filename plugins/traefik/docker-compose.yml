@@ -10,7 +10,7 @@ services:
     volumes:
       - './traefik_dev.yml:/etc/traefik/traefik-template.yml'
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '.:/plugins-local/src/github.com/acouvreur/traefik-ondemand-plugin'
+      - '.:/plugins-local/src/github.com/acouvreur/traefik-ondemand-plugin/plugins/traefik'
     environment:
       - TRAEFIK_PILOT_TOKEN
     deploy:
