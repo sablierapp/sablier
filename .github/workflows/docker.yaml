@@ -23,8 +23,8 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            ghcr.io/acouvreur/traefik-ondemand-service
-            acouvreur/traefik-ondemand-service
+            ghcr.io/acouvreur/sablier
+            acouvreur/sablier
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/acouvreur/tinykv"
-	"github.com/acouvreur/traefik-ondemand-service/pkg/scaler"
-	"github.com/acouvreur/traefik-ondemand-service/pkg/storage"
+	"github.com/acouvreur/sablier/pkg/scaler"
+	"github.com/acouvreur/sablier/pkg/storage"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"

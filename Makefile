@@ -8,6 +8,6 @@ version = draft
 release: $(PLATFORMS)
 
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) go build -o 'traefik-ondemand-service_$(version)_$(os)-$(arch)' .
+	GOOS=$(os) GOARCH=$(arch) go build -o 'sablier_$(version)_$(os)-$(arch)' .
 
 .PHONY: release $(PLATFORMS)

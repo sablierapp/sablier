@@ -19,7 +19,7 @@ services:
         - traefik.http.services.traefik.loadbalancer.server.port=8080
 
   ondemand:
-    image: ghcr.io/acouvreur/traefik-ondemand-service:1.7
+    image: ghcr.io/acouvreur/sablier:1.7
     command:
       - --swarmMode=true
     volumes:

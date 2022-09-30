@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/acouvreur/traefik-ondemand-service/pkg/scaler/mocks"
+	"github.com/acouvreur/sablier/pkg/scaler/mocks"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"

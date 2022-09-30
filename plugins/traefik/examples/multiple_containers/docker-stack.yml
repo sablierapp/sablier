@@ -22,7 +22,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
     
   ondemand:
-    image: ghcr.io/acouvreur/traefik-ondemand-service:1
+    image: ghcr.io/acouvreur/sablier:1
     command:
       - --swarmMode=true
     volumes:

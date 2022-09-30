@@ -11,7 +11,7 @@ module.exports = {
     }],
     ["@semantic-release/github", {
       "assets": [
-        "traefik-ondemand-service*"
+        "sablier*"
       ]
     }]
   ]

@@ -13,7 +13,7 @@ Traefik middleware to start containers on demand.
     - [Plugin configuration](#plugin-configuration)
       - [Strategies](#strategies)
       - [Custom loading/error pages](#custom-loadingerror-pages)
-    - [Traefik-Ondemand-Service](#traefik-ondemand-service)
+    - [sablier](#sablier)
   - [Examples](#examples)
   - [Development](#development)
   - [Authors](#authors)
@@ -104,9 +104,9 @@ testData:
 | `loadingpage` | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/loading.html` | The path in the traefik container for the **loading** page template                   |
 | `errorpage`   | `string`        | empty   | no                             | `/etc/traefik/plugins/traefik-ondemand-plugin/custompages/error.html`   | The path in the traefik container for the **error** page template                     |
 
-### Traefik-Ondemand-Service
+### sablier
 
-The [traefik-ondemand-service](https://github.com/acouvreur/traefik-ondemand-service) must be used to bypass [Yaegi](https://github.com/traefik/yaegi) limitations.
+The [sablier](https://github.com/acouvreur/sablier) must be used to bypass [Yaegi](https://github.com/traefik/yaegi) limitations.
 
 Yaegi is the interpreter used by Traefik to load plugin and run them at runtime.
 

@@ -126,7 +126,7 @@ func (scaler *DockerSwarmScaler) isServiceRunningFor(service *swarm.Service, dur
 		return false
 	}
 
-	// Getting 503 first time a workload is woken up https://github.com/acouvreur/traefik-ondemand-service/issues/24
+	// Getting 503 first time a workload is woken up https://github.com/acouvreur/sablier/issues/24
 	// Let the service be up for a given duration
 	for _, task := range tasks {
 		if time.Since(task.Status.Timestamp) < (time.Second * 5) {
