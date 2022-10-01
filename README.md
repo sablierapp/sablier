@@ -5,6 +5,8 @@
 Sablier is an API that start containers on demand.
 It provides an integrations with multiple reverse proxies and different loading strategies.
 
+![Hourglass](./docs/img/hourglass.png)
+
 - [Sablier](#sablier)
   - [Getting started](#getting-started)
   - [Features](#features)
@@ -123,3 +125,7 @@ GET <service_url>:10000/?name=<service_name>&timeout=<timeout>
 | ---------- | ------------ | ------------------------------------------------------------------------------ |
 | `started`  | 202 Created  | The container/service is available                                             |
 | `starting` | 201 Accepted | The container/service has been scheduled for starting but is not yet available |
+
+## Credits
+
+[Hourglass icons created by Vectors Market - Flaticon](https://www.flaticon.com/free-icons/hourglass)
