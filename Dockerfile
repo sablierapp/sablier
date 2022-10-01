@@ -8,7 +8,7 @@ WORKDIR /go/src/sablier
 
 ARG TARGETOS
 ARG TARGETARCH
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false -o /go/bin/sablier
+RUN GIN_MODE=release GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -buildvcs=false -o /go/bin/sablier
 
 FROM alpine
 EXPOSE 10000

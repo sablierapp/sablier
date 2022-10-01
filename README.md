@@ -1,6 +1,32 @@
-# Sablier ![Github Actions](https://img.shields.io/github/workflow/status/acouvreur/sablier/Build?style=flat-square) ![Go Report](https://goreportcard.com/badge/github.com/acouvreur/sablier?style=flat-square) ![Go Version](https://img.shields.io/github/go-mod/go-version/acouvreur/sablier?style=flat-square) ![Latest Release](https://img.shields.io/github/release/acouvreur/sablier/all.svg?style=flat-square)
+# Sablier
+
+![Github Actions](https://img.shields.io/github/workflow/status/acouvreur/sablier/Build?style=flat-square) ![Go Report](https://goreportcard.com/badge/github.com/acouvreur/sablier?style=flat-square) ![Go Version](https://img.shields.io/github/go-mod/go-version/acouvreur/sablier?style=flat-square) ![Latest Release](https://img.shields.io/github/release/acouvreur/sablier/all.svg?style=flat-square)
+
+Sablier is an API that start containers on demand.
+It provides an integrations with multiple reverse proxies and different loading strategies.
+
+- [Sablier](#sablier)
+  - [Getting started](#getting-started)
+  - [Features](#features)
+  - [CLI Usage](#cli-usage)
+  - [Configuration](#configuration)
+  - [Reverse proxies integration plugins](#reverse-proxies-integration-plugins)
+    - [Traefik Integration](#traefik-integration)
+  - [Kubernetes](#kubernetes)
+  - [API](#api)
 
 ## Getting started
+
+Binary
+
+```bash
+docker run -d --name nginx nginx
+docker stop nginx
+./sablier start
+curl 'http://localhost:10000/?name=nginx&timeout=1m'
+```
+
+Docker
 
 ```bash
 docker run -d --name nginx nginx
@@ -8,8 +34,6 @@ docker stop nginx
 docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest --swarmode=false
 curl 'http://localhost:10000/?name=nginx&timeout=1m'
 ```
-
-## Plugins
 
 ## Features
 
@@ -21,32 +45,70 @@ curl 'http://localhost:10000/?name=nginx&timeout=1m'
 - Dynamic loading page (cloudflare or grafana cloud style)
 - Customize dynamic and loading pages
 
-## Usage
+## CLI Usage
 
-`docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest --swarmode=true`
+```
+Usage:
+  sablier [command]
 
-### CLI
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  start       Start the Sablier server
+  version     Print the version Sablier
 
-`./sablier --swarmMode=true --kubernetesMode=false`
+Flags:
+  -h, --help   help for sablier
 
-| Argument         | Value                              | Description                                                                                                                                                  |
-| ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `swarmMode`      | true,false (default true)          | Enable/Disable swarm mode. Used to determine the scaler implementation.                                                                                      |
-| `kubernetesMode` | true,false (default false)         | Enable/Disable Kubernetes mode. Used to determine the scaler implementation.                                                                                 |
-| `storagePath`    | path/to/storage/file (default nil) | Enables persistent storage, file will be used to load previous state upon starting and will sync the current content to memory into the file every 5 seconds |
+Use "sablier [command] --help" for more information about a command.
+```
 
-### Docker
+Start options
 
-- Docker Hub `acouvreur/sablier`
-- Ghcr `ghcr.io/acouvreur/sablier`
+```
+Start the Sablier server
 
-`docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest --swarmode=true`
+Usage:
+  sablier start [flags]
 
-### Kubernetes
+Flags:
+  -h, --help                      help for start
+      --provider.name string      Provider to use to manage containers [docker swarm kubernetes] (default "docker")
+      --server.base-path string   The base path for the API (default "/")
+      --server.port int           The server port to use (default 10000)
+      --storage.file string       File path to save the state
+```
 
-see <a href="https://github.com/acouvreur/sablier/blob/main/KUBERNETES.md">KUBERNETES.md</a>
+## Configuration
 
-### API
+Sablier can be configured in that order:
+
+1. command line arguments
+2. environment variable
+3. config.yaml file
+
+```yaml
+server:
+  port: 10000
+  basePath: /
+storage:
+  file: 
+provider:
+  name: docker # available providers are docker, swarm and kubernetes
+```
+
+## Reverse proxies integration plugins
+
+### Traefik Integration
+
+see [Traefik Integration](./plugins/traefik/README.md)
+
+
+## Kubernetes
+
+see [KUBERNETES.md](https://github.com/acouvreur/sablier/blob/main/KUBERNETES.md)
+
+## API
 
 ```
 GET <service_url>:10000/?name=<service_name>&timeout=<timeout>
