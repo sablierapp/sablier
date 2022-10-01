@@ -1,16 +1,11 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/acouvreur/sablier/app"
 	"github.com/acouvreur/sablier/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
-}
 
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -19,6 +14,9 @@ var startCmd = &cobra.Command{
 		conf := config.NewConfig()
 		viper.Unmarshal(&conf)
 
-		fmt.Printf("In Start: %v\n", conf)
+		err := app.Start(conf)
+		if err != nil {
+			panic(err)
+		}
 	},
 }
