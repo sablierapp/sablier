@@ -11,7 +11,7 @@ import (
 	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/pkg/scaler"
 	"github.com/acouvreur/sablier/pkg/storage"
-	"github.com/acouvreur/tinykv"
+	"github.com/acouvreur/sablier/pkg/tinykv"
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
