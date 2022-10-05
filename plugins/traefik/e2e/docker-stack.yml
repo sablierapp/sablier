@@ -1,0 +1,96 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: traefik:2.9.1
+    command:
+      - --experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier
+      - --entryPoints.http.address=:80
+      - --providers.docker=true
+      - --providers.docker.swarmmode=true
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+        mode: host # Use host to bypass ingress, which is not available in codespaces
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
+    deploy:
+      labels:
+        - traefik.http.services.traefik.loadbalancer.server.port=8080
+      restart_policy: 
+        condition: none # Do not restart on setup failure
+    
+  sablier:
+    image: ghcr.io/acouvreur/sablier:local
+    command:
+      - start
+      - --provider.name=swarm
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    deploy:
+      labels:
+        - traefik.enable=true
+        # Dynamic Middleware
+        - traefik.http.middlewares.dynamic.plugin.sablier.name=DOCKER_SWARM_E2E_whoami
+        - traefik.http.middlewares.dynamic.plugin.sablier.serviceUrl=http://tasks.sablier:10000
+        - traefik.http.middlewares.dynamic.plugin.sablier.timeout=10s
+        - traefik.http.middlewares.dynamic.plugin.sablier.displayname=Dynamic Whoami
+        # Blocking Middleware
+        - traefik.http.middlewares.blocking.plugin.sablier.name=DOCKER_SWARM_E2E_whoami
+        - traefik.http.middlewares.blocking.plugin.sablier.waitui=false
+        - traefik.http.middlewares.blocking.plugin.sablier.serviceUrl=http://tasks.sablier:10000
+        - traefik.http.middlewares.blocking.plugin.sablier.timeout=10s
+        # Multiple Dynamic Middleware
+        - traefik.http.middlewares.multiple.plugin.sablier.names=DOCKER_SWARM_E2E_whoami,DOCKER_SWARM_E2E_nginx
+        - traefik.http.middlewares.multiple.plugin.sablier.serviceUrl=http://tasks.sablier:10000
+        - traefik.http.middlewares.multiple.plugin.sablier.displayname=Multiple Whoami
+        - traefik.http.middlewares.multiple.plugin.sablier.timeout=10s
+        # Healthy Middleware
+        - traefik.http.middlewares.healthy.plugin.sablier.name=DOCKER_SWARM_E2E_nginx
+        - traefik.http.middlewares.healthy.plugin.sablier.serviceUrl=http://tasks.sablier:10000
+        - traefik.http.middlewares.healthy.plugin.sablier.displayname=Healthy Nginx
+        - traefik.http.middlewares.healthy.plugin.sablier.timeout=20s
+        - traefik.http.services.sablier.loadbalancer.server.port=10000
+
+  whoami:
+    image: containous/whoami:v1.5.0
+    deploy:
+      replicas: 0
+      labels:
+        - traefik.enable=true
+        # If you do not use the swarm load balancer, traefik will evict the service from its pool
+        # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
+        - traefik.docker.lbswarm=true
+        - traefik.http.routers.whoami-dynamic.middlewares=dynamic@docker
+        - traefik.http.routers.whoami-dynamic.rule=PathPrefix(`/dynamic/whoami`)
+        - traefik.http.routers.whoami-dynamic.service=whoami
+        - traefik.http.routers.whoami-blocking.middlewares=blocking@docker
+        - traefik.http.routers.whoami-blocking.rule=PathPrefix(`/blocking/whoami`)
+        - traefik.http.routers.whoami-blocking.service=whoami
+        - traefik.http.routers.whoami-multiple.middlewares=multiple@docker
+        - traefik.http.routers.whoami-multiple.rule=PathPrefix(`/multiple/whoami`)
+        - traefik.http.routers.whoami-multiple.service=whoami
+        - traefik.http.services.whoami.loadbalancer.server.port=80
+
+  nginx:
+    image: nginx:1.23.1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      start_period: 5s
+      interval: 1s
+    deploy:
+      replicas: 0
+      labels:
+        - traefik.enable=true
+        # If you do not use the swarm load balancer, traefik will evict the service from its pool
+        # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
+        - traefik.docker.lbswarm=true
+        - traefik.http.routers.nginx-multiple.middlewares=multiple@docker
+        - traefik.http.routers.nginx-multiple.rule=PathPrefix(`/multiple/nginx`)
+        - traefik.http.routers.nginx-multiple.service=nginx
+        - traefik.http.routers.nginx-healthy.middlewares=healthy@docker
+        - traefik.http.routers.nginx-healthy.rule=PathPrefix(`/healthy/nginx`)
+        - traefik.http.routers.nginx-healthy.service=nginx
+        - traefik.http.services.nginx.loadbalancer.server.port=80

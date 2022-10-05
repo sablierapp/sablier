@@ -1,0 +1,51 @@
+http:
+  services:
+    whoami:
+      loadBalancer:
+        servers:
+        - url: "http://whoami:80"
+    nginx:
+      loadBalancer:
+        servers:
+        - url: "http://nginx:80"
+
+  routers:
+    whoami-dynamic:
+      rule: PathPrefix(`/dynamic/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - dynamic@docker
+      service: "whoami"
+
+    whoami-blocking:
+      rule: PathPrefix(`/blocking/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - blocking@docker
+      service: "whoami"
+
+    whoami-multiple:
+      rule: PathPrefix(`/multiple/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - multiple@docker
+      service: "whoami"
+
+    nginx-multiple:
+      rule: PathPrefix(`/multiple/nginx`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - multiple@docker
+      service: "nginx"
+
+    nginx-healthy:
+      rule: PathPrefix(`/healthy/nginx`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - healthy@docker
+      service: "nginx"
