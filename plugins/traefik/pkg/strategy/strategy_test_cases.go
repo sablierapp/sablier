@@ -1,5 +1,7 @@
 package strategy
 
+import "encoding/json"
+
 type OnDemandServiceResponses struct {
 	body   string
 	status int
@@ -43,16 +45,20 @@ var SingleServiceTestCases = []TestCase{
 }
 
 func GenerateServicesResponses(count int, serviceBody string) []OnDemandServiceResponses {
+	body, err := json.Marshal(SablierResponse{State: serviceBody, Error: "ko"})
+	if err != nil {
+		return nil
+	}
 	responses := make([]OnDemandServiceResponses, count)
 	for i := 0; i < count; i++ {
 		if serviceBody == "starting" || serviceBody == "started" {
 			responses[i] = OnDemandServiceResponses{
-				body:   serviceBody,
+				body:   string(body),
 				status: 200,
 			}
 		} else {
 			responses[i] = OnDemandServiceResponses{
-				body:   serviceBody,
+				body:   string(body),
 				status: 503,
 			}
 		}
