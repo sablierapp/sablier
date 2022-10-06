@@ -29,7 +29,7 @@ run_docker_swarm_test() {
   prepare_docker_stack
   sleep 10
   go clean -testcache
-  go test -count=1 -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || docker service logs ${DOCKER_STACK_NAME}_sablier && docker service logs ${DOCKER_STACK_NAME}_traefik
+  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || docker service logs ${DOCKER_STACK_NAME}_sablier && docker service logs ${DOCKER_STACK_NAME}_traefik
   destroy_docker_stack
 }
 
