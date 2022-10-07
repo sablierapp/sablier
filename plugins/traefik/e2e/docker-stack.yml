@@ -8,6 +8,7 @@ services:
       - --entryPoints.http.address=:80
       - --providers.docker=true
       - --providers.docker.swarmmode=true
+      - --providers.docker.swarmModeRefreshSeconds=1 # Default is 15s
     ports:
       - target: 80
         published: 8080
