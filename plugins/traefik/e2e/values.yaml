@@ -1,0 +1,25 @@
+# traefik helm values
+image:
+  tag: "2.9.1"
+
+additionalArguments:
+  - "--experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier"
+
+providers:
+  kubernetesIngress:
+    allowEmptyServices: true
+  kubernetesCRD:
+    allowEmptyServices: true
+
+additionalVolumeMounts:
+  - name: local-sablier-plugin
+    mountPath: /plugins-local/src/github.com/acouvreur/sablier
+
+deployment:
+  additionalVolumes:
+    - name: local-sablier-plugin
+      hostPath:
+        # directory location on host
+        path: /plugins-local/src/github.com/acouvreur/sablier
+        # this field is optional
+        type: Directory 

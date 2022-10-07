@@ -1,12 +1,10 @@
 #!/bin/bash
 
-TRAEFIK_VERSION=2.9.4
 DOCKER_STACK_FILE=docker-stack.yml
 DOCKER_STACK_NAME=DOCKER_SWARM_E2E
 
 errors=0
 
-echo "Using Traefik version ${TRAEFIK_VERSION}"
 echo "Using Docker version:"
 docker version
 
@@ -34,8 +32,11 @@ run_docker_swarm_test() {
   prepare_docker_stack
   sleep 10
   go clean -testcache
-  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || (docker service logs ${DOCKER_STACK_NAME}_sablier && docker service logs ${DOCKER_STACK_NAME}_traefik && errors=1)
-  destroy_docker_stack
+  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+    errors=1
+    docker service logs ${DOCKER_STACK_NAME}_sablier
+    docker service logs ${DOCKER_STACK_NAME}_traefik
+  fi
 }
 
 trap destroy_docker_swarm EXIT

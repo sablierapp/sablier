@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        provider: [docker_classic, docker_swarm]
+        provider: [docker_classic, docker_swarm, kubernetes]
     steps:
       - name: Set up Go 1.18
         uses: actions/setup-go@v2
