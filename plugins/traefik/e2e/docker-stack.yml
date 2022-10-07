@@ -35,23 +35,23 @@ services:
         # Dynamic Middleware
         - traefik.http.middlewares.dynamic.plugin.sablier.name=DOCKER_SWARM_E2E_whoami
         - traefik.http.middlewares.dynamic.plugin.sablier.serviceUrl=http://tasks.sablier:10000
-        - traefik.http.middlewares.dynamic.plugin.sablier.timeout=10s
+        - traefik.http.middlewares.dynamic.plugin.sablier.timeout=1m
         - traefik.http.middlewares.dynamic.plugin.sablier.displayname=Dynamic Whoami
         # Blocking Middleware
         - traefik.http.middlewares.blocking.plugin.sablier.name=DOCKER_SWARM_E2E_whoami
         - traefik.http.middlewares.blocking.plugin.sablier.waitui=false
         - traefik.http.middlewares.blocking.plugin.sablier.serviceUrl=http://tasks.sablier:10000
-        - traefik.http.middlewares.blocking.plugin.sablier.timeout=10s
+        - traefik.http.middlewares.blocking.plugin.sablier.timeout=1m
         # Multiple Dynamic Middleware
         - traefik.http.middlewares.multiple.plugin.sablier.names=DOCKER_SWARM_E2E_whoami,DOCKER_SWARM_E2E_nginx
         - traefik.http.middlewares.multiple.plugin.sablier.serviceUrl=http://tasks.sablier:10000
         - traefik.http.middlewares.multiple.plugin.sablier.displayname=Multiple Whoami
-        - traefik.http.middlewares.multiple.plugin.sablier.timeout=10s
+        - traefik.http.middlewares.multiple.plugin.sablier.timeout=1m
         # Healthy Middleware
         - traefik.http.middlewares.healthy.plugin.sablier.name=DOCKER_SWARM_E2E_nginx
         - traefik.http.middlewares.healthy.plugin.sablier.serviceUrl=http://tasks.sablier:10000
         - traefik.http.middlewares.healthy.plugin.sablier.displayname=Healthy Nginx
-        - traefik.http.middlewares.healthy.plugin.sablier.timeout=20s
+        - traefik.http.middlewares.healthy.plugin.sablier.timeout=1m
         - traefik.http.services.sablier.loadbalancer.server.port=10000
 
   whoami:

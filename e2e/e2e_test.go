@@ -11,6 +11,8 @@ import (
 	"github.com/gavv/httpexpect/v2"
 )
 
+var waitingTime = 10 * time.Second
+
 func Test_Dynamic(t *testing.T) {
 	e := httpexpect.New(t, "http://localhost:8080/dynamic/")
 
@@ -19,9 +21,9 @@ func Test_Dynamic(t *testing.T) {
 		Status(http.StatusAccepted).
 		Body().
 		Contains(`<h2 class="headline" id="headline">Dynamic Whoami is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 10 seconds of inactivity.`)
+		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(waitingTime)
 
 	e.GET("/whoami").
 		Expect().
@@ -46,9 +48,9 @@ func Test_Multiple(t *testing.T) {
 		Status(http.StatusAccepted).
 		Body().
 		Contains(`<h2 class="headline" id="headline">Multiple Whoami is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 10 seconds of inactivity.`)
+		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(waitingTime)
 
 	e.GET("/whoami").
 		Expect().
@@ -69,16 +71,16 @@ func Test_Healthy(t *testing.T) {
 		Status(http.StatusAccepted).
 		Body().
 		Contains(`<h2 class="headline" id="headline">Healthy Nginx is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 20 seconds of inactivity.`)
+		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
 
 	e.GET("/nginx").
 		Expect().
 		Status(http.StatusAccepted).
 		Body().
 		Contains(`<h2 class="headline" id="headline">Healthy Nginx is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 20 seconds of inactivity.`)
+		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(waitingTime)
 
 	e.GET("/nginx").
 		Expect().

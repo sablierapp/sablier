@@ -28,23 +28,23 @@ services:
       # Dynamic Middleware
       - traefik.http.middlewares.dynamic.plugin.sablier.name=docker_classic_e2e-whoami-1
       - traefik.http.middlewares.dynamic.plugin.sablier.serviceUrl=http://sablier:10000
-      - traefik.http.middlewares.dynamic.plugin.sablier.timeout=10s
+      - traefik.http.middlewares.dynamic.plugin.sablier.timeout=1m
       - traefik.http.middlewares.dynamic.plugin.sablier.displayname=Dynamic Whoami
       # Blocking Middleware
       - traefik.http.middlewares.blocking.plugin.sablier.name=docker_classic_e2e-whoami-1
       - traefik.http.middlewares.blocking.plugin.sablier.waitui=false
       - traefik.http.middlewares.blocking.plugin.sablier.serviceUrl=http://sablier:10000
-      - traefik.http.middlewares.blocking.plugin.sablier.timeout=10s
+      - traefik.http.middlewares.blocking.plugin.sablier.timeout=1m
       # Multiple Dynamic Middleware
       - traefik.http.middlewares.multiple.plugin.sablier.names=docker_classic_e2e-whoami-1,docker_classic_e2e-nginx-1
       - traefik.http.middlewares.multiple.plugin.sablier.serviceUrl=http://sablier:10000
       - traefik.http.middlewares.multiple.plugin.sablier.displayname=Multiple Whoami
-      - traefik.http.middlewares.multiple.plugin.sablier.timeout=10s
+      - traefik.http.middlewares.multiple.plugin.sablier.timeout=1m
       # Healthy Middleware
       - traefik.http.middlewares.healthy.plugin.sablier.name=docker_classic_e2e-nginx-1
       - traefik.http.middlewares.healthy.plugin.sablier.serviceUrl=http://sablier:10000
       - traefik.http.middlewares.healthy.plugin.sablier.displayname=Healthy Nginx
-      - traefik.http.middlewares.healthy.plugin.sablier.timeout=20s
+      - traefik.http.middlewares.healthy.plugin.sablier.timeout=1m
 
   whoami:
     image: containous/whoami:v1.5.0
@@ -59,7 +59,7 @@ services:
     image: nginx:1.23.1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
-      start_period: 5s
+      start_period: 10s
       interval: 1s
     # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.

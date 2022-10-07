@@ -4,6 +4,8 @@ TRAEFIK_VERSION=2.9.4
 DOCKER_STACK_FILE=docker-stack.yml
 DOCKER_STACK_NAME=DOCKER_SWARM_E2E
 
+errors=0
+
 echo "Using Traefik version ${TRAEFIK_VERSION}"
 echo "Using Docker version:"
 docker version
@@ -14,14 +16,17 @@ prepare_docker_swarm() {
 
 prepare_docker_stack() {
   docker stack deploy --compose-file $DOCKER_STACK_FILE ${DOCKER_STACK_NAME}
+  docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock sudobmitch/docker-stack-wait -t 60 ${DOCKER_STACK_NAME}
 }
 
 destroy_docker_stack() {
   docker stack rm ${DOCKER_STACK_NAME}
+  # Sometimes, the network is not well cleaned up, see https://github.com/moby/moby/issues/30942#issuecomment-540699206
+  until [ -z "$(docker stack ps ${DOCKER_STACK_NAME} -q)" ]; do sleep 1; done
 }
 
 destroy_docker_swarm() {
-  docker swarm leave -f
+  docker swarm leave -f || true
 }
 
 run_docker_swarm_test() {
@@ -29,13 +34,16 @@ run_docker_swarm_test() {
   prepare_docker_stack
   sleep 10
   go clean -testcache
-  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || docker service logs ${DOCKER_STACK_NAME}_sablier && docker service logs ${DOCKER_STACK_NAME}_traefik
+  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || (docker service logs ${DOCKER_STACK_NAME}_sablier && docker service logs ${DOCKER_STACK_NAME}_traefik && errors=1)
   destroy_docker_stack
 }
+
+trap destroy_docker_swarm EXIT
 
 prepare_docker_swarm
 run_docker_swarm_test Test_Dynamic
 run_docker_swarm_test Test_Blocking
 run_docker_swarm_test Test_Multiple
 run_docker_swarm_test Test_Healthy
-destroy_docker_swarm
+
+exit $errors

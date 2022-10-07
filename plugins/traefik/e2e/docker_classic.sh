@@ -4,6 +4,8 @@ TRAEFIK_VERSION=2.9.4
 DOCKER_COMPOSE_FILE=docker-compose.yml
 DOCKER_COMPOSE_PROJECT_NAME=docker_classic_e2e
 
+errors=0
+
 echo "Using Traefik version ${TRAEFIK_VERSION}"
 echo "Using Docker version:"
 docker version
@@ -14,7 +16,7 @@ prepare_docker_classic() {
 }
 
 destroy_docker_classic() {
-  docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME down --remove-orphans
+  docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME down --remove-orphans || true
 }
 
 run_docker_classic_test() {
@@ -22,11 +24,15 @@ run_docker_classic_test() {
   prepare_docker_classic
   sleep 2
   go clean -testcache
-  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || docker compose -f ${DOCKER_COMPOSE_FILE} -p ${DOCKER_COMPOSE_PROJECT_NAME}"" logs sablier traefik
+  go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e || (docker compose -f ${DOCKER_COMPOSE_FILE} -p ${DOCKER_COMPOSE_PROJECT_NAME}"" logs sablier traefik && errors=1)
   destroy_docker_classic
 }
+
+trap destroy_docker_classic EXIT
 
 run_docker_classic_test Test_Dynamic
 run_docker_classic_test Test_Blocking
 run_docker_classic_test Test_Multiple
 run_docker_classic_test Test_Healthy
+
+exit $errors
