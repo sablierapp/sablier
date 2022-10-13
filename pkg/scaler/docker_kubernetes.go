@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -158,17 +159,7 @@ func (scaler *KubernetesScaler) IsUp(name string) bool {
 
 	switch config.Kind {
 	case "deployment":
-		d, err := scaler.Client.AppsV1().Deployments(config.Namespace).
-			Get(ctx, config.Name, metav1.GetOptions{})
-		if err != nil {
-			log.Error(err.Error())
-			return false
-		}
-		log.Infof("Status for %s %s in namespace %s is: AvailableReplicas %d, ReadyReplicas: %d ", config.Kind, config.Name, config.Namespace, d.Status.AvailableReplicas, d.Status.ReadyReplicas)
-
-		if d.Status.ReadyReplicas > 0 {
-			return true
-		}
+		return scaler.isDeploymentUp(ctx, config)
 	case "statefulset":
 		d, err := scaler.Client.AppsV1().StatefulSets(config.Namespace).
 			Get(ctx, config.Name, metav1.GetOptions{})
@@ -188,4 +179,104 @@ func (scaler *KubernetesScaler) IsUp(name string) bool {
 	}
 
 	return false
+}
+
+func (scaler *KubernetesScaler) isDeploymentUp(ctx context.Context, config *Config) bool {
+	deployment, err := scaler.Client.AppsV1().Deployments(config.Namespace).
+		Get(ctx, config.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+	log.Infof("Status for %s %s in namespace %s is: AvailableReplicas %d, ReadyReplicas: %d ", config.Kind, config.Name, config.Namespace, deployment.Status.AvailableReplicas, deployment.Status.ReadyReplicas)
+
+	endpoints, err := scaler.getEndpointsByLabelSelector(ctx, *config, "app", deployment.Spec.Template.Labels["app"])
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
+
+	if deployment.Status.ReadyReplicas > 0 && endpointsHasAtLeastNReadyAddresses(endpoints, 1) {
+		return true
+	}
+	return false
+}
+
+func (scaler *KubernetesScaler) getEndpointsByLabelSelector(ctx context.Context, config Config, selectorKey, selectorValue string) (*[]v1.Endpoints, error) {
+	// No filter because filter is not supported on Spec.Selector map
+	services, err := scaler.Client.CoreV1().Services(config.Namespace).
+		List(ctx, metav1.ListOptions{})
+
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	var foundServices []v1.Service
+	for _, service := range services.Items {
+		if service.Spec.Selector["app"] == selectorValue {
+			foundServices = append(foundServices, service)
+		}
+	}
+
+	if len(foundServices) == 0 {
+		log.Error("No service found with label selector " + selectorKey + "=" + selectorValue)
+		return nil, fmt.Errorf("No service found with label selector " + selectorKey + "=" + selectorValue)
+	}
+
+	serviceNames := make(map[string]bool)
+	for _, item := range services.Items {
+		serviceNames[item.Name] = true
+	}
+
+	endpoints, err := scaler.Client.CoreV1().Endpoints(config.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	if len(endpoints.Items) == 0 {
+		log.Error("No endpoint found")
+		return nil, fmt.Errorf("no endpoint found")
+	}
+
+	var foundEndpoints []v1.Endpoints
+	for _, endpoint := range endpoints.Items {
+		if serviceNames[endpoint.ObjectMeta.Name] {
+			foundEndpoints = append(foundEndpoints, endpoint)
+		}
+	}
+	return &foundEndpoints, nil
+}
+
+func endpointsHasAtLeastNReadyAddresses(endpoints *[]v1.Endpoints, n int) bool {
+
+	if len(*endpoints) == 0 {
+		log.Infof("No endpoint available")
+		return false
+	}
+
+	for _, endpoint := range *endpoints {
+		if endpointHasAtLeastNReadyAddresses(&endpoint, n) {
+			log.Infof("Endpoint %s has at least one IP!", &endpoint.Name)
+			return true
+		}
+	}
+
+	log.Infof("All %d endpoint(s) had no available IP", len(*endpoints))
+	return false
+}
+
+func endpointHasAtLeastNReadyAddresses(endpoint *v1.Endpoints, n int) bool {
+
+	if len(endpoint.Subsets) == 0 {
+		return false
+	}
+
+	availableAddressesCount := 0
+	for _, subset := range endpoint.Subsets {
+		availableAddressesCount += len(subset.Addresses)
+	}
+
+	return availableAddressesCount > 0
 }
