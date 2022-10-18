@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />
+    <title>Sablier</title>
+    <style>
+        html, body {
+            margin: 0;
+            background-color: #222;
+            color: #aaa;
+            font-family: 'Hack', monospace;
+            font-size: 0;
+        }
+
+        .full-height {
+            height: 100vh;
+        }
+
+        .flex-center {
+            align-items: center;
+            display: flex;
+            justify-content: center;
+        }
+
+        #error_text {
+            font-size: 32px;
+        }
+
+        #details table {
+            width: 100%;
+            border-collapse: collapse;
+            box-sizing: border-box;
+            margin-top: 20px;
+        }
+
+        #details.hidden td {
+            opacity: 0;
+            font-size: 0;
+            color: #222;
+        }
+
+        #details td {
+            font-size: 11px;
+            color: #999;
+            padding-top: .5em;
+            transition: opacity 1s, font-size .3s, color 1.2s;
+            opacity: 1;
+        }
+
+        #details td.name {
+            text-align: right;
+            padding-right: .3em;
+            width: 50%;
+        }
+
+        #details td.value {
+            text-align: left;
+            padding-left: .3em;
+            font-family: 'Lucida Console', 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+<div class="flex-center full-height">
+    <div>
+        <div id="error_text">
+            <span class="source">Starting <span>{{ .DisplayName }}...</span></span>
+            <span class="target"></span>
+        </div>
+        <div class="hidden" id="details">
+            <table>
+                {{- range $i, $request := .RequestStates }}
+                <tr>
+                    <td class="name">{{ $request.Name }}</td>
+                    {{- if $request.Error }}
+                    <td class="value error">{{ $request.Error }}</td>
+                    {{- else }}
+                    <td class="value success">{{ $request.Status }} ({{ $request.CurrentReplicas }}/{{ $request.DesiredReplicas }})</td>
+                    {{- end}}
+                </tr>
+                {{ end -}}
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    'use strict';
+
+    /**
+     * @param {HTMLElement} $el
+     */
+    const Shuffle = function ($el) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-=+<>,./?[{()}]!@#$%^&*~`\|'.split(''),
+            $source = $el.querySelector('.source'), $target = $el.querySelector('.target');
+
+        let cursor = 0, scrambleInterval = undefined, cursorDelayInterval = undefined, cursorInterval = undefined;
+
+        /**
+         * @param {Number} len
+         * @return {string}
+         */
+        const getRandomizedString = function (len) {
+            let s = '';
+
+            for (let i = 0; i < len; i++) {
+                s += chars[Math.floor(Math.random() * chars.length)];
+            }
+
+            return s;
+        };
+
+        this.start = function () {
+            $source.style.display = 'none';
+            $target.style.display = 'block';
+
+            scrambleInterval = window.setInterval(() => {
+                if (cursor <= $source.innerText.length) {
+                    $target.innerText = $source.innerText.substring(0, cursor) + getRandomizedString($source.innerText.length - cursor);
+                }
+            }, 200 / 30);
+
+            cursorDelayInterval = window.setTimeout(() => {
+                cursorInterval = window.setInterval(() => {
+                    if (cursor > $source.innerText.length - 1) {
+                        this.stop();
+                    }
+
+                    cursor++;
+                }, 40);
+            }, 200);
+        };
+
+        this.stop = function () {
+            $source.style.display = 'block';
+            $target.style.display = 'none';
+            $target.innerText = '';
+            cursor = 0;
+
+            if (scrambleInterval !== undefined) {
+                window.clearInterval(scrambleInterval);
+                scrambleInterval = undefined;
+            }
+
+            if (cursorInterval !== undefined) {
+                window.clearInterval(cursorInterval);
+                cursorInterval = undefined;
+            }
+
+            if (cursorDelayInterval !== undefined) {
+                window.clearInterval(cursorDelayInterval);
+                cursorDelayInterval = undefined;
+            }
+        };
+    };
+
+    (new Shuffle(document.getElementById('error_text'))).start();
+
+    window.setTimeout(function () {
+        document.getElementById('details').classList.remove('hidden');
+    }, 200);
+</script>
+</body>
+</html>

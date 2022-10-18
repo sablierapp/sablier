@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />
+    <title>Sablier</title>
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css2?family=Inconsolata:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /** Idea author: https://codepen.io/robinselmer */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            font-size: 0;
+        }
+
+        body {
+            box-sizing: border-box;
+            background-color: #000000;
+            background-image: radial-gradient(#11581E, #041607);
+            background-repeat: no-repeat;
+            background-size: cover;
+            font-family: 'Inconsolata', Helvetica, sans-serif;
+            color: rgba(128, 255, 128, 0.8);
+            text-shadow:
+                0 0 11px rgba(51, 255, 51, 1),
+                0 0 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .overlay {
+            pointer-events: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background:
+                repeating-linear-gradient(
+                    180deg,
+                    rgba(0, 0, 0, 0) 0,
+                    rgba(0, 0, 0, 0.3) 50%,
+                    rgba(0, 0, 0, 0) 100%);
+            background-size: auto 4px;
+            z-index: 1;
+        }
+
+        .overlay::before {
+            content: "";
+            pointer-events: none;
+            position: absolute;
+            display: block;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(
+                0deg,
+                transparent 0%,
+                rgba(32, 128, 32, 0.2) 2%,
+                rgba(32, 128, 32, 0.8) 3%,
+                rgba(32, 128, 32, 0.2) 3%,
+                transparent 100%);
+            background-repeat: no-repeat;
+            animation: scan 7.5s linear 0s infinite;
+        }
+
+        @keyframes scan {
+            0%        { background-position: 0 -100vh; }
+            35%, 100% { background-position: 0 100vh; }
+        }
+
+        .terminal {
+            box-sizing: inherit;
+            position: absolute;
+            height: 100%;
+            width: 1000px;
+            max-width: 100%;
+            padding: 64px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-size: 48px;
+        }
+
+        p {
+            font-size: 24px;
+        }
+
+        .output {
+            color: rgba(128, 255, 128, 0.8);
+            text-shadow:
+                0 0 1px rgba(51, 255, 51, 0.4),
+                0 0 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .output.error {
+            color: rgba(255, 128, 128, 0.8);
+            text-shadow:
+                0 0 1px rgba(255, 51, 51, 0.4),
+                0 0 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .output::before {
+            content: "> ";
+        }
+
+        .output.error::before {
+            content: "X ";
+        }
+
+        .output.success::before {
+            content: "√ ";
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        a::before {
+            content: "[";
+        }
+
+        a::after {
+            content: "]";
+        }
+
+        .error_code {
+            color: white;
+        }
+
+        .details {
+            margin-bottom: 24px;
+        }
+
+        .details p {
+            margin-top: .5em;
+            margin-bottom: .5em;
+        }
+
+        .details * {
+            font-size: 15px;
+        }
+
+        .details .command::before {
+            content: "$ ";
+        }
+
+        .details code {
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<div class="overlay"></div>
+<div class="terminal">
+    <h1><span>Starting </span> <span class="error_code">{{ .DisplayName }}</span>...</h1>
+    <p class="output"><span>Your instance(s) will stop after {{ .SessionDuration }} of inactivity</span>.</p>
+    {{  range $i, $request := .RequestStates }}
+    <div class="details"> 
+        <p class="output small command"><span>sablier status <span class="error_code">{{ $request.Name }}</span></span></code></p>
+        {{ if $request.Error }}<p class="output small error">An error occured</span>: <code>{{ $request.Error }}</code></p>
+        {{ else }}<p class="output small success"><span>{{ $request.Name }}</span> is {{ $request.Status }} <code>({{ $request.CurrentReplicas }}/{{ $request.DesiredReplicas }})</code></p>{{ end }}
+    </div>
+    {{ end }}
+</div>
+</body>
+</html>
