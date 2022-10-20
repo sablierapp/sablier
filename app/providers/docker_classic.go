@@ -24,10 +24,6 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 	}, nil
 }
 
-func (provider *DockerClassicProvider) Init() {
-
-}
-
 func (provider *DockerClassicProvider) Start(name string) (InstanceState, error) {
 	ctx := context.Background()
 
@@ -101,39 +97,4 @@ func (provider *DockerClassicProvider) GetState(name string) (InstanceState, err
 	default:
 		return unrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status))
 	}
-}
-
-func errorInstanceState(name string, err error) (InstanceState, error) {
-	log.Error(err.Error())
-	return InstanceState{
-		Name:            name,
-		CurrentReplicas: 0,
-		Status:          Error,
-		Error:           err.Error(),
-	}, err
-}
-
-func unrecoverableInstanceState(name string, err string) (InstanceState, error) {
-	return InstanceState{
-		Name:            name,
-		CurrentReplicas: 0,
-		Status:          Error,
-		Error:           err,
-	}, nil
-}
-
-func readyInstanceState(name string) (InstanceState, error) {
-	return InstanceState{
-		Name:            name,
-		CurrentReplicas: 1,
-		Status:          Ready,
-	}, nil
-}
-
-func notReadyInstanceState(name string) (InstanceState, error) {
-	return InstanceState{
-		Name:            name,
-		CurrentReplicas: 0,
-		Status:          NotReady,
-	}, nil
 }

@@ -1,5 +1,7 @@
 package providers
 
+import log "github.com/sirupsen/logrus"
+
 type InstanceState struct {
 	Name            string
 	CurrentReplicas int
@@ -23,4 +25,39 @@ func (instance InstanceState) IsReady() bool {
 
 func (instance InstanceState) HasError() bool {
 	return instance.Status == Error
+}
+
+func errorInstanceState(name string, err error) (InstanceState, error) {
+	log.Error(err.Error())
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: 0,
+		Status:          Error,
+		Error:           err.Error(),
+	}, err
+}
+
+func unrecoverableInstanceState(name string, err string) (InstanceState, error) {
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: 0,
+		Status:          Error,
+		Error:           err,
+	}, nil
+}
+
+func readyInstanceState(name string) (InstanceState, error) {
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: 1,
+		Status:          Ready,
+	}, nil
+}
+
+func notReadyInstanceState(name string) (InstanceState, error) {
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: 0,
+		Status:          NotReady,
+	}, nil
 }
