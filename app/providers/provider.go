@@ -38,6 +38,7 @@ func errorInstanceState(name string, err error) (InstanceState, error) {
 }
 
 func unrecoverableInstanceState(name string, err string) (InstanceState, error) {
+	log.Warn(err)
 	return InstanceState{
 		Name:            name,
 		CurrentReplicas: 0,
@@ -54,10 +55,26 @@ func readyInstanceState(name string) (InstanceState, error) {
 	}, nil
 }
 
+func readyInstanceStateOfReplicas(name string, replicas int) (InstanceState, error) {
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: replicas,
+		Status:          Ready,
+	}, nil
+}
+
 func notReadyInstanceState(name string) (InstanceState, error) {
 	return InstanceState{
 		Name:            name,
 		CurrentReplicas: 0,
+		Status:          NotReady,
+	}, nil
+}
+
+func notReadyInstanceStateOfReplicas(name string, replicas int) (InstanceState, error) {
+	return InstanceState{
+		Name:            name,
+		CurrentReplicas: replicas,
 		Status:          NotReady,
 	}, nil
 }
