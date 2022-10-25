@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/acouvreur/sablier/app/instance"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,19 +69,19 @@ func NewKubernetesProvider() *KubernetesProvider {
 	}
 }
 
-func (provider *KubernetesProvider) Start(name string) (InstanceState, error) {
+func (provider *KubernetesProvider) Start(name string) (instance.State, error) {
 	config, err := convertName(name)
 	if err != nil {
-		return unrecoverableInstanceState(name, err.Error())
+		return instance.UnrecoverableInstanceState(name, err.Error())
 	}
 
 	return provider.scale(config)
 }
 
-func (provider *KubernetesProvider) Stop(name string) (InstanceState, error) {
+func (provider *KubernetesProvider) Stop(name string) (instance.State, error) {
 	config, err := convertName(name)
 	if err != nil {
-		return unrecoverableInstanceState(name, err.Error())
+		return instance.UnrecoverableInstanceState(name, err.Error())
 	}
 
 	config.Replicas = 0
@@ -89,7 +90,7 @@ func (provider *KubernetesProvider) Stop(name string) (InstanceState, error) {
 
 }
 
-func (provider *KubernetesProvider) scale(config *Config) (InstanceState, error) {
+func (provider *KubernetesProvider) scale(config *Config) (instance.State, error) {
 	ctx := context.Background()
 
 	var workload Workload
@@ -100,28 +101,28 @@ func (provider *KubernetesProvider) scale(config *Config) (InstanceState, error)
 	case "statefulset":
 		workload = provider.Client.AppsV1().StatefulSets(config.Namespace)
 	default:
-		return unrecoverableInstanceState(config.OriginalName, fmt.Sprintf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind))
+		return instance.UnrecoverableInstanceState(config.OriginalName, fmt.Sprintf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind))
 	}
 
 	s, err := workload.GetScale(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
-		return errorInstanceState(config.OriginalName, err)
+		return instance.ErrorInstanceState(config.OriginalName, err)
 	}
 
 	s.Spec.Replicas = config.Replicas
 	_, err = workload.UpdateScale(ctx, config.Name, s, metav1.UpdateOptions{})
 
 	if err != nil {
-		return errorInstanceState(config.OriginalName, err)
+		return instance.ErrorInstanceState(config.OriginalName, err)
 	}
 
-	return notReadyInstanceState(config.OriginalName)
+	return instance.NotReadyInstanceState(config.OriginalName)
 }
 
-func (provider *KubernetesProvider) GetState(name string) (InstanceState, error) {
+func (provider *KubernetesProvider) GetState(name string) (instance.State, error) {
 	config, err := convertName(name)
 	if err != nil {
-		return unrecoverableInstanceState(name, err.Error())
+		return instance.UnrecoverableInstanceState(name, err.Error())
 	}
 
 	switch config.Kind {
@@ -130,40 +131,40 @@ func (provider *KubernetesProvider) GetState(name string) (InstanceState, error)
 	case "statefulset":
 		return provider.getStatefulsetState(config)
 	default:
-		return unrecoverableInstanceState(config.OriginalName, fmt.Sprintf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind))
+		return instance.UnrecoverableInstanceState(config.OriginalName, fmt.Sprintf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind))
 	}
 }
 
-func (provider *KubernetesProvider) getDeploymentState(config *Config) (InstanceState, error) {
+func (provider *KubernetesProvider) getDeploymentState(config *Config) (instance.State, error) {
 	ctx := context.Background()
 
 	d, err := provider.Client.AppsV1().Deployments(config.Namespace).
 		Get(ctx, config.Name, metav1.GetOptions{})
 
 	if err != nil {
-		return errorInstanceState(config.OriginalName, err)
+		return instance.ErrorInstanceState(config.OriginalName, err)
 	}
 
 	if *d.Spec.Replicas == d.Status.ReadyReplicas {
-		return readyInstanceStateOfReplicas(config.OriginalName, int(d.Status.ReadyReplicas))
+		return instance.ReadyInstanceStateOfReplicas(config.OriginalName, int(d.Status.ReadyReplicas))
 	}
 
-	return notReadyInstanceStateOfReplicas(config.OriginalName, int(d.Status.ReadyReplicas))
+	return instance.NotReadyInstanceStateOfReplicas(config.OriginalName, int(d.Status.ReadyReplicas))
 }
 
-func (provider *KubernetesProvider) getStatefulsetState(config *Config) (InstanceState, error) {
+func (provider *KubernetesProvider) getStatefulsetState(config *Config) (instance.State, error) {
 	ctx := context.Background()
 
 	ss, err := provider.Client.AppsV1().StatefulSets(config.Namespace).
 		Get(ctx, config.Name, metav1.GetOptions{})
 
 	if err != nil {
-		return errorInstanceState(config.OriginalName, err)
+		return instance.ErrorInstanceState(config.OriginalName, err)
 	}
 
 	if *ss.Spec.Replicas == ss.Status.ReadyReplicas {
-		return readyInstanceStateOfReplicas(config.OriginalName, int(ss.Status.ReadyReplicas))
+		return instance.ReadyInstanceStateOfReplicas(config.OriginalName, int(ss.Status.ReadyReplicas))
 	}
 
-	return notReadyInstanceStateOfReplicas(config.OriginalName, int(ss.Status.ReadyReplicas))
+	return instance.NotReadyInstanceStateOfReplicas(config.OriginalName, int(ss.Status.ReadyReplicas))
 }

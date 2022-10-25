@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/apps/v1"
@@ -23,7 +24,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    InstanceState
+		want    instance.State
 		data    data
 		wantErr bool
 	}{
@@ -32,10 +33,10 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -49,10 +50,10 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			args: args{
 				name: "statefulset_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -66,10 +67,10 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{
@@ -118,7 +119,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    InstanceState
+		want    instance.State
 		data    data
 		wantErr bool
 	}{
@@ -127,10 +128,10 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -144,10 +145,10 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			args: args{
 				name: "statefulset_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -161,10 +162,10 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{
@@ -213,7 +214,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    InstanceState
+		want    instance.State
 		data    data
 		wantErr bool
 	}{
@@ -222,10 +223,10 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 2,
-				Status:          Ready,
+				Status:          instance.Ready,
 			},
 			data: data{
 				name:          "nginx",
@@ -238,10 +239,10 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 1,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:          "nginx",
@@ -254,10 +255,10 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "statefulset_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 2,
-				Status:          Ready,
+				Status:          instance.Ready,
 			},
 			data: data{
 				name:           "nginx",
@@ -270,10 +271,10 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "statefulset_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 1,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			data: data{
 				name:           "nginx",
@@ -286,10 +287,10 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{

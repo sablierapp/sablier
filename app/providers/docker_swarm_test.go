@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers/mocks"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
@@ -21,7 +22,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        InstanceState
+		want        instance.State
 		serviceList []swarm.Service
 		response    types.ServiceUpdateResponse
 		wantService swarm.Service
@@ -41,10 +42,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
 			wantErr:     false,
@@ -64,10 +65,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -89,10 +90,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
 			wantErr:     false,
@@ -112,10 +113,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx (STACK1_nginx)",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("STACK1_nginx", 1),
 			wantErr:     false,
@@ -134,10 +135,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "swarm service is not in \"replicated\" mode",
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -176,7 +177,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        InstanceState
+		want        instance.State
 		serviceList []swarm.Service
 		response    types.ServiceUpdateResponse
 		wantService swarm.Service
@@ -196,10 +197,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
 			wantErr:     false,
@@ -219,10 +220,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -244,10 +245,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
 			wantErr:     false,
@@ -267,10 +268,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx (STACK1_nginx)",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("STACK1_nginx", 0),
 			wantErr:     false,
@@ -289,10 +290,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: types.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "swarm service is not in \"replicated\" mode",
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -331,7 +332,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        InstanceState
+		want        instance.State
 		serviceList []swarm.Service
 		wantErr     bool
 	}{
@@ -346,10 +347,10 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceReplicated("nginx", 1),
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 1,
-				Status:          Ready,
+				Status:          instance.Ready,
 			},
 			wantErr: false,
 		},
@@ -364,10 +365,10 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceNotReadyReplicated("nginx", 1, 0),
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantErr: false,
 		},
@@ -382,10 +383,10 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceNotReadyReplicated("STACK_nginx", 1, 0),
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx (STACK_nginx)",
 				CurrentReplicas: 0,
-				Status:          NotReady,
+				Status:          instance.NotReady,
 			},
 			wantErr: false,
 		},
@@ -400,10 +401,10 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceGlobal("nginx"),
 			},
-			want: InstanceState{
+			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
-				Status:          Error,
+				Status:          instance.Error,
 				Error:           "swarm service is not in \"replicated\" mode",
 			},
 			wantErr: false,

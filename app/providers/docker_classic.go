@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/acouvreur/sablier/app/instance"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
@@ -24,77 +25,77 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 	}, nil
 }
 
-func (provider *DockerClassicProvider) Start(name string) (InstanceState, error) {
+func (provider *DockerClassicProvider) Start(name string) (instance.State, error) {
 	ctx := context.Background()
 
 	err := provider.Client.ContainerStart(ctx, name, types.ContainerStartOptions{})
 
 	if err != nil {
-		return errorInstanceState(name, err)
+		return instance.ErrorInstanceState(name, err)
 	}
 
-	return InstanceState{
+	return instance.State{
 		Name:            name,
 		CurrentReplicas: 0,
-		Status:          NotReady,
+		Status:          instance.NotReady,
 	}, err
 }
 
-func (provider *DockerClassicProvider) Stop(name string) (InstanceState, error) {
+func (provider *DockerClassicProvider) Stop(name string) (instance.State, error) {
 	ctx := context.Background()
 
 	// TODO: Allow to specify a termination timeout
 	err := provider.Client.ContainerStop(ctx, name, nil)
 
 	if err != nil {
-		return errorInstanceState(name, err)
+		return instance.ErrorInstanceState(name, err)
 	}
 
-	return InstanceState{
+	return instance.State{
 		Name:            name,
 		CurrentReplicas: 0,
-		Status:          NotReady,
+		Status:          instance.NotReady,
 	}, nil
 }
 
-func (provider *DockerClassicProvider) GetState(name string) (InstanceState, error) {
+func (provider *DockerClassicProvider) GetState(name string) (instance.State, error) {
 	ctx := context.Background()
 
 	spec, err := provider.Client.ContainerInspect(ctx, name)
 
 	if err != nil {
-		return errorInstanceState(name, err)
+		return instance.ErrorInstanceState(name, err)
 	}
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {
 	case "created", "paused", "restarting", "removing":
-		return notReadyInstanceState(name)
+		return instance.NotReadyInstanceState(name)
 	case "running":
 		if spec.State.Health != nil {
 			// // "starting", "healthy" or "unhealthy"
 			if spec.State.Health.Status == "healthy" {
-				return readyInstanceState(name)
+				return instance.ReadyInstanceState(name)
 			} else if spec.State.Health.Status == "unhealthy" {
 				if len(spec.State.Health.Log) >= 1 {
 					lastLog := spec.State.Health.Log[len(spec.State.Health.Log)-1]
-					return unrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode))
+					return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode))
 				} else {
-					return unrecoverableInstanceState(name, "container is unhealthy: no log available")
+					return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available")
 				}
 			} else {
-				return notReadyInstanceState(name)
+				return instance.NotReadyInstanceState(name)
 			}
 		}
-		return readyInstanceState(name)
+		return instance.ReadyInstanceState(name)
 	case "exited":
 		if spec.State.ExitCode != 0 {
-			return unrecoverableInstanceState(name, fmt.Sprintf("container exited with code \"%d\"", spec.State.ExitCode))
+			return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container exited with code \"%d\"", spec.State.ExitCode))
 		}
-		return notReadyInstanceState(name)
+		return instance.NotReadyInstanceState(name)
 	case "dead":
-		return unrecoverableInstanceState(name, "container in \"dead\" state cannot be restarted")
+		return instance.UnrecoverableInstanceState(name, "container in \"dead\" state cannot be restarted")
 	default:
-		return unrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status))
+		return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status))
 	}
 }
