@@ -4,21 +4,17 @@ import log "github.com/sirupsen/logrus"
 
 var Ready = "ready"
 var NotReady = "not-ready"
-var Error = "error"
+var Unrecoverable = "unrecoverable"
 
 type State struct {
 	Name            string
 	CurrentReplicas int
 	Status          string
-	Error           string
+	Message         string
 }
 
 func (instance State) IsReady() bool {
 	return instance.Status == Ready
-}
-
-func (instance State) HasError() bool {
-	return instance.Status == Error
 }
 
 func ErrorInstanceState(name string, err error) (State, error) {
@@ -26,18 +22,18 @@ func ErrorInstanceState(name string, err error) (State, error) {
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,
-		Status:          Error,
-		Error:           err.Error(),
+		Status:          Unrecoverable,
+		Message:         err.Error(),
 	}, err
 }
 
-func UnrecoverableInstanceState(name string, err string) (State, error) {
-	log.Warn(err)
+func UnrecoverableInstanceState(name string, message string) (State, error) {
+	log.Warn(message)
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,
-		Status:          Error,
-		Error:           err,
+		Status:          Unrecoverable,
+		Message:         message,
 	}, nil
 }
 

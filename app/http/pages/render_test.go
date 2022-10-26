@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var requestsStates []RenderOptionsRequestState = []RenderOptionsRequestState{
+var instanceStates []RenderOptionsInstanceState = []RenderOptionsInstanceState{
 	{
 		Name:            "nginx",
 		CurrentReplicas: 0,
@@ -46,7 +46,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "ghost",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -61,7 +61,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "hacker-terminal",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -76,7 +76,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "matrix",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -91,7 +91,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "shuffle",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -106,7 +106,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "nonexistant",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -121,7 +121,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "dc-comics.html",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
@@ -139,7 +139,7 @@ func TestRender(t *testing.T) {
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
-					RequestStates:    requestsStates,
+					InstanceStates:   instanceStates,
 					Theme:            "nonexistant",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,

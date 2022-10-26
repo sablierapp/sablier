@@ -81,13 +81,13 @@
         </div>
         <div class="hidden" id="details">
             <table>
-                {{- range $i, $request := .RequestStates }}
+                {{- range $i, $instance := .InstanceStates }}
                 <tr>
-                    <td class="name">{{ $request.Name }}</td>
-                    {{- if $request.Error }}
-                    <td class="value error">{{ $request.Error }}</td>
+                    <td class="name">{{ $instance.Name }}</td>
+                    {{- if $instance.Error }}
+                    <td class="value error">{{ $instance.Error }}</td>
                     {{- else }}
-                    <td class="value success">{{ $request.Status }} ({{ $request.CurrentReplicas }}/{{ $request.DesiredReplicas }})</td>
+                    <td class="value success">{{ $instance.Status }} ({{ $instance.CurrentReplicas }}/{{ $instance.DesiredReplicas }})</td>
                     {{- end}}
                 </tr>
                 {{ end -}}

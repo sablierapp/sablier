@@ -48,13 +48,13 @@
 
         <div class="details">
             <ul>
-            {{- range $i, $request := .RequestStates }}
+            {{- range $i, $instance := .InstanceStates }}
                 <li>
-                    <span><span>{{ $request.Name }}</span>:</span>
-                    {{- if $request.Error }}
-                    <span class="error">{{ $request.Error }}</span>
+                    <span><span>{{ $instance.Name }}</span>:</span>
+                    {{- if $instance.Error }}
+                    <span class="error">{{ $instance.Error }}</span>
                     {{- else }}
-                    <span class="success">{{ $request.Status }} ({{ $request.CurrentReplicas }}/{{ $request.DesiredReplicas }})</span>
+                    <span class="success">{{ $instance.Status }} ({{ $instance.CurrentReplicas }}/{{ $instance.DesiredReplicas }})</span>
                     {{- end}}
                 </li>
                 {{ end -}}

@@ -162,11 +162,11 @@
 <div class="terminal">
     <h1><span>Starting </span> <span class="error_code">{{ .DisplayName }}</span>...</h1>
     <p class="output"><span>Your instance(s) will stop after {{ .SessionDuration }} of inactivity</span>.</p>
-    {{  range $i, $request := .RequestStates }}
+    {{  range $i, $instance := .InstanceStates }}
     <div class="details"> 
-        <p class="output small command"><span>sablier status <span class="error_code">{{ $request.Name }}</span></span></code></p>
-        {{ if $request.Error }}<p class="output small error">An error occured</span>: <code>{{ $request.Error }}</code></p>
-        {{ else }}<p class="output small success"><span>{{ $request.Name }}</span> is {{ $request.Status }} <code>({{ $request.CurrentReplicas }}/{{ $request.DesiredReplicas }})</code></p>{{ end }}
+        <p class="output small command"><span>sablier status <span class="error_code">{{ $instance.Name }}</span></span></code></p>
+        {{ if $instance.Error }}<p class="output small error">An error occured</span>: <code>{{ $instance.Error }}</code></p>
+        {{ else }}<p class="output small success"><span>{{ $instance.Name }}</span> is {{ $instance.Status }} <code>({{ $instance.CurrentReplicas }}/{{ $instance.DesiredReplicas }})</code></p>{{ end }}
     </div>
     {{ end }}
 </div>

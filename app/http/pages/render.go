@@ -15,7 +15,7 @@ import (
 //go:embed themes/*
 var themes embed.FS
 
-type RenderOptionsRequestState struct {
+type RenderOptionsInstanceState struct {
 	Name            string
 	CurrentReplicas int
 	DesiredReplicas int
@@ -25,7 +25,7 @@ type RenderOptionsRequestState struct {
 
 type RenderOptions struct {
 	DisplayName      string
-	RequestStates    []RenderOptionsRequestState
+	InstanceStates   []RenderOptionsInstanceState
 	SessionDuration  time.Duration
 	RefreshFrequency time.Duration
 	Theme            string
@@ -35,7 +35,7 @@ type RenderOptions struct {
 
 type TemplateValues struct {
 	DisplayName      string
-	RequestStates    []RenderOptionsRequestState
+	InstanceStates   []RenderOptionsInstanceState
 	SessionDuration  string
 	RefreshFrequency time.Duration
 	Version          string
@@ -59,7 +59,7 @@ func Render(options RenderOptions, writer io.Writer) error {
 
 	return tpl.Execute(writer, TemplateValues{
 		DisplayName:      options.DisplayName,
-		RequestStates:    options.RequestStates,
+		InstanceStates:   options.InstanceStates,
 		SessionDuration:  humanizeDuration(options.SessionDuration),
 		RefreshFrequency: options.RefreshFrequency,
 		Version:          options.Version,

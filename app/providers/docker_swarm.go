@@ -20,7 +20,6 @@ type DockerSwarmProvider struct {
 func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Fatal(fmt.Errorf("%+v", "Could not connect to docker API"))
 		return nil, err
 	}
 	return &DockerSwarmProvider{

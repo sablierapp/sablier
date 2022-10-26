@@ -70,8 +70,8 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          instance.Error,
-				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
+				Status:          instance.Unrecoverable,
+				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{
 				name:   "nginx",
@@ -165,8 +165,8 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          instance.Error,
-				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
+				Status:          instance.Unrecoverable,
+				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{
 				name:   "nginx",
@@ -290,8 +290,8 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
-				Status:          instance.Error,
-				Error:           "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
+				Status:          instance.Unrecoverable,
+				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
 			data: data{
 				name: "nginx",

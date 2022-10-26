@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/acouvreur/sablier/app/instance"
-	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -55,18 +54,18 @@ type KubernetesProvider struct {
 	Client kubernetes.Interface
 }
 
-func NewKubernetesProvider() *KubernetesProvider {
+func NewKubernetesProvider() (*KubernetesProvider, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	return &KubernetesProvider{
 		Client: client,
-	}
+	}, nil
 }
 
 func (provider *KubernetesProvider) Start(name string) (instance.State, error) {
