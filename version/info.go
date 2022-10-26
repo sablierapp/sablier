@@ -57,3 +57,16 @@ func Info() string {
 func BuildContext() string {
 	return fmt.Sprintf("(go=%s, user=%s, date=%s)", GoVersion, BuildUser, BuildDate)
 }
+
+func Map() map[string]string {
+	return map[string]string{
+		"program":   "sablier",
+		"version":   Version,
+		"revision":  Revision,
+		"branch":    Branch,
+		"buildUser": BuildUser,
+		"buildDate": BuildDate,
+		"goVersion": GoVersion,
+		"platform":  runtime.GOOS + "/" + runtime.GOARCH,
+	}
+}
