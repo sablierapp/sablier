@@ -3,6 +3,8 @@ package routes
 import (
 	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -76,6 +78,10 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	sessionState.Instances.Range(func(key, value any) bool {
 		instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
 		return true
+	})
+
+	sort.SliceStable(instances, func(i, j int) bool {
+		return strings.Compare(instances[i].Name, instances[j].Name) == -1
 	})
 
 	return
