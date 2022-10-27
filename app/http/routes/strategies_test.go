@@ -30,6 +30,13 @@ func (s *SessionsManagerMock) RequestReadySession(names []string, duration time.
 	return &s.SessionState
 }
 
+func (s *SessionsManagerMock) LoadSessions(io.ReadCloser) error {
+	return nil
+}
+func (s *SessionsManagerMock) SaveSessions(io.WriteCloser) error {
+	return nil
+}
+
 func TestServeStrategy_ServeDynamic(t *testing.T) {
 	type arg struct {
 		body    models.DynamicRequest
@@ -50,7 +57,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 					SessionDuration: 1 * time.Minute,
 				},
 				session: sessions.SessionState{
-					Instances: createMap([]instance.State{
+					Instances: createMap([]*instance.State{
 						{Name: "nginx", Status: instance.NotReady},
 					}),
 				},
@@ -67,7 +74,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 					SessionDuration: 1 * time.Minute,
 				},
 				session: sessions.SessionState{
-					Instances: createMap([]instance.State{
+					Instances: createMap([]*instance.State{
 						{Name: "nginx", Status: instance.Ready},
 					}),
 				},
@@ -152,11 +159,14 @@ func MockJsonDelete(c *gin.Context, params gin.Params) {
 	c.Params = params
 }
 
-func createMap(instances []instance.State) (store *sync.Map) {
+func createMap(instances []*instance.State) (store *sync.Map) {
 	store = &sync.Map{}
 
 	for _, v := range instances {
-		store.Store(v.Name, &v)
+		store.Store(v.Name, sessions.InstanceState{
+			Instance: v,
+			Error:    nil,
+		})
 	}
 
 	return

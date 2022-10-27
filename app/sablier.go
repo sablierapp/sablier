@@ -1,190 +1,93 @@
 package app
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
-	"time"
-
-	"github.com/acouvreur/sablier/app/middleware"
+	"github.com/acouvreur/sablier/app/http"
+	"github.com/acouvreur/sablier/app/instance"
+	"github.com/acouvreur/sablier/app/providers"
+	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/app/storage"
 	"github.com/acouvreur/sablier/config"
-	"github.com/acouvreur/sablier/pkg/scaler"
-	"github.com/acouvreur/sablier/pkg/storage"
 	"github.com/acouvreur/sablier/pkg/tinykv"
-	"github.com/docker/docker/client"
-	"github.com/gin-gonic/gin"
+	"github.com/acouvreur/sablier/version"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
-
-type OnDemandRequestState struct {
-	State string `json:"state"`
-	Name  string `json:"name"`
-}
 
 func Start(conf config.Config) error {
 
-	scaler, err := initScaler(conf.Provider)
+	logLevel, err := log.ParseLevel(conf.Logging.Level)
+
 	if err != nil {
-		return (err)
+		log.Warnf("unrecognized log level \"%s\" must be one of [panic, fatal, error, warn, info, debug, trace]", conf.Logging.Level)
+		logLevel = log.InfoLevel
 	}
+
+	log.SetLevel(logLevel)
+
+	log.Info(version.Info())
+
+	provider, err := providers.NewProvider(conf.Provider)
+	if err != nil {
+		return err
+	}
+
 	log.Infof("using provider \"%s\"", conf.Provider.Name)
 
-	store, err := initRuntimeStorage(scaler)
+	store := tinykv.New(conf.Sessions.ExpirationInterval, onSessionExpires(provider))
+
+	storage, err := storage.NewFileStorage(conf.Storage)
 	if err != nil {
-		return (err)
+		return err
 	}
 
-	err = initPersistentStorage(conf.Storage, store)
-	if err != nil {
-		return (err)
+	sessionsManager := sessions.NewSessionsManager(store, provider)
+
+	if storage.Enabled() {
+		defer saveSessions(storage, sessionsManager)
+		loadSessions(storage, sessionsManager)
 	}
 
-	err = initServer(conf.Server, scaler, store)
+	err = http.Start(conf.Server, sessionsManager)
 	if err != nil {
-		return (err)
+		return err
 	}
 
 	return nil
 }
 
-func initScaler(conf config.Provider) (scaler.Scaler, error) {
+func onSessionExpires(provider providers.Provider) func(key string, instance instance.State) {
+	return func(_key string, _instance instance.State) {
+		go func(key string, instance instance.State) {
+			log.Debugf("stopping %s...", key)
+			_, err := provider.Stop(key)
 
-	err := conf.IsValid()
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case conf.Name == "swarm":
-		cli, err := client.NewClientWithOpts()
-		if err != nil {
-			log.Fatal(fmt.Errorf("%+v", "Could not connect to docker API"))
-		}
-		return &scaler.DockerSwarmScaler{
-			Client: cli,
-		}, nil
-	case conf.Name == "docker":
-		cli, err := client.NewClientWithOpts()
-		if err != nil {
-			log.Fatal(fmt.Errorf("%+v", "Could not connect to docker API"))
-		}
-		return &scaler.DockerClassicScaler{
-			Client: cli,
-		}, nil
-	case conf.Name == "kubernetes":
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			log.Fatal(err)
-		}
-		client, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return scaler.NewKubernetesScaler(client), nil
-	}
-
-	return nil, fmt.Errorf("unimplemented provider %s", conf.Name)
-}
-
-func initRuntimeStorage(scaler scaler.Scaler) (tinykv.KV[OnDemandRequestState], error) {
-	// TODO: Add some checks
-	return tinykv.New(time.Second*20, func(key string, _ OnDemandRequestState) {
-		// Auto scale down after timeout
-		err := scaler.ScaleDown(key)
-
-		if err != nil {
-			log.Warnf("error scaling down %s: %s", key, err.Error())
-		}
-	}), nil
-}
-
-func initPersistentStorage(config config.Storage, store tinykv.KV[OnDemandRequestState]) error {
-	if len(config.File) > 0 {
-		file, err := os.OpenFile(config.File, os.O_RDWR|os.O_CREATE, 0755)
-
-		if err != nil {
-			return err
-		}
-
-		// TODO: Add data check
-		json.NewDecoder(file).Decode(store)
-		storage.New(file, time.Second*5, store)
-		log.Infof("initialized storage to %s", config.File)
-	} else {
-		log.Infof("no storage configuration provided. all states will be lost upon exit")
-	}
-	return nil
-}
-
-func initServer(conf config.Server, scaler scaler.Scaler, store tinykv.KV[OnDemandRequestState]) error {
-	r := gin.New()
-
-	r.Use(middleware.Logger(log.New()), gin.Recovery())
-
-	base := r.Group(conf.BasePath)
-	{
-		base.GET("/", onDemand(scaler, store))
-	}
-
-	r.Run(fmt.Sprintf(":%d", conf.Port))
-	return nil
-}
-
-func onDemand(scaler scaler.Scaler, store tinykv.KV[OnDemandRequestState]) func(c *gin.Context) {
-	return func(c *gin.Context) {
-
-		name := c.Query("name")
-		to := c.Query("timeout")
-
-		if name == "" || to == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "name or timeout empty"})
-			return
-		}
-
-		timeout, err := time.ParseDuration(to)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		requestState, exists := store.Get(name)
-
-		// 1. Check against the current state
-		if !exists || requestState.State != "started" {
-			if scaler.IsUp(name) {
-				requestState = OnDemandRequestState{
-					State: "started",
-					Name:  name,
-				}
+			if err != nil {
+				log.Warnf("error stopping %s: %s", key, err.Error())
 			} else {
-				requestState = OnDemandRequestState{
-					State: "starting",
-					Name:  name,
-				}
-				err := scaler.ScaleUp(name)
-
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
+				log.Debugf("stopped %s", key)
 			}
-		}
+		}(_key, _instance)
+	}
+}
 
-		// 2. Store the updated state
-		store.Put(name, requestState, tinykv.ExpiresAfter(timeout))
+func loadSessions(storage storage.Storage, sessions sessions.Manager) {
+	reader, err := storage.Reader()
+	if err != nil {
+		log.Error("error loading sessions", err)
+	}
+	err = sessions.LoadSessions(reader)
+	if err != nil {
+		log.Error("error loading sessions", err)
+	}
+}
 
-		// 3. Serve depending on the current state
-		switch requestState.State {
-		case "starting":
-			c.JSON(http.StatusAccepted, gin.H{"state": requestState.State})
-		case "started":
-			c.JSON(http.StatusCreated, gin.H{"state": requestState.State})
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Errorf("unknown state %s", requestState.State)})
-		}
+func saveSessions(storage storage.Storage, sessions sessions.Manager) {
+	writer, err := storage.Writer()
+	if err != nil {
+		log.Error("error saving sessions", err)
+		return
+	}
+	err = sessions.SaveSessions(writer)
+	if err != nil {
+		log.Error("error saving sessions", err)
 	}
 }

@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/acouvreur/sablier/config"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -49,6 +51,15 @@ func init() {
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
 	viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))
+	// Sessions flags
+	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.default-duration", time.Duration(5)*time.Minute, "The default session duration")
+	viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))
+	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
+	viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
+
+	// logging level
+	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", log.InfoLevel.String(), "The logging level. Can be one of [panic, fatal, error, warn, info, debug, trace]")
+	viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("logging.level"))
 
 	rootCmd.AddCommand(versionCmd)
 }

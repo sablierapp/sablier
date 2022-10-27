@@ -5,8 +5,8 @@ import (
 )
 
 type DynamicRequest struct {
-	Names           []string
-	DisplayName     string
-	Theme           string
-	SessionDuration time.Duration
+	Names           []string      `form:"names" binding:"required"`
+	DisplayName     string        `form:"display-name" binding:"required"`
+	Theme           string        `form:"theme" binding:"required"`
+	SessionDuration time.Duration `form:"session-duration" binding:"required"`
 }

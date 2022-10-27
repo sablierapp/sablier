@@ -24,7 +24,7 @@ type ServeStrategy struct {
 func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	request := models.DynamicRequest{}
 
-	if err := c.BindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -57,7 +57,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	request := models.BlockingRequest{}
 
-	if err := c.BindJSON(&request); err != nil {
+	if err := c.BindUri(&request); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -74,7 +74,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 
 func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []pages.RenderOptionsInstanceState) {
 	sessionState.Instances.Range(func(key, value any) bool {
-		instances = append(instances, instanceStateToRenderOptionsRequestState(value.(*instance.State)))
+		instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
 		return true
 	})
 
@@ -82,11 +82,19 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 }
 
 func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pages.RenderOptionsInstanceState {
+
+	var err error
+	if instanceState.Message == "" {
+		err = nil
+	} else {
+		err = fmt.Errorf(instanceState.Message)
+	}
+
 	return pages.RenderOptionsInstanceState{
 		Name:            instanceState.Name,
 		Status:          instanceState.Status,
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: 1, //instanceState.DesiredReplicas,
-		Error:           fmt.Errorf(instanceState.Message),
+		Error:           err,
 	}
 }

@@ -1,12 +1,13 @@
 package sessions
 
 import (
+	"encoding/json"
+	"io"
 	"sync"
 	"time"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
 )
@@ -14,6 +15,9 @@ import (
 type Manager interface {
 	RequestSession(names []string, duration time.Duration) *SessionState
 	RequestReadySession(names []string, duration time.Duration, timeout time.Duration) *SessionState
+
+	LoadSessions(io.ReadCloser) error
+	SaveSessions(io.WriteCloser) error
 }
 
 type SessionsManager struct {
@@ -21,14 +25,21 @@ type SessionsManager struct {
 	provider providers.Provider
 }
 
-func NewSessionsManager(conf config.Sessions, provider providers.Provider) (Manager, error) {
-
-	store := tinykv.New(conf.ExpirationInterval, onSessionExpires(provider))
-
+func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
 	return &SessionsManager{
 		store:    store,
 		provider: provider,
-	}, nil
+	}
+}
+
+func (sm *SessionsManager) LoadSessions(reader io.ReadCloser) error {
+	defer reader.Close()
+	return json.NewDecoder(reader).Decode(sm.store)
+}
+
+func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
+	defer writer.Close()
+	return json.NewEncoder(writer).Encode(sm.store)
 }
 
 type InstanceState struct {
@@ -38,19 +49,6 @@ type InstanceState struct {
 
 type SessionState struct {
 	Instances *sync.Map
-}
-
-func onSessionExpires(provider providers.Provider) func(key string, instance instance.State) {
-	return func(key string, instance instance.State) {
-		log.Debugf("stopping %s...", key)
-		_, err := provider.Stop(key)
-
-		if err != nil {
-			log.Warnf("error stopping %s: %s", key, err.Error())
-		} else {
-			log.Debugf("stopped %s", key)
-		}
-	}
 }
 
 func (s *SessionState) IsReady() bool {
@@ -70,13 +68,20 @@ func (s *SessionState) IsReady() bool {
 
 func (s *SessionsManager) RequestSession(names []string, duration time.Duration) (sessionState *SessionState) {
 
+	if len(names) == 0 {
+		return nil
+	}
+
 	var wg sync.WaitGroup
+
+	sessionState = &SessionState{
+		Instances: &sync.Map{},
+	}
 
 	wg.Add(len(names))
 
 	for i := 0; i < len(names); i++ {
-		name := names[i]
-		go func() {
+		go func(name string) {
 			defer wg.Done()
 			state, err := s.requestSessionInstance(name, duration)
 
@@ -84,7 +89,7 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 				Instance: state,
 				Error:    err,
 			})
-		}()
+		}(names[i])
 	}
 
 	wg.Wait()
@@ -99,17 +104,34 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	// Trust the stored value
 	// TODO: Provider background check on the store
 	// Via polling or whatever
-	if !exists || requestState.Status != instance.Ready {
+	if !exists {
+		log.Debugf("starting %s...", name)
+
 		state, err := s.provider.Start(name)
 
 		if err != nil {
-			return nil, err
+			log.Errorf("an error occurred starting %s: %s", name, err.Error())
 		}
 
 		requestState.Name = state.Name
 		requestState.CurrentReplicas = state.CurrentReplicas
 		requestState.Status = state.Status
-		requestState.Error = state.Error
+		requestState.Message = state.Message
+		log.Debugf("status for %s=%s", name, requestState.Status)
+	} else if requestState.Status != instance.Ready {
+		log.Debugf("checking %s...", name)
+
+		state, err := s.provider.GetState(name)
+
+		if err != nil {
+			log.Errorf("an error occurred checking state %s: %s", name, err.Error())
+		}
+
+		requestState.Name = state.Name
+		requestState.CurrentReplicas = state.CurrentReplicas
+		requestState.Status = state.Status
+		requestState.Message = state.Message
+		log.Debugf("status for %s=%s", name, requestState.Status)
 	}
 
 	// Refresh the duration
@@ -121,6 +143,6 @@ func (s *SessionsManager) RequestReadySession(names []string, duration time.Dura
 	return nil
 }
 
-func (s *SessionsManager) ExpiresAfter(request *instance.State, duration time.Duration) {
-	s.store.Put(request.Name, *request, tinykv.ExpiresAfter(duration))
+func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
+	s.store.Put(instance.Name, *instance, tinykv.ExpiresAfter(duration))
 }

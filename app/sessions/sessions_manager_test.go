@@ -20,7 +20,7 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "all instances are ready",
 			fields: fields{
-				Instances: createMap([]instance.State{
+				Instances: createMap([]*instance.State{
 					{Name: "nginx", Status: instance.Ready},
 					{Name: "apache", Status: instance.Ready},
 				}),
@@ -30,7 +30,7 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "one instance is not ready",
 			fields: fields{
-				Instances: createMap([]instance.State{
+				Instances: createMap([]*instance.State{
 					{Name: "nginx", Status: instance.Ready},
 					{Name: "apache", Status: instance.NotReady},
 				}),
@@ -40,15 +40,15 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "no instances specified",
 			fields: fields{
-				Instances: createMap([]instance.State{}),
+				Instances: createMap([]*instance.State{}),
 			},
 			want: true,
 		},
 		{
 			name: "one instance has an error",
 			fields: fields{
-				Instances: createMap([]instance.State{
-					{Name: "nginx", Status: instance.Error, Error: "connection timeout"},
+				Instances: createMap([]*instance.State{
+					{Name: "nginx-error", Status: instance.Unrecoverable, Message: "connection timeout"},
 					{Name: "apache", Status: instance.Ready},
 				}),
 			},
@@ -67,12 +67,12 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 }
 
-func createMap(instances []instance.State) (store *sync.Map) {
+func createMap(instances []*instance.State) (store *sync.Map) {
 	store = &sync.Map{}
 
 	for _, v := range instances {
 		store.Store(v.Name, InstanceState{
-			Instance: &v,
+			Instance: v,
 			Error:    nil,
 		})
 	}
