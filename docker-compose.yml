@@ -1,16 +1,40 @@
 version: "3.9"
 
 services:
-  sablier:
-    image: gchr.io/acouvreur/sablier:latest
-    command:
-      - --swarmMode=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - traefik
-
-networks:
   traefik:
-    external: true
-    name: traefik
+    image: traefik:2.9.1
+    command:
+      - --entryPoints.http.address=:80
+      - --providers.docker=true
+      - --providers.file.filename=/etc/traefik/dynamic-config.yml
+      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier
+      - --experimental.plugins.sablier.version=v1.0.0-beta.2
+    ports:
+      - "8080:80"
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
+
+  sablier:
+    image: ghcr.io/acouvreur/sablier:local
+    command:
+      - start
+      - --provider.name=docker
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    labels:
+      - traefik.enable=true
+      # Dynamic Middleware
+      - traefik.http.middlewares.dynamic.plugin.sablier.name=sablier_whoami_1
+      - traefik.http.middlewares.dynamic.plugin.sablier.serviceUrl=http://sablier:10000
+      - traefik.http.middlewares.dynamic.plugin.sablier.timeout=1m
+      - traefik.http.middlewares.dynamic.plugin.sablier.displayname=Dynamic Whoami
+
+  whoami:
+    image: containous/whoami:v1.5.0
+    # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
+    # The route doesn't exist anymore. Use dynamic-config.yml file instead.
+    # labels:
+    #  - traefik.enable
+    #  - traefik.http.routers.whoami-dynamic.rule=PathPrefix(`/dynamic/whoami`)
+    #  - traefik.http.routers.whoami-dynamic.middlewares=dynamic@docker

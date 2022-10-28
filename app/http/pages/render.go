@@ -37,7 +37,7 @@ type TemplateValues struct {
 	DisplayName      string
 	InstanceStates   []RenderOptionsInstanceState
 	SessionDuration  string
-	RefreshFrequency time.Duration
+	RefreshFrequency string
 	Version          string
 }
 
@@ -61,7 +61,7 @@ func Render(options RenderOptions, writer io.Writer) error {
 		DisplayName:      options.DisplayName,
 		InstanceStates:   options.InstanceStates,
 		SessionDuration:  humanizeDuration(options.SessionDuration),
-		RefreshFrequency: options.RefreshFrequency,
+		RefreshFrequency: fmt.Sprintf("%d", int64(options.RefreshFrequency)),
 		Version:          options.Version,
 	})
 }
