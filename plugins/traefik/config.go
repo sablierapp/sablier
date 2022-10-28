@@ -35,7 +35,7 @@ func CreateConfig() *Config {
 	}
 }
 
-func (c *Config) BuildRequest() (*http.Request, error) {
+func (c *Config) BuildRequest(middlewareName string) (*http.Request, error) {
 
 	if len(c.SablierURL) == 0 {
 		return nil, fmt.Errorf("sablierURL cannot be empty")
@@ -57,14 +57,14 @@ func (c *Config) BuildRequest() (*http.Request, error) {
 	}
 
 	if c.Dynamic != nil {
-		return c.buildDynamicRequest()
+		return c.buildDynamicRequest(middlewareName)
 	} else if c.Blocking != nil {
 		return c.buildBlockingRequest()
 	}
 	return nil, fmt.Errorf("no strategy configured")
 }
 
-func (c *Config) buildDynamicRequest() (*http.Request, error) {
+func (c *Config) buildDynamicRequest(middlewareName string) (*http.Request, error) {
 	if c.Dynamic == nil {
 		return nil, fmt.Errorf("dynamic config is nil")
 	}
@@ -83,6 +83,9 @@ func (c *Config) buildDynamicRequest() (*http.Request, error) {
 
 	if c.Dynamic.DisplayName != "" {
 		q.Add("display_name", c.Dynamic.DisplayName)
+	} else {
+		// display name defaults as middleware name
+		q.Add("display_name", middlewareName)
 	}
 
 	if c.Dynamic.Theme != "" {

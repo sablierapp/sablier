@@ -14,7 +14,7 @@ type SablierMiddleware struct {
 
 // New function creates the configuration
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	req, err := config.BuildRequest()
+	req, err := config.BuildRequest(name)
 
 	if err != nil {
 		return nil, err

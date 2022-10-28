@@ -31,7 +31,7 @@ func TestConfig_BuildRequest(t *testing.T) {
 				SessionDuration: "1m",
 				Dynamic:         &traefik.DynamicConfiguration{},
 			},
-			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?names=nginx&names=apache&session_duration=1m", nil),
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&session_duration=1m", nil),
 			wantErr: false,
 		},
 		{
@@ -44,7 +44,7 @@ func TestConfig_BuildRequest(t *testing.T) {
 					Theme: "hacker-terminal",
 				},
 			},
-			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?names=nginx&names=apache&session_duration=1m&theme=hacker-terminal", nil),
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&session_duration=1m&theme=hacker-terminal", nil),
 			wantErr: false,
 		},
 		{
@@ -108,7 +108,7 @@ func TestConfig_BuildRequest(t *testing.T) {
 				Blocking:        tt.fields.Blocking,
 			}
 
-			got, err := c.BuildRequest()
+			got, err := c.BuildRequest("sablier-middleware")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Config.BuildRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
