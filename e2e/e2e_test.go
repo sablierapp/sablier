@@ -18,10 +18,10 @@ func Test_Dynamic(t *testing.T) {
 
 	e.GET("/whoami").
 		Expect().
-		Status(http.StatusAccepted).
+		Status(http.StatusOK).
 		Body().
-		Contains(`<h2 class="headline" id="headline">Dynamic Whoami is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
+		Contains(`Dynamic Whoami`).
+		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
 	time.Sleep(waitingTime)
 
@@ -45,10 +45,10 @@ func Test_Multiple(t *testing.T) {
 
 	e.GET("/whoami").
 		Expect().
-		Status(http.StatusAccepted).
+		Status(http.StatusOK).
 		Body().
-		Contains(`<h2 class="headline" id="headline">Multiple Whoami is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
+		Contains(`Multiple Whoami`).
+		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
 	time.Sleep(waitingTime)
 
@@ -68,17 +68,17 @@ func Test_Healthy(t *testing.T) {
 
 	e.GET("/nginx").
 		Expect().
-		Status(http.StatusAccepted).
+		Status(http.StatusOK).
 		Body().
-		Contains(`<h2 class="headline" id="headline">Healthy Nginx is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
+		Contains(`Healthy Nginx`).
+		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
 	e.GET("/nginx").
 		Expect().
-		Status(http.StatusAccepted).
+		Status(http.StatusOK).
 		Body().
-		Contains(`<h2 class="headline" id="headline">Healthy Nginx is loading...</h2>`).
-		Contains(`Your instance will shutdown automatically after 1 minutes of inactivity.`)
+		Contains(`Healthy Nginx`).
+		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
 	time.Sleep(waitingTime)
 
