@@ -38,10 +38,11 @@ metadata:
 spec:
   plugin:
     sablier:
-      name: deployment_default_whoami-deployment_1
-      serviceUrl: 'http://sablier:10000'
-      timeout: 1m
-      displayname: 'Dynamic Whoami'
+      names: deployment_default_whoami-deployment_1
+      sablierUrl: 'http://sablier:10000'
+      sessionDuration: 1m
+      dynamic:
+        displayName: 'Dynamic Whoami'
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
@@ -51,10 +52,11 @@ metadata:
 spec:
   plugin:
     sablier:
-      name: deployment_default_whoami-deployment_1
-      serviceUrl: 'http://sablier:10000'
-      timeout: 1m
-      waitui: false
+      names: deployment_default_whoami-deployment_1
+      sablierUrl: 'http://sablier:10000'
+      sessionDuration: 1m
+      blocking:
+        timeout: 30s
 
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -66,9 +68,10 @@ spec:
   plugin:
     sablier:
       names: deployment_default_whoami-deployment_1,deployment_default_nginx-deployment_1
-      serviceUrl: 'http://sablier:10000'
-      timeout: 1m
-      displayname: 'Multiple Whoami'
+      sablierUrl: 'http://sablier:10000'
+      sessionDuration: 1m
+      dynamic:
+        displayName: 'Multiple Whoami'
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -171,10 +174,11 @@ metadata:
 spec:
   plugin:
     sablier:
-      name: deployment_default_nginx-deployment_1
-      serviceUrl: 'http://sablier:10000'
-      timeout: 1m
-      displayname: 'Healthy Nginx'
+      names: deployment_default_nginx-deployment_1
+      sablierUrl: 'http://sablier:10000'
+      sessionDuration: 1m
+      dynamic:
+        displayName: 'Healthy Nginx'
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
