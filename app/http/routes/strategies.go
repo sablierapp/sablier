@@ -61,12 +61,18 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	request := models.BlockingRequest{}
 
-	if err := c.BindUri(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	sessionState := s.SessionsManager.RequestReadySession(request.Names, request.SessionDuration, request.Timeout)
+	sessionState, err := s.SessionsManager.RequestReadySession(request.Names, request.SessionDuration, request.Timeout)
+
+	if err != nil {
+		c.Header("X-Sablier-Session-Status", "not-ready")
+		c.JSON(http.StatusGatewayTimeout, map[string]interface{}{"error": err.Error()})
+		return
+	}
 
 	if sessionState.IsReady() {
 		c.Header("X-Sablier-Session-Status", "ready")
@@ -74,6 +80,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
+	c.JSON(http.StatusOK, sessionState)
 }
 
 func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []pages.RenderOptionsInstanceState) {

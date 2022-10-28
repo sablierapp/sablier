@@ -26,8 +26,8 @@ func (s *SessionsManagerMock) RequestSession(names []string, duration time.Durat
 	return &s.SessionState
 }
 
-func (s *SessionsManagerMock) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) *sessions.SessionState {
-	return &s.SessionState
+func (s *SessionsManagerMock) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*sessions.SessionState, error) {
+	return &s.SessionState, nil
 }
 
 func (s *SessionsManagerMock) LoadSessions(io.ReadCloser) error {

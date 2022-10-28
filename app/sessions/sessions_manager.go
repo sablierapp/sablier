@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 type Manager interface {
 	RequestSession(names []string, duration time.Duration) *SessionState
-	RequestReadySession(names []string, duration time.Duration, timeout time.Duration) *SessionState
+	RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
@@ -139,8 +140,40 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	return &requestState, nil
 }
 
-func (s *SessionsManager) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) *SessionState {
-	return s.RequestSession(names, duration)
+func (s *SessionsManager) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+
+	session := s.RequestSession(names, duration)
+	if session.IsReady() {
+		return session, nil
+	}
+
+	ticker := time.NewTicker(5 * time.Second)
+	readiness := make(chan *SessionState)
+	quit := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				session := s.RequestSession(names, duration)
+				if session.IsReady() {
+					readiness <- session
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	select {
+	case status := <-readiness:
+		close(quit)
+		return status, nil
+	case <-time.After(timeout):
+		close(quit)
+		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
+	}
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
