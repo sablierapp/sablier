@@ -34,9 +34,9 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	sessionState := s.SessionsManager.RequestSession(request.Names, request.SessionDuration)
 
 	if sessionState.IsReady() {
-		// All requests are fulfilled, redirect to
-		c.Redirect(http.StatusTemporaryRedirect, "origin")
-		return
+		c.Header("X-Sablier-Session-Status", "ready")
+	} else {
+		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
 	renderOptions := pages.RenderOptions{
@@ -67,9 +67,9 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	sessionState := s.SessionsManager.RequestReadySession(request.Names, request.SessionDuration, request.Timeout)
 
 	if sessionState.IsReady() {
-		// All requests are fulfilled, redirect to
-		c.Redirect(http.StatusTemporaryRedirect, "origin")
-		return
+		c.Header("X-Sablier-Session-Status", "ready")
+	} else {
+		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
 }

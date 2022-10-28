@@ -7,7 +7,14 @@ import: github.com/acouvreur/sablier/plugins/traefik
 summary: "Start your containers on demand, shut them down automatically when there's no activity. Docker, Docker Swarm Mode and Kubernetes compatible."
 
 testData:
-  serviceUrl: http://sablier:10000
-  name: whoami
-  timeout: 1m
-  
+  sablierUrl: http://sablier:10000
+  names: whoami,nginx # comma separated names
+  sessionDuration: 1m
+  # Dynamic strategy, provides the waiting webui
+  dynamic:
+    displayName: My Title
+    theme: hacker-terminal
+  # Blocking strategy, waits until services are up and running
+  # but will not wait more than `timeout`
+  blocking: 
+    timeout: 1m

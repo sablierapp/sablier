@@ -140,7 +140,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 }
 
 func (s *SessionsManager) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) *SessionState {
-	return nil
+	return s.RequestSession(names, duration)
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {

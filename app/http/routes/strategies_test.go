@@ -43,9 +43,10 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 		session sessions.SessionState
 	}
 	tests := []struct {
-		name         string
-		arg          arg
-		expectedCode int
+		name                string
+		arg                 arg
+		expectedHeaderKey   string
+		expectedHeaderValue string
 	}{
 		{
 			name: "return HTML Theme",
@@ -62,7 +63,8 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 					}),
 				},
 			},
-			expectedCode: http.StatusOK,
+			expectedHeaderKey:   "X-Sablier-Session-Status",
+			expectedHeaderValue: "not-ready",
 		},
 		{
 			name: "temporary redirect when session is ready",
@@ -79,7 +81,8 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 					}),
 				},
 			},
-			expectedCode: http.StatusTemporaryRedirect,
+			expectedHeaderKey:   "X-Sablier-Session-Status",
+			expectedHeaderValue: "ready",
 		},
 	}
 	for _, tt := range tests {
@@ -99,7 +102,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 			res := recorder.Result()
 			defer res.Body.Close()
 
-			assert.Equal(t, c.Writer.Status(), tt.expectedCode)
+			assert.Equal(t, c.Writer.Header().Get(tt.expectedHeaderKey), tt.expectedHeaderValue)
 		})
 	}
 }
