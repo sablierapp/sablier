@@ -9,7 +9,7 @@ import (
 type SablierMiddleware struct {
 	client  *http.Client
 	request *http.Request
-	Next    http.Handler
+	next    http.Handler
 }
 
 // New function creates the configuration
@@ -23,7 +23,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	return &SablierMiddleware{
 		request: req,
 		client:  &http.Client{},
-		Next:    config.Next,
+		next:    next,
 	}, nil
 }
 
@@ -38,7 +38,7 @@ func (sm *SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request
 	defer resp.Body.Close()
 
 	if resp.Header.Get("X-Sablier-Session-Status") == "ready" {
-		sm.Next.ServeHTTP(rw, req)
+		sm.next.ServeHTTP(rw, req)
 	} else {
 		forward(resp, rw)
 	}

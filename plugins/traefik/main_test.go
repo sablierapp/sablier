@@ -33,11 +33,11 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 				body: "response from sablier",
 			},
 			fields: fields{
+				Next: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, "response from service")
+				}),
 				Config: &Config{
 					Dynamic: &DynamicConfiguration{},
-					Next: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						fmt.Fprint(w, "response from service")
-					}),
 				},
 			},
 			expected: "response from service",
@@ -51,11 +51,11 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 				body: "response from sablier",
 			},
 			fields: fields{
+				Next: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, "response from service")
+				}),
 				Config: &Config{
 					Dynamic: &DynamicConfiguration{},
-					Next: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						fmt.Fprint(w, "response from service")
-					}),
 				},
 			},
 			expected: "response from sablier",

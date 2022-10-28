@@ -22,7 +22,6 @@ type Config struct {
 	splittedNames   []string
 	Dynamic         *DynamicConfiguration  `yaml:"dynamic"`
 	Blocking        *BlockingConfiguration `yaml:"blocking"`
-	Next            http.Handler
 }
 
 func CreateConfig() *Config {
