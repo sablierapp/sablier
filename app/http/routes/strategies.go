@@ -24,7 +24,9 @@ type ServeStrategy struct {
 // ServeDynamic returns a waiting page displaying the session request if the session is not ready
 // If the session is ready, returns a redirect 307 with an arbitrary location
 func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
-	request := models.DynamicRequest{}
+	request := models.DynamicRequest{
+		Theme: "hacker-terminal",
+	}
 
 	if err := c.ShouldBind(&request); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
