@@ -61,7 +61,7 @@ func Render(options RenderOptions, writer io.Writer) error {
 		DisplayName:      options.DisplayName,
 		InstanceStates:   options.InstanceStates,
 		SessionDuration:  humanizeDuration(options.SessionDuration),
-		RefreshFrequency: fmt.Sprintf("%d", int64(options.RefreshFrequency)),
+		RefreshFrequency: fmt.Sprintf("%d", int64(options.RefreshFrequency.Seconds())),
 		Version:          options.Version,
 	})
 }
