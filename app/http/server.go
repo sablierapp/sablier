@@ -12,16 +12,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Start(conf config.Server, sessionManager sessions.Manager) error {
+func Start(serverConf config.Server, strategyConf config.Strategy, sessionManager sessions.Manager) error {
 	r := gin.New()
 
 	r.Use(middleware.Logger(log.New()), gin.Recovery())
 
-	base := r.Group(conf.BasePath)
+	base := r.Group(serverConf.BasePath)
 	{
 		api := base.Group("/api")
 		{
-			strategy := routes.ServeStrategy{SessionsManager: sessionManager}
+			strategy := routes.ServeStrategy{SessionsManager: sessionManager, StrategyConfig: strategyConf}
 			api.GET("/strategies/dynamic", strategy.ServeDynamic)
 			api.GET("/strategies/blocking", strategy.ServeBlocking)
 		}
@@ -29,7 +29,7 @@ func Start(conf config.Server, sessionManager sessions.Manager) error {
 
 	logRoutes(r.Routes())
 
-	return r.Run(fmt.Sprintf(":%d", conf.Port))
+	return r.Run(fmt.Sprintf(":%d", serverConf.Port))
 }
 
 func logRoutes(routes gin.RoutesInfo) {

@@ -61,6 +61,14 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", log.InfoLevel.String(), "The logging level. Can be one of [panic, fatal, error, warn, info, debug, trace]")
 	viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("logging.level"))
 
+	// strategy
+	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.DefaultTheme, "strategy.dynamic.default-theme", "hacker-terminal", "Default theme used for dynamic strategy")
+	viper.BindPFlag("strategy.dynamic.default-theme", startCmd.Flags().Lookup("strategy.dynamic.default-theme"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Dynamic.DefaultRefreshFrequency, "strategy.dynamic.default-refresh-frequency", 5*time.Second, "Default refresh frequency in the HTML page for dynamic strategy")
+	viper.BindPFlag("strategy.dynamic.default-refresh-frequency", startCmd.Flags().Lookup("strategy.dynamic.default-refresh-frequency"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")
+	viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
+
 	rootCmd.AddCommand(versionCmd)
 }
 

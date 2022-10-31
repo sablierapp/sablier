@@ -14,6 +14,7 @@ import (
 	"github.com/acouvreur/sablier/app/http/routes/models"
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/config"
 	"github.com/gin-gonic/gin"
 	"gotest.tools/v3/assert"
 )
@@ -92,6 +93,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 				SessionsManager: &SessionsManagerMock{
 					SessionState: tt.arg.session,
 				},
+				StrategyConfig: config.NewStrategyConfig(),
 			}
 			recorder := httptest.NewRecorder()
 			c := GetTestGinContext(recorder)

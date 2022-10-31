@@ -13,19 +13,22 @@ import (
 	"github.com/acouvreur/sablier/app/http/routes/models"
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/version"
 	"github.com/gin-gonic/gin"
 )
 
 type ServeStrategy struct {
 	SessionsManager sessions.Manager
+	StrategyConfig  config.Strategy
 }
 
 // ServeDynamic returns a waiting page displaying the session request if the session is not ready
 // If the session is ready, returns a redirect 307 with an arbitrary location
 func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	request := models.DynamicRequest{
-		Theme: "hacker-terminal",
+		Theme:            s.StrategyConfig.Dynamic.DefaultTheme,
+		RefreshFrequency: s.StrategyConfig.Dynamic.DefaultRefreshFrequency,
 	}
 
 	if err := c.ShouldBind(&request); err != nil {
@@ -59,7 +62,9 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 }
 
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
-	request := models.BlockingRequest{}
+	request := models.BlockingRequest{
+		Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
+	}
 
 	if err := c.ShouldBind(&request); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)

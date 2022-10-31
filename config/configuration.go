@@ -6,6 +6,7 @@ type Config struct {
 	Provider Provider
 	Sessions Sessions
 	Logging  Logging
+	Strategy Strategy
 }
 
 func NewConfig() Config {
@@ -14,6 +15,7 @@ func NewConfig() Config {
 		Storage:  NewStorageConfig(),
 		Provider: NewProviderConfig(),
 		Sessions: NewSessionsConfig(),
-		Logging:  NewLoggingLevel(),
+		Logging:  NewLoggingConfig(),
+		Strategy: NewStrategyConfig(),
 	}
 }
