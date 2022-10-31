@@ -3,9 +3,12 @@ package pages
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 	"testing/fstest"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var instanceStates []RenderOptionsInstanceState = []RenderOptionsInstanceState{
@@ -211,6 +214,51 @@ func TestRender(t *testing.T) {
 				t.Errorf("Render() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+		})
+	}
+}
+
+func TestRenderContent(t *testing.T) {
+	type args struct {
+		options RenderOptions
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantContent string
+	}{
+		{
+			name: "refresh frequency is 10 seconds",
+			args: args{
+				options: RenderOptions{
+					DisplayName:      "Test",
+					InstanceStates:   instanceStates,
+					Theme:            "ghost",
+					SessionDuration:  10 * time.Minute,
+					RefreshFrequency: 10 * time.Second,
+					CustomThemes:     nil,
+					Version:          "v0.0.0",
+				},
+			},
+			wantContent: "<meta http-equiv=\"refresh\" content=\"10\" />",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer := &bytes.Buffer{}
+			if err := Render(tt.args.options, writer); err != nil {
+				t.Errorf("Render() error = %v", err)
+				return
+			}
+
+			content, err := io.ReadAll(writer)
+
+			if err != nil {
+				t.Errorf("ReadAll() error = %v", err)
+				return
+			}
+
+			assert.Contains(t, string(content), tt.wantContent)
 		})
 	}
 }
