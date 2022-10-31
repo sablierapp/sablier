@@ -3,6 +3,7 @@ package config
 import "time"
 
 type DynamicStrategy struct {
+	CustomThemesPath        string        `mapstructure:"CUSTOMTHEMESPATH" yaml:"customThemesPath"`
 	DefaultTheme            string        `mapstructure:"DEFAULTTHEME" yaml:"defaultTheme" default:"hacker-terminal"`
 	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULTREFRESHFREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
 }

@@ -21,7 +21,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionManage
 	{
 		api := base.Group("/api")
 		{
-			strategy := routes.ServeStrategy{SessionsManager: sessionManager, StrategyConfig: strategyConf}
+			strategy := routes.NewServeStrategy(sessionManager, strategyConf)
 			api.GET("/strategies/dynamic", strategy.ServeDynamic)
 			api.GET("/strategies/blocking", strategy.ServeBlocking)
 		}

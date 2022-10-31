@@ -2,7 +2,9 @@ package routes
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -18,13 +20,32 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var osDirFS = os.DirFS
+
 type ServeStrategy struct {
+	customThemesFS fs.FS
+	customThemes   map[string]bool
+
 	SessionsManager sessions.Manager
 	StrategyConfig  config.Strategy
 }
 
-// ServeDynamic returns a waiting page displaying the session request if the session is not ready
-// If the session is ready, returns a redirect 307 with an arbitrary location
+func NewServeStrategy(sessionsManager sessions.Manager, conf config.Strategy) *ServeStrategy {
+
+	serveStrategy := &ServeStrategy{
+		SessionsManager: sessionsManager,
+		StrategyConfig:  conf,
+	}
+
+	if conf.Dynamic.CustomThemesPath != "" {
+		customThemesFs := osDirFS(conf.Dynamic.CustomThemesPath)
+		serveStrategy.customThemesFS = customThemesFs
+		serveStrategy.customThemes = loadAllowedThemes(customThemesFs)
+	}
+
+	return serveStrategy
+}
+
 func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	request := models.DynamicRequest{
 		Theme:            s.StrategyConfig.Dynamic.DefaultTheme,
@@ -45,12 +66,14 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	}
 
 	renderOptions := pages.RenderOptions{
-		DisplayName:      request.DisplayName,
-		SessionDuration:  request.SessionDuration,
-		Theme:            request.Theme,
-		Version:          version.Version,
-		RefreshFrequency: 5 * time.Second,
-		InstanceStates:   sessionStateToRenderOptionsInstanceState(sessionState),
+		DisplayName:         request.DisplayName,
+		SessionDuration:     request.SessionDuration,
+		Theme:               request.Theme,
+		CustomThemes:        s.customThemesFS,
+		AllowedCustomThemes: s.customThemes,
+		Version:             version.Version,
+		RefreshFrequency:    5 * time.Second,
+		InstanceStates:      sessionStateToRenderOptionsInstanceState(sessionState),
 	}
 
 	c.Header("Content-Type", "text/html")
@@ -117,4 +140,25 @@ func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pag
 		DesiredReplicas: 1, //instanceState.DesiredReplicas,
 		Error:           err,
 	}
+}
+
+func loadAllowedThemes(dir fs.FS) (allowedThemes map[string]bool) {
+	fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(d.Name(), ".html") {
+			log.Debugf("found theme at \"%s\" can be loaded using \"%s\"", path, strings.TrimSuffix(path, ".html"))
+			allowedThemes[strings.TrimSuffix(path, ".html")] = true
+		} else {
+			log.Tracef("ignoring file \"%s\" because it has no .html suffix", path)
+		}
+		return nil
+	})
+	return
 }

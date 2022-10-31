@@ -30,7 +30,11 @@ type RenderOptions struct {
 	RefreshFrequency time.Duration
 	Theme            string
 	CustomThemes     fs.FS
-	Version          string
+	// If custom theme is loaded through os.DirFS, nothing prevents you
+	// from escaping the prefix with relative path such as ..
+	// The `AllowedCustomThemes` are the themes that were scanned during initilization
+	AllowedCustomThemes map[string]bool
+	Version             string
 }
 
 type TemplateValues struct {
@@ -46,13 +50,10 @@ func Render(options RenderOptions, writer io.Writer) error {
 	var err error
 
 	// Load custom theme if provided
-	if options.CustomThemes != nil {
+	if options.CustomThemes != nil && options.AllowedCustomThemes[options.Theme] {
 		tpl, err = template.ParseFS(options.CustomThemes, fmt.Sprintf("%s.html", options.Theme))
-	}
-
-	// TODO: Optimize this so we don't have to fallback but instead know if it's a embedded theme or custom theme.
-	if options.CustomThemes == nil || err != nil {
-		// Load embedded themes if the custom theme
+	} else {
+		// Load from the embedded FS
 		tpl, err = template.ParseFS(themes, fmt.Sprintf("themes/%s.html", options.Theme))
 	}
 

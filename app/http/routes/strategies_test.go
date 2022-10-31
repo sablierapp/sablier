@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sync"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/acouvreur/sablier/app/http/routes/models"
@@ -175,4 +178,103 @@ func createMap(instances []*instance.State) (store *sync.Map) {
 	}
 
 	return
+}
+
+func TestNewServeStrategy(t *testing.T) {
+	type args struct {
+		sessionsManager sessions.Manager
+		conf            config.Strategy
+	}
+	tests := []struct {
+		name    string
+		args    args
+		osDirFS fs.FS
+		want    map[string]bool
+	}{
+		{
+			name: "load custom themes",
+			args: args{
+				sessionsManager: &SessionsManagerMock{},
+				conf: config.Strategy{
+					Dynamic: config.DynamicStrategy{
+						CustomThemesPath: "my/path/to/themes",
+					},
+				},
+			},
+			osDirFS: fstest.MapFS{
+				"my/path/to/themes/marvel.html":    {Data: []byte("thor")},
+				"my/path/to/themes/dc-comics.html": {Data: []byte("batman")},
+			},
+			want: map[string]bool{
+				"marvel":    true,
+				"dc-comics": true,
+			},
+		},
+		{
+			name: "load custom themes recursively",
+			args: args{
+				sessionsManager: &SessionsManagerMock{},
+				conf: config.Strategy{
+					Dynamic: config.DynamicStrategy{
+						CustomThemesPath: "my/path/to/themes",
+					},
+				},
+			},
+			osDirFS: fstest.MapFS{
+				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
+				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
+				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
+			},
+			want: map[string]bool{
+				"marvel":          true,
+				"dc-comics":       true,
+				"inner/dc-comics": true,
+			},
+		},
+		{
+			name: "do not load custom themes outside of path",
+			args: args{
+				sessionsManager: &SessionsManagerMock{},
+				conf: config.Strategy{
+					Dynamic: config.DynamicStrategy{
+						CustomThemesPath: "my/path/to/themes",
+					},
+				},
+			},
+			osDirFS: fstest.MapFS{
+				"my/path/to/superman.html":               {Data: []byte("superman")},
+				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
+				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
+				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
+			},
+			want: map[string]bool{
+				"marvel":          true,
+				"dc-comics":       true,
+				"inner/dc-comics": true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			oldosDirFS := osDirFS
+			defer func() { osDirFS = oldosDirFS }()
+
+			myOsDirFS := func(dir string) fs.FS {
+				fs, err := fs.Sub(tt.osDirFS, dir)
+
+				if err != nil {
+					panic(err)
+				}
+
+				return fs
+			}
+
+			osDirFS = myOsDirFS
+
+			if got := NewServeStrategy(tt.args.sessionsManager, tt.args.conf); !reflect.DeepEqual(got.customThemes, tt.want) {
+				t.Errorf("NewServeStrategy() = %v, want %v", got.customThemes, tt.want)
+			}
+		})
+	}
 }

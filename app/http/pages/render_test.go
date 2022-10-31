@@ -129,6 +129,10 @@ func TestRender(t *testing.T) {
 						"marvel.html":    {Data: []byte("{{ .DisplayName }}")},
 						"dc-comics.html": {Data: []byte("batman")},
 					},
+					AllowedCustomThemes: map[string]bool{
+						"marvel":    true,
+						"dc-comics": true,
+					},
 					Version: "v0.0.0",
 				},
 			},
@@ -146,6 +150,10 @@ func TestRender(t *testing.T) {
 					CustomThemes: fstest.MapFS{
 						"marvel.html":    {Data: []byte("thor")},
 						"dc-comics.html": {Data: []byte("batman")},
+					},
+					AllowedCustomThemes: map[string]bool{
+						"marvel":    true,
+						"dc-comics": true,
 					},
 					Version: "v0.0.0",
 				},
@@ -165,10 +173,35 @@ func TestRender(t *testing.T) {
 						"marvel.html":    {Data: []byte("thor")},
 						"dc-comics.html": {Data: []byte("batman")},
 					},
+					AllowedCustomThemes: map[string]bool{
+						"marvel":    true,
+						"dc-comics": true,
+					},
 					Version: "v0.0.0",
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "Error loading non allowed custom theme",
+			args: args{
+				options: RenderOptions{
+					DisplayName:      "Test",
+					InstanceStates:   instanceStates,
+					Theme:            "dc-comics",
+					SessionDuration:  10 * time.Minute,
+					RefreshFrequency: 5 * time.Second,
+					CustomThemes: fstest.MapFS{
+						"marvel.html":    {Data: []byte("thor")},
+						"dc-comics.html": {Data: []byte("batman")},
+					},
+					AllowedCustomThemes: map[string]bool{
+						"marvel": true,
+					},
+					Version: "v0.0.0",
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
