@@ -37,7 +37,7 @@ run_docker_swarm_test() {
     docker service logs ${DOCKER_STACK_NAME}_sablier
     docker service logs ${DOCKER_STACK_NAME}_traefik
   fi
-  prepare_docker_stack
+  destroy_docker_stack
 }
 
 trap destroy_docker_swarm EXIT
