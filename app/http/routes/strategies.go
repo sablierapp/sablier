@@ -40,7 +40,7 @@ func NewServeStrategy(sessionsManager sessions.Manager, conf config.Strategy) *S
 	if conf.Dynamic.CustomThemesPath != "" {
 		customThemesFs := osDirFS(conf.Dynamic.CustomThemesPath)
 		serveStrategy.customThemesFS = customThemesFs
-		serveStrategy.customThemes = loadAllowedThemes(customThemesFs)
+		serveStrategy.customThemes = listThemes(customThemesFs)
 	}
 
 	return serveStrategy
@@ -82,6 +82,26 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+}
+
+func (s *ServeStrategy) ServeDynamicThemes(c *gin.Context) {
+
+	customThemes := []string{}
+	for theme := range s.customThemes {
+		customThemes = append(customThemes, theme)
+	}
+	sort.Strings(customThemes)
+
+	embeddedThemes := []string{}
+	for theme := range listThemes(pages.Themes) {
+		embeddedThemes = append(embeddedThemes, strings.TrimPrefix(theme, "themes/"))
+	}
+	sort.Strings(embeddedThemes)
+
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"custom":   customThemes,
+		"embedded": embeddedThemes,
+	})
 }
 
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
@@ -142,7 +162,8 @@ func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pag
 	}
 }
 
-func loadAllowedThemes(dir fs.FS) (allowedThemes map[string]bool) {
+func listThemes(dir fs.FS) (themes map[string]bool) {
+	themes = make(map[string]bool)
 	fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -154,7 +175,7 @@ func loadAllowedThemes(dir fs.FS) (allowedThemes map[string]bool) {
 
 		if strings.HasSuffix(d.Name(), ".html") {
 			log.Debugf("found theme at \"%s\" can be loaded using \"%s\"", path, strings.TrimSuffix(path, ".html"))
-			allowedThemes[strings.TrimSuffix(path, ".html")] = true
+			themes[strings.TrimSuffix(path, ".html")] = true
 		} else {
 			log.Tracef("ignoring file \"%s\" because it has no .html suffix", path)
 		}

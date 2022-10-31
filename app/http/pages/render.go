@@ -13,7 +13,7 @@ import (
 )
 
 //go:embed themes/*
-var themes embed.FS
+var Themes embed.FS
 
 type RenderOptionsInstanceState struct {
 	Name            string
@@ -54,7 +54,7 @@ func Render(options RenderOptions, writer io.Writer) error {
 		tpl, err = template.ParseFS(options.CustomThemes, fmt.Sprintf("%s.html", options.Theme))
 	} else {
 		// Load from the embedded FS
-		tpl, err = template.ParseFS(themes, fmt.Sprintf("themes/%s.html", options.Theme))
+		tpl, err = template.ParseFS(Themes, fmt.Sprintf("themes/%s.html", options.Theme))
 	}
 
 	if err != nil {

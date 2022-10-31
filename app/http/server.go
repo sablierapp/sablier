@@ -23,6 +23,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionManage
 		{
 			strategy := routes.NewServeStrategy(sessionManager, strategyConf)
 			api.GET("/strategies/dynamic", strategy.ServeDynamic)
+			api.GET("/strategies/dynamic/themes", strategy.ServeDynamicThemes)
 			api.GET("/strategies/blocking", strategy.ServeBlocking)
 		}
 	}

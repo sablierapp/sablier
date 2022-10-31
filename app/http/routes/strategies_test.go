@@ -278,3 +278,94 @@ func TestNewServeStrategy(t *testing.T) {
 		})
 	}
 }
+
+func TestServeStrategy_ServeDynamicThemes(t *testing.T) {
+	type fields struct {
+		StrategyConfig config.Strategy
+	}
+	tests := []struct {
+		name     string
+		fields   fields
+		osDirFS  fs.FS
+		expected map[string]any
+	}{
+		{
+			name: "load custom themes",
+			fields: fields{StrategyConfig: config.Strategy{
+				Dynamic: config.DynamicStrategy{
+					CustomThemesPath: "my/path/to/themes",
+				},
+			}},
+			osDirFS: fstest.MapFS{
+				"my/path/to/superman.html":               {Data: []byte("superman")},
+				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
+				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
+				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
+			},
+			expected: map[string]any{
+				"custom": []any{
+					"dc-comics",
+					"inner/dc-comics",
+					"marvel",
+				},
+				"embedded": []any{
+					"ghost",
+					"hacker-terminal",
+					"matrix",
+					"shuffle",
+				},
+			},
+		},
+		{
+			name: "load without custom themes",
+			expected: map[string]any{
+				"custom": []any{},
+				"embedded": []any{
+					"ghost",
+					"hacker-terminal",
+					"matrix",
+					"shuffle",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			oldosDirFS := osDirFS
+			defer func() { osDirFS = oldosDirFS }()
+
+			myOsDirFS := func(dir string) fs.FS {
+				fs, err := fs.Sub(tt.osDirFS, dir)
+
+				if err != nil {
+					panic(err)
+				}
+
+				return fs
+			}
+
+			osDirFS = myOsDirFS
+
+			s := NewServeStrategy(nil, tt.fields.StrategyConfig)
+
+			recorder := httptest.NewRecorder()
+			c := GetTestGinContext(recorder)
+
+			s.ServeDynamicThemes(c)
+
+			res := recorder.Result()
+			defer res.Body.Close()
+
+			jsonRes := make(map[string]interface{})
+			err := json.NewDecoder(res.Body).Decode(&jsonRes)
+
+			if err != nil {
+				panic(err)
+			}
+
+			assert.DeepEqual(t, jsonRes, tt.expected)
+
+		})
+	}
+}
