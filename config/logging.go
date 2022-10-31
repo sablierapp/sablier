@@ -6,7 +6,7 @@ type Logging struct {
 	Level string `mapstructure:"LEVEL" yaml:"level" default:"info"`
 }
 
-func NewLoggingLevel() Logging {
+func NewLoggingConfig() Logging {
 	return Logging{
 		Level: log.InfoLevel.String(),
 	}
