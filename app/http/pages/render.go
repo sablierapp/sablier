@@ -47,9 +47,12 @@ func Render(options RenderOptions, writer io.Writer) error {
 
 	// Load custom theme if provided
 	if options.CustomThemes != nil {
-		tpl, err = template.ParseFS(options.CustomThemes, options.Theme)
-	} else {
-		// Load selected theme
+		tpl, err = template.ParseFS(options.CustomThemes, fmt.Sprintf("%s.html", options.Theme))
+	}
+
+	// TODO: Optimize this so we don't have to fallback but instead know if it's a embedded theme or custom theme.
+	if options.CustomThemes == nil || err != nil {
+		// Load embedded themes if the custom theme
 		tpl, err = template.ParseFS(themes, fmt.Sprintf("themes/%s.html", options.Theme))
 	}
 

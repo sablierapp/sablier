@@ -122,7 +122,7 @@ func TestRender(t *testing.T) {
 				options: RenderOptions{
 					DisplayName:      "Test",
 					InstanceStates:   instanceStates,
-					Theme:            "dc-comics.html",
+					Theme:            "dc-comics",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
 					CustomThemes: fstest.MapFS{
@@ -151,6 +151,24 @@ func TestRender(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "Load embedded theme with custom theme provided",
+			args: args{
+				options: RenderOptions{
+					DisplayName:      "Test",
+					InstanceStates:   instanceStates,
+					Theme:            "hacker-terminal",
+					SessionDuration:  10 * time.Minute,
+					RefreshFrequency: 5 * time.Second,
+					CustomThemes: fstest.MapFS{
+						"marvel.html":    {Data: []byte("thor")},
+						"dc-comics.html": {Data: []byte("batman")},
+					},
+					Version: "v0.0.0",
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
