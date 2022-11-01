@@ -1,0 +1,29 @@
+{
+  "Server": {
+    "Port": 2222,
+    "BasePath": "/envvar/"
+  },
+  "Storage": {
+    "File": "/tmp/envvar.json"
+  },
+  "Provider": {
+    "Name": "envvar"
+  },
+  "Sessions": {
+    "DefaultDuration": 7200000000000,
+    "ExpirationInterval": 7200000000000
+  },
+  "Logging": {
+    "Level": "debug"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "/tmp/envvar/themes",
+      "DefaultTheme": "envvar",
+      "DefaultRefreshFrequency": 7200000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 7200000000000
+    }
+  }
+}

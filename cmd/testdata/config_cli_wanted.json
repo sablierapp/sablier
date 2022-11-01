@@ -1,0 +1,29 @@
+{
+  "Server": {
+    "Port": 3333,
+    "BasePath": "/cli/"
+  },
+  "Storage": {
+    "File": "/tmp/cli.json"
+  },
+  "Provider": {
+    "Name": "cli"
+  },
+  "Sessions": {
+    "DefaultDuration": 10800000000000,
+    "ExpirationInterval": 10800000000000
+  },
+  "Logging": {
+    "Level": "info"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "/tmp/cli/themes",
+      "DefaultTheme": "cli",
+      "DefaultRefreshFrequency": 10800000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 10800000000000
+    }
+  }
+}

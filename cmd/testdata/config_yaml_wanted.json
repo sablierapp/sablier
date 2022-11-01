@@ -1,0 +1,29 @@
+{
+  "Server": {
+    "Port": 1111,
+    "BasePath": "/configfile/"
+  },
+  "Storage": {
+    "File": "/tmp/configfile.json"
+  },
+  "Provider": {
+    "Name": "configfile"
+  },
+  "Sessions": {
+    "DefaultDuration": 3600000000000,
+    "ExpirationInterval": 3600000000000
+  },
+  "Logging": {
+    "Level": "trace"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "/tmp/configfile/themes",
+      "DefaultTheme": "configfile",
+      "DefaultRefreshFrequency": 3600000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 3600000000000
+    }
+  }
+}

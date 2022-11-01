@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -17,8 +18,17 @@ const (
 	defaultConfigFilename = "config"
 )
 
-var (
-	rootCmd = &cobra.Command{
+var conf = config.NewConfig()
+
+func Execute() {
+	cmd := NewRootCommand()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func NewRootCommand() *cobra.Command {
+	rootCmd := &cobra.Command{
 		Use:   "sablier",
 		Short: "A webserver to start container on demand",
 		Long: `Sablier is an API that start containers on demand.
@@ -28,18 +38,8 @@ It provides an integrations with multiple reverse proxies and different loading 
 			return initializeConfig(cmd)
 		},
 	}
-)
 
-// Execute executes the root command.
-func Execute() error {
-	return rootCmd.Execute()
-}
-
-var conf = config.NewConfig()
-
-func init() {
-
-	rootCmd.AddCommand(startCmd)
+	startCmd := newStartCommand()
 	// Provider flags
 	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
 	viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
@@ -54,7 +54,7 @@ func init() {
 	// Sessions flags
 	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.default-duration", time.Duration(5)*time.Minute, "The default session duration")
 	viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))
-	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
+	startCmd.Flags().DurationVar(&conf.Sessions.ExpirationInterval, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
 	viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
 
 	// logging level
@@ -71,7 +71,10 @@ func init() {
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")
 	viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
 
+	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(versionCmd)
+
+	return rootCmd
 }
 
 func initializeConfig(cmd *cobra.Command) error {
