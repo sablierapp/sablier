@@ -182,7 +182,7 @@ func (s *SessionsManager) RequestReadySession(names []string, duration time.Dura
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
-	s.store.Put(instance.Name, *instance, tinykv.ExpiresAfter(duration))
+	s.store.Put(instance.Name, *instance, duration)
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {

@@ -2,7 +2,6 @@ package tinykv
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -58,40 +57,14 @@ type entry[T any] struct {
 
 // KV is a registry for values (like/is a concurrent map) with timeout and sliding timeout
 type KV[T any] interface {
-	Delete(k string)
 	Get(k string) (v T, ok bool)
 	Keys() (keys []string)
 	Values() (values []T)
 	Entries() (entries map[string]entry[T])
-	Put(k string, v T, options ...PutOption) error
-	Take(k string) (v T, ok bool)
+	Put(k string, v T, expiresAfter time.Duration) error
 	Stop()
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
-}
-
-//-----------------------------------------------------------------------------
-
-type putOpt struct {
-	expiresAfter time.Duration
-	cas          func(interface{}, bool) bool
-}
-
-// PutOption extra options for put
-type PutOption func(*putOpt)
-
-// ExpiresAfter entry will expire after this time
-func ExpiresAfter(expiresAfter time.Duration) PutOption {
-	return func(opt *putOpt) {
-		opt.expiresAfter = expiresAfter
-	}
-}
-
-// CAS for performing a compare and swap
-func CAS(cas func(oldValue interface{}, found bool) bool) PutOption {
-	return func(opt *putOpt) {
-		opt.cas = cas
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -131,15 +104,6 @@ func (kv *store[T]) Stop() {
 	kv.stopOnce.Do(func() { close(kv.stop) })
 }
 
-// Delete deletes an entry
-func (kv *store[T]) Delete(k string) {
-	kv.mx.Lock()
-	defer kv.mx.Unlock()
-	delete(kv.kv, k)
-}
-
-// Get gets an entry from KV store
-// and if a sliding timeout is set, it will be slided
 func (kv *store[T]) Get(k string) (T, bool) {
 	var zero T
 	kv.mx.Lock()
@@ -202,23 +166,16 @@ func (kv *store[T]) Entries() (entries map[string]entry[T]) {
 }
 
 // Put puts an entry inside kv store with provided options
-func (kv *store[T]) Put(k string, v T, options ...PutOption) error {
-	opt := &putOpt{}
-	for _, v := range options {
-		v(opt)
-	}
+func (kv *store[T]) Put(k string, v T, expiresAfter time.Duration) error {
 	e := &entry[T]{
 		value: v,
 	}
 	kv.mx.Lock()
 	defer kv.mx.Unlock()
-	if opt.expiresAfter > 0 {
-		e.timeout = newTimeout(k, opt.expiresAfter)
-		timeheapPush(&kv.heap, e.timeout)
-	}
-	if opt.cas != nil {
-		return kv.cas(k, e, opt.cas)
-	}
+
+	e.timeout = newTimeout(k, expiresAfter)
+	timeheapPush(&kv.heap, e.timeout)
+
 	kv.kv[k] = e
 	return nil
 }
@@ -238,29 +195,28 @@ func (e *entry[T]) MarshalJSON() ([]byte, error) {
 			Value:     e.value,
 			ExpiresAt: e.expiresAt,
 		})
-	} else {
-		return json.Marshal(&struct {
-			Value T `json:"value"`
-		}{
-			Value: e.value,
-		})
 	}
+	return nil, nil
 }
 
 type minimalEntry[T any] struct {
 	Value        T
 	ExpiresAfter time.Duration
+	expired      bool
 }
 
 func (kv *store[T]) UnmarshalJSON(b []byte) error {
 
-	var result map[string]minimalEntry[T]
+	var entries map[string]minimalEntry[T]
 
-	// Unmarshal or Decode the JSON to the interface.
-	json.Unmarshal([]byte(b), &result)
+	if err := json.Unmarshal([]byte(b), &entries); err != nil {
+		return err
+	}
 
-	for k, v := range result {
-		kv.Put(k, v.Value, ExpiresAfter(v.ExpiresAfter))
+	for k, v := range entries {
+		if !v.expired {
+			kv.Put(k, v.Value, v.ExpiresAfter)
+		}
 	}
 
 	return nil
@@ -268,52 +224,23 @@ func (kv *store[T]) UnmarshalJSON(b []byte) error {
 
 func (e *minimalEntry[T]) UnmarshalJSON(b []byte) error {
 
-	result := &struct {
+	entry := &struct {
 		Value     T         `json:"value"`
 		ExpiresAt time.Time `json:"expiresAt"`
 	}{}
 
-	// Unmarshal or Decode the JSON to the interface.
-	json.Unmarshal([]byte(b), &result)
+	if err := json.Unmarshal([]byte(b), &entry); err != nil {
+		return err
+	}
 
-	if result.ExpiresAt.After(time.Now()) {
-		e.Value = result.Value
-		e.ExpiresAfter = time.Until(result.ExpiresAt)
+	if entry.ExpiresAt.After(time.Now()) {
+		e.Value = entry.Value
+		e.ExpiresAfter = time.Until(entry.ExpiresAt)
+		e.expired = false
+	} else {
+		e.expired = true
 	}
 	return nil
-}
-
-func (kv *store[T]) cas(k string, e *entry[T], casFunc func(interface{}, bool) bool) error {
-	old, ok := kv.kv[k]
-	var oldValue T
-	if ok && old != nil {
-		oldValue = old.value
-	}
-	if !casFunc(oldValue, ok) {
-		return ErrCASCond
-	}
-	if ok && old != nil {
-		if e.timeout != nil {
-			old.timeout = e.timeout
-		}
-		old.value = e.value
-		e = old
-	}
-	kv.kv[k] = e
-	return nil
-}
-
-// Take takes an entry out of kv store
-func (kv *store[T]) Take(k string) (T, bool) {
-	var zero T
-	kv.mx.Lock()
-	defer kv.mx.Unlock()
-	e, ok := kv.kv[k]
-	if ok {
-		delete(kv.kv, k)
-		return e.value, ok
-	}
-	return zero, ok
 }
 
 //-----------------------------------------------------------------------------
@@ -413,21 +340,3 @@ func notifyExpirations[T any](
 		})
 	}
 }
-
-//-----------------------------------------------------------------------------
-
-// errors
-var (
-	ErrCASCond = errorf("CAS COND FAILED")
-)
-
-//-----------------------------------------------------------------------------
-
-type sentinelErr string
-
-func (v sentinelErr) Error() string { return string(v) }
-func errorf(format string, a ...interface{}) error {
-	return sentinelErr(fmt.Sprintf(format, a...))
-}
-
-//-----------------------------------------------------------------------------
