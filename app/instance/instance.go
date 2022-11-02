@@ -7,10 +7,10 @@ var NotReady = "not-ready"
 var Unrecoverable = "unrecoverable"
 
 type State struct {
-	Name            string
-	CurrentReplicas int
-	Status          string
-	Message         string
+	Name            string `json:"name"`
+	CurrentReplicas int    `json:"currentReplicas"`
+	Status          string `json:"status"`
+	Message         string `json:"message,omitempty"`
 }
 
 func (instance State) IsReady() bool {

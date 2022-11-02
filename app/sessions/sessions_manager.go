@@ -40,7 +40,12 @@ func (sm *SessionsManager) LoadSessions(reader io.ReadCloser) error {
 
 func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
 	defer writer.Close()
-	return json.NewEncoder(writer).Encode(sm.store)
+
+	encoder := json.NewEncoder(writer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+
+	return encoder.Encode(sm.store)
 }
 
 type InstanceState struct {
