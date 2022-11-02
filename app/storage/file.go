@@ -50,7 +50,7 @@ func (fs *FileStorage) Writer() (io.WriteCloser, error) {
 	if !fs.Enabled() {
 		return nil, fmt.Errorf("file storage is not enabled")
 	}
-	return os.OpenFile(fs.file, os.O_RDWR|os.O_CREATE, 0755)
+	return os.OpenFile(fs.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 }
 
 func (fs *FileStorage) Enabled() bool {
