@@ -46,10 +46,7 @@ func Start(conf config.Config) error {
 		loadSessions(storage, sessionsManager)
 	}
 
-	err = http.Start(conf.Server, conf.Strategy, sessionsManager)
-	if err != nil {
-		return err
-	}
+	http.Start(conf.Server, conf.Strategy, sessionsManager)
 
 	return nil
 }
