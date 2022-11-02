@@ -115,7 +115,7 @@ func TestMarshalJSON(t *testing.T) {
 	jsonb, err := json.Marshal(rg)
 	assert.Nil(err)
 	json := string(jsonb)
-	assert.Regexp(`{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z","expiresAfter":3000000000000}}`, json)
+	assert.Regexp(`{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z"}}`, json)
 }
 
 func TestUnmarshalJSON(t *testing.T) {
@@ -123,7 +123,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	in5Minutes := time.Now().Add(time.Minute * 5)
 	in5MinutesJson, err := json.Marshal(in5Minutes)
 	assert.Nil(err)
-	jsons := `{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":` + string(in5MinutesJson) + `,"expiresAfter":3000000000000}}`
+	jsons := `{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":` + string(in5MinutesJson) + `}}`
 
 	rg := New[int](0)
 	defer rg.Stop()

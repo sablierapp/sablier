@@ -232,13 +232,11 @@ func (kv *store[T]) MarshalJSON() ([]byte, error) {
 func (e *entry[T]) MarshalJSON() ([]byte, error) {
 	if e.timeout != nil {
 		return json.Marshal(&struct {
-			Value        T             `json:"value"`
-			ExpiresAt    time.Time     `json:"expiresAt"`
-			ExpiresAfter time.Duration `json:"expiresAfter"`
+			Value     T         `json:"value"`
+			ExpiresAt time.Time `json:"expiresAt"`
 		}{
-			Value:        e.value,
-			ExpiresAt:    e.expiresAt,
-			ExpiresAfter: e.expiresAfter,
+			Value:     e.value,
+			ExpiresAt: e.expiresAt,
 		})
 	} else {
 		return json.Marshal(&struct {
