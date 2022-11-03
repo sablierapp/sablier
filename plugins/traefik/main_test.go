@@ -37,7 +37,8 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 					fmt.Fprint(w, "response from service")
 				}),
 				Config: &Config{
-					Dynamic: &DynamicConfiguration{},
+					SessionDuration: "1m",
+					Dynamic:         &DynamicConfiguration{},
 				},
 			},
 			expected: "response from service",
@@ -55,7 +56,8 @@ func TestSablierMiddleware_ServeHTTP(t *testing.T) {
 					fmt.Fprint(w, "response from service")
 				}),
 				Config: &Config{
-					Dynamic: &DynamicConfiguration{},
+					SessionDuration: "1m",
+					Dynamic:         &DynamicConfiguration{},
 				},
 			},
 			expected: "response from sablier",

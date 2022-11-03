@@ -62,6 +62,43 @@ func TestConfig_BuildRequest(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "dynamic session with invalid session duration",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "invalid",
+				Dynamic:         &traefik.DynamicConfiguration{},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "dynamic session with refresh frequency",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Dynamic: &traefik.DynamicConfiguration{
+					RefreshFrequency: "1m",
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&refresh_frequency=1m&session_duration=1m", nil),
+			wantErr: false,
+		},
+		{
+			name: "dynamic session with invalid refresh frequency",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Dynamic: &traefik.DynamicConfiguration{
+					RefreshFrequency: "invalid",
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "blocking session with default values",
 			fields: fields{
 				SablierURL:      "http://sablier:10000",
@@ -84,6 +121,19 @@ func TestConfig_BuildRequest(t *testing.T) {
 			},
 			want:    createRequest("GET", "http://sablier:10000/api/strategies/blocking?names=nginx&names=apache&session_duration=1m&timeout=5m", nil),
 			wantErr: false,
+		},
+		{
+			name: "blocking session with invalid timeout value",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Blocking: &traefik.BlockingConfiguration{
+					Timeout: "invalid",
+				},
+			},
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "both strategies defined",

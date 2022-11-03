@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type DynamicConfiguration struct {
-	DisplayName string `yaml:"displayname"`
-	Theme       string `yaml:"theme"`
+	DisplayName      string `yaml:"displayname"`
+	Theme            string `yaml:"theme"`
+	RefreshFrequency string `yaml:"refreshFrequency"`
 }
 
 type BlockingConfiguration struct {
@@ -76,6 +78,12 @@ func (c *Config) buildDynamicRequest(middlewareName string) (*http.Request, erro
 
 	q := request.URL.Query()
 
+	_, err = time.ParseDuration(c.SessionDuration)
+
+	if err != nil {
+		return nil, fmt.Errorf("error parsing dynamic.sessionDuration: %v", err)
+	}
+
 	q.Add("session_duration", c.SessionDuration)
 	for _, name := range c.splittedNames {
 		q.Add("names", name)
@@ -90,6 +98,16 @@ func (c *Config) buildDynamicRequest(middlewareName string) (*http.Request, erro
 
 	if c.Dynamic.Theme != "" {
 		q.Add("theme", c.Dynamic.Theme)
+	}
+
+	if c.Dynamic.RefreshFrequency != "" {
+		_, err := time.ParseDuration(c.Dynamic.RefreshFrequency)
+
+		if err != nil {
+			return nil, fmt.Errorf("error parsing dynamic.refreshFrequency: %v", err)
+		}
+
+		q.Add("refresh_frequency", c.Dynamic.RefreshFrequency)
 	}
 
 	request.URL.RawQuery = q.Encode()
@@ -115,6 +133,12 @@ func (c *Config) buildBlockingRequest() (*http.Request, error) {
 	}
 
 	if c.Blocking.Timeout != "" {
+		_, err := time.ParseDuration(c.Blocking.Timeout)
+
+		if err != nil {
+			return nil, fmt.Errorf("error paring blocking.timeout: %v", err)
+		}
+
 		q.Add("timeout", c.Blocking.Timeout)
 	}
 
