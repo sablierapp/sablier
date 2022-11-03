@@ -49,8 +49,8 @@ func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
 }
 
 type InstanceState struct {
-	Instance *instance.State
-	Error    error
+	Instance *instance.State `json:"instance"`
+	Error    error           `json:"error"`
 }
 
 type SessionState struct {
@@ -70,6 +70,14 @@ func (s *SessionState) IsReady() bool {
 	})
 
 	return ready
+}
+
+func (s *SessionState) Status() string {
+	if s.IsReady() {
+		return "ready"
+	}
+
+	return "not-ready"
 }
 
 func (s *SessionsManager) RequestSession(names []string, duration time.Duration) (sessionState *SessionState) {
@@ -194,5 +202,8 @@ func (s *SessionState) MarshalJSON() ([]byte, error) {
 		return true
 	})
 
-	return json.Marshal(instances)
+	return json.Marshal(map[string]any{
+		"instances": instances,
+		"status":    s.Status(),
+	})
 }

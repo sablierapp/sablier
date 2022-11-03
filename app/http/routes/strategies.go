@@ -128,7 +128,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
-	c.JSON(http.StatusOK, sessionState)
+	c.JSON(http.StatusOK, map[string]interface{}{"session": sessionState})
 }
 
 func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []pages.RenderOptionsInstanceState) {

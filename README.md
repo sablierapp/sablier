@@ -41,26 +41,29 @@ docker run -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/a
 
 # Start the containers, the request will hang until both containers are up and running
 curl 'http://localhost:10000/api/strategies/blocking?names=nginx&names=whoami&session_duration=1m'
-[
+{
+  "session": {
+    "instances": [
   {
-    "Instance": {
-      "Name": "whoami",
-      "CurrentReplicas": 1,
-      "Status": "ready",
-      "Message": ""
+        "instance": {
+          "name": "nginx",
+          "currentReplicas": 1,
+          "status": "ready"
     },
-    "Error": null
+        "error": null
   },
   {
-    "Instance": {
-      "Name": "nginx",
-      "CurrentReplicas": 1,
-      "Status": "ready",
-      "Message": ""
+        "instance": {
+          "name": "nginx",
+          "currentReplicas": 1,
+          "status": "ready"
     },
-    "Error": null
+        "error": null
   }
-]
+    ],
+    "status":"ready"
+  }
+}
 ```
 
 ## ⚙️ Configuration

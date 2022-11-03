@@ -53,7 +53,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 		expectedHeaderValue string
 	}{
 		{
-			name: "return HTML Theme",
+			name: "header has not ready value when not ready",
 			arg: arg{
 				body: models.DynamicRequest{
 					Names:           []string{"nginx"},
@@ -71,7 +71,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 			expectedHeaderValue: "not-ready",
 		},
 		{
-			name: "temporary redirect when session is ready",
+			name: "header has ready value when session is ready",
 			arg: arg{
 				body: models.DynamicRequest{
 					Names:           []string{"nginx"},
@@ -108,6 +108,84 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 			defer res.Body.Close()
 
 			assert.Equal(t, c.Writer.Header().Get(tt.expectedHeaderKey), tt.expectedHeaderValue)
+		})
+	}
+}
+
+func TestServeStrategy_ServeBlocking(t *testing.T) {
+	type arg struct {
+		body    models.BlockingRequest
+		session sessions.SessionState
+	}
+	tests := []struct {
+		name                string
+		arg                 arg
+		expectedBody        string
+		expectedHeaderKey   string
+		expectedHeaderValue string
+	}{
+		{
+			name: "not ready returns session status not ready",
+			arg: arg{
+				body: models.BlockingRequest{
+					Names:           []string{"nginx"},
+					Timeout:         10 * time.Second,
+					SessionDuration: 1 * time.Minute,
+				},
+				session: sessions.SessionState{
+					Instances: createMap([]*instance.State{
+						{Name: "nginx", Status: instance.NotReady, CurrentReplicas: 0},
+					}),
+				},
+			},
+			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":0,"status":"not-ready"},"error":null}],"status":"not-ready"}}`,
+			expectedHeaderKey:   "X-Sablier-Session-Status",
+			expectedHeaderValue: "not-ready",
+		},
+		{
+			name: "ready returns session status ready",
+			arg: arg{
+				body: models.BlockingRequest{
+					Names:           []string{"nginx"},
+					SessionDuration: 1 * time.Minute,
+				},
+				session: sessions.SessionState{
+					Instances: createMap([]*instance.State{
+						{Name: "nginx", Status: instance.Ready, CurrentReplicas: 1},
+					}),
+				},
+			},
+			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":1,"status":"ready"},"error":null}],"status":"ready"}}`,
+			expectedHeaderKey:   "X-Sablier-Session-Status",
+			expectedHeaderValue: "ready",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s := &ServeStrategy{
+				SessionsManager: &SessionsManagerMock{
+					SessionState: tt.arg.session,
+				},
+				StrategyConfig: config.NewStrategyConfig(),
+			}
+			recorder := httptest.NewRecorder()
+			c := GetTestGinContext(recorder)
+			MockJsonPost(c, tt.arg.body)
+
+			s.ServeBlocking(c)
+
+			res := recorder.Result()
+			defer res.Body.Close()
+
+			bytes, err := io.ReadAll(res.Body)
+
+			if err != nil {
+				panic(err)
+			}
+
+			assert.Equal(t, c.Writer.Header().Get(tt.expectedHeaderKey), tt.expectedHeaderValue)
+			assert.Equal(t, string(bytes), tt.expectedBody)
 		})
 	}
 }
