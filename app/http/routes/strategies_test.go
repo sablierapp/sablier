@@ -134,11 +134,11 @@ func TestServeStrategy_ServeBlocking(t *testing.T) {
 				},
 				session: sessions.SessionState{
 					Instances: createMap([]*instance.State{
-						{Name: "nginx", Status: instance.NotReady, CurrentReplicas: 0},
+						{Name: "nginx", Status: instance.NotReady, CurrentReplicas: 0, DesiredReplicas: 1},
 					}),
 				},
 			},
-			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":0,"status":"not-ready"},"error":null}],"status":"not-ready"}}`,
+			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":0,"desiredReplicas":1,"status":"not-ready"},"error":null}],"status":"not-ready"}}`,
 			expectedHeaderKey:   "X-Sablier-Session-Status",
 			expectedHeaderValue: "not-ready",
 		},
@@ -151,11 +151,11 @@ func TestServeStrategy_ServeBlocking(t *testing.T) {
 				},
 				session: sessions.SessionState{
 					Instances: createMap([]*instance.State{
-						{Name: "nginx", Status: instance.Ready, CurrentReplicas: 1},
+						{Name: "nginx", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1},
 					}),
 				},
 			},
-			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":1,"status":"ready"},"error":null}],"status":"ready"}}`,
+			expectedBody:        `{"session":{"instances":[{"instance":{"name":"nginx","currentReplicas":1,"desiredReplicas":1,"status":"ready"},"error":null}],"status":"ready"}}`,
 			expectedHeaderKey:   "X-Sablier-Session-Status",
 			expectedHeaderValue: "ready",
 		},

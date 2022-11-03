@@ -45,6 +45,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -68,6 +69,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
 			},
@@ -93,6 +95,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
@@ -116,6 +119,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx (STACK1_nginx)",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("STACK1_nginx", 1),
@@ -138,6 +142,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "swarm service is not in \"replicated\" mode",
 			},
@@ -148,7 +153,8 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerSwarmProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
@@ -200,6 +206,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
@@ -223,6 +230,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
 			},
@@ -248,6 +256,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
@@ -271,6 +280,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx (STACK1_nginx)",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("STACK1_nginx", 0),
@@ -293,6 +303,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "swarm service is not in \"replicated\" mode",
 			},
@@ -303,7 +314,8 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerSwarmProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
@@ -350,6 +362,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 1,
+				DesiredReplicas: 1,
 				Status:          instance.Ready,
 			},
 			wantErr: false,
@@ -368,6 +381,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr: false,
@@ -386,6 +400,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx (STACK_nginx)",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr: false,
@@ -404,6 +419,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "swarm service is not in \"replicated\" mode",
 			},
@@ -413,7 +429,8 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerSwarmProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)

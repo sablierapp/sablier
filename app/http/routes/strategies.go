@@ -157,7 +157,7 @@ func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pag
 		Name:            instanceState.Name,
 		Status:          instanceState.Status,
 		CurrentReplicas: instanceState.CurrentReplicas,
-		DesiredReplicas: 1, //instanceState.DesiredReplicas,
+		DesiredReplicas: instanceState.DesiredReplicas,
 		Error:           err,
 	}
 }

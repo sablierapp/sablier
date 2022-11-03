@@ -38,6 +38,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -54,6 +55,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 1,
+				DesiredReplicas: 1,
 				Status:          instance.Ready,
 			},
 			wantErr:       false,
@@ -70,6 +72,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -86,6 +89,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container is unhealthy: curl http://localhost failed (1)",
 			},
@@ -103,6 +107,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 1,
+				DesiredReplicas: 1,
 				Status:          instance.Ready,
 			},
 			wantErr:       false,
@@ -119,6 +124,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -135,6 +141,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -151,6 +158,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -167,6 +175,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr:       false,
@@ -183,6 +192,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container exited with code \"137\"",
 			},
@@ -200,6 +210,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container in \"dead\" state cannot be restarted",
 			},
@@ -217,6 +228,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container with name \"nginx\" was not found",
 			},
@@ -228,7 +240,8 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerClassicProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ContainerInspect", mock.Anything, mock.Anything).Return(tt.containerSpec, tt.err)
@@ -271,6 +284,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container with name \"nginx\" was not found",
 			},
@@ -288,6 +302,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr: false,
@@ -297,7 +312,8 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerClassicProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
@@ -340,6 +356,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container with name \"nginx\" was not found",
 			},
@@ -357,6 +374,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "nginx",
 				CurrentReplicas: 0,
+				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
 			wantErr: false,
@@ -366,7 +384,8 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := &DockerClassicProvider{
-				Client: tt.fields.Client,
+				Client:          tt.fields.Client,
+				desiredReplicas: 1,
 			}
 
 			tt.fields.Client.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)

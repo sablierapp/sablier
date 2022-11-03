@@ -36,6 +36,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -53,6 +54,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -70,6 +72,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.Unrecoverable,
 				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
@@ -131,6 +134,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -148,6 +152,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -165,6 +170,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.Unrecoverable,
 				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},
@@ -226,6 +232,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 2,
+				DesiredReplicas: 2,
 				Status:          instance.Ready,
 			},
 			data: data{
@@ -242,6 +249,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "deployment_default_nginx_2",
 				CurrentReplicas: 1,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -258,6 +266,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 2,
+				DesiredReplicas: 2,
 				Status:          instance.Ready,
 			},
 			data: data{
@@ -274,6 +283,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "statefulset_default_nginx_2",
 				CurrentReplicas: 1,
+				DesiredReplicas: 2,
 				Status:          instance.NotReady,
 			},
 			data: data{
@@ -290,6 +300,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			want: instance.State{
 				Name:            "gateway_default_nginx_2",
 				CurrentReplicas: 0,
+				DesiredReplicas: 2,
 				Status:          instance.Unrecoverable,
 				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
 			},

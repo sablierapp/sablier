@@ -9,6 +9,7 @@ var Unrecoverable = "unrecoverable"
 type State struct {
 	Name            string `json:"name"`
 	CurrentReplicas int    `json:"currentReplicas"`
+	DesiredReplicas int    `json:"desiredReplicas"`
 	Status          string `json:"status"`
 	Message         string `json:"message,omitempty"`
 }
@@ -17,54 +18,42 @@ func (instance State) IsReady() bool {
 	return instance.Status == Ready
 }
 
-func ErrorInstanceState(name string, err error) (State, error) {
+func ErrorInstanceState(name string, err error, desiredReplicas int) (State, error) {
 	log.Error(err.Error())
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,
+		DesiredReplicas: desiredReplicas,
 		Status:          Unrecoverable,
 		Message:         err.Error(),
 	}, err
 }
 
-func UnrecoverableInstanceState(name string, message string) (State, error) {
+func UnrecoverableInstanceState(name string, message string, desiredReplicas int) (State, error) {
 	log.Warn(message)
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,
+		DesiredReplicas: desiredReplicas,
 		Status:          Unrecoverable,
 		Message:         message,
 	}, nil
 }
 
-func ReadyInstanceState(name string) (State, error) {
+func ReadyInstanceState(name string, replicas int) (State, error) {
 	return State{
 		Name:            name,
-		CurrentReplicas: 1,
+		CurrentReplicas: replicas,
+		DesiredReplicas: replicas,
 		Status:          Ready,
 	}, nil
 }
 
-func ReadyInstanceStateOfReplicas(name string, replicas int) (State, error) {
+func NotReadyInstanceState(name string, currentReplicas int, desiredReplicas int) (State, error) {
 	return State{
 		Name:            name,
-		CurrentReplicas: replicas,
-		Status:          Ready,
-	}, nil
-}
-
-func NotReadyInstanceState(name string) (State, error) {
-	return State{
-		Name:            name,
-		CurrentReplicas: 0,
-		Status:          NotReady,
-	}, nil
-}
-
-func NotReadyInstanceStateOfReplicas(name string, replicas int) (State, error) {
-	return State{
-		Name:            name,
-		CurrentReplicas: replicas,
+		CurrentReplicas: currentReplicas,
+		DesiredReplicas: desiredReplicas,
 		Status:          NotReady,
 	}, nil
 }

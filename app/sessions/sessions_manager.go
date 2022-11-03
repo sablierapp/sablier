@@ -129,6 +129,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 
 		requestState.Name = state.Name
 		requestState.CurrentReplicas = state.CurrentReplicas
+		requestState.DesiredReplicas = state.DesiredReplicas
 		requestState.Status = state.Status
 		requestState.Message = state.Message
 		log.Debugf("status for %s=%s", name, requestState.Status)
@@ -143,6 +144,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 
 		requestState.Name = state.Name
 		requestState.CurrentReplicas = state.CurrentReplicas
+		requestState.DesiredReplicas = state.DesiredReplicas
 		requestState.Status = state.Status
 		requestState.Message = state.Message
 		log.Debugf("status for %s=%s", name, requestState.Status)
