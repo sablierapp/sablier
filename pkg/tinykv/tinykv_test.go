@@ -201,6 +201,25 @@ func Test03(t *testing.T) {
 	assert.WithinDuration(putAt, putAt.Add(<-elapsed), time.Millisecond*60)
 }
 
+func Test04(t *testing.T) {
+	assert := assert.New(t)
+	kv := New(
+		time.Millisecond*10,
+		func(k string, v interface{}) {
+			t.Fatal(k, v)
+		})
+
+	err := kv.Put("1", 1, time.Millisecond*10000)
+	assert.NoError(err)
+	<-time.After(time.Millisecond * 50)
+	kv.Delete("1")
+	kv.Delete("1")
+
+	<-time.After(time.Millisecond * 100)
+	_, ok := kv.Get("1")
+	assert.False(ok)
+}
+
 func Test05(t *testing.T) {
 	assert := assert.New(t)
 	N := 10000

@@ -57,6 +57,7 @@ type entry[T any] struct {
 
 // KV is a registry for values (like/is a concurrent map) with timeout and sliding timeout
 type KV[T any] interface {
+	Delete(k string)
 	Get(k string) (v T, ok bool)
 	Keys() (keys []string)
 	Values() (values []T)
@@ -102,6 +103,13 @@ func New[T any](expirationInterval time.Duration, onExpire ...func(k string, v T
 // Stop stops the goroutine
 func (kv *store[T]) Stop() {
 	kv.stopOnce.Do(func() { close(kv.stop) })
+}
+
+// Delete deletes an entry
+func (kv *store[T]) Delete(k string) {
+	kv.mx.Lock()
+	defer kv.mx.Unlock()
+	delete(kv.kv, k)
 }
 
 func (kv *store[T]) Get(k string) (T, bool) {
