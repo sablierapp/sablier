@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/acouvreur/sablier/app/instance"
@@ -11,6 +12,8 @@ type Provider interface {
 	Start(name string) (instance.State, error)
 	Stop(name string) (instance.State, error)
 	GetState(name string) (instance.State, error)
+
+	NotifyInsanceStopped(ctx context.Context, instance chan string)
 }
 
 func NewProvider(config config.Provider) (Provider, error) {

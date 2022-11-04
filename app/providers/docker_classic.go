@@ -2,16 +2,19 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 )
 
 type DockerClassicProvider struct {
-	Client          client.ContainerAPIClient
+	Client          client.APIClient
 	desiredReplicas int
 }
 
@@ -102,4 +105,33 @@ func (provider *DockerClassicProvider) GetState(name string) (instance.State, er
 	default:
 		return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status), provider.desiredReplicas)
 	}
+}
+
+func (provider *DockerClassicProvider) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+	msgs, errs := provider.Client.Events(ctx, types.EventsOptions{
+		Filters: filters.NewArgs(
+			filters.Arg("scope", "local"),
+			filters.Arg("type", "container"),
+			filters.Arg("event", "die"),
+		),
+	})
+
+	go func() {
+		for {
+			select {
+			case msg := <-msgs:
+				// Send the container that has died to the channel
+				instance <- msg.From
+			case err := <-errs:
+				if errors.Is(err, io.EOF) {
+					log.Debug("provider event stream closed")
+					close(instance)
+					return
+				}
+			case <-ctx.Done():
+				close(instance)
+				return
+			}
+		}
+	}()
 }

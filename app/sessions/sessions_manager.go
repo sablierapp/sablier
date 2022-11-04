@@ -1,6 +1,7 @@
 package sessions
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,14 +23,30 @@ type Manager interface {
 }
 
 type SessionsManager struct {
-	store    tinykv.KV[instance.State]
-	provider providers.Provider
+	store          tinykv.KV[instance.State]
+	provider       providers.Provider
+	insanceStopped chan string
 }
 
 func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
+
+	instanceStopped := make(chan string)
+
+	go func() {
+		for instance := range instanceStopped {
+			// Will delete from the store containers that have been stop either by external sources
+			// or by the internal expiration loop, if the deleted entry does not exist, it doesn't matter
+			log.Debugf("received event instance %s is stopped, removing from store", instance)
+			store.Delete(instance)
+		}
+	}()
+
+	provider.NotifyInsanceStopped(context.Background(), instanceStopped)
+
 	return &SessionsManager{
-		store:    store,
-		provider: provider,
+		store:          store,
+		provider:       provider,
+		insanceStopped: instanceStopped,
 	}
 }
 

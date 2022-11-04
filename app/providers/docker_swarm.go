@@ -137,3 +137,6 @@ func (provider *DockerSwarmProvider) getInstanceName(name string, service swarm.
 
 	return fmt.Sprintf("%s (%s)", name, service.Spec.Name)
 }
+
+func (provider *DockerSwarmProvider) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+}

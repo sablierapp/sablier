@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/acouvreur/sablier/app/instance"
+	"github.com/acouvreur/sablier/app/sessions/mocks"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestSessionState_IsReady(t *testing.T) {
@@ -78,4 +80,41 @@ func createMap(instances []*instance.State) (store *sync.Map) {
 	}
 
 	return
+}
+
+func TestNewSessionsManagerEvents(t *testing.T) {
+	tests := []struct {
+		name             string
+		stoppedInstances []string
+	}{
+		{
+			name:             "when nginx is stopped it is removed from the store",
+			stoppedInstances: []string{"nginx"},
+		},
+		{
+			name:             "when nginx, apache and whoami is stopped it is removed from the store",
+			stoppedInstances: []string{"nginx", "apache", "whoami"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := mocks.NewProviderMock(tt.stoppedInstances)
+			provider.Add(1)
+
+			kv := mocks.NewKVMock()
+			kv.Add(len(tt.stoppedInstances))
+			kv.Mock.On("Delete", mock.AnythingOfType("string")).Return()
+
+			NewSessionsManager(kv, provider)
+
+			// The provider watches notifications from a Goroutine, must wait
+			provider.Wait()
+			// The key is deleted inside a Goroutine by the session manager, must wait
+			kv.Wait()
+
+			for _, instance := range tt.stoppedInstances {
+				kv.AssertCalled(t, "Delete", instance)
+			}
+		})
+	}
 }

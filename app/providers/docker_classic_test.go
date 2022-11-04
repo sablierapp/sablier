@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -8,12 +9,13 @@ import (
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers/mocks"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestDockerClassicProvider_GetState(t *testing.T) {
 	type fields struct {
-		Client *mocks.ContainerAPIClientMock
+		Client *mocks.DockerAPIClientMock
 	}
 	type args struct {
 		name string
@@ -30,7 +32,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx created container state",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -47,7 +49,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx running container state without healthcheck",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -64,7 +66,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx running container state with \"starting\" health",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -81,7 +83,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx running container state with \"unhealthy\" health",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -99,7 +101,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx running container state with \"healthy\" health",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -116,7 +118,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx paused container state",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -133,7 +135,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx restarting container state",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -150,7 +152,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx removing container state",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -167,7 +169,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx exited container state with status code 0",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -184,7 +186,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx exited container state with status code 137",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -202,7 +204,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "nginx dead container state",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -220,7 +222,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		{
 			name: "container inspect has an error",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -260,7 +262,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 
 func TestDockerClassicProvider_Stop(t *testing.T) {
 	type fields struct {
-		Client *mocks.ContainerAPIClientMock
+		Client *mocks.DockerAPIClientMock
 	}
 	type args struct {
 		name string
@@ -276,7 +278,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		{
 			name: "container stop has an error",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -294,7 +296,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		{
 			name: "container stop as expected",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -332,7 +334,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 
 func TestDockerClassicProvider_Start(t *testing.T) {
 	type fields struct {
-		Client *mocks.ContainerAPIClientMock
+		Client *mocks.DockerAPIClientMock
 	}
 	type args struct {
 		name string
@@ -348,7 +350,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 		{
 			name: "container start has an error",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -366,7 +368,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 		{
 			name: "container start as expected",
 			fields: fields{
-				Client: mocks.NewContainerAPIClientMock(),
+				Client: mocks.NewDockerAPIClientMock(),
 			},
 			args: args{
 				name: "nginx",
@@ -397,6 +399,46 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DockerClassicProvider.Start() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDockerClassicProvider_NotifyInsanceStopped(t *testing.T) {
+	tests := []struct {
+		name   string
+		want   []string
+		events []events.Message
+		errors []error
+	}{
+		{
+			name: "container nginx is stopped",
+			want: []string{"nginx"},
+			events: []events.Message{
+				mocks.ContainerStoppedEvent("nginx"),
+			},
+			errors: []error{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := &DockerClassicProvider{
+				Client:          mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors),
+				desiredReplicas: 1,
+			}
+
+			instanceC := make(chan string)
+
+			provider.NotifyInsanceStopped(context.Background(), instanceC)
+
+			var got []string
+
+			for i := range instanceC {
+				got = append(got, i)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NotifyInsanceStopped() = %v, want %v", got, tt.want)
 			}
 		})
 	}

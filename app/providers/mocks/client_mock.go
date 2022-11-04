@@ -2,9 +2,11 @@ package mocks
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/mock"
@@ -15,28 +17,53 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
-type ContainerAPIClientMock struct {
-	client.ContainerAPIClient
+type DockerAPIClientMock struct {
+	// Will be sent through events
+	messages []events.Message
+	errors   []error
+
+	client.APIClient
 	mock.Mock
 }
 
-func NewContainerAPIClientMock() *ContainerAPIClientMock {
-	return &ContainerAPIClientMock{}
+func NewDockerAPIClientMock() *DockerAPIClientMock {
+	return &DockerAPIClientMock{}
 }
 
-func (client *ContainerAPIClientMock) ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error {
+func NewDockerAPIClientMockWithEvents(messages []events.Message, errors []error) *DockerAPIClientMock {
+	return &DockerAPIClientMock{
+		messages: messages,
+		errors:   errors,
+	}
+}
+
+func (client *DockerAPIClientMock) ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error {
 	args := client.Mock.Called(ctx, container, options)
 	return args.Error(0)
 }
 
-func (client *ContainerAPIClientMock) ContainerStop(ctx context.Context, container string, timeout *time.Duration) error {
+func (client *DockerAPIClientMock) ContainerStop(ctx context.Context, container string, timeout *time.Duration) error {
 	args := client.Mock.Called(ctx, container, timeout)
 	return args.Error(0)
 }
 
-func (client *ContainerAPIClientMock) ContainerInspect(ctx context.Context, container string) (types.ContainerJSON, error) {
+func (client *DockerAPIClientMock) ContainerInspect(ctx context.Context, container string) (types.ContainerJSON, error) {
 	args := client.Mock.Called(ctx, container)
 	return args.Get(0).(types.ContainerJSON), args.Error(1)
+}
+
+func (client *DockerAPIClientMock) Events(ctx context.Context, options types.EventsOptions) (<-chan events.Message, <-chan error) {
+	// client.Mock.Called(ctx, options)
+	evnts := make(chan events.Message)
+	errors := make(chan error)
+	go func() {
+		defer close(evnts)
+		for i := 0; i < len(client.messages); i++ {
+			evnts <- client.messages[i]
+		}
+		errors <- io.EOF
+	}()
+	return evnts, errors
 }
 
 func CreatedContainerSpec(name string) types.ContainerJSON {
@@ -151,6 +178,15 @@ func DeadContainerSpec(name string) types.ContainerJSON {
 				Status: "dead",
 			},
 		},
+	}
+}
+
+func ContainerStoppedEvent(name string) events.Message {
+	return events.Message{
+		From:   name,
+		Scope:  "local",
+		Action: "stop",
+		Type:   "container",
 	}
 }
 
@@ -327,7 +363,7 @@ func V1Scale(replicas int) *autoscalingv1.Scale {
 func V1Deployment(replicas int, readyReplicas int) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		Spec: appsv1.DeploymentSpec{
-			Replicas: make(int32(replicas)),
+			Replicas: makeP(int32(replicas)),
 		},
 		Status: appsv1.DeploymentStatus{
 			ReadyReplicas: int32(readyReplicas),
@@ -338,7 +374,7 @@ func V1Deployment(replicas int, readyReplicas int) *appsv1.Deployment {
 func V1StatefulSet(replicas int, readyReplicas int) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: make(int32(replicas)),
+			Replicas: makeP(int32(replicas)),
 		},
 		Status: appsv1.StatefulSetStatus{
 			ReadyReplicas: int32(readyReplicas),
@@ -346,6 +382,6 @@ func V1StatefulSet(replicas int, readyReplicas int) *appsv1.StatefulSet {
 	}
 }
 
-func make(val int32) *int32 {
+func makeP(val int32) *int32 {
 	return &val
 }
