@@ -88,10 +88,10 @@ This is best suited when this interaction is made through a browser.
 
 |       Name        |                       Preview                       |
 | :---------------: | :-------------------------------------------------: |
-|      `ghost`      |           [![ghost](./docs/img/ghost.png)           |
-|     `shuffle`     |         [![shuffle](./docs/img/shuffle.png)         |
-| `hacker-terminal` | [![hacker-terminal](./docs/img/hacker-terminal.png) |
-|     `matrix`      |          [![matrix](./docs/img/matrix.png)          |
+|      `ghost`      |           ![ghost](./docs/img/ghost.png)           |
+|     `shuffle`     |         ![shuffle](./docs/img/shuffle.png)         |
+| `hacker-terminal` | ![hacker-terminal](./docs/img/hacker-terminal.png) |
+|     `matrix`      |          ![matrix](./docs/img/matrix.png)          |
 
 ### Dynamic Strategy Configuration
 
