@@ -105,12 +105,12 @@ func TestRender(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Load non existant theme",
+			name: "Load non existent theme",
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
 					InstanceStates:   instanceStates,
-					Theme:            "nonexistant",
+					Theme:            "nonexistent",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
 					CustomThemes:     nil,
@@ -142,12 +142,12 @@ func TestRender(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Load non existant custom theme",
+			name: "Load non existent custom theme",
 			args: args{
 				options: RenderOptions{
 					DisplayName:      "Test",
 					InstanceStates:   instanceStates,
-					Theme:            "nonexistant",
+					Theme:            "nonexistent",
 					SessionDuration:  10 * time.Minute,
 					RefreshFrequency: 5 * time.Second,
 					CustomThemes: fstest.MapFS{
