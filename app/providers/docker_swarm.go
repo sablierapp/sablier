@@ -2,7 +2,9 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/acouvreur/sablier/app/instance"
@@ -14,7 +16,7 @@ import (
 )
 
 type DockerSwarmProvider struct {
-	Client          client.ServiceAPIClient
+	Client          client.APIClient
 	desiredReplicas int
 }
 
@@ -139,4 +141,31 @@ func (provider *DockerSwarmProvider) getInstanceName(name string, service swarm.
 }
 
 func (provider *DockerSwarmProvider) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+	msgs, errs := provider.Client.Events(ctx, types.EventsOptions{
+		Filters: filters.NewArgs(
+			filters.Arg("scope", "swarm"),
+			filters.Arg("type", "service"),
+		),
+	})
+
+	go func() {
+		for {
+			select {
+			case msg := <-msgs:
+				// Send the container that has died to the channel
+				if msg.Actor.Attributes["replicas.new"] == "0" {
+					instance <- msg.Actor.Attributes["name"]
+				}
+			case err := <-errs:
+				if errors.Is(err, io.EOF) {
+					log.Debug("provider event stream closed")
+					close(instance)
+					return
+				}
+			case <-ctx.Done():
+				close(instance)
+				return
+			}
+		}
+	}()
 }

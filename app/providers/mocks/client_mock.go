@@ -190,21 +190,12 @@ func ContainerStoppedEvent(name string) events.Message {
 	}
 }
 
-type ServiceAPIClientMock struct {
-	client.ServiceAPIClient
-	mock.Mock
-}
-
-func NewServiceAPIClientMock() *ServiceAPIClientMock {
-	return &ServiceAPIClientMock{}
-}
-
-func (client *ServiceAPIClientMock) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error) {
+func (client *DockerAPIClientMock) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error) {
 	args := client.Mock.Called(ctx, serviceID, version, service, options)
 	return args.Get(0).(types.ServiceUpdateResponse), args.Error(1)
 }
 
-func (client *ServiceAPIClientMock) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
+func (client *DockerAPIClientMock) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
 	args := client.Mock.Called(ctx, options)
 	return args.Get(0).([]swarm.Service), args.Error(1)
 }
@@ -261,6 +252,22 @@ func ServiceGlobal(name string) swarm.Service {
 			},
 			Mode: swarm.ServiceMode{
 				Global: &swarm.GlobalService{},
+			},
+		},
+	}
+}
+
+func SeviceScaledEvent(name string, oldReplicas string, newReplicas string) events.Message {
+	return events.Message{
+		Scope:  "swarm",
+		Action: "update",
+		Type:   "service",
+		Actor: events.Actor{
+			ID: "randomid",
+			Attributes: map[string]string{
+				"name":         name,
+				"replicas.new": newReplicas,
+				"replicas.old": oldReplicas,
 			},
 		},
 	}

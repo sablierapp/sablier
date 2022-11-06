@@ -1,26 +1,24 @@
 package providers
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers/mocks"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestDockerSwarmProvider_Start(t *testing.T) {
-	type fields struct {
-		Client *mocks.ServiceAPIClientMock
-	}
 	type args struct {
 		name string
 	}
 	tests := []struct {
 		name        string
-		fields      fields
 		args        args
 		want        instance.State
 		serviceList []swarm.Service
@@ -30,9 +28,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	}{
 		{
 			name: "scale nginx service to 1 replica",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -53,9 +48,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		},
 		{
 			name: "ambiguous service name",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -78,9 +70,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		},
 		{
 			name: "exact match service name",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -103,9 +92,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		},
 		{
 			name: "service match on suffix",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -127,9 +113,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		},
 		{
 			name: "nginx is not a replicated service",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -152,13 +135,14 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			clientMock := mocks.NewDockerAPIClientMock()
 			provider := &DockerSwarmProvider{
-				Client:          tt.fields.Client,
+				Client:          clientMock,
 				desiredReplicas: 1,
 			}
 
-			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
-			tt.fields.Client.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
+			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
+			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
 			got, err := provider.Start(tt.args.name)
 			if (err != nil) != tt.wantErr {
@@ -173,15 +157,11 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 }
 
 func TestDockerSwarmProvider_Stop(t *testing.T) {
-	type fields struct {
-		Client *mocks.ServiceAPIClientMock
-	}
 	type args struct {
 		name string
 	}
 	tests := []struct {
 		name        string
-		fields      fields
 		args        args
 		want        instance.State
 		serviceList []swarm.Service
@@ -191,9 +171,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	}{
 		{
 			name: "scale nginx service to 0 replica",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -214,9 +191,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		},
 		{
 			name: "ambiguous service name",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -239,9 +213,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		},
 		{
 			name: "exact match service name",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -264,9 +235,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		},
 		{
 			name: "service match on suffix",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -288,9 +256,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		},
 		{
 			name: "nginx is not a replicated service",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -313,13 +278,14 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			clientMock := mocks.NewDockerAPIClientMock()
 			provider := &DockerSwarmProvider{
-				Client:          tt.fields.Client,
+				Client:          clientMock,
 				desiredReplicas: 1,
 			}
 
-			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
-			tt.fields.Client.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
+			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
+			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
 			got, err := provider.Stop(tt.args.name)
 			if (err != nil) != tt.wantErr {
@@ -334,15 +300,11 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 }
 
 func TestDockerSwarmProvider_GetState(t *testing.T) {
-	type fields struct {
-		Client *mocks.ServiceAPIClientMock
-	}
 	type args struct {
 		name string
 	}
 	tests := []struct {
 		name        string
-		fields      fields
 		args        args
 		want        instance.State
 		serviceList []swarm.Service
@@ -350,9 +312,6 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	}{
 		{
 			name: "nginx service is ready",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -369,9 +328,6 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		},
 		{
 			name: "nginx service is not ready",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -388,9 +344,6 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		},
 		{
 			name: "nginx service is not ready",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -407,9 +360,6 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		},
 		{
 			name: "nginx is not a replicated service",
-			fields: fields{
-				Client: mocks.NewServiceAPIClientMock(),
-			},
 			args: args{
 				name: "nginx",
 			},
@@ -428,12 +378,13 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			clientMock := mocks.NewDockerAPIClientMock()
 			provider := &DockerSwarmProvider{
-				Client:          tt.fields.Client,
+				Client:          clientMock,
 				desiredReplicas: 1,
 			}
 
-			tt.fields.Client.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
+			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 
 			got, err := provider.GetState(tt.args.name)
 			if (err != nil) != tt.wantErr {
@@ -442,6 +393,46 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DockerSwarmProvider.GetState() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDockerSwarmProvider_NotifyInsanceStopped(t *testing.T) {
+	tests := []struct {
+		name   string
+		want   []string
+		events []events.Message
+		errors []error
+	}{
+		{
+			name: "service nginx is scaled to 0",
+			want: []string{"nginx"},
+			events: []events.Message{
+				mocks.SeviceScaledEvent("nginx", "1", "0"),
+			},
+			errors: []error{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := &DockerSwarmProvider{
+				Client:          mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors),
+				desiredReplicas: 1,
+			}
+
+			instanceC := make(chan string)
+
+			provider.NotifyInsanceStopped(context.Background(), instanceC)
+
+			var got []string
+
+			for i := range instanceC {
+				got = append(got, i)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NotifyInsanceStopped() = %v, want %v", got, tt.want)
 			}
 		})
 	}
