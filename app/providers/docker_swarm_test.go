@@ -47,28 +47,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name: "ambiguous service name",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceReplicated("STACK1_nginx", 0),
-				mocks.ServiceReplicated("STACK2_nginx", 0),
-			},
-			response: types.ServiceUpdateResponse{
-				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
-			},
-			wantService: mocks.ServiceReplicated("nginx", 1),
-			wantErr:     true,
-		},
-		{
 			name: "exact match service name",
 			args: args{
 				name: "nginx",
@@ -88,27 +66,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
-			wantErr:     false,
-		},
-		{
-			name: "service match on suffix",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceReplicated("STACK1_nginx", 0),
-				mocks.ServiceReplicated("STACK2_nginx-2", 0),
-			},
-			response: types.ServiceUpdateResponse{
-				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx (STACK1_nginx)",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantService: mocks.ServiceReplicated("STACK1_nginx", 1),
 			wantErr:     false,
 		},
 		{
@@ -190,28 +147,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name: "ambiguous service name",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceReplicated("STACK1_nginx", 1),
-				mocks.ServiceReplicated("STACK2_nginx", 1),
-			},
-			response: types.ServiceUpdateResponse{
-				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "ambiguous service names found for \"nginx\" (STACK1_nginx, STACK2_nginx)",
-			},
-			wantService: mocks.ServiceReplicated("nginx", 1),
-			wantErr:     true,
-		},
-		{
 			name: "exact match service name",
 			args: args{
 				name: "nginx",
@@ -231,27 +166,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
-			wantErr:     false,
-		},
-		{
-			name: "service match on suffix",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceReplicated("STACK1_nginx", 1),
-				mocks.ServiceReplicated("STACK2_nginx-2", 1),
-			},
-			response: types.ServiceUpdateResponse{
-				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx (STACK1_nginx)",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantService: mocks.ServiceReplicated("STACK1_nginx", 0),
 			wantErr:     false,
 		},
 		{
@@ -336,22 +250,6 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			},
 			want: instance.State{
 				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nginx service is not ready",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceNotReadyReplicated("STACK_nginx", 1, 0),
-			},
-			want: instance.State{
-				Name:            "nginx (STACK_nginx)",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,

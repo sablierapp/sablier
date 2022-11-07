@@ -307,10 +307,6 @@ http:
 
 #### Traefik with Docker Swarm
 
-- The value from the `names` section will do a strict match if possible, if it is not found it will match by suffix only if there's one match.
-  - `names=nginx` matches `nginx` from `MYSTACK_nginx` and `nginx` services
-  - `names=nginx` matches `MYSTACK_nginx` from `MYSTACK_nginx` and `nginx-2` services
-
 ⚠️ Limitations
 
 - Traefik will evict the service from its pool as soon as the service is 0/0. You must add the [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/providers/docker/#traefikdockerlbswarm) label.

@@ -106,27 +106,11 @@ func (provider *DockerSwarmProvider) getServiceByName(name string, ctx context.C
 		return nil, fmt.Errorf(fmt.Sprintf("service with name %s was not found", name))
 	}
 
-	suffixMatches := make([]swarm.Service, 0)
-	suffixMatchNames := make([]string, 0)
-
 	for _, service := range services {
 		// Exact match
 		if service.Spec.Name == name {
 			return &service, nil
-		} else if strings.HasSuffix(service.Spec.Name, name) {
-			suffixMatches = append(suffixMatches, service)
-			suffixMatchNames = append(suffixMatchNames, service.Spec.Name)
-		} else {
-			log.Warnf("service %s was ignored because it did not match %s exactly or on suffix", service.Spec.Name, name)
 		}
-	}
-
-	if len(suffixMatches) > 1 {
-		return nil, fmt.Errorf("ambiguous service names found for \"%s\" (%s)", name, strings.Join(suffixMatchNames, ", "))
-	}
-
-	if len(suffixMatches) == 1 {
-		return &suffixMatches[0], nil
 	}
 
 	return nil, fmt.Errorf(fmt.Sprintf("service %s was not found because it did not match exactly or on suffix", name))
