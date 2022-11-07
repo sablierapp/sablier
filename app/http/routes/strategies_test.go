@@ -41,6 +41,8 @@ func (s *SessionsManagerMock) SaveSessions(io.WriteCloser) error {
 	return nil
 }
 
+func (s *SessionsManagerMock) Stop() {}
+
 func TestServeStrategy_ServeDynamic(t *testing.T) {
 	type arg struct {
 		body    models.DynamicRequest

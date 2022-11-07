@@ -40,6 +40,7 @@ func Start(conf config.Config) error {
 	}
 
 	sessionsManager := sessions.NewSessionsManager(store, provider)
+	defer sessionsManager.Stop()
 
 	if storage.Enabled() {
 		defer saveSessions(storage, sessionsManager)

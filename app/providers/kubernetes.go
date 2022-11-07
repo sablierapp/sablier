@@ -166,5 +166,5 @@ func (provider *KubernetesProvider) getStatefulsetState(config *Config) (instanc
 	return instance.NotReadyInstanceState(config.OriginalName, int(ss.Status.ReadyReplicas), int(config.Replicas))
 }
 
-func (provider *KubernetesProvider) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+func (provider *KubernetesProvider) NotifyInsanceStopped(ctx context.Context, instance chan<- string) {
 }

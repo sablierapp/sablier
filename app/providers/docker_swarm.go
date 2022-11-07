@@ -124,7 +124,7 @@ func (provider *DockerSwarmProvider) getInstanceName(name string, service swarm.
 	return fmt.Sprintf("%s (%s)", name, service.Spec.Name)
 }
 
-func (provider *DockerSwarmProvider) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+func (provider *DockerSwarmProvider) NotifyInsanceStopped(ctx context.Context, instance chan<- string) {
 	msgs, errs := provider.Client.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("scope", "swarm"),
@@ -143,11 +143,9 @@ func (provider *DockerSwarmProvider) NotifyInsanceStopped(ctx context.Context, i
 			case err := <-errs:
 				if errors.Is(err, io.EOF) {
 					log.Debug("provider event stream closed")
-					close(instance)
 					return
 				}
 			case <-ctx.Done():
-				close(instance)
 				return
 			}
 		}

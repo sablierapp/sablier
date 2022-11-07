@@ -20,12 +20,17 @@ type Manager interface {
 
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
+
+	Stop()
 }
 
 type SessionsManager struct {
-	store          tinykv.KV[instance.State]
-	provider       providers.Provider
-	insanceStopped chan string
+	events context.Context
+	cancel context.CancelFunc
+
+	store           tinykv.KV[instance.State]
+	provider        providers.Provider
+	instanceStopped chan string
 }
 
 func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
@@ -41,12 +46,15 @@ func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Prov
 		}
 	}()
 
-	provider.NotifyInsanceStopped(context.Background(), instanceStopped)
+	events, cancel := context.WithCancel(context.Background())
+	provider.NotifyInsanceStopped(events, instanceStopped)
 
 	return &SessionsManager{
-		store:          store,
-		provider:       provider,
-		insanceStopped: instanceStopped,
+		events:          events,
+		cancel:          cancel,
+		store:           store,
+		provider:        provider,
+		instanceStopped: instanceStopped,
 	}
 }
 
@@ -132,9 +140,6 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 
 	requestState, exists := s.store.Get(name)
 
-	// Trust the stored value
-	// TODO: Provider background check on the store
-	// Via polling or whatever
 	if !exists {
 		log.Debugf("starting %s...", name)
 
@@ -210,6 +215,17 @@ func (s *SessionsManager) RequestReadySession(names []string, duration time.Dura
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
 	s.store.Put(instance.Name, *instance, duration)
+}
+
+func (s *SessionsManager) Stop() {
+	// Stop event listeners
+	s.cancel()
+
+	// Stop receiving stopped instance
+	close(s.instanceStopped)
+
+	// Stop the store
+	s.store.Stop()
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {

@@ -13,7 +13,7 @@ type Provider interface {
 	Stop(name string) (instance.State, error)
 	GetState(name string) (instance.State, error)
 
-	NotifyInsanceStopped(ctx context.Context, instance chan string)
+	NotifyInsanceStopped(ctx context.Context, instance chan<- string)
 }
 
 func NewProvider(config config.Provider) (Provider, error) {

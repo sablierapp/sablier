@@ -25,7 +25,7 @@ func NewProviderMock(stoppedInstances []string) *ProviderMock {
 	}
 }
 
-func (provider *ProviderMock) NotifyInsanceStopped(ctx context.Context, instance chan string) {
+func (provider *ProviderMock) NotifyInsanceStopped(ctx context.Context, instance chan<- string) {
 	go func() {
 		defer close(instance)
 		for i := 0; i < len(provider.stoppedInstances); i++ {
