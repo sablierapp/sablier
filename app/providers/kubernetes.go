@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+
+	appsv1 "k8s.io/api/apps/v1"
+	core_v1 "k8s.io/api/core/v1"
 
 	"github.com/acouvreur/sablier/app/instance"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Delimiter is used to split name into kind,namespace,name,replicacount
@@ -167,4 +173,53 @@ func (provider *KubernetesProvider) getStatefulsetState(config *Config) (instanc
 }
 
 func (provider *KubernetesProvider) NotifyInsanceStopped(ctx context.Context, instance chan<- string) {
+
+	inforemer := provider.watchDeployents(instance)
+	go inforemer.Run(ctx.Done())
+	inforemer = provider.watchStatefulSets(instance)
+	go inforemer.Run(ctx.Done())
+}
+
+func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cache.SharedIndexInformer {
+	handler := cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(old, new interface{}) {
+			newDeployment := new.(*appsv1.Deployment)
+			oldDeployment := old.(*appsv1.Deployment)
+
+			if newDeployment.ObjectMeta.ResourceVersion == oldDeployment.ObjectMeta.ResourceVersion {
+				return
+			}
+
+			if *newDeployment.Spec.Replicas == 0 {
+				instance <- fmt.Sprintf("deployment_%s_%s_%d", newDeployment.Namespace, newDeployment.Name, *oldDeployment.Spec.Replicas)
+			}
+		},
+	}
+	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	informer := factory.Apps().V1().Deployments().Informer()
+
+	informer.AddEventHandler(handler)
+	return informer
+}
+
+func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
+	handler := cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(old, new interface{}) {
+			newStatefulSet := new.(*appsv1.StatefulSet)
+			oldStatefulSet := old.(*appsv1.StatefulSet)
+
+			if newStatefulSet.ObjectMeta.ResourceVersion == oldStatefulSet.ObjectMeta.ResourceVersion {
+				return
+			}
+
+			if *newStatefulSet.Spec.Replicas == 0 {
+				instance <- fmt.Sprintf("statefulset_%s_%s_%d", newStatefulSet.Namespace, newStatefulSet.Name, *oldStatefulSet.Spec.Replicas)
+			}
+		},
+	}
+	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	informer := factory.Apps().V1().StatefulSets().Informer()
+
+	informer.AddEventHandler(handler)
+	return informer
 }

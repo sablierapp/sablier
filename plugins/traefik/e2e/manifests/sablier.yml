@@ -59,9 +59,11 @@ rules:
       - statefulsets/scale
       - endpoints
     verbs:
-      - patch
-      - get
-      - update
+      - patch   # Scale up and down
+      - get     # Retrieve info about specific dep
+      - update  # Scale up and down
+      - list    # Events
+      - watch   # Events
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

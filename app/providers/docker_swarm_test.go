@@ -321,13 +321,14 @@ func TestDockerSwarmProvider_NotifyInsanceStopped(t *testing.T) {
 
 			instanceC := make(chan string)
 
-			provider.NotifyInsanceStopped(context.Background(), instanceC)
+			ctx, cancel := context.WithCancel(context.Background())
+			provider.NotifyInsanceStopped(ctx, instanceC)
 
 			var got []string
 
-			for i := range instanceC {
-				got = append(got, i)
-			}
+			got = append(got, <-instanceC)
+			cancel()
+			close(instanceC)
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NotifyInsanceStopped() = %v, want %v", got, tt.want)
