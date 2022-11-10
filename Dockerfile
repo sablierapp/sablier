@@ -16,9 +16,9 @@ RUN make ${TARGETOS}/${TARGETARCH}
 
 FROM alpine
 
-COPY --from=build /go/src/sablier/sablier* /go/bin/sablier
+COPY --from=build /go/src/sablier/sablier* /etc/sablier/sablier
 
 EXPOSE 10000
 
-ENTRYPOINT [ "/go/bin/sablier" ]
+ENTRYPOINT [ "/etc/sablier/sablier" ]
 CMD [ "start", "--provider.name=docker"]

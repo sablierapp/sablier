@@ -18,24 +18,13 @@ import (
 )
 
 func TestPrecedence(t *testing.T) {
-	// Run the tests in a temporary directory
-	tmpDir := os.TempDir()
 	testDir, err := os.Getwd()
 	require.NoError(t, err, "error getting the current working directory")
-	defer os.Chdir(testDir)
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err, "error changing to the temporary test directory")
 
 	// CHANGE `startCmd` behavior to only print the config, this is for testing purposes only
 	newStartCommand = mockStartCommand
 
 	t.Run("config file", func(t *testing.T) {
-		configB, err := os.ReadFile(filepath.Join(testDir, "testdata", "config.yml"))
-		require.NoError(t, err, "error reading test config file")
-		err = ioutil.WriteFile(filepath.Join(tmpDir, "config.yml"), configB, 0644)
-		require.NoError(t, err, "error writing test config file")
-		defer os.Remove(filepath.Join(tmpDir, "config.yml"))
-
 		wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_yaml_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
@@ -43,7 +32,10 @@ func TestPrecedence(t *testing.T) {
 		cmd := NewRootCommand()
 		output := &bytes.Buffer{}
 		cmd.SetOut(output)
-		cmd.SetArgs([]string{"start"})
+		cmd.SetArgs([]string{
+			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
+			"start",
+		})
 		cmd.Execute()
 
 		gotOutput := output.String()
@@ -52,13 +44,6 @@ func TestPrecedence(t *testing.T) {
 	})
 
 	t.Run("env var", func(t *testing.T) {
-		// 1. Load Config file for precedence assertions
-		configB, err := os.ReadFile(filepath.Join(testDir, "testdata", "config.yml"))
-		require.NoError(t, err, "error reading test config file")
-		err = ioutil.WriteFile(filepath.Join(tmpDir, "config.yml"), configB, 0644)
-		require.NoError(t, err, "error writing test config file")
-		defer os.Remove(filepath.Join(tmpDir, "config.yml"))
-
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 
@@ -69,7 +54,10 @@ func TestPrecedence(t *testing.T) {
 		cmd := NewRootCommand()
 		output := &bytes.Buffer{}
 		cmd.SetOut(output)
-		cmd.SetArgs([]string{"start"})
+		cmd.SetArgs([]string{
+			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
+			"start",
+		})
 		cmd.Execute()
 
 		gotOutput := output.String()
@@ -78,14 +66,6 @@ func TestPrecedence(t *testing.T) {
 	})
 
 	t.Run("flag", func(t *testing.T) {
-		// 1. Load Config file for precedence assertions
-		configB, err := os.ReadFile(filepath.Join(testDir, "testdata", "config.yml"))
-		require.NoError(t, err, "error reading test config file")
-		err = ioutil.WriteFile(filepath.Join(tmpDir, "config.yml"), configB, 0644)
-		require.NoError(t, err, "error writing test config file")
-		defer os.Remove(filepath.Join(tmpDir, "config.yml"))
-
-		// 2. Load envs variable for precedence assertions
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 
@@ -97,6 +77,7 @@ func TestPrecedence(t *testing.T) {
 		conf = config.NewConfig()
 		cmd.SetOut(output)
 		cmd.SetArgs([]string{
+			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
 			"start",
 			"--provider.name", "cli",
 			"--server.port", "3333",

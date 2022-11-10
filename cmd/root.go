@@ -15,10 +15,11 @@ import (
 
 const (
 	// The name of our config file, without the file extension because viper supports many different config file languages.
-	defaultConfigFilename = "config"
+	defaultConfigFilename = "sablier"
 )
 
 var conf = config.NewConfig()
+var cfgFile string
 
 func Execute() {
 	cmd := NewRootCommand()
@@ -38,6 +39,8 @@ It provides an integrations with multiple reverse proxies and different loading 
 			return initializeConfig(cmd)
 		},
 	}
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "configFile", "", "Config file path. If not defined, looks for sablier.(yml|yaml|toml) in /etc/sablier/ > $XDG_CONFIG_HOME > $HOME/.config/ and current directory")
 
 	startCmd := newStartCommand()
 	// Provider flags
@@ -83,9 +86,14 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Set the base name of the config file, without the file extension.
 	v.SetConfigName(defaultConfigFilename)
 
-	// Set as many paths as you like where viper should look for the
-	// config file. We are only looking in the current working directory.
+	v.AddConfigPath("/etc/sablier/")
+	v.AddConfigPath("$XDG_CONFIG_HOME")
+	v.AddConfigPath("$HOME/.config/")
 	v.AddConfigPath(".")
+
+	if cfgFile != "" {
+		v.SetConfigFile(cfgFile)
+	}
 
 	// Attempt to read the config file, gracefully ignoring errors
 	// caused by a config file not being found. Return an error
@@ -93,6 +101,9 @@ func initializeConfig(cmd *cobra.Command) error {
 	if err := v.ReadInConfig(); err != nil {
 		// It's okay if there isn't a config file
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		} else if cfgFile != "" {
+			// But if we explicitely defined the config file it should return the error
 			return err
 		}
 	}
