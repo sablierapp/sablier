@@ -17,6 +17,7 @@ Which allows you to start your containers on demand and shut them down automatic
     - [Dynamic Strategy Configuration](#dynamic-strategy-configuration)
     - [Creating your own loading theme](#creating-your-own-loading-theme)
   - [Blocking the loading until the session is ready](#blocking-the-loading-until-the-session-is-ready)
+  - [💾 Saving the state to a file](#-saving-the-state-to-a-file)
   - [Reverse proxies integration plugins](#reverse-proxies-integration-plugins)
   - [Credits](#credits)
 
@@ -70,7 +71,6 @@ curl 'http://localhost:10000/api/strategies/blocking?names=nginx&names=whoami&se
 | `--server.port`                                | `server.port`                                | `SERVER_PORT`                                | `10000`           | The server port to use                                                                                                                              |
 | `--sessions.default-duration`                  | `sessions.default-duration`                  | `SESSIONS_DEFAULT_DURATION`                  | `5m`              | The default session duration                                                                                                                        |
 | `--sessions.expiration-interval`               | `sessions.expiration-interval`               | `SESSIONS_EXPIRATION_INTERVAL`               | `20s`             | The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off. |
-| `--storage.file`                               | `storage.file`                               | `STORAGE_FILE`                               |                   | File path to save the state                                                                                                                         |
 | `--strategy.blocking.default-timeout`          | `strategy.blocking.default-timeout`          | `STRATEGY_BLOCKING_DEFAULT_TIMEOUT`          | `1m`              | Default timeout used for blocking strategy                                                                                                          |
 | `--strategy.dynamic.custom-themes-path`        | `strategy.dynamic.custom-themes-path`        | `STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH`        |                   | Custom themes folder, will load all .html files recursively                                                                                         |
 | `--strategy.dynamic.default-refresh-frequency` | `strategy.dynamic.default-refresh-frequency` | `STRATEGY_DYNAMIC_DEFAULT_REFRESH_FREQUENCY` | `5s`              | Default refresh frequency in the HTML page for dynamic strategy                                                                                     |
@@ -166,6 +166,21 @@ You can see the available themes from the API:
 
 **The Blocking Strategy waits for the instances to load before serving the request**
 This is best suited when this interaction from an API.
+
+## 💾 Saving the state to a file
+
+You can save the state of the application in case of failure toi resume your sessions.
+
+For this you can use the `storage` configuration.
+
+```yml
+storage:
+  file: /path/to/file.json
+```
+
+If the file doesn't exist it will be created, and it will be syned upon exit.
+
+Loaded instances that expired during the restart won't be changed though, they will simply be ignored.
 
 ## Reverse proxies integration plugins
 
