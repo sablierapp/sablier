@@ -49,6 +49,7 @@ func NewServeStrategy(sessionsManager sessions.Manager, conf config.Strategy) *S
 func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	request := models.DynamicRequest{
 		Theme:            s.StrategyConfig.Dynamic.DefaultTheme,
+		ShowDetails:      s.StrategyConfig.Dynamic.ShowDetailsByDefault,
 		RefreshFrequency: s.StrategyConfig.Dynamic.DefaultRefreshFrequency,
 	}
 
@@ -67,6 +68,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 
 	renderOptions := pages.RenderOptions{
 		DisplayName:         request.DisplayName,
+		ShowDetails:         request.ShowDetails,
 		SessionDuration:     request.SessionDuration,
 		Theme:               request.Theme,
 		CustomThemes:        s.customThemesFS,

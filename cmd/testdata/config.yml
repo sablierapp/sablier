@@ -13,6 +13,7 @@ logging:
 strategy:
   dynamic:
     custom-themes-path: /tmp/configfile/themes
+    show-details-by-default: false
     default-theme: configfile
     default-refresh-frequency: 1h
   blocking:

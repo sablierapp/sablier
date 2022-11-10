@@ -242,6 +242,38 @@ func TestRenderContent(t *testing.T) {
 			},
 			wantContent: "<meta http-equiv=\"refresh\" content=\"10\" />",
 		},
+		{
+			name: "details is rendered",
+			args: args{
+				options: RenderOptions{
+					DisplayName:      "Test",
+					ShowDetails:      true,
+					InstanceStates:   instanceStates,
+					Theme:            "ghost",
+					SessionDuration:  10 * time.Minute,
+					RefreshFrequency: 10 * time.Second,
+					CustomThemes:     nil,
+					Version:          "v0.0.0",
+				},
+			},
+			wantContent: "started (4/4)",
+		},
+		{
+			name: "details is not rendered",
+			args: args{
+				options: RenderOptions{
+					DisplayName:      "Test",
+					ShowDetails:      false,
+					InstanceStates:   instanceStates,
+					Theme:            "ghost",
+					SessionDuration:  10 * time.Minute,
+					RefreshFrequency: 10 * time.Second,
+					CustomThemes:     nil,
+					Version:          "v0.0.0",
+				},
+			},
+			wantContent: "<table></table>",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

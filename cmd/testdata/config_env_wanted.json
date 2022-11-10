@@ -19,6 +19,7 @@
   "Strategy": {
     "Dynamic": {
       "CustomThemesPath": "/tmp/envvar/themes",
+      "ShowDetailsByDefault": false,
       "DefaultTheme": "envvar",
       "DefaultRefreshFrequency": 7200000000000
     },

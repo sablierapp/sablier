@@ -19,6 +19,7 @@
   "Strategy": {
     "Dynamic": {
       "CustomThemesPath": "/tmp/cli/themes",
+      "ShowDetailsByDefault": false,
       "DefaultTheme": "cli",
       "DefaultRefreshFrequency": 10800000000000
     },

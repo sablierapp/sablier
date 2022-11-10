@@ -25,6 +25,7 @@ type RenderOptionsInstanceState struct {
 
 type RenderOptions struct {
 	DisplayName      string
+	ShowDetails      bool
 	InstanceStates   []RenderOptionsInstanceState
 	SessionDuration  time.Duration
 	RefreshFrequency time.Duration
@@ -61,9 +62,15 @@ func Render(options RenderOptions, writer io.Writer) error {
 		return err
 	}
 
+	instanceStates := []RenderOptionsInstanceState{}
+
+	if options.ShowDetails {
+		instanceStates = options.InstanceStates
+	}
+
 	return tpl.Execute(writer, TemplateValues{
 		DisplayName:      options.DisplayName,
-		InstanceStates:   options.InstanceStates,
+		InstanceStates:   instanceStates,
 		SessionDuration:  humanizeDuration(options.SessionDuration),
 		RefreshFrequency: fmt.Sprintf("%d", int64(options.RefreshFrequency.Seconds())),
 		Version:          options.Version,

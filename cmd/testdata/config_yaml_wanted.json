@@ -19,6 +19,7 @@
   "Strategy": {
     "Dynamic": {
       "CustomThemesPath": "/tmp/configfile/themes",
+      "ShowDetailsByDefault": false,
       "DefaultTheme": "configfile",
       "DefaultRefreshFrequency": 3600000000000
     },

@@ -3,12 +3,14 @@ package traefik
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type DynamicConfiguration struct {
 	DisplayName      string `yaml:"displayname"`
+	ShowDetails      *bool  `yaml:"showDetails"`
 	Theme            string `yaml:"theme"`
 	RefreshFrequency string `yaml:"refreshFrequency"`
 }
@@ -108,6 +110,10 @@ func (c *Config) buildDynamicRequest(middlewareName string) (*http.Request, erro
 		}
 
 		q.Add("refresh_frequency", c.Dynamic.RefreshFrequency)
+	}
+
+	if c.Dynamic.ShowDetails != nil {
+		q.Add("show_details", strconv.FormatBool(*c.Dynamic.ShowDetails))
 	}
 
 	request.URL.RawQuery = q.Encode()

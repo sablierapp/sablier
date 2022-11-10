@@ -106,6 +106,8 @@ func TestPrecedence(t *testing.T) {
 			"--sessions.expiration-interval", "3h",
 			"--logging.level", "info",
 			"--strategy.dynamic.custom-themes-path", "/tmp/cli/themes",
+			// Must use `=` see https://github.com/spf13/cobra/issues/613
+			"--strategy.dynamic.show-details-by-default=false",
 			"--strategy.dynamic.default-theme", "cli",
 			"--strategy.dynamic.default-refresh-frequency", "3h",
 			"--strategy.blocking.default-timeout", "3h",

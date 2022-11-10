@@ -66,6 +66,8 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("strategy.dynamic.custom-themes-path", startCmd.Flags().Lookup("strategy.dynamic.custom-themes-path"))
 	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.DefaultTheme, "strategy.dynamic.default-theme", "hacker-terminal", "Default theme used for dynamic strategy")
 	viper.BindPFlag("strategy.dynamic.default-theme", startCmd.Flags().Lookup("strategy.dynamic.default-theme"))
+	startCmd.Flags().BoolVar(&conf.Strategy.Dynamic.ShowDetailsByDefault, "strategy.dynamic.show-details-by-default", true, "Show the loading instances details by default")
+	viper.BindPFlag("strategy.dynamic.show-details-by-default", startCmd.Flags().Lookup("strategy.dynamic.show-details-by-default"))
 	startCmd.Flags().DurationVar(&conf.Strategy.Dynamic.DefaultRefreshFrequency, "strategy.dynamic.default-refresh-frequency", 5*time.Second, "Default refresh frequency in the HTML page for dynamic strategy")
 	viper.BindPFlag("strategy.dynamic.default-refresh-frequency", startCmd.Flags().Lookup("strategy.dynamic.default-refresh-frequency"))
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")

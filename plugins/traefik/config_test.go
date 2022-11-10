@@ -9,6 +9,9 @@ import (
 	"github.com/acouvreur/sablier/plugins/traefik"
 )
 
+var fals bool = false
+var tru bool = true
+
 func TestConfig_BuildRequest(t *testing.T) {
 	type fields struct {
 		SablierURL      string
@@ -97,6 +100,48 @@ func TestConfig_BuildRequest(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
+		},
+		{
+			name: "dynamic session with show details to true",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Dynamic: &traefik.DynamicConfiguration{
+					ShowDetails:      &tru,
+					RefreshFrequency: "1m",
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&refresh_frequency=1m&session_duration=1m&show_details=true", nil),
+			wantErr: false,
+		},
+		{
+			name: "dynamic session with show details to false",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Dynamic: &traefik.DynamicConfiguration{
+					ShowDetails:      &fals,
+					RefreshFrequency: "1m",
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&refresh_frequency=1m&session_duration=1m&show_details=false", nil),
+			wantErr: false,
+		},
+		{
+			name: "dynamic session without show details set",
+			fields: fields{
+				SablierURL:      "http://sablier:10000",
+				Names:           "nginx , apache",
+				SessionDuration: "1m",
+				Dynamic: &traefik.DynamicConfiguration{
+					ShowDetails:      nil,
+					RefreshFrequency: "1m",
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/dynamic?display_name=sablier-middleware&names=nginx&names=apache&refresh_frequency=1m&session_duration=1m", nil),
+			wantErr: false,
 		},
 		{
 			name: "blocking session with default values",

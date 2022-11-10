@@ -4,6 +4,7 @@ import "time"
 
 type DynamicStrategy struct {
 	CustomThemesPath        string        `mapstructure:"CUSTOM_THEMES_PATH" yaml:"customThemesPath"`
+	ShowDetailsByDefault    bool          `mapstructure:"SHOW_DETAILS_BY_DEFAULT" yaml:"showDetailsByDefault"`
 	DefaultTheme            string        `mapstructure:"DEFAULT_THEME" yaml:"defaultTheme" default:"hacker-terminal"`
 	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULT_REFRESH_FREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
 }
@@ -27,6 +28,7 @@ func NewStrategyConfig() Strategy {
 func newDynamicStrategy() DynamicStrategy {
 	return DynamicStrategy{
 		DefaultTheme:            "hacker-terminal",
+		ShowDetailsByDefault:    true,
 		DefaultRefreshFrequency: 5 * time.Second,
 	}
 }
