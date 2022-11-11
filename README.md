@@ -13,6 +13,9 @@ Which allows you to start your containers on demand and shut them down automatic
 - [⏳ Sablier](#-sablier)
   - [⚡️ Quick start](#️-quick-start)
   - [⚙️ Configuration](#️-configuration)
+    - [Configuration File](#configuration-file)
+    - [Environment Variables](#environment-variables)
+    - [Arguments](#arguments)
   - [Loading with a waiting page](#loading-with-a-waiting-page)
     - [Dynamic Strategy Configuration](#dynamic-strategy-configuration)
     - [Creating your own loading theme](#creating-your-own-loading-theme)
@@ -64,17 +67,109 @@ curl 'http://localhost:10000/api/strategies/blocking?names=nginx&names=whoami&se
 
 ## ⚙️ Configuration
 
-| Cli                                            | Yaml file                                    | Environment variable                         | Default           | Description                                                                                                                                         |
-| ---------------------------------------------- | -------------------------------------------- | -------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--provider.name`                              | `provider.name`                              | `PROVIDER_NAME`                              | `docker`          | Provider to use to manage containers [docker swarm kubernetes]                                                                                      |
-| `--server.base-path`                           | `server.base-path`                           | `SERVER_BASE_PATH`                           | `/`               | The base path for the API                                                                                                                           |
-| `--server.port`                                | `server.port`                                | `SERVER_PORT`                                | `10000`           | The server port to use                                                                                                                              |
-| `--sessions.default-duration`                  | `sessions.default-duration`                  | `SESSIONS_DEFAULT_DURATION`                  | `5m`              | The default session duration                                                                                                                        |
-| `--sessions.expiration-interval`               | `sessions.expiration-interval`               | `SESSIONS_EXPIRATION_INTERVAL`               | `20s`             | The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off. |
-| `--strategy.blocking.default-timeout`          | `strategy.blocking.default-timeout`          | `STRATEGY_BLOCKING_DEFAULT_TIMEOUT`          | `1m`              | Default timeout used for blocking strategy                                                                                                          |
-| `--strategy.dynamic.custom-themes-path`        | `strategy.dynamic.custom-themes-path`        | `STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH`        |                   | Custom themes folder, will load all .html files recursively                                                                                         |
-| `--strategy.dynamic.default-refresh-frequency` | `strategy.dynamic.default-refresh-frequency` | `STRATEGY_DYNAMIC_DEFAULT_REFRESH_FREQUENCY` | `5s`              | Default refresh frequency in the HTML page for dynamic strategy                                                                                     |
-| `--strategy.dynamic.default-theme`             | `strategy.dynamic.default-theme`             | `STRATEGY_DYNAMIC_DEFAULT_THEME`             | `hacker-terminal` | Default theme used for dynamic strategy                                                                                                             |
+There are three different ways to define configuration options in Sablier:
+
+1. In a configuration file
+2. As environment variables
+3. In the command-line arguments
+
+These ways are evaluated in the order listed above.
+
+If no value was provided for a given option, a default value applies.
+
+### Configuration File
+
+At startup, Sablier searches for configuration in a file named sablier.yml (or sablier.yaml) in:
+
+- `/etc/traefik/`
+- `$XDG_CONFIG_HOME/`
+- `$HOME/.config/`
+- `.` *(the working directory).*
+
+You can override this using the configFile argument.
+
+```bash
+sablier --configFile=path/to/myconfigfile.yml
+```
+
+```yaml
+provider:
+  # Provider to use to manage containers (docker, swarm, kubernetes)
+  name: docker 
+server:
+  # The server port to use
+  port: 10000 
+  # The base path for the API
+  base-path: /
+storage:
+  # File path to save the state (default stateless)
+  file:
+sessions:
+  # The default session duration (default 5m)
+  default-duration: 5m
+  # The expiration checking interval. 
+  # Higher duration gives less stress on CPU. 
+  # If you only use sessions of 1h, setting this to 5m is a good trade-off.
+  expiration-interval: 20s
+logging:
+  level: trace
+strategy:
+  dynamic:
+    # Custom themes folder, will load all .html files recursively (default empty)
+    custom-themes-path:
+    # Show instances details by default in waiting UI
+    show-details-by-default: false
+    # Default theme used for dynamic strategy
+    default-theme: configfile
+    # Default refresh frequency in the HTML page for dynamic strategy
+    default-refresh-frequency: 5s
+  blocking:
+    # Default timeout used for blocking strategy
+    default-timeout: 1h
+```
+
+### Environment Variables
+
+All environment variables can be used in the form of the config file such as 
+
+```yaml
+strategy:
+  dynamic:
+    custom-themes-path: /my/path
+```
+
+Becomes
+
+```bash
+STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
+```
+
+### Arguments
+
+To get the list of all available arguments:
+
+```bash
+sablier --help
+
+# or
+
+docker run sablier[:version] --help
+# ex: docker run sablier:v1.0.0 --help
+```
+
+All arguments can be used in the form of the config file such as 
+
+```yaml
+strategy:
+  dynamic:
+    custom-themes-path: /my/path
+```
+
+Becomes
+
+```bash
+sablier start --strategy.dynamic.custom-themes-path /my/path
+```
 
 ## Loading with a waiting page
 
