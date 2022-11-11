@@ -22,6 +22,7 @@ Which allows you to start your containers on demand and shut them down automatic
   - [Blocking the loading until the session is ready](#blocking-the-loading-until-the-session-is-ready)
   - [💾 Saving the state to a file](#-saving-the-state-to-a-file)
   - [Reverse proxies integration plugins](#reverse-proxies-integration-plugins)
+  - [Glossary](#glossary)
   - [Credits](#credits)
 
 ## ⚡️ Quick start
@@ -280,6 +281,13 @@ Loaded instances that expired during the restart won't be changed though, they w
 ## Reverse proxies integration plugins
 
 - [Traefik](./plugins/traefik/README.md)
+
+## Glossary
+
+I'll use these terms in order to be provider agnostic.
+
+- **Session**: A Session is a set of **instances**
+- **Instance**: An instance is either a docker container, docker swarm service, kubernetes deployment or kubernetes statefulset
 
 ## Credits
 
