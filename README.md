@@ -81,7 +81,7 @@ If no value was provided for a given option, a default value applies.
 
 At startup, Sablier searches for configuration in a file named sablier.yml (or sablier.yaml) in:
 
-- `/etc/traefik/`
+- `/etc/sablier/`
 - `$XDG_CONFIG_HOME/`
 - `$HOME/.config/`
 - `.` *(the working directory).*
