@@ -3,6 +3,7 @@ package mocks
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers"
@@ -19,7 +20,11 @@ type ProviderMock struct {
 	mock.Mock
 }
 
-func NewProviderMock(stoppedInstances []string) *ProviderMock {
+func NewProviderMock() *ProviderMock {
+	return &ProviderMock{}
+}
+
+func NewProviderMockWithStoppedInstancesEvents(stoppedInstances []string) *ProviderMock {
 	return &ProviderMock{
 		stoppedInstances: stoppedInstances,
 	}
@@ -43,6 +48,11 @@ func (provider *ProviderMock) Wait() {
 	provider.wg.Wait()
 }
 
+func (provider *ProviderMock) GetState(name string) (instance.State, error) {
+	args := provider.Mock.Called(name)
+	return args.Get(0).(instance.State), args.Error(1)
+}
+
 type KVMock[T any] struct {
 	wg sync.WaitGroup
 
@@ -52,6 +62,11 @@ type KVMock[T any] struct {
 
 func NewKVMock() *KVMock[instance.State] {
 	return &KVMock[instance.State]{}
+}
+
+func (kv *KVMock[T]) Get(k string) (v instance.State, ok bool) {
+	args := kv.Mock.Called(k)
+	return args.Get(0).(instance.State), args.Bool(1)
 }
 
 func (kv *KVMock[T]) Delete(k string) {
@@ -65,4 +80,8 @@ func (kv *KVMock[T]) Add(count int) {
 
 func (kv *KVMock[T]) Wait() {
 	kv.wg.Wait()
+}
+
+func (kv *KVMock[T]) Put(k string, v T, expiresAfter time.Duration) error {
+	return nil
 }

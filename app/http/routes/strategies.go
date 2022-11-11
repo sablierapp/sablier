@@ -116,7 +116,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 		return
 	}
 
-	sessionState, err := s.SessionsManager.RequestReadySession(request.Names, request.SessionDuration, request.Timeout)
+	sessionState, err := s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
 
 	if err != nil {
 		c.Header("X-Sablier-Session-Status", "not-ready")

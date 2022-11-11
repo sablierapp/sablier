@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/fs"
@@ -30,7 +31,7 @@ func (s *SessionsManagerMock) RequestSession(names []string, duration time.Durat
 	return &s.SessionState
 }
 
-func (s *SessionsManagerMock) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*sessions.SessionState, error) {
+func (s *SessionsManagerMock) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*sessions.SessionState, error) {
 	return &s.SessionState, nil
 }
 

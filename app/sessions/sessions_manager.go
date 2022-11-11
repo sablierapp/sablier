@@ -16,7 +16,7 @@ import (
 
 type Manager interface {
 	RequestSession(names []string, duration time.Duration) *SessionState
-	RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
+	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
@@ -177,7 +177,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	return &requestState, nil
 }
 
-func (s *SessionsManager) RequestReadySession(names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
 
 	session := s.RequestSession(names, duration)
 	if session.IsReady() {
@@ -204,6 +204,10 @@ func (s *SessionsManager) RequestReadySession(names []string, duration time.Dura
 	}()
 
 	select {
+	case <-ctx.Done():
+		log.Debug("request cancelled by user, stopping timeout")
+		close(quit)
+		return nil, fmt.Errorf("request cancelled by user")
 	case status := <-readiness:
 		close(quit)
 		return status, nil
