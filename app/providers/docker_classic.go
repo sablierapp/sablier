@@ -121,7 +121,7 @@ func (provider *DockerClassicProvider) NotifyInsanceStopped(ctx context.Context,
 			select {
 			case msg := <-msgs:
 				// Send the container that has died to the channel
-				instance <- msg.From
+				instance <- msg.Actor.Attributes["name"]
 			case err := <-errs:
 				if errors.Is(err, io.EOF) {
 					log.Debug("provider event stream closed")

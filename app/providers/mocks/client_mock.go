@@ -187,6 +187,12 @@ func ContainerStoppedEvent(name string) events.Message {
 		Scope:  "local",
 		Action: "stop",
 		Type:   "container",
+		Actor: events.Actor{
+			ID: "randomid",
+			Attributes: map[string]string{
+				"name": name,
+			},
+		},
 	}
 }
 
