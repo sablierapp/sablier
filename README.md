@@ -11,12 +11,14 @@ Which allows you to start your containers on demand and shut them down automatic
 ![Hourglass](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/hourglass.png)
 
 - [Sablier](#sablier)
-  - [Quick start](#quick-start)
+  - [Quick start with Traefik](#quick-start-with-traefik)
+  - [Reverse proxies integration plugins](#reverse-proxies-integration-plugins)
+    - [Traefik Middleware Plugin](#traefik-middleware-plugin)
   - [Configuration](#configuration)
     - [Configuration File](#configuration-file)
     - [Environment Variables](#environment-variables)
     - [Arguments](#arguments)
-  - [Install Sablier](#install-sablier)
+  - [Install Sablier on its own](#install-sablier-on-its-own)
     - [Use the Docker image](#use-the-docker-image)
     - [Use the binary distribution](#use-the-binary-distribution)
     - [Compile your binary from the sources](#compile-your-binary-from-the-sources)
@@ -25,53 +27,57 @@ Which allows you to start your containers on demand and shut them down automatic
     - [Creating your own loading theme](#creating-your-own-loading-theme)
   - [Blocking the loading until the session is ready](#blocking-the-loading-until-the-session-is-ready)
   - [Saving the state to a file](#saving-the-state-to-a-file)
-  - [Reverse proxies integration plugins](#reverse-proxies-integration-plugins)
-    - [Traefik Middleware Plugin](#traefik-middleware-plugin)
   - [Glossary](#glossary)
   - [Credits](#credits)
 
-## Quick start
+## Quick start with Traefik
+
+You will see how to use Sablier with Traefik in order to start your container automatically when reaching it by its route.
+
+![Demo](docs/img/demo.gif)
 
 ```bash
-# Create and stop nginx container
-docker run -d --name nginx nginx
-docker stop nginx
+git clone https://github.com/acouvreur/sablier
+cd sablier
+docker-compose up -d
+docker-compose stop whoami
 
-# Create and stop whoami container
-docker run -d --name whoami containous/whoami:v1.5.0
-docker stop whoami
+# Now you go to http://localhost:8080/whoami/dynamic with your browser
+# Or you can call the blocking URL, this will wait until whoami is started
+curl http://localhost:8080/whoami/blocking
 
-# Start Sablier with the docker provider
-docker run -d -v /var/run/docker.sock:/var/run/docker.sock -p 10000:10000 ghcr.io/acouvreur/sablier:latest start --provider.name=docker
-
-# Start the containers, the request will hang until both containers are up and running
-curl 'http://localhost:10000/api/strategies/blocking?names=nginx&names=whoami&session_duration=1m'
-{
-  "session": {
-    "instances": [
-      {
-        "instance": {
-          "name": "nginx",
-          "currentReplicas": 1,
-          "desiredReplicas": 1,
-          "status": "ready"
-      },
-        "error": null
-      },
-      {
-        "instance": {
-          "name": "nginx",
-          "currentReplicas": 1,
-          "desiredReplicas": 1,
-          "status": "ready"
-       },
-        "error": null
-      }
-    ],
-    "status":"ready"
-  }
-}
+Hostname: 1d034329b651
+IP: 127.0.0.1
+IP: 172.18.0.2
+RemoteAddr: 172.18.0.4:33052
+GET /whoami/blocking HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/7.68.0
+Accept: */*
+Accept-Encoding: gzip
+X-Forwarded-For: 172.18.0.1
+X-Forwarded-Host: localhost:8080
+X-Forwarded-Port: 8080
+X-Forwarded-Proto: http
+X-Forwarded-Server: 1aea141808c5
+X-Real-Ip: 172.18.0.1
 ```
+
+## Reverse proxies integration plugins
+
+The reverse proxy integrations is probably what you're most interested about.
+
+It leverage the API calls to Sablier to your reverse proxy middleware to wake up your instances on demand.
+
+![Reverse Proxy Integration](./docs/img/reverse-proxy-integration.png)
+
+### Traefik Middleware Plugin
+
+See [Traefik Middleware Plugin](https://github.com/acouvreur/sablier/tree/main/plugins/traefik/README.md)
+
+- [Traefik Middleware Plugin with Docker classic](https://github.com/acouvreur/sablier/tree/main/plugins/traefik/README.md#traefik-with-docker-classic)
+- [Traefik Middleware Plugin with Docker Swarm](https://github.com/acouvreur/sablier/tree/main/plugins/traefik/README.md#traefik-with-docker-swarm)
+- [Traefik Middleware Plugin with Kubernetes](https://github.com/acouvreur/sablier/tree/main/plugins/traefik/README.md#traefik-with-kubernetes)
 
 ## Configuration
 
@@ -179,9 +185,9 @@ Becomes
 sablier start --strategy.dynamic.custom-themes-path /my/path
 ```
 
-## Install Sablier
+## Install Sablier on its own
 
-You can install Traefik with the following flavors:
+You can install Sablier with the following flavors:
 
 - Use the Docker image
 - Use the binary distribution
@@ -279,11 +285,7 @@ If the file doesn't exist it will be created, and it will be syned upon exit.
 
 Loaded instances that expired during the restart won't be changed though, they will simply be ignored.
 
-## Reverse proxies integration plugins
 
-### Traefik Middleware Plugin
-
-See [Traefik Middleware Plugin](https://github.com/acouvreur/sablier/tree/main/plugins/traefik/README.md)
 
 ## Glossary
 

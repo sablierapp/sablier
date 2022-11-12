@@ -1,14 +1,14 @@
-version: "3.9"
+version: "3.7"
 
 services:
   traefik:
     image: traefik:2.9.1
     command:
+      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier
+      - --experimental.plugins.sablier.version=v1.1.0
       - --entryPoints.http.address=:80
       - --providers.docker=true
       - --providers.file.filename=/etc/traefik/dynamic-config.yml
-      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier
-      - --experimental.plugins.sablier.version=v1.0.0-beta.2
     ports:
       - "8080:80"
     volumes:
@@ -16,19 +16,21 @@ services:
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
 
   sablier:
-    image: ghcr.io/acouvreur/sablier:local
-    command:
-      - start
-      - --provider.name=docker
+    image: acouvreur/sablier:1.1.0
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     labels:
       - traefik.enable=true
       # Dynamic Middleware
-      - traefik.http.middlewares.dynamic.plugin.sablier.name=sablier_whoami_1
-      - traefik.http.middlewares.dynamic.plugin.sablier.serviceUrl=http://sablier:10000
-      - traefik.http.middlewares.dynamic.plugin.sablier.timeout=1m
-      - traefik.http.middlewares.dynamic.plugin.sablier.displayname=Dynamic Whoami
+      - traefik.http.middlewares.dynamic.plugin.sablier.names=sablier-whoami-1
+      - traefik.http.middlewares.dynamic.plugin.sablier.sablierUrl=http://sablier:10000
+      - traefik.http.middlewares.dynamic.plugin.sablier.sessionDuration=1m
+      - traefik.http.middlewares.dynamic.plugin.sablier.dynamic.theme=hacker-terminal
+      # Blocking Middleware
+      - traefik.http.middlewares.blocking.plugin.sablier.names=sablier-whoami-1
+      - traefik.http.middlewares.blocking.plugin.sablier.sablierUrl=http://sablier:10000
+      - traefik.http.middlewares.blocking.plugin.sablier.sessionDuration=1m
+      - traefik.http.middlewares.blocking.plugin.sablier.blocking.timeout=30s
 
   whoami:
     image: containous/whoami:v1.5.0
@@ -36,5 +38,5 @@ services:
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.
     # labels:
     #  - traefik.enable
-    #  - traefik.http.routers.whoami-dynamic.rule=PathPrefix(`/dynamic/whoami`)
-    #  - traefik.http.routers.whoami-dynamic.middlewares=dynamic@docker
+    #  - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
+    #  - traefik.http.routers.whoami.middlewares=dynamic@docker

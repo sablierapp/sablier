@@ -1,0 +1,23 @@
+http:
+  services:
+    whoami:
+      loadBalancer:
+        servers:
+        - url: "http://whoami:80"
+
+  routers:
+    whoami-dynamic:
+      rule: PathPrefix(`/whoami/dynamic`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - dynamic@docker
+      service: "whoami"
+
+    whoami-blocking:
+      rule: PathPrefix(`/whoami/blocking`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - blocking@docker
+      service: "whoami"
