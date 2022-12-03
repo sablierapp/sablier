@@ -13,7 +13,7 @@ services:
       - target: 80
         published: 8080
         protocol: tcp
-        mode: host # Use host to bypass ingress, which is not available in codespaces
+        mode: host # Won't work in github actions otherwise
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
@@ -80,8 +80,7 @@ services:
     image: nginx:1.23.1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
-      start_period: 5s
-      interval: 1s
+      interval: 5s
     deploy:
       replicas: 0
       labels:

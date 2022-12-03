@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  proxy:
+    image: nginx:1.23.1
+    ports:
+      - 8080:80
+    volumes:
+      # Used to load js module
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../njs/sablier.js:/etc/nginx/conf.d/sablier.js
+      - ./conf/nginx_docker_classic.conf:/etc/nginx/conf.d/default.conf
+
+  sablier:
+    image: acouvreur/sablier:local
+    ports:
+      - 10000:10000
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=trace
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  whoami:
+    image: containous/whoami:v1.5.0
+
+  nginx:
+    image: nginx:1.23.1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 5s

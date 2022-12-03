@@ -61,8 +61,7 @@ services:
     image: nginx:1.23.1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
-      start_period: 10s
-      interval: 1s
+      interval: 5s
     # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.
     # labels:
