@@ -1,0 +1,12 @@
+ARG CADDY_VERSION=2.6.4
+ARG SABLIER_VERSION=v1.4.0-beta.1
+FROM caddy:${CADDY_VERSION}-builder AS builder
+
+ADD https://github.com/acouvreur/sablier.git#${SABLIER_VERSION} /sablier
+
+RUN xcaddy build \
+    --with github.com/acouvreur/sablier/plugins/caddy=/sablier/plugins/caddy
+
+FROM caddy:${CADDY_VERSION}
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

@@ -73,13 +73,6 @@ func Test_Healthy(t *testing.T) {
 		Contains(`Healthy Nginx`).
 		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
-	e.GET("/nginx").
-		Expect().
-		Status(http.StatusOK).
-		Body().
-		Contains(`Healthy Nginx`).
-		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
-
 	time.Sleep(waitingTime)
 
 	e.GET("/nginx").

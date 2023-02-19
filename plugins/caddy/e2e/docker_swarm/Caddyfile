@@ -1,0 +1,60 @@
+:80 {
+	route /dynamic/whoami {
+		sablier http://tasks.sablier:10000 {
+			names DOCKER_SWARM_E2E_whoami
+			session_duration 1m
+			dynamic {
+				display_name Dynamic Whoami
+				theme hacker-terminal
+			}
+		}
+		reverse_proxy whoami:80
+	}
+
+	route /blocking/whoami {
+		sablier http://tasks.sablier:10000 {
+			names DOCKER_SWARM_E2E_whoami
+			session_duration 1m
+			blocking {
+				timeout 30s
+			}
+		}
+		reverse_proxy whoami:80
+	}
+
+	route /multiple/whoami {
+		sablier http://tasks.sablier:10000 {
+			names DOCKER_SWARM_E2E_whoami DOCKER_SWARM_E2E_nginx
+			session_duration 1m
+			dynamic {
+				display_name Multiple Whoami
+				theme=hacker-terminal
+			}
+		}
+		reverse_proxy whoami:80
+	}
+
+	route /multiple/nginx {
+		sablier http://tasks.sablier:10000 {
+			names DOCKER_SWARM_E2E_whoami DOCKER_SWARM_E2E_nginx
+			session_duration 1m
+			dynamic {
+				display_name Multiple Whoami
+				theme=hacker-terminal
+			}
+		}
+		reverse_proxy nginx:80
+	}
+
+	route /healthy/nginx {
+		sablier http://tasks.sablier:10000 {
+			names DOCKER_SWARM_E2E_nginx
+			session_duration 1m
+			dynamic {
+				display_name Healthy Nginx
+				theme hacker-terminal
+			}
+		}
+		reverse_proxy nginx:80
+	}
+}
