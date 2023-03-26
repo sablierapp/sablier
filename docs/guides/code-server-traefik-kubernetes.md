@@ -152,7 +152,7 @@
           serviceAccount: sablier
           containers:
           - name: sablier
-            image: acouvreur/sablier:v1.3.0
+            image: acouvreur/sablier:1.3.0
             args: 
             - "start"
             - "--provider.name=kubernetes"

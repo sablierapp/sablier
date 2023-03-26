@@ -17,7 +17,7 @@ experimental:
   plugins:
     sablier:
       moduleName: "github.com/acouvreur/sablier"
-      version: "v1.3.0-beta.3"
+      version: "v1.3.0"
 ```
 
 2. Configure the plugin using the Dynamic Configuration. Example:
@@ -71,7 +71,7 @@ services:
       - --providers.docker=true
       - --providers.file.filename=/etc/traefik/dynamic-config.yml
       - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier/plugins/traefik
-      - --experimental.plugins.sablier.version=vv1.3.0
+      - --experimental.plugins.sablier.version=v1.3.0
     ports:
       - "8080:80"
     volumes:
@@ -79,7 +79,7 @@ services:
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
 
   sablier:
-    image: acouvreur/sablier:v1.3.0
+    image: acouvreur/sablier:1.3.0
     command:
       - start
       - --provider.name=docker
