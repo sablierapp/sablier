@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        provider: [docker_classic, docker_swarm, kubernetes]
+        provider: [docker, docker_swarm, kubernetes]
     steps:
       - name: Set up Go 1.18
         uses: actions/setup-go@v2
@@ -80,7 +80,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Test ${{ matrix.provider }}
-        run: cd plugins/traefik/e2e && bash ./${{ matrix.provider }}.sh
+        run: cd plugins/traefik/e2e/${{ matrix.provider }} && bash ./run.sh
 
   nginx_e2e:
     name: Run Sablier E2E tests for Nginx NJS module with Sablier
@@ -115,7 +115,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Test ${{ matrix.provider }}
-        run: cd plugins/nginx/e2e && bash ./${{ matrix.provider }}.sh
+        run: cd plugins/nginx/e2e/${{ matrix.provider }} && bash ./run.sh
 
   build-caddy:
     name: Build Caddy docker image once and share it to Caddy E2E jobs
@@ -182,4 +182,4 @@ jobs:
         run: docker load --input /tmp/caddy.tar
 
       - name: Test ${{ matrix.provider }}
-        run: cd plugins/caddy/e2e && bash ./${{ matrix.provider }}.sh
+        run: cd plugins/caddy/e2e/${{ matrix.provider }} && bash ./run.sh
