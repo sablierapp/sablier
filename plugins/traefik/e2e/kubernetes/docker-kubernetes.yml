@@ -19,7 +19,7 @@ services:
     volumes:
       # This is just so that we get the kubeconfig file out
       - .:/output
-      - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
+      - '../../../..:/plugins-local/src/github.com/acouvreur/sablier'
     ports:
       - 6443:6443  # Kubernetes API Server
       - 8080:80  # Ingress controller port 80

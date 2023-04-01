@@ -12,7 +12,7 @@ services:
       - "8080:80"
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
+      - '../../../..:/plugins-local/src/github.com/acouvreur/sablier'
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
     restart: "no"
 

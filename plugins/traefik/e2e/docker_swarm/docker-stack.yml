@@ -16,7 +16,7 @@ services:
         mode: host # Won't work in github actions otherwise
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
+      - '../../../..:/plugins-local/src/github.com/acouvreur/sablier'
     deploy:
       labels:
         - traefik.http.services.traefik.loadbalancer.server.port=8080
