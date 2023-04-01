@@ -10,9 +10,9 @@ services:
         mode: host # Won't work in github actions otherwise
     volumes:
       # Used to load js module
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ../njs/sablier.js:/etc/nginx/conf.d/sablier.js
-      - ./conf/nginx_docker_swarm.conf:/etc/nginx/conf.d/default.conf
+      - ../nginx.conf:/etc/nginx/nginx.conf
+      - ../../njs/sablier.js:/etc/nginx/conf.d/sablier.js
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
 
   sablier:
     image: acouvreur/sablier:local
