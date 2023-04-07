@@ -114,7 +114,9 @@ func (provider *KubernetesProvider) GetGroups() (map[string][]string, error) {
 		}
 
 		group := groups[groupName]
-		group = append(group, deployment.Name)
+		// TOOD: Use annotation for scale
+		name := fmt.Sprintf("%s_%s_%s_%d", "deployment", deployment.Namespace, deployment.Name, 1)
+		group = append(group, name)
 		groups[groupName] = group
 	}
 
