@@ -27,23 +27,24 @@ http:
   middlewares:
     my-sablier:
       plugin:
-        sablierUrl: http://sablier:10000  # The sablier URL service, must be reachable from the Traefik instance
-        names: whoami,nginx               # Comma separated names of containers/services/deployments etc.
-        sessionDuration: 1m               # The session duration after which containers/services/deployments instances are shutdown
-        # You can only use one strategy at a time
-        # To do so, only declare `dynamic` or `blocking`
+        sablier:
+          sablierUrl: http://sablier:10000  # The sablier URL service, must be reachable from the Traefik instance
+          names: whoami,nginx               # Comma separated names of containers/services/deployments etc.
+          sessionDuration: 1m               # The session duration after which containers/services/deployments instances are shutdown
+          # You can only use one strategy at a time
+          # To do so, only declare `dynamic` or `blocking`
 
-        # Dynamic strategy, provides the waiting webui
-        dynamic:
-          displayName: My Title       # (Optional) Defaults to the middleware name
-          showDetails: true           # (Optional) Set to true or false to show details specifcally for this middleware, unset to use Sablier server defaults
-          theme: hacker-terminal      # (Optional) The theme to use
-          refreshFrequency: 5s        # (Optional) The loading page refresh frequency
+          # Dynamic strategy, provides the waiting webui
+          dynamic:
+            displayName: My Title       # (Optional) Defaults to the middleware name
+            showDetails: true           # (Optional) Set to true or false to show details specifcally for this middleware, unset to use Sablier server defaults
+            theme: hacker-terminal      # (Optional) The theme to use
+            refreshFrequency: 5s        # (Optional) The loading page refresh frequency
 
-        # Blocking strategy, waits until services are up and running
-        # but will not wait more than `timeout`
-        # blocking: 
-        #   timeout: 1m
+          # Blocking strategy, waits until services are up and running
+          # but will not wait more than `timeout`
+          # blocking: 
+          #   timeout: 1m
 ```
 
 You can also checkout the End to End tests here: [e2e](./e2e/).
