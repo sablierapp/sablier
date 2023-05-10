@@ -1,24 +1,28 @@
-# Creating your own loading theme
+# Themes
 
-- [Creating your own loading theme](#creating-your-own-loading-theme)
-  - [Custom themes locations](#custom-themes-locations)
-  - [Create a custom theme](#create-a-custom-theme)
-    - [Available Go Template Values](#available-go-template-values)
-    - [The `<meta http-equiv="refresh" />` tag](#the-meta-http-equivrefresh--tag)
-  - [The `showDetails` option](#the-showdetails-option)
-  - [The embedded themes](#the-embedded-themes)
-  - [How to load my custom theme](#how-to-load-my-custom-theme)
-  - [See the available themes from the API](#see-the-available-themes-from-the-api)
+Sablier comes with a set of default theme that you can use.
+
+You can also extend the themes by providing your own and they will be templated as Go Templates.
+
+## The embedded themes
+
+
+|       Name        |                                                  Preview                                                  |
+| :---------------: | :-------------------------------------------------------------------------------------------------------: |
+|      `ghost`      |           ![ghost](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/ghost.png)           |
+|     `shuffle`     |         ![shuffle](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/shuffle.png)         |
+| `hacker-terminal` | ![hacker-terminal](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/hacker-terminal.png) |
+|     `matrix`      |          ![matrix](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/matrix.png)          |
+
+
 
 ## Custom themes locations
 
-You can use the argument `--strategy.dynamic.coustom-themes` to define the location to search upon starting.
+You can use the argument `--strategy.dynamic.custom-themes` to define the location to search upon starting.
 
-By default, the docker image looks for theme inside the `/etc/sablier/themes` folder.
+By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder.
 
 ```yaml
-version: 3.9
-
 services:
   sablier:
     image: acouvreur/sablier:1.4.0-beta.3
@@ -30,7 +34,6 @@ services:
 It will look recursively for themes with the `.html` extension.
 
 - You **cannot** load new themes added in the folder without restarting
-  - Why? Because we build a theme whitelist in order to prevent malicious payload crafting by using `theme=../../very_secret.txt`
 - You **can** modify the existing themes files
 
 ## Create a custom theme
@@ -72,10 +75,6 @@ So the first step to create your own theme is to include the `HTML <meta> http-e
 
 If `showDetails` is set to `false` then the `.InstanceStates` will be an empty array.
 
-## The embedded themes
-
-See the [embedded themes](../app/http/pages/themes/).
-
 ## How to load my custom theme
 
 You can load themes by specifying their name and their relative path from the `--strategy.dynamic.custom-themes-path` value.
@@ -90,14 +89,14 @@ You can load themes by specifying their name and their relative path from the `-
 
 Such as 
 
-```shell
+```bash
 curl 'http://localhost:10000/api/strategies/dynamic?session_duration=1m&names=nginx&theme=custom1'
 ```
 
 ## See the available themes from the API
 
-```
-> curl 'http://localhost:10000/api/strategies/dynamic/themes'
+```bash
+curl 'http://localhost:10000/api/strategies/dynamic/themes'
 ```
 ```json
 {

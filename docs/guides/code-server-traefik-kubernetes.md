@@ -1,13 +1,4 @@
-# Sablier Guide: Code-Server + Traefik + Kubernetes Ingress
-
-- [Sablier Guide: Code-Server + Traefik + Kubernetes Ingress](#sablier-guide-code-server--traefik--kubernetes-ingress)
-  - [1. Prerequisites](#1-prerequisites)
-  - [2. Create the Kubernetes Cluster using K3S](#2-create-the-kubernetes-cluster-using-k3s)
-  - [3. Deploy Traefik using Helm](#3-deploy-traefik-using-helm)
-  - [3. Deploy Sablier](#3-deploy-sablier)
-  - [4. Deploy Code-Server](#4-deploy-code-server)
-  - [5. Routing Code-Server through Traefik with the Sablier Plugin Middleware](#5-routing-code-server-through-traefik-with-the-sablier-plugin-middleware)
-  - [6. Clean up](#6-clean-up)
+# Code-Server + Traefik + Kubernetes Ingress
 
 ## 1. Prerequisites
 

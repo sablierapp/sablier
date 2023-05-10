@@ -1,0 +1,24 @@
+- [Introduction](/)
+- [Getting started](/getting-started)
+- [Installation](/installation)
+- [Configuration](/configuration)
+- [Strategies](/strategies)
+- [Themes](/themes)
+- [FAQ](/faq)
+- [Versioning](/versioning)
+- **Providers**
+  - [Overview](/providers/overview)
+  - [Docker](/providers/docker)
+  - [Docker Swarm](/providers/docker_swarm)
+  - [Kubernetes](/providers/kubernetes)
+- **Reverse Proxy Plugins**
+  - [Overview](/plugins/overview)
+  - [Traefik](/plugins/traefik)
+  - [Nginx](/plugins/nginx)
+  - [Caddy](/plugins/caddy)
+- **Guides**
+  - [Overview](/guides/overview)
+  - [VSCode Server with Traefik and Kubernetes](/guides/code-server-traefik-kubernetes.md)
+- **Links**
+- [<img src="/assets/img/github.svg" />Github](https://github.com/acouvreur/sablier)
+- [<img src="/assets/img/docker.svg" height=24px />Docker Hub](https://hub.docker.com/r/acouvreur/sablier)
