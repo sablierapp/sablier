@@ -23,6 +23,17 @@
         "example",
         "ideas"
       ]
+    },
+    {
+      "login": "mschneider82",
+      "name": "Matthias Schneider",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8426497?v=4",
+      "profile": "https://github.com/mschneider82",
+      "contributions": [
+        "code",
+        "doc",
+        "review"
+      ]
     }
   ],
   "contributorsPerLine": 7,
