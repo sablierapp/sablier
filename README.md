@@ -1,6 +1,6 @@
 # Sablier
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![GoDoc](https://godoc.org/github.com/acouvreur/sablier?status.svg)](http://godoc.org/github.com/acouvreur/sablier)
@@ -34,6 +34,7 @@ Which allows you to start your containers on demand and shut them down automatic
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://www.alexiscouvreur.fr/"><img src="https://avatars.githubusercontent.com/u/22034450?v=4?s=100" width="100px;" alt="Alexis Couvreur"/><br /><sub><b>Alexis Couvreur</b></sub></a><br /><a href="#question-acouvreur" title="Answering Questions">💬</a> <a href="https://github.com/acouvreur/sablier/issues?q=author%3Aacouvreur" title="Bug reports">🐛</a> <a href="https://github.com/acouvreur/sablier/commits?author=acouvreur" title="Code">💻</a> <a href="https://github.com/acouvreur/sablier/commits?author=acouvreur" title="Documentation">📖</a> <a href="#example-acouvreur" title="Examples">💡</a> <a href="#ideas-acouvreur" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mschneider82"><img src="https://avatars.githubusercontent.com/u/8426497?v=4?s=100" width="100px;" alt="Matthias Schneider"/><br /><sub><b>Matthias Schneider</b></sub></a><br /><a href="https://github.com/acouvreur/sablier/commits?author=mschneider82" title="Code">💻</a> <a href="https://github.com/acouvreur/sablier/commits?author=mschneider82" title="Documentation">📖</a> <a href="https://github.com/acouvreur/sablier/pulls?q=is%3Apr+reviewed-by%3Amschneider82" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Thyvador"><img src="https://avatars.githubusercontent.com/u/20644197?v=4?s=100" width="100px;" alt="Alexandre HILTCHER"/><br /><sub><b>Alexandre HILTCHER</b></sub></a><br /><a href="https://github.com/acouvreur/sablier/commits?author=Thyvador" title="Code">💻</a> <a href="#ideas-Thyvador" title="Ideas, Planning, & Feedback">🤔</a></td>
     </tr>
   </tbody>
   <tfoot>
