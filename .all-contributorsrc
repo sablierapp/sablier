@@ -54,6 +54,15 @@
         "doc",
         "ideas"
       ]
+    },
+    {
+      "login": "Sam-R",
+      "name": "Sam R.",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4183297?v=4",
+      "profile": "https://github.com/Sam-R",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
