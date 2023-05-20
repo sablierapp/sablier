@@ -83,6 +83,16 @@
         "code",
         "ideas"
       ]
+    },
+    {
+      "login": "romdum",
+      "name": "Romain Duminil",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19633997?v=4",
+      "profile": "https://github.com/romdum",
+      "contributions": [
+        "code",
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
