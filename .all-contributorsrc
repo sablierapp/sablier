@@ -1,0 +1,30 @@
+{
+  "projectName": "sablier",
+  "projectOwner": "acouvreur",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": true,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "acouvreur",
+      "name": "Alexis Couvreur",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22034450?v=4",
+      "profile": "https://www.alexiscouvreur.fr/",
+      "contributions": [
+        "question",
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "linkToUsage": true
+}
