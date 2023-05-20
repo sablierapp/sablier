@@ -44,6 +44,16 @@
         "code",
         "ideas"
       ]
+    },
+    {
+      "login": "tandy-1000",
+      "name": "tandy1000",
+      "avatar_url": "https://avatars.githubusercontent.com/u/24867509?v=4",
+      "profile": "https://github.com/tandy-1000",
+      "contributions": [
+        "doc",
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
