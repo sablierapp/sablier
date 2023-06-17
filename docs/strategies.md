@@ -6,6 +6,8 @@ When configuring
 
 The **Dynamic Strategy** provides a waiting page for your session.
 
+![Demo](assets/img/demo.gif)
+
 ?> This strategy is well suited for a user that would access a frontend directly and expects to see a loading page.
 
 ```plantuml
@@ -13,6 +15,8 @@ The **Dynamic Strategy** provides a waiting page for your session.
 
 User -> Proxy: Website Request
 Proxy -> Sablier: Reverse Proxy Plugin Request Session Status
+Sablier -> Provider: Request Instance Status
+Sablier <-- Provider: Response Instance Status
 Proxy <-- Sablier: Returns the X-Sablier-Status Header
 
 alt `X-Sablier-Status` value is `not-ready`
@@ -47,7 +51,10 @@ Proxy -> Sablier: Reverse Proxy Plugin Request Session Status
 Sablier -> Provider: Request Instance Status
 
 alt `Instance` status is `not-ready`
-
+    Proxy -> Sablier: Reverse Proxy Plugin Request Session Status
+    Sablier -> Provider: Request Instance Status
+    Sablier <-- Provider: Response Instance Status
+    Proxy <-- Sablier: Returns the waiting page
 end
 
 Sablier <-- Provider: Response Instance Status

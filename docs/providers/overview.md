@@ -21,4 +21,4 @@ A Provider typically have the following capabilities:
 |       | [EC2](/providers/ec2)                   | `ec2`          | Work in progress                                         |
 |       | [Systemd](/providers/systemd)           | `systemd`      | Work in progress                                         |
 
-*Your Provider is not on the list? Open an issue or a pull request to add this functionnality here!*
+*Your Provider is not on the list? [Open an issue to request the missing provider here!](https://github.com/acouvreur/sablier/issues/new?assignees=&labels=enhancement%2C+provider&projects=&template=instance-provider-request.md&title=Add+%60%5BPROVIDER%5D%60+provider)*
