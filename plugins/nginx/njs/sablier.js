@@ -75,16 +75,23 @@ function buildRequest(c) {
  */
  function createDynamicUrl(config) {
   const url = `${config.sablierUrl}/api/strategies/dynamic`
-  const query = querystring.stringify({ 
-    names: config.names.split(",").map(name => name.trim()),
+  const query = {
     session_duration: config.sessionDuration,
     display_name:config.displayName,
     theme: config.theme,
     refresh_frequency: config.refreshFrequency,
     show_details: config.showDetails
-  });
+  };
 
-	return {url, query}
+  if(config.names) {
+    query.names = config.names.split(",").map(name => name.trim())
+  } else if(config.group) {
+    query.group = config.group
+  } else {
+    throw new Error('you must specify names or group'); 
+  }
+
+	return {url, query: querystring.stringify(query)}
 }
 
 /**
@@ -94,13 +101,21 @@ function buildRequest(c) {
  */
  function createBlockingUrl(config) {
   const url = `${config.sablierUrl}/api/strategies/blocking`
-  const query = querystring.stringify({ 
+  const query = { 
     names: config.names.split(",").map(name => name.trim()),
     session_duration: config.sessionDuration,
     timeout:config.timeout,
-  });
+  };
 
-	return {url, query} 
+  if(config.names) {
+    query.names = config.names.split(",").map(name => name.trim())
+  } else if(config.group) {
+    query.group = config.group
+  } else {
+    throw new Error('you must specify names or group'); 
+  }
+
+	return {url, query: querystring.stringify(query)} 
 }
 
 export default { call };
