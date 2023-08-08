@@ -17,7 +17,7 @@ type State struct {
 	Status          string        `json:"status"`
 	Message         string        `json:"message,omitempty"`
 	ExpiresAt       time.Time     `json:"expires_on"`
-	ExpiresAfter    time.Duration `json:"expires_in"`
+	ExpiresIn       time.Duration `json:"expires_in"`
 }
 
 func (instance State) IsReady() bool {

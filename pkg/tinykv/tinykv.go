@@ -13,9 +13,9 @@ type timeout struct {
 }
 
 type EntityWithTimeout struct {
-	Value        any
-	ExpiresAt    time.Time
-	ExpiresAfter time.Duration
+	Value     any
+	ExpiresAt time.Time
+	ExpiresIn time.Duration
 }
 
 func newTimeout(
@@ -154,17 +154,18 @@ func (kv *store[T]) GetWithTimeout(k string) (EntityWithTimeout, bool) {
 	var expiresAfter time.Duration
 
 	if e.timeout != nil {
+		diff := time.Since(e.expiresAt) * -1
 		expiresAt = e.expiresAt
-		expiresAfter = e.expiresAfter
+		expiresAfter = time.Duration(diff.Seconds())
 	} else {
 		expiresAt = time.Time{}
 		expiresAfter = 0
 	}
 
 	entity := EntityWithTimeout{
-		Value:        e.value,
-		ExpiresAt:    expiresAt,
-		ExpiresAfter: expiresAfter,
+		Value:     e.value,
+		ExpiresAt: expiresAt,
+		ExpiresIn: expiresAfter,
 	}
 
 	return entity, true

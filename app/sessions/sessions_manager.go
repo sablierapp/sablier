@@ -301,7 +301,7 @@ func (s *SessionsManager) GetContainerStatus(name string) *InstanceState {
 	storeState, exists := s.store.GetWithTimeout(name)
 	if exists {
 		instance.Instance.ExpiresAt = storeState.ExpiresAt
-		instance.Instance.ExpiresAfter = storeState.ExpiresAfter
+		instance.Instance.ExpiresIn = storeState.ExpiresIn
 	}
 
 	return instance
