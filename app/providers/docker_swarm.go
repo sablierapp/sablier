@@ -111,6 +111,29 @@ func (provider *DockerSwarmProvider) GetGroup(group string) []string {
 	return containers.([]string)
 }
 
+func (provider *DockerSwarmProvider) GetMangedContainers() ([]string, error) {
+	ctx := context.Background()
+
+	filters := filters.NewArgs()
+	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
+
+	services, err := provider.Client.ServiceList(ctx, types.ServiceListOptions{
+		Filters: filters,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var output []string
+
+	for _, service := range services {
+		output = append(output, service.Spec.Name)
+	}
+
+	return output, nil
+}
+
 func (provider *DockerSwarmProvider) GetState(name string) (instance.State, error) {
 	ctx := context.Background()
 

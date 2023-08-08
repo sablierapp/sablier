@@ -1,17 +1,23 @@
 package instance
 
-import log "github.com/sirupsen/logrus"
+import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
 
 var Ready = "ready"
 var NotReady = "not-ready"
 var Unrecoverable = "unrecoverable"
 
 type State struct {
-	Name            string `json:"name"`
-	CurrentReplicas int    `json:"currentReplicas"`
-	DesiredReplicas int    `json:"desiredReplicas"`
-	Status          string `json:"status"`
-	Message         string `json:"message,omitempty"`
+	Name            string        `json:"name"`
+	CurrentReplicas int           `json:"currentReplicas"`
+	DesiredReplicas int           `json:"desiredReplicas"`
+	Status          string        `json:"status"`
+	Message         string        `json:"message,omitempty"`
+	ExpiresAt       time.Time     `json:"expires_on"`
+	ExpiresAfter    time.Duration `json:"expires_in"`
 }
 
 func (instance State) IsReady() bool {

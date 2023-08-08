@@ -12,6 +12,12 @@ type timeout struct {
 	key          string
 }
 
+type EntityWithTimeout struct {
+	Value        any
+	ExpiresAt    time.Time
+	ExpiresAfter time.Duration
+}
+
 func newTimeout(
 	key string,
 	expiresAfter time.Duration) *timeout {
@@ -59,6 +65,7 @@ type entry[T any] struct {
 type KV[T any] interface {
 	Delete(k string)
 	Get(k string) (v T, ok bool)
+	GetWithTimeout(k string) (v EntityWithTimeout, ok bool)
 	Keys() (keys []string)
 	Values() (values []T)
 	Entries() (entries map[string]entry[T])
@@ -127,6 +134,40 @@ func (kv *store[T]) Get(k string) (T, bool) {
 		return zero, false
 	}
 	return e.value, ok
+}
+
+func (kv *store[T]) GetWithTimeout(k string) (EntityWithTimeout, bool) {
+	kv.mx.Lock()
+	defer kv.mx.Unlock()
+
+	e, ok := kv.kv[k]
+	if !ok {
+		return EntityWithTimeout{}, ok
+	}
+	if e.expired() {
+		go notifyExpirations(map[string]T{k: e.value}, kv.onExpire)
+		delete(kv.kv, k)
+		return EntityWithTimeout{}, false
+	}
+
+	var expiresAt time.Time
+	var expiresAfter time.Duration
+
+	if e.timeout != nil {
+		expiresAt = e.expiresAt
+		expiresAfter = e.expiresAfter
+	} else {
+		expiresAt = time.Time{}
+		expiresAfter = 0
+	}
+
+	entity := EntityWithTimeout{
+		Value:        e.value,
+		ExpiresAt:    expiresAt,
+		ExpiresAfter: expiresAfter,
+	}
+
+	return entity, true
 }
 
 func (kv *store[T]) Keys() (keys []string) {

@@ -64,6 +64,30 @@ func (provider *DockerClassicProvider) GetGroups() (map[string][]string, error) 
 	return groups, nil
 }
 
+func (provider *DockerClassicProvider) GetMangedContainers() ([]string, error) {
+	ctx := context.Background()
+
+	filters := filters.NewArgs()
+	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
+
+	containers, err := provider.Client.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: filters,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var output []string
+
+	for _, container := range containers {
+		output = append(output, strings.TrimPrefix(container.Names[0], "/"))
+	}
+
+	return output, nil
+}
+
 func (provider *DockerClassicProvider) Start(name string) (instance.State, error) {
 	ctx := context.Background()
 

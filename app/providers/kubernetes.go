@@ -123,6 +123,27 @@ func (provider *KubernetesProvider) GetGroups() (map[string][]string, error) {
 	return groups, nil
 }
 
+func (provider *KubernetesProvider) GetMangedContainers() ([]string, error) {
+	ctx := context.Background()
+
+	deployments, err := provider.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+		LabelSelector: enableLabel,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var output []string
+
+	for _, deployment := range deployments.Items {
+		name := fmt.Sprintf("%s_%s_%s_%d", "deployment", deployment.Namespace, deployment.Name, 1)
+		output = append(output, name)
+	}
+
+	return output, nil
+}
+
 func (provider *KubernetesProvider) scale(config *Config, replicas int32) (instance.State, error) {
 	ctx := context.Background()
 

@@ -21,6 +21,8 @@ type Manager interface {
 	RequestSessionGroup(group string, duration time.Duration) *SessionState
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
+	GetManagedContainers() ([]string, error)
+	GetContainerStatus(name string) *InstanceState
 
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
@@ -271,6 +273,38 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 	}
 
 	return s.RequestReadySession(ctx, names, duration, timeout)
+}
+
+func (s *SessionsManager) GetManagedContainers() ([]string, error) {
+
+	output, err := s.provider.GetMangedContainers()
+
+	if err != nil {
+		return nil, fmt.Errorf("Error getting list of managed containers")
+	}
+
+	return output, nil
+}
+
+func (s *SessionsManager) GetContainerStatus(name string) *InstanceState {
+
+	state, err := s.provider.GetState(name)
+
+	instance := &InstanceState{}
+	if err != nil {
+		instance.Error = err
+		return instance
+	}
+
+	instance.Instance = &state
+
+	storeState, exists := s.store.GetWithTimeout(name)
+	if exists {
+		instance.Instance.ExpiresAt = storeState.ExpiresAt
+		instance.Instance.ExpiresAfter = storeState.ExpiresAfter
+	}
+
+	return instance
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {

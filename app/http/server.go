@@ -38,6 +38,9 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 		health.SetDefaults()
 		health.WithContext(ctx)
 		base.GET("/health", health.ServeHTTP)
+
+		status := routes.NewStatus(sessionManager, strategyConf, sessionsConf)
+		base.GET("/status", status.ServeStatus)
 	}
 
 	srv := &http.Server{
