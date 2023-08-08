@@ -64,7 +64,7 @@ func (provider *DockerClassicProvider) GetGroups() (map[string][]string, error) 
 	return groups, nil
 }
 
-func (provider *DockerClassicProvider) GetMangedContainers() ([]string, error) {
+func (provider *DockerClassicProvider) GetManagedContainers() ([]string, error) {
 	ctx := context.Background()
 
 	filters := filters.NewArgs()

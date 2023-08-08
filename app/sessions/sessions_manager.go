@@ -277,7 +277,7 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 
 func (s *SessionsManager) GetManagedContainers() ([]string, error) {
 
-	output, err := s.provider.GetMangedContainers()
+	output, err := s.provider.GetManagedContainers()
 
 	if err != nil {
 		return nil, fmt.Errorf("Error getting list of managed containers")

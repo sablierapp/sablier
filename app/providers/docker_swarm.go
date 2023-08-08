@@ -111,7 +111,7 @@ func (provider *DockerSwarmProvider) GetGroup(group string) []string {
 	return containers.([]string)
 }
 
-func (provider *DockerSwarmProvider) GetMangedContainers() ([]string, error) {
+func (provider *DockerSwarmProvider) GetManagedContainers() ([]string, error) {
 	ctx := context.Background()
 
 	filters := filters.NewArgs()

@@ -123,7 +123,7 @@ func (provider *KubernetesProvider) GetGroups() (map[string][]string, error) {
 	return groups, nil
 }
 
-func (provider *KubernetesProvider) GetMangedContainers() ([]string, error) {
+func (provider *KubernetesProvider) GetManagedContainers() ([]string, error) {
 	ctx := context.Background()
 
 	deployments, err := provider.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{

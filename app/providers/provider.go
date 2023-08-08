@@ -17,7 +17,7 @@ type Provider interface {
 	Stop(name string) (instance.State, error)
 	GetState(name string) (instance.State, error)
 	GetGroups() (map[string][]string, error)
-	GetMangedContainers() ([]string, error)
+	GetManagedContainers() ([]string, error)
 
 	NotifyInstanceStopped(ctx context.Context, instance chan<- string)
 }
