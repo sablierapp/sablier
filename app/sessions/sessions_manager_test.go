@@ -8,6 +8,7 @@ import (
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/sessions/mocks"
+	"github.com/acouvreur/sablier/config"
 	"github.com/stretchr/testify/mock"
 	"gotest.tools/v3/assert"
 )
@@ -104,11 +105,13 @@ func TestNewSessionsManagerEvents(t *testing.T) {
 			provider := mocks.NewProviderMockWithStoppedInstancesEvents(tt.stoppedInstances)
 			provider.Add(1)
 
+			conf := config.NewConfig()
+
 			kv := mocks.NewKVMock()
 			kv.Add(len(tt.stoppedInstances))
 			kv.Mock.On("Delete", mock.AnythingOfType("string")).Return()
 
-			NewSessionsManager(kv, provider)
+			NewSessionsManager(kv, provider, conf)
 
 			// The provider watches notifications from a Goroutine, must wait
 			provider.Wait()

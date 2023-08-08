@@ -10,6 +10,7 @@ import (
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers"
+	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,12 +35,13 @@ type SessionsManager struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
+	config   config.Config
 	store    tinykv.KV[instance.State]
 	provider providers.Provider
 	groups   map[string][]string
 }
 
-func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
+func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider, conf config.Config) Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	groups, err := provider.GetGroups()
@@ -51,12 +53,14 @@ func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Prov
 	sm := &SessionsManager{
 		ctx:      ctx,
 		cancel:   cancel,
+		config:   conf,
 		store:    store,
 		provider: provider,
 		groups:   groups,
 	}
 
 	sm.initWatchers()
+	sm.initContainerManagementStart()
 
 	return sm
 }
@@ -69,6 +73,30 @@ func (sm *SessionsManager) initWatchers() {
 	instanceStopped := make(chan string)
 	go sm.provider.NotifyInstanceStopped(sm.ctx, instanceStopped)
 	go sm.consumeInstanceStopped(instanceStopped)
+}
+
+func (sm *SessionsManager) initContainerManagementStart() {
+	output, err := sm.provider.GetManagedContainers()
+
+	if err != nil {
+		log.Debugf("Could not get list of managed containers to apply default")
+	}
+
+	var startContainers []string
+
+	for _, name := range output {
+		instance, err := sm.provider.GetState(name)
+
+		if err != nil {
+			log.Debugf("Could not get state for %s", name)
+		}
+
+		if instance.IsReady() {
+			startContainers = append(startContainers, name)
+		}
+	}
+
+	sm.RequestSession(startContainers, sm.config.Sessions.DefaultDuration)
 }
 
 func (sm *SessionsManager) consumeGroups(receive chan map[string][]string) {
