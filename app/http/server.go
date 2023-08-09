@@ -33,14 +33,13 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 			api.GET("/strategies/dynamic", strategy.ServeDynamic)
 			api.GET("/strategies/dynamic/themes", strategy.ServeDynamicThemes)
 			api.GET("/strategies/blocking", strategy.ServeBlocking)
+			status := routes.NewStatus(sessionManager, strategyConf, sessionsConf)
+			api.GET("/status", status.ServeStatus)
 		}
 		health := routes.Health{}
 		health.SetDefaults()
 		health.WithContext(ctx)
 		base.GET("/health", health.ServeHTTP)
-
-		status := routes.NewStatus(sessionManager, strategyConf, sessionsConf)
-		base.GET("/status", status.ServeStatus)
 	}
 
 	srv := &http.Server{
