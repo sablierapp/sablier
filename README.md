@@ -13,7 +13,9 @@
 ![Latest Release](https://img.shields.io/github/v/release/acouvreur/sablier?style=flat-square&sort=semver)
 ![Latest PreRelease](https://img.shields.io/github/v/release/acouvreur/sablier?style=flat-square&include_prereleases&sort=semver)
 
-An free and open-source software to bring workloads on demand to your infrastructure.
+An free and open-source software to start workloads on demand and stop them after a period of inactivity.
+
+![Demo](./docs/assets/img/demo.gif)
 
 Either because you don't want to overload your raspberry pi or because your QA environment gets used only once a week and wastes resources by keeping your workloads up and running, Sablier is a project that might interest you.
 
