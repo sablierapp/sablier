@@ -47,7 +47,7 @@ func TestPrecedence(t *testing.T) {
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 
-		wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_env_wanted.json"))
+		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_env_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
 		conf = config.NewConfig()

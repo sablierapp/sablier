@@ -17,6 +17,12 @@ GO_LDFLAGS := -X $(VPREFIX).Branch=$(GIT_BRANCH) -X $(VPREFIX).Version=$(VERSION
 $(PLATFORMS):
 	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) go build -tags=nomsgpack -v -ldflags="${GO_LDFLAGS}" -o 'sablier_$(VERSION)_$(os)-$(arch)' .
 
+build:
+	go build -v .
+
+test:
+	go test -v ./...
+
 release: $(PLATFORMS)
 .PHONY: release $(PLATFORMS)
 
@@ -33,3 +39,20 @@ update-doc-version-middleware:
 
 docs:
 	docsify serve docs
+
+# End to end tests
+
+## Caddy
+e2e-caddy-docker:
+	
+e2e-caddy-swarm:
+
+e2e-caddy-kubernetes:
+
+e2e-caddy: e2e-caddy-docker e2e-caddy-swarm e2e-caddy-kubernetes
+
+## NGinx
+e2e-caddy: e2e-caddy-docker e2e-caddy-swarm e2e-caddy-kubernetes
+
+## Traefik
+e2e:

@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"github.com/docker/docker/api/types/container"
 	"io"
 	"time"
 
@@ -42,8 +43,8 @@ func (client *DockerAPIClientMock) ContainerStart(ctx context.Context, container
 	return args.Error(0)
 }
 
-func (client *DockerAPIClientMock) ContainerStop(ctx context.Context, container string, timeout *time.Duration) error {
-	args := client.Mock.Called(ctx, container, timeout)
+func (client *DockerAPIClientMock) ContainerStop(ctx context.Context, container string, options container.StopOptions) error {
+	args := client.Mock.Called(ctx, container, options)
 	return args.Error(0)
 }
 
@@ -92,7 +93,7 @@ func RunningWithoutHealthcheckContainerSpec(name string) types.ContainerJSON {
 	}
 }
 
-// Status can be "starting", "healthy" or "unhealthy"
+// RunningWithHealthcheckContainerSpec Status can be "starting", "healthy" or "unhealthy"
 func RunningWithHealthcheckContainerSpec(name string, status string) types.ContainerJSON {
 	return types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{

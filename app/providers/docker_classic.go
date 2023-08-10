@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/docker/docker/api/types/container"
 	"io"
 	"strings"
 
@@ -85,7 +86,7 @@ func (provider *DockerClassicProvider) Stop(name string) (instance.State, error)
 	ctx := context.Background()
 
 	// TODO: Allow to specify a termination timeout
-	err := provider.Client.ContainerStop(ctx, name, nil)
+	err := provider.Client.ContainerStop(ctx, name, container.StopOptions{})
 
 	if err != nil {
 		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)

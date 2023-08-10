@@ -16,10 +16,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Go 1.18
+      - name: Set up Go 1.21
         uses: actions/setup-go@v2
         with:
-         go-version: ^1.18
+         go-version: ^1.21
 
       - name: Setup Node.js
         uses: actions/setup-node@v3

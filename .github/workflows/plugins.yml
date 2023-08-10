@@ -36,10 +36,10 @@ jobs:
     name: Build Sablier for Traefik middleware
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.21
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -59,10 +59,10 @@ jobs:
       matrix:
         provider: [docker, docker_swarm, kubernetes]
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.21
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -91,10 +91,10 @@ jobs:
       matrix:
         provider: [docker, docker_swarm] # , kubernetes]
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.21
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -152,10 +152,10 @@ jobs:
       matrix:
         provider: [docker, docker_swarm] # , kubernetes]
     steps:
-      - name: Set up Go 1.18
+      - name: Set up Go 1.21
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Checkout code
         uses: actions/checkout@v2
