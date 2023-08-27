@@ -46,6 +46,5 @@ func (sm *SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
 func forward(resp *http.Response, rw http.ResponseWriter) {
 	rw.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	rw.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
 	io.Copy(rw, resp.Body)
 }
