@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -87,7 +86,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 		CustomThemes:        s.customThemesFS,
 		AllowedCustomThemes: s.customThemes,
 		Version:             version.Version,
-		RefreshFrequency:    5 * time.Second,
+		RefreshFrequency:    request.RefreshFrequency,
 		InstanceStates:      sessionStateToRenderOptionsInstanceState(sessionState),
 	}
 
