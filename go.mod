@@ -3,7 +3,7 @@ module github.com/acouvreur/sablier
 go 1.21
 
 require (
-	github.com/docker/docker v24.0.5+incompatible
+	github.com/docker/docker v24.0.6+incompatible
 	github.com/gavv/httpexpect/v2 v2.15.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/pkg/errors v0.9.1
