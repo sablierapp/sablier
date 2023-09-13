@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   proxy:
-    image: nginx:1.23.1
+    image: nginx:1.25.2
     ports:
       - 8080:80
     volumes:
@@ -26,7 +26,7 @@ services:
     image: containous/whoami:v1.5.0
 
   nginx:
-    image: nginx:1.23.1
+    image: nginx:1.25.2
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s

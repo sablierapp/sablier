@@ -22,7 +22,7 @@ services:
     image: containous/whoami:v1.5.0
 
   nginx:
-    image: nginx:1.23.1
+    image: nginx:1.25.2
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
