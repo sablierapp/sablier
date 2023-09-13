@@ -38,7 +38,7 @@ func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
 }
 
 func (provider *DockerSwarmProvider) Start(name string) (instance.State, error) {
-	return provider.scale(name, uint64(provider.desiredReplicas))
+	return instance.State{}, fmt.Errorf("test error for docker swarm provider")
 }
 
 func (provider *DockerSwarmProvider) Stop(name string) (instance.State, error) {
