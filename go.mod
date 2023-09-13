@@ -2,6 +2,8 @@ module github.com/acouvreur/sablier
 
 go 1.21
 
+replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
+
 require (
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/gavv/httpexpect/v2 v2.15.0

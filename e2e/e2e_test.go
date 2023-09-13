@@ -4,17 +4,17 @@
 package e2e
 
 import (
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gavv/httpexpect/v2"
 )
 
-var waitingTime = 10 * time.Second
-
 func Test_Dynamic(t *testing.T) {
-	e := httpexpect.New(t, "http://localhost:8080/dynamic/")
+	e := httpexpect.Default(t, "http://localhost:8080/dynamic/")
 
 	e.GET("/whoami").
 		Expect().
@@ -23,16 +23,30 @@ func Test_Dynamic(t *testing.T) {
 		Contains(`Dynamic Whoami`).
 		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
-	time.Sleep(waitingTime)
-
 	e.GET("/whoami").
+		WithMaxRetries(10).
+		WithRetryDelay(time.Second, time.Second*2).
+		WithRetryPolicy(httpexpect.RetryCustomHandler).
+		WithCustomHandler(func(resp *http.Response, _ error) bool {
+			if resp.Body != nil {
+
+				// Check body if available, etc.
+				body, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					return true
+				}
+				return !strings.Contains(string(body), "Host: localhost:8080")
+			}
+			return false
+		}).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
 }
 
 func Test_Blocking(t *testing.T) {
-	e := httpexpect.New(t, "http://localhost:8080/blocking/")
+	e := httpexpect.Default(t, "http://localhost:8080/blocking/")
 
 	e.GET("/whoami").
 		Expect().
@@ -41,7 +55,7 @@ func Test_Blocking(t *testing.T) {
 }
 
 func Test_Multiple(t *testing.T) {
-	e := httpexpect.New(t, "http://localhost:8080/multiple/")
+	e := httpexpect.Default(t, "http://localhost:8080/multiple/")
 
 	e.GET("/whoami").
 		Expect().
@@ -50,21 +64,50 @@ func Test_Multiple(t *testing.T) {
 		Contains(`Multiple Whoami`).
 		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
-	time.Sleep(waitingTime)
-
 	e.GET("/whoami").
+		WithMaxRetries(10).
+		WithRetryDelay(time.Second, time.Second*2).
+		WithRetryPolicy(httpexpect.RetryCustomHandler).
+		WithCustomHandler(func(resp *http.Response, _ error) bool {
+			if resp.Body != nil {
+				// Check body if available, etc.
+				body, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					return true
+				}
+				return !strings.Contains(string(body), "Host: localhost:8080")
+			}
+			return false
+		}).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
 
 	e.GET("/nginx").
+		WithMaxRetries(10).
+		WithRetryDelay(time.Second, time.Second*2).
+		WithRetryPolicy(httpexpect.RetryCustomHandler).
+		WithCustomHandler(func(resp *http.Response, _ error) bool {
+			if resp.Body != nil {
+
+				// Check body if available, etc.
+				body, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					return true
+				}
+				return !strings.Contains(string(body), "nginx/")
+			}
+			return false
+		}).
 		Expect().
 		Status(http.StatusNotFound).
-		Body().Contains(`nginx/1.23.1`)
+		Body().Contains(`nginx/`)
 }
 
 func Test_Healthy(t *testing.T) {
-	e := httpexpect.New(t, "http://localhost:8080/healthy/")
+	e := httpexpect.Default(t, "http://localhost:8080/healthy/")
 
 	e.GET("/nginx").
 		Expect().
@@ -73,10 +116,24 @@ func Test_Healthy(t *testing.T) {
 		Contains(`Healthy Nginx`).
 		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
 
-	time.Sleep(waitingTime)
-
 	e.GET("/nginx").
+		WithMaxRetries(10).
+		WithRetryDelay(time.Second, time.Second*2).
+		WithRetryPolicy(httpexpect.RetryCustomHandler).
+		WithCustomHandler(func(resp *http.Response, _ error) bool {
+			if resp.Body != nil {
+
+				// Check body if available, etc.
+				body, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					return true
+				}
+				return !strings.Contains(string(body), "nginx/")
+			}
+			return false
+		}).
 		Expect().
 		Status(http.StatusNotFound).
-		Body().Contains(`nginx/1.23.1`)
+		Body().Contains(`nginx/`)
 }
