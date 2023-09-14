@@ -1,4 +1,7 @@
 # Sablier
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 ![Latest Build](https://img.shields.io/github/actions/workflow/status/acouvreur/sablier/build.yml?style=flat-square&branch=main)![Go Report](https://goreportcard.com/badge/github.com/acouvreur/sablier?style=flat-square) ![Go Version](https://img.shields.io/github/go-mod/go-version/acouvreur/sablier?style=flat-square) ![Latest Release](https://img.shields.io/github/release/acouvreur/sablier/all.svg?style=flat-square)
 
@@ -430,3 +433,24 @@ The configuration is [release.config.js](https://github.com/acouvreur/sablier/bl
 
 - [Hourglass icons created by Vectors Market - Flaticon](https://www.flaticon.com/free-icons/hourglass)
 - [tarampampam/error-pages](https://github.com/tarampampam/error-pages/) for the themes
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/patcher-ms"><img src="https://avatars.githubusercontent.com/u/113395549?v=4?s=100" width="100px;" alt="patcher-ms"/><br /><sub><b>patcher-ms</b></sub></a><br /><a href="https://github.com/acouvreur/sablier/issues?q=author%3Apatcher-ms" title="Bug reports">🐛</a> <a href="https://github.com/acouvreur/sablier/commits?author=patcher-ms" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
