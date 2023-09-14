@@ -1,0 +1,27 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "patcher-ms",
+      "name": "patcher-ms",
+      "avatar_url": "https://avatars.githubusercontent.com/u/113395549?v=4",
+      "profile": "https://github.com/patcher-ms",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "sablier",
+  "projectOwner": "acouvreur"
+}
