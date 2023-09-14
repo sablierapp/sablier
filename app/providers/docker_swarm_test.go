@@ -101,7 +101,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
-			got, err := provider.Start(tt.args.name)
+			got, err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -201,7 +201,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
-			got, err := provider.Stop(tt.args.name)
+			got, err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -284,7 +284,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 
-			got, err := provider.GetState(tt.args.name)
+			got, err := provider.GetState(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return

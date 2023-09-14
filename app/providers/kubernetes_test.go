@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -98,7 +99,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			got, err := provider.Start(tt.args.name)
+			got, err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KubernetesProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -196,7 +197,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			got, err := provider.Stop(tt.args.name)
+			got, err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KubernetesProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -321,7 +322,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			deploymentAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getDeployment, nil)
 			statefulsetAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getStatefulSet, nil)
 
-			got, err := provider.GetState(tt.args.name)
+			got, err := provider.GetState(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KubernetesProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return

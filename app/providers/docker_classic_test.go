@@ -248,7 +248,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 
 			tt.fields.Client.On("ContainerInspect", mock.Anything, mock.Anything).Return(tt.containerSpec, tt.err)
 
-			got, err := provider.GetState(tt.args.name)
+			got, err := provider.GetState(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerClassicProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -320,7 +320,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 
 			tt.fields.Client.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
-			got, err := provider.Stop(tt.args.name)
+			got, err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerClassicProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -392,7 +392,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 
 			tt.fields.Client.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
-			got, err := provider.Start(tt.args.name)
+			got, err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerClassicProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -40,7 +40,7 @@ type SessionsManager struct {
 func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	groups, err := provider.GetGroups()
+	groups, err := provider.GetGroups(ctx)
 	if err != nil {
 		groups = make(map[string][]string)
 		log.Warn("could not get groups", err)
@@ -184,7 +184,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	if !exists {
 		log.Debugf("starting %s...", name)
 
-		state, err := s.provider.Start(name)
+		state, err := s.provider.Start(s.ctx, name)
 
 		if err != nil {
 			log.Errorf("an error occurred starting %s: %s", name, err.Error())
@@ -199,7 +199,7 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	} else if requestState.Status != instance.Ready {
 		log.Debugf("checking %s...", name)
 
-		state, err := s.provider.GetState(name)
+		state, err := s.provider.GetState(s.ctx, name)
 
 		if err != nil {
 			log.Errorf("an error occurred checking state %s: %s", name, err.Error())

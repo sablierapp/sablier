@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/container"
 	"io"
 	"strings"
+
+	"github.com/docker/docker/api/types/container"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/docker/docker/api/types"
@@ -34,9 +35,7 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 	}, nil
 }
 
-func (provider *DockerClassicProvider) GetGroups() (map[string][]string, error) {
-	ctx := context.Background()
-
+func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
 	filters := filters.NewArgs()
 	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
 
@@ -65,9 +64,7 @@ func (provider *DockerClassicProvider) GetGroups() (map[string][]string, error) 
 	return groups, nil
 }
 
-func (provider *DockerClassicProvider) Start(name string) (instance.State, error) {
-	ctx := context.Background()
-
+func (provider *DockerClassicProvider) Start(ctx context.Context, name string) (instance.State, error) {
 	err := provider.Client.ContainerStart(ctx, name, types.ContainerStartOptions{})
 
 	if err != nil {
@@ -82,10 +79,7 @@ func (provider *DockerClassicProvider) Start(name string) (instance.State, error
 	}, err
 }
 
-func (provider *DockerClassicProvider) Stop(name string) (instance.State, error) {
-	ctx := context.Background()
-
-	// TODO: Allow to specify a termination timeout
+func (provider *DockerClassicProvider) Stop(ctx context.Context, name string) (instance.State, error) {
 	err := provider.Client.ContainerStop(ctx, name, container.StopOptions{})
 
 	if err != nil {
@@ -100,9 +94,7 @@ func (provider *DockerClassicProvider) Stop(name string) (instance.State, error)
 	}, nil
 }
 
-func (provider *DockerClassicProvider) GetState(name string) (instance.State, error) {
-	ctx := context.Background()
-
+func (provider *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := provider.Client.ContainerInspect(ctx, name)
 
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/docker/docker/api/types"
@@ -18,8 +17,6 @@ import (
 
 type DockerSwarmProvider struct {
 	Client          client.APIClient
-	updateGroups    chan any
-	groups          *sync.Map
 	desiredReplicas int
 }
 
@@ -31,22 +28,19 @@ func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
 	return &DockerSwarmProvider{
 		Client:          cli,
 		desiredReplicas: 1,
-		updateGroups:    make(chan any, 1),
-		groups:          &sync.Map{},
 	}, nil
 
 }
 
-func (provider *DockerSwarmProvider) Start(name string) (instance.State, error) {
-	return provider.scale(name, uint64(provider.desiredReplicas))
+func (provider *DockerSwarmProvider) Start(ctx context.Context, name string) (instance.State, error) {
+	return provider.scale(ctx, name, uint64(provider.desiredReplicas))
 }
 
-func (provider *DockerSwarmProvider) Stop(name string) (instance.State, error) {
-	return provider.scale(name, 0)
+func (provider *DockerSwarmProvider) Stop(ctx context.Context, name string) (instance.State, error) {
+	return provider.scale(ctx, name, 0)
 }
 
-func (provider *DockerSwarmProvider) scale(name string, replicas uint64) (instance.State, error) {
-	ctx := context.Background()
+func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) (instance.State, error) {
 	service, err := provider.getServiceByName(name, ctx)
 
 	if err != nil {
@@ -74,9 +68,7 @@ func (provider *DockerSwarmProvider) scale(name string, replicas uint64) (instan
 	return instance.NotReadyInstanceState(foundName, 0, provider.desiredReplicas)
 }
 
-func (provider *DockerSwarmProvider) GetGroups() (map[string][]string, error) {
-	ctx := context.Background()
-
+func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
 	filters := filters.NewArgs()
 	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
 
@@ -103,16 +95,7 @@ func (provider *DockerSwarmProvider) GetGroups() (map[string][]string, error) {
 	return groups, nil
 }
 
-func (provider *DockerSwarmProvider) GetGroup(group string) []string {
-	containers, ok := provider.groups.Load(group)
-	if !ok {
-		return []string{}
-	}
-	return containers.([]string)
-}
-
-func (provider *DockerSwarmProvider) GetState(name string) (instance.State, error) {
-	ctx := context.Background()
+func (provider *DockerSwarmProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 
 	service, err := provider.getServiceByName(name, ctx)
 	if err != nil {

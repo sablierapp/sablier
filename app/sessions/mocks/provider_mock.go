@@ -48,12 +48,12 @@ func (provider *ProviderMock) Wait() {
 	provider.wg.Wait()
 }
 
-func (provider *ProviderMock) GetState(name string) (instance.State, error) {
+func (provider *ProviderMock) GetState(ctx context.Context, name string) (instance.State, error) {
 	args := provider.Mock.Called(name)
 	return args.Get(0).(instance.State), args.Error(1)
 }
 
-func (provider *ProviderMock) GetGroups() (map[string][]string, error) {
+func (provider *ProviderMock) GetGroups(ctx context.Context) (map[string][]string, error) {
 	return make(map[string][]string), nil
 }
 

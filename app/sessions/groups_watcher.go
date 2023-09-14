@@ -16,7 +16,7 @@ func watchGroups(ctx context.Context, provider providers.Provider, frequency tim
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			groups, err := provider.GetGroups()
+			groups, err := provider.GetGroups(ctx)
 			if err != nil {
 				log.Warn("could not get groups", err)
 			} else {

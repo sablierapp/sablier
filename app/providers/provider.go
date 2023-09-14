@@ -13,10 +13,10 @@ const groupLabel = "sablier.group"
 const defaultGroupValue = "default"
 
 type Provider interface {
-	Start(name string) (instance.State, error)
-	Stop(name string) (instance.State, error)
-	GetState(name string) (instance.State, error)
-	GetGroups() (map[string][]string, error)
+	Start(ctx context.Context, name string) (instance.State, error)
+	Stop(ctx context.Context, name string) (instance.State, error)
+	GetState(ctx context.Context, name string) (instance.State, error)
+	GetGroups(ctx context.Context) (map[string][]string, error)
 
 	NotifyInstanceStopped(ctx context.Context, instance chan<- string)
 }
