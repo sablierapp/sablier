@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/acouvreur/sablier/app/http/healthcheck"
+	"github.com/acouvreur/sablier/internal/http"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +13,7 @@ var newHealthCommand = func() *cobra.Command {
 		Use:   "health",
 		Short: "Calls the health endpoint of a Sablier instance",
 		Run: func(cmd *cobra.Command, args []string) {
-			details, healthy := healthcheck.Health(cmd.Flag("url").Value.String())
+			details, healthy := http.Health(cmd.Flag("url").Value.String())
 
 			if healthy {
 				fmt.Fprintf(os.Stderr, "healthy: %v\n", details)

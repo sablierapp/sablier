@@ -20,7 +20,7 @@ RUN make BUILDTIME=${BUILDTIME} VERSION=${VERSION} GIT_REVISION=${REVISION} ${TA
 FROM alpine:3.18.3
 
 COPY --from=build /go/src/sablier/sablier* /etc/sablier/sablier
-COPY docker/sablier.yaml /etc/sablier/sablier.yaml
+COPY sablier.yaml /etc/sablier/sablier.yaml
 
 EXPOSE 10000
 
