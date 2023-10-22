@@ -16,154 +16,224 @@ var errorPage = `<!doctype html>
 
   <meta http-equiv="refresh" content="5" />
 
+  <link rel="shortcut icon" href="https://docs.traefik.io/assets/images/logo-traefik-proxy-logo.svg" />
+  <link rel="preconnect" href="https://fonts.gstatic.com/">
 
-  <link rel="shortcut icon"
-    href="https://docs.traefik.io/assets/images/logo-traefik-proxy-logo.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" />
-
-
-  <style>
-    * {
-      box-sizing: border-box;
+  <style type="text/css">
+    :root {
+      --color-Rose: #ff99a5;
+      --color-Jaune: #ffcc01;
+      --color-Vert: #00cc99;
+      --color-Raven: #0046da;
+      --color-Raven-shadow: #0046da66;
+      --color-Beige: #f6ecdf;
+      --color-Wayne6: #001440;
+      --translate-size: 7px;
     }
-
     html {
-      -ms-text-size-adjust: 100%;
-      -webkit-text-size-adjust: 100%;
-      font-family: 'Inter', 'system-ui', sans-serif;
-      font-size: 62.5%;
-      height: 100%;
-      line-height: 1.15;
-      margin: 0;
-      min-height: 100vh;
-      width: 100%;
+      background-color: var(--color-Wayne6);
     }
-
     body {
-      align-items: center;
-      background-color: #c7d0d9;
-      background-position: center center;
-      background-repeat: no-repeat;
-      display: flex;
-      flex-flow: column nowrap;
+      height: 100vh;
+      width: 100vw;
+      font-family: 'Work Sans', sans-serif;
       margin: 0;
-      min-height: 100vh;
-      padding: 10rem 0 0 0;
-      width: 100%;
+      padding: 0;
     }
-
-    img {
-      border: 0;
+    .u-flex-center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-y: auto;
     }
-
-    a {
-      background-color: transparent;
-      color: inherit;
+    .cluster {
+      width: fit-content;
+      margin: auto;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      border-radius: 24px;
+      padding: 24px 46px 1px;
+      background-color: var(--color-Beige);
+      position: relative;
+      transition: 300ms ease-in-out;
+      min-width: 200px;
+      max-width: 70%;
     }
-
-    a:active,
-    a:hover {
-      outline: 0;
+    .cluster:before {
+      content: '';
+      background-color: var(--color-Vert);
+      border-top-left-radius: 24px;
+      border-bottom-left-radius: 24px;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      top: 0;
+      width: 20px;
     }
-
-    .text {
-      color: #c7d0d9;
-      font-size: 1.6rem;
-      line-height: 2.4rem;
-      text-align: center;
+    .cluster:after {
+      content: '';
+      background-color: var(--color-Rose);
+      border-top-right-radius: 24px;
+      border-bottom-right-radius: 24px;
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      top: 0;
+      width: 20px;
     }
-
-    .header {
+    .cluster:hover {
+      transform: translateY(calc(-1 * var(--translate-size)));
+      box-shadow: 0 15px 0 0 var(--color-Raven);
+    }
+    .title {
+      margin-top: 8px;
+      margin-bottom: 24px;
+      font-weight: 600;
+      font-size: 22px;
+    }
+    .title.small {
+      font-size: 14px;
+    }
+    .subtitle {
+      font-weight: 600;
+      font-size: 18px;
       position: relative;
     }
-
-    .logo {
-      height: 4rem;
-      left: 50%;
-      position: absolute;
-      top: 50%;
-      transform: translateX(-50%) translateY(-50%);
-      width: 4rem;
-    }
-
-    .panel {
-      align-items: center;
-      background-color: #212124;
-      border-radius: 2px;
-      display: flex;
-      flex-flow: column nowrap;
-      margin: 6rem 0 0 0;
-      max-width: 100vw;
-      padding: 3.5rem 6.2rem;
-      width: 56rem;
-    }
-
-    .panel>*:not(:last-child) {
-      margin: 0 0 4rem;
-    }
-
-    .headline {
-      color: #ffffff;
-      font-size: 3.2rem;
-      font-weight: 500;
-      line-height: 5rem;
-      margin: 0 0 1.3rem;
-      text-align: center;
-    }
-
-    .footer {
-      bottom: 1rem;
+    .subtitle:after {
+      background-color: var(--color-Jaune);
+      height: 5px;
+      bottom: -3px;
+      content: '';
       left: 0;
-      position: fixed;
-      width: 100%;
-      font-size: small;
+      position: absolute;
+      right: 0;
+      transform: scaleX(0);
+      transform-origin: 100% 50%;
+      transition: transform 300ms ease-in-out;
+    }
+    .cluster:hover .subtitle:after {
+      transform: scaleX(1);
+      transform-origin: 0 50%;
+    }
+    .code {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: var(--color-Wayne6);
+      color: var(--color-Rose);
+      padding: 24px;
+      font-size: 16px;
+      transition: 300ms ease-in-out;
+    }
+    .cluster:hover .code {
+      transform: translate(calc(.5 * var(--translate-size)), calc(-.5 * var(--translate-size)));
+      box-shadow: -10px 10px 0 0 var(--color-Jaune);
+    }
+    
+    .footer {
+      position: absolute;
+      bottom: 0px;
+    }
+    .footer>a {
+      text-decoration: none;
+      color: var(--color-Beige);
+      transition: 500ms;
+      opacity: .4;
+    }
+    .footer>a:hover {
+      opacity: 1;
     }
 
-    @media (max-width: 56rem) {
-      body {
-        background-image: none;
-        padding: 0;
-      }
-
-      .panel {
-        margin: 0;
-        padding: 2rem;
-      }
-
-      .panel>*:not(:last-child) {
-        margin-bottom: 2rem;
-      }
-
-      .footer {
-        margin: 2rem 0;
-        padding: 2rem;
-        position: initial;
-      }
+    .copyright {
+      opacity: .3;
+      position: fixed;
+      bottom: 15px;
+      right: 120px;
+      color: var(--color-Beige);
+      transition-duration: 250ms;
+      transform: scale(0.7);
+    }
+    .copyright:hover {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .copyright:before,
+    .copyright:after {
+      opacity: 0;
+      position: absolute;
+      transition-duration: 250ms;
+      white-space: nowrap;
+    }
+    .copyright:before {
+      content: "Designed with";
+      left: -40px;
+    }
+    .copyright:after {
+      content: "by Staylix";
+      right: -35px;
+    }
+    .copyright:hover:before,
+    .copyright:hover:after {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .copyright:hover:before {
+      left: -110px;
+    }
+    .copyright:hover:after {
+      right: -78px;
+    }
+    .heart {
+      background-color: var(--color-Rose);
+      display: inline-block;
+      height: 14px;
+      position: relative;
+      top: 0;
+      transform: rotate(-45deg);
+      width: 15px;
+      border-radius: 2px;
+    }
+    .heart:before,
+    .heart:after {
+      content: "";
+      background-color: var(--color-Rose);
+      border-radius: 50%;
+      height: 14px;
+      position: absolute;
+      width: 14px;
+    }
+    .heart:before {
+      top: -6px;
+      left: 0;
+    }
+    .heart:after {
+      left: 6px;
+      top: 0;
     }
   </style>
 </head>
 
-<body>
-  <header class="header">
-    <img
-      src="https://docs.traefik.io/assets/images/logo-traefik-proxy-logo.svg">
-  </header>
 
-  <section class="panel">
-    <h2 class="headline" id="headline">Error loading {{ .Name }}.</h2>
-
-    <p class="message text" id="message">There was an error loading your instance.</p>
-
-
-    <div class="support text">
+<body class="u-flex-center">
+  <div class="cluster">
+    <div>
+      <span class="subtitle">Stack name</span>
+      <div class="title">{{ .Name }}</div>
+    </div>
+    <div>
+      <span class="subtitle">Error</span>
+      <div class="title small">
+        There was an error loading your instance.
+      </div>
+    </div>
+    <div class="title code">
       {{ .Error }}
     </div>
-  </section>
+  </div>
 
-  <footer class="footer text">
+  <div class="copyright">
+    <div class="heart"></div>
+  </div>
+
+  <footer class="footer title small">
     <a href="https://github.com/acouvreur/traefik-ondemand-plugin"
       target="_blank">acouvreur/traefik-ondemand-plugin</a>
   </footer>
