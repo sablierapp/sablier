@@ -21,6 +21,7 @@ type DynamicSessionRequestDefaults struct {
 	SessionDuration time.Duration
 	Theme           string
 	ThemeOptions    DynamicRequestThemeOptions
+	DesiredReplicas uint32
 }
 
 type DynamicRequestByNames struct {
@@ -28,6 +29,7 @@ type DynamicRequestByNames struct {
 	SessionDuration time.Duration              `json:"session_duration"`
 	Theme           string                     `json:"theme"`
 	ThemeOptions    DynamicRequestThemeOptions `json:"themeOptions"`
+	DesiredReplicas uint32                     `json:"desiredReplicas"`
 }
 
 type DynamicRequestByGroup struct {
@@ -35,6 +37,7 @@ type DynamicRequestByGroup struct {
 	SessionDuration time.Duration              `json:"sessionDuration"`
 	Theme           string                     `json:"theme"`
 	ThemeOptions    DynamicRequestThemeOptions `json:"themeOptions"`
+	DesiredReplicas uint32                     `json:"desiredReplicas"`
 }
 
 type RequestDynamicSession struct {
@@ -44,19 +47,31 @@ type RequestDynamicSession struct {
 	discovery provider.Discovery
 }
 
-func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) error {
-	var body DynamicRequestByNames
+func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) {
+	body := DynamicRequestByNames{
+		SessionDuration: rds.defaults.SessionDuration,
+		Theme:           rds.defaults.Theme,
+		ThemeOptions:    rds.defaults.ThemeOptions,
+		DesiredReplicas: rds.defaults.DesiredReplicas,
+	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	return rds.requestDynamic(c, body)
+	rds.requestDynamic(c, body)
 }
 
-func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) error {
-	var body DynamicRequestByGroup
+func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
+	body := DynamicRequestByGroup{
+		SessionDuration: rds.defaults.SessionDuration,
+		Theme:           rds.defaults.Theme,
+		ThemeOptions:    rds.defaults.ThemeOptions,
+		DesiredReplicas: rds.defaults.DesiredReplicas,
+	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
 	names, found := rds.discovery.Group(body.Group)
@@ -67,34 +82,46 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) error {
 	req := DynamicRequestByNames{
 		Names:           names,
 		SessionDuration: body.SessionDuration,
+		Theme:           body.Theme,
+		ThemeOptions:    body.ThemeOptions,
+		DesiredReplicas: body.DesiredReplicas,
 	}
 
-	return rds.requestDynamic(c, req)
+	rds.requestDynamic(c, req)
 }
 
-func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicRequestByNames) error {
-	instances, err := rds.session.Request(c.Request.Context(), req.Names, session.RequestBlockingOptions{
+func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicRequestByNames) {
+	instances, err := rds.session.RequestDynamicAll(c.Request.Context(), req.Names, session.RequestDynamicOptions{
 		DesiredReplicas: req.DesiredReplicas,
 		SessionDuration: req.SessionDuration,
 	})
 	if err != nil {
-		return c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	instancesInfo := make([]theme.InstanceInfo, 0, len(instances))
+	for _, instance := range instances {
+		instancesInfo = append(instancesInfo, theme.InstanceInfo{
+			Name:   instance.Name,
+			Status: string(instance.Status),
+			Error:  instance.Error,
+		})
 	}
 
 	opts := theme.Options{
-		Title:            "",
-		DisplayName:      "",
-		ShowDetails:      req.ShowDetails,
-		Instances:        instances,
+		Title:            req.ThemeOptions.Title,
+		DisplayName:      req.ThemeOptions.DisplayName,
+		ShowDetails:      req.ThemeOptions.ShowDetails,
+		Instances:        instancesInfo,
 		SessionDuration:  req.SessionDuration,
-		RefreshFrequency: req.RefreshFrequency,
+		RefreshFrequency: req.ThemeOptions.RefreshFrequency,
 	}
 
 	applyStatusHeader(c, instances)
 
 	c.Header("Content-Type", "text/html")
 	if err := rds.theme.Execute(c.Writer, req.Theme, opts); err != nil {
-		return c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithError(http.StatusInternalServerError, err)
 	}
-	return nil
 }

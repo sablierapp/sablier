@@ -1,7 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"github.com/acouvreur/sablier/internal/session"
+	"github.com/acouvreur/sablier/version"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,4 +27,7 @@ func applyStatusHeader(c *gin.Context, instances []session.Instance) {
 	} else {
 		NotReady(c)
 	}
+}
+func applyServerHeader(c *gin.Context) {
+	c.Header("Server", fmt.Sprintf("sablier/%s", version.Version))
 }

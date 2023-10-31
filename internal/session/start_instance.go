@@ -21,6 +21,7 @@ type Instance struct {
 	// of which the state is being represented
 	Name   string         `json:"name"`
 	Status InstanceStatus `json:"status"`
+	Error  error          `json:"error"`
 }
 
 type StartOptions struct {
@@ -53,6 +54,7 @@ func StartInstance(ctx context.Context, name string, opts StartOptions, p provid
 		started := Instance{
 			Name:   name,
 			Status: InstanceRunning,
+			Error:  nil,
 		}
 		resolve(started)
 	})

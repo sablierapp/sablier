@@ -41,27 +41,29 @@ type RequestBlockingSession struct {
 	discovery provider.Discovery
 }
 
-func (rbs *RequestBlockingSession) RequestBlockingByNames(c *gin.Context) error {
+func (rbs *RequestBlockingSession) RequestBlockingByNames(c *gin.Context) {
 	body := BlockingSessionRequestByNames{
 		SessionDuration: rbs.defaults.SessionDuration,
 		Timeout:         rbs.defaults.Timeout,
 		DesiredReplicas: rbs.defaults.DesiredReplicas,
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	return rbs.requestBlocking(c, body)
+	rbs.requestBlocking(c, body)
 }
 
-func (rbs *RequestBlockingSession) RequestBlockingByGroup(c *gin.Context) error {
+func (rbs *RequestBlockingSession) RequestBlockingByGroup(c *gin.Context) {
 	body := BlockingSessionRequestByGroup{
 		SessionDuration: rbs.defaults.SessionDuration,
 		Timeout:         rbs.defaults.Timeout,
 		DesiredReplicas: rbs.defaults.DesiredReplicas,
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
 	names, found := rbs.discovery.Group(body.Group)
@@ -76,10 +78,10 @@ func (rbs *RequestBlockingSession) RequestBlockingByGroup(c *gin.Context) error 
 		DesiredReplicas: body.DesiredReplicas,
 	}
 
-	return rbs.requestBlocking(c, req)
+	rbs.requestBlocking(c, req)
 }
 
-func (rbs *RequestBlockingSession) requestBlocking(c *gin.Context, req BlockingSessionRequestByNames) error {
+func (rbs *RequestBlockingSession) requestBlocking(c *gin.Context, req BlockingSessionRequestByNames) {
 	ctx, cancel := context.WithTimeout(c, req.Timeout)
 	defer cancel()
 
@@ -89,14 +91,15 @@ func (rbs *RequestBlockingSession) requestBlocking(c *gin.Context, req BlockingS
 	})
 	if errors.Is(err, context.DeadlineExceeded) {
 		NotReady(c)
-		return c.AbortWithError(http.StatusGatewayTimeout, err)
+		c.AbortWithError(http.StatusGatewayTimeout, err)
+		return
 	}
 	if err != nil {
-		return c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 
 	applyStatusHeader(c, instances)
 
 	c.JSON(http.StatusOK, BlockingSessionResponse{Instances: instances})
-	return nil
 }

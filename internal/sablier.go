@@ -15,17 +15,15 @@ import (
 
 func Start(conf config.Config) error {
 
-	SetupLogger()
-
 	log.Info(version.Info())
 
-	provider, err := NewClient(conf.Provider)
+	client, err := NewClient(conf.Provider)
 	if err != nil {
 		return err
 	}
 	log.Info("using provider \"%s\"", conf.Provider.Name)
 
-	sessionsManager := session.NewSessionManager(provider, conf.Sessions)
+	sessionsManager := session.NewSessionManager(client, conf.Sessions)
 
 	http.Start(conf.Server, conf.Strategy, conf.Sessions, sessionsManager)
 

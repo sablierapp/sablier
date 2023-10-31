@@ -25,7 +25,7 @@ func TestRequestRunningInstance(t *testing.T) {
 	}
 	manager := session.NewSessionManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.Request(ctx, "myinstance", session.RequestOptions{})
+	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 
 	assert.Equal(t, "myinstance", instance.Name)
 	// An Instance which is ready will be "Starting" on the first request
@@ -50,7 +50,7 @@ func TestRequestStartingInstance(t *testing.T) {
 	}
 	manager := session.NewSessionManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.Request(ctx, "myinstance", session.RequestOptions{})
+	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
 	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
@@ -58,7 +58,7 @@ func TestRequestStartingInstance(t *testing.T) {
 	})
 	assert.Equal(t, session.InstanceRunning, instance.Status)
 
-	instance, _ = manager.Request(ctx, "myinstance", session.RequestOptions{})
+	instance, _ = manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceRunning, instance.Status)
 }
 
@@ -83,7 +83,7 @@ func TestRequestErrorInstance(t *testing.T) {
 
 	// The first request won't succeed
 	ch <- errors.New("unexpected error please retry")
-	instance, _ := manager.Request(ctx, "myinstance", session.RequestOptions{})
+	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
 	// We wait for the initial completion
@@ -94,7 +94,7 @@ func TestRequestErrorInstance(t *testing.T) {
 
 	// But the second request succeeds
 	ch <- nil
-	instance, _ = manager.Request(ctx, "myinstance", session.RequestOptions{})
+	instance, _ = manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
 	// We wait for the second request completion

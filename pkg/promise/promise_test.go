@@ -117,6 +117,75 @@ func TestPromise_Panic(t *testing.T) {
 	require.Nil(t, val)
 }
 
+func TestAllSettled_Happy(t *testing.T) {
+	p1 := New(func(resolve func(string), reject func(error)) {
+		resolve("one")
+	})
+	p2 := New(func(resolve func(string), reject func(error)) {
+		resolve("two")
+	})
+	p3 := New(func(resolve func(string), reject func(error)) {
+		resolve("three")
+	})
+
+	p := AllSettled(ctx, p1, p2, p3)
+
+	val, err := p.Await(ctx)
+	promises := *val
+	require.NoError(t, err)
+	require.NotNil(t, val)
+	require.Len(t, *val, 3)
+	require.Equal(t, "one", *(promises[0].value))
+	require.Equal(t, "two", *(promises[1].value))
+	require.Equal(t, "three", *(promises[2].value))
+}
+
+func TestAllSettled_ContainsRejected(t *testing.T) {
+	p1 := New(func(resolve func(string), reject func(error)) {
+		resolve("one")
+	})
+	p2 := New(func(resolve func(string), reject func(error)) {
+		reject(errExpected)
+	})
+	p3 := New(func(resolve func(string), reject func(error)) {
+		resolve("three")
+	})
+
+	p := AllSettled(ctx, p1, p2, p3)
+
+	val, err := p.Await(ctx)
+	promises := *val
+	require.NoError(t, err)
+	require.NotNil(t, val)
+	require.Len(t, *val, 3)
+	require.Equal(t, "one", *(promises[0].value))
+	require.ErrorIs(t, promises[1].err, errExpected)
+	require.Equal(t, "three", *(promises[2].value))
+}
+
+func TestAllSettled_OnlyRejected(t *testing.T) {
+	p1 := New(func(resolve func(any), reject func(error)) {
+		reject(errExpected)
+	})
+	p2 := New(func(resolve func(any), reject func(error)) {
+		reject(errExpected)
+	})
+	p3 := New(func(resolve func(any), reject func(error)) {
+		reject(errExpected)
+	})
+
+	p := AllSettled(ctx, p1, p2, p3)
+
+	val, err := p.Await(ctx)
+	promises := *val
+	require.NoError(t, err)
+	require.NotNil(t, val)
+	require.Len(t, *val, 3)
+	require.ErrorIs(t, promises[0].err, errExpected)
+	require.ErrorIs(t, promises[1].err, errExpected)
+	require.ErrorIs(t, promises[2].err, errExpected)
+}
+
 func TestAll_Happy(t *testing.T) {
 	p1 := New(func(resolve func(string), reject func(error)) {
 		resolve("one")

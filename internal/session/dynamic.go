@@ -8,13 +8,13 @@ import (
 	"github.com/acouvreur/sablier/pkg/promise"
 )
 
-type RequestOptions struct {
+type RequestDynamicOptions struct {
 	DesiredReplicas uint32 `json:"desiredReplicas"`
 	SessionDuration time.Duration
 }
 
-func (s *SessionManager) Request(ctx context.Context, name string, opts RequestOptions) (Instance, error) {
-	p, ok := s.promise(ctx, name, opts)
+func (s *SessionManager) RequestDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (Instance, error) {
+	p, ok := s.startDynamic(ctx, name, opts)
 	if !ok {
 		promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
 			s.instances.Put(name, string(data.Status), opts.SessionDuration)
@@ -47,7 +47,51 @@ func (s *SessionManager) Request(ctx context.Context, name string, opts RequestO
 	}
 }
 
-func (s *SessionManager) promise(ctx context.Context, name string, opts RequestOptions) (*promise.Promise[Instance], bool) {
+func (s *SessionManager) RequestDynamicAll(ctx context.Context, names []string, opts RequestDynamicOptions) ([]Instance, error) {
+	promisesByName := make(map[string]*promise.Promise[Instance], len(names))
+	promises := make([]*promise.Promise[Instance], 0, len(names))
+
+	for _, name := range names {
+		p, ok := s.startDynamic(ctx, name, opts)
+		promisesByName[name] = p
+		promises = append(promises, p)
+		if !ok {
+			promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
+				s.instances.Put(name, string(data.Status), opts.SessionDuration)
+				return nil, nil
+			})
+			promise.Catch[Instance](p, ctx, func(err error) error {
+				s.deleteSync(name)
+				return err
+			})
+		}
+	}
+
+	all := promise.AllSettled(ctx, promises...)
+
+	_, err := all.Await(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	instances := make([]Instance, len(names))
+	for name, p := range promisesByName {
+		instance, err := p.Await(ctx)
+		if err != nil {
+			instances = append(instances, Instance{
+				Name:   name,
+				Status: InstanceError,
+				Error:  err,
+			})
+		} else {
+			instances = append(instances, *instance)
+		}
+	}
+
+	return instances, err
+}
+
+func (s *SessionManager) startDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (*promise.Promise[Instance], bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

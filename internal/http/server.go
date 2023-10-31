@@ -71,9 +71,3 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 	log.Info("server exiting")
 
 }
-
-func logRoutes(routes gin.RoutesInfo) {
-	for _, route := range routes {
-		log.Debug(fmt.Sprintf("%s %s %s", route.Method, route.Path, route.Handler))
-	}
-}

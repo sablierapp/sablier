@@ -2,10 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 
-	"github.com/acouvreur/sablier/internal/http"
 	"github.com/spf13/cobra"
+)
+
+const (
+	healthy   = true
+	unhealthy = false
 )
 
 var newHealthCommand = func() *cobra.Command {
@@ -13,7 +19,7 @@ var newHealthCommand = func() *cobra.Command {
 		Use:   "health",
 		Short: "Calls the health endpoint of a Sablier instance",
 		Run: func(cmd *cobra.Command, args []string) {
-			details, healthy := http.Health(cmd.Flag("url").Value.String())
+			details, healthy := Health(cmd.Flag("url").Value.String())
 
 			if healthy {
 				fmt.Fprintf(os.Stderr, "healthy: %v\n", details)
@@ -24,4 +30,24 @@ var newHealthCommand = func() *cobra.Command {
 			}
 		},
 	}
+}
+
+func Health(url string) (string, bool) {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return err.Error(), unhealthy
+	}
+
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return err.Error(), unhealthy
+	}
+
+	if resp.StatusCode >= 400 {
+		return string(body), unhealthy
+	}
+
+	return string(body), healthy
 }
