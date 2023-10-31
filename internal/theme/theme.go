@@ -55,7 +55,7 @@ type InstanceInfo struct {
 	Error  error
 }
 
-type ThemeOptions struct {
+type Options struct {
 	Title            string
 	DisplayName      string
 	ShowDetails      bool
@@ -73,7 +73,7 @@ type templateData struct {
 	Version                 string
 }
 
-func (t *Themes) Execute(writer io.Writer, name string, opts ThemeOptions) error {
+func (t *Themes) Execute(writer io.Writer, name string, opts Options) error {
 
 	var instances []InstanceInfo
 

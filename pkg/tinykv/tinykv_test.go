@@ -211,8 +211,7 @@ func Test04(t *testing.T) {
 			t.Fatal(k, v)
 		})
 
-	err := kv.Put("1", 1, time.Millisecond*10000)
-	assert.NoError(err)
+	kv.Put("1", 1, time.Millisecond*10000)
 	<-time.After(time.Millisecond * 50)
 	kv.Delete("1")
 	kv.Delete("1")
@@ -257,10 +256,9 @@ func Test11(t *testing.T) {
 	onExpired := func(k string, v interface{}) { expiredKey <- k }
 
 	kv := New(time.Millisecond*100, onExpired)
-	err := kv.Put(
+	kv.Put(
 		key, "G",
 		time.Millisecond*15)
-	assert.NoError(err)
 
 	<-time.After(time.Millisecond * 10)
 
@@ -289,10 +287,9 @@ func Test12(t *testing.T) {
 	onExpired := func(k string, v interface{}) {}
 
 	kv := New(time.Millisecond*100, onExpired)
-	err := kv.Put(
+	kv.Put(
 		key, "G",
 		time.Millisecond)
-	assert.NoError(err)
 
 	<-time.After(time.Millisecond * 10)
 
@@ -310,10 +307,9 @@ func Test13(t *testing.T) {
 	}
 
 	kv := New(time.Millisecond*10, onExpired)
-	err := kv.Put(
+	kv.Put(
 		"1", 123,
 		time.Millisecond)
-	assert.NoError(err)
 
 	<-time.After(time.Millisecond * 50)
 

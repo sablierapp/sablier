@@ -62,7 +62,7 @@ type KV[T any] interface {
 	Keys() (keys []string)
 	Values() (values []T)
 	Entries() (entries map[string]entry[T])
-	Put(k string, v T, expiresAfter time.Duration) error
+	Put(k string, v T, expiresAfter time.Duration)
 	Stop()
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
@@ -174,7 +174,7 @@ func (kv *store[T]) Entries() (entries map[string]entry[T]) {
 }
 
 // Put puts an entry inside kv store with provided options
-func (kv *store[T]) Put(k string, v T, expiresAfter time.Duration) error {
+func (kv *store[T]) Put(k string, v T, expiresAfter time.Duration) {
 	e := &entry[T]{
 		value: v,
 	}
@@ -185,7 +185,6 @@ func (kv *store[T]) Put(k string, v T, expiresAfter time.Duration) error {
 	timeheapPush(&kv.heap, e.timeout)
 
 	kv.kv[k] = e
-	return nil
 }
 
 func (kv *store[T]) MarshalJSON() ([]byte, error) {

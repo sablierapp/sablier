@@ -6,17 +6,17 @@ import (
 	"sync"
 )
 
-type State string
+type Status string
 
 const (
-	Pending   State = "pending"
-	Fulfilled State = "fulfilled"
-	Rejected  State = "rejected"
+	Pending   Status = "pending"
+	Fulfilled Status = "fulfilled"
+	Rejected  Status = "rejected"
 )
 
 // Promise represents the eventual completion (or failure) of an asynchronous operation and its resulting value
 type Promise[T any] struct {
-	State State
+	Status Status
 
 	value *T
 	err   error
@@ -42,11 +42,11 @@ func NewWithPool[T any](
 	}
 
 	p := &Promise[T]{
-		State: Pending,
-		value: nil,
-		err:   nil,
-		ch:    make(chan struct{}),
-		once:  sync.Once{},
+		Status: Pending,
+		value:  nil,
+		err:    nil,
+		ch:     make(chan struct{}),
+		once:   sync.Once{},
 	}
 
 	pool.Go(func() {
@@ -124,7 +124,7 @@ func (p *Promise[T]) Await(ctx context.Context) (*T, error) {
 func (p *Promise[T]) resolve(value T) {
 	p.once.Do(func() {
 		p.value = &value
-		p.State = Fulfilled
+		p.Status = Fulfilled
 		close(p.ch)
 	})
 }
@@ -132,7 +132,7 @@ func (p *Promise[T]) resolve(value T) {
 func (p *Promise[T]) reject(err error) {
 	p.once.Do(func() {
 		p.err = err
-		p.State = Rejected
+		p.Status = Rejected
 		close(p.ch)
 	})
 }
@@ -149,6 +149,44 @@ func (p *Promise[T]) handlePanic() {
 	default:
 		p.reject(fmt.Errorf("%+v", v))
 	}
+}
+
+// AllSettled resolves when all promises have resolved or rejected
+func AllSettled[T any](
+	ctx context.Context,
+	promises ...*Promise[T],
+) *Promise[[]*Promise[T]] {
+	return AllSettledWithPool(ctx, defaultPool, promises...)
+}
+
+func AllSettledWithPool[T any](
+	ctx context.Context,
+	pool Pool,
+	promises ...*Promise[T],
+) *Promise[[]*Promise[T]] {
+	if len(promises) == 0 {
+		panic("missing promises")
+	}
+
+	return NewWithPool[[]*Promise[T]](func(resolve func([]*Promise[T]), reject func(error)) {
+		group := sync.WaitGroup{}
+		group.Add(len(promises))
+
+		for _, p := range promises {
+			_ = ThenWithPool(p, ctx, func(data T) (T, error) {
+				group.Done()
+				return data, nil
+			}, pool)
+			_ = CatchWithPool(p, ctx, func(err error) error {
+				group.Done()
+				return err
+			}, pool)
+		}
+
+		group.Wait()
+
+		resolve(promises)
+	}, pool)
 }
 
 // All resolves when all promises have resolved, or rejects immediately upon any of the promises rejecting

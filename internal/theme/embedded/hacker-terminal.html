@@ -164,8 +164,8 @@
     <p class="output"><span>Your instance(s) will stop after {{ .SessionDuration }} of inactivity</span>.</p>
     {{  range $i, $instance := .Instances }}
     <div class="details"> 
-        <p class="output small command"><span>sablier status <span class="error_code">{{ $instance.Name }}</span></span></code></p>
-        {{ if $instance.Error }}<p class="output small error">An error occured</span>: <code>{{ $instance.Error }}</code></p>
+        <p class="output small command"><span>sablier status <span class="error_code">{{ $instance.Name }}</span></span></p>
+        {{ if $instance.Error }}<p class="output small error">An error occurred: <code>{{ $instance.Error }}</code></p>
         {{ else }}<p class="output small success"><span>{{ $instance.Name }}</span> is {{ $instance.Status }}</p>{{ end }}
     </div>
     {{ end }}

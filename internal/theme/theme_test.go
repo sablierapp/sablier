@@ -65,7 +65,7 @@ func TestThemes_Execute(t *testing.T) {
 	}
 	type args struct {
 		name string
-		opts theme.ThemeOptions
+		opts theme.Options
 	}
 	tests := []struct {
 		name    string
@@ -76,7 +76,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load ghost theme",
 			args: args{
 				name: "ghost",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -89,7 +89,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load hacker-terminal theme",
 			args: args{
 				name: "hacker-terminal",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -102,7 +102,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load matrix theme",
 			args: args{
 				name: "matrix",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -115,7 +115,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load shuffle theme",
 			args: args{
 				name: "shuffle",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -128,7 +128,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load non existent theme",
 			args: args{
 				name: "non-existent",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -141,7 +141,7 @@ func TestThemes_Execute(t *testing.T) {
 			name: "Load custom theme",
 			args: args{
 				name: "custom-theme",
-				opts: theme.ThemeOptions{
+				opts: theme.Options{
 					DisplayName:      "Test",
 					Instances:        instances,
 					SessionDuration:  10 * time.Minute,
@@ -196,7 +196,7 @@ func ExampleThemes_Execute() {
 		ErrorInstanceInfo,
 	}
 
-	err := themes.Execute(os.Stdout, "custom-theme", theme.ThemeOptions{
+	err := themes.Execute(os.Stdout, "custom-theme", theme.Options{
 		Title:            "My Title",
 		DisplayName:      "Test",
 		Instances:        instances,

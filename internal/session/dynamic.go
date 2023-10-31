@@ -17,8 +17,8 @@ func (s *SessionManager) Request(ctx context.Context, name string, opts RequestO
 	p, ok := s.promise(ctx, name, opts)
 	if !ok {
 		promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
-			err := s.instances.Put(name, string(data.Status), opts.SessionDuration)
-			return nil, err
+			s.instances.Put(name, string(data.Status), opts.SessionDuration)
+			return nil, nil
 		})
 		promise.Catch[Instance](p, ctx, func(err error) error {
 			s.deleteSync(name)
@@ -26,7 +26,7 @@ func (s *SessionManager) Request(ctx context.Context, name string, opts RequestO
 		})
 	}
 
-	switch p.State {
+	switch p.Status {
 	case promise.Pending:
 		return Instance{
 			Name:   name,

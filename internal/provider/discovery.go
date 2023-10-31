@@ -11,17 +11,17 @@ const (
 	DefaultGroupValue string = "default"
 )
 
-type DefaultGroupStartegy string
+type DefaultGroupStrategy string
 
 const (
-	DefaultGroupStartegyUseInstanceName DefaultGroupStartegy = "instanceName"
-	DefaultGroupStartegyUseValue        DefaultGroupStartegy = "value"
+	DefaultGroupStrategyUseInstanceName DefaultGroupStrategy = "instanceName"
+	DefaultGroupStrategyUseValue        DefaultGroupStrategy = "value"
 )
 
 type DiscoveryOptions struct {
 	EnableLabel          string
 	GroupLabel           string
-	DefaultGroupStartegy DefaultGroupStartegy
+	DefaultGroupStrategy DefaultGroupStrategy
 	StopOnDiscover       bool
 }
 
@@ -48,7 +48,7 @@ func NewDiscovery(opts DiscoveryOptions) Discovery {
 	}
 }
 
-// Discover retrieve from the provider all the available instances
+// StartDiscovery retrieves from the provider all the available instances
 func (d *Discovery) StartDiscovery() {
 	// Initial scan
 	d.refresh()

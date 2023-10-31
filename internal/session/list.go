@@ -4,15 +4,15 @@ import (
 	"github.com/acouvreur/sablier/pkg/promise"
 )
 
-func (m *SessionManager) List() []Instance {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (s *SessionManager) List() []Instance {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	instances := make([]Instance, len(m.promises))
+	instances := make([]Instance, len(s.promises))
 
-	for name, p := range m.promises {
+	for name, p := range s.promises {
 		var instance Instance
-		switch p.State {
+		switch p.Status {
 		case promise.Pending:
 			instance = Instance{
 				Name:   name,

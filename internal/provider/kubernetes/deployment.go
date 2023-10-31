@@ -48,7 +48,7 @@ func (client *Client) toDiscoveredDeployment(deployment v1.Deployment, opts prov
 	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStartegyUseInstanceName {
 		// The container did not define a label and uses the instance name as group
 		group = name.Original
-	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStartegyUseValue {
+	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStrategyUseValue {
 		// The container did not define a label and uses the "default" group
 		group = provider.DefaultGroupValue
 	}

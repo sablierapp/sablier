@@ -10,17 +10,12 @@ import (
 type RequestBlockingOptions struct {
 	DesiredReplicas uint32 `json:"desiredReplicas"`
 	SessionDuration time.Duration
-	Timeout         time.Duration
 }
 
 func (s *SessionManager) RequestBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (Instance, error) {
-	p, _ := s.promiseBlocking(ctx, name, opts)
+	p, _ := s.startBlocking(ctx, name, opts)
 
-	timeout, cancel := context.WithTimeout(ctx, opts.Timeout)
-	defer cancel()
-
-	instance, err := p.Await(timeout)
-
+	instance, err := p.Await(ctx)
 	if err != nil {
 		s.deleteSync(name)
 		return Instance{}, err
@@ -35,16 +30,16 @@ func (s *SessionManager) RequestBlockingAll(ctx context.Context, names []string,
 	promises := make([]*promise.Promise[Instance], 0)
 
 	for _, name := range names {
-		p, ok := s.promiseBlocking(ctx, name, opts)
+		p, ok := s.startBlocking(ctx, name, opts)
 		promises = append(promises, p)
 		if !ok {
 			promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
-				err := s.instances.Put(name, string(data.Status), opts.SessionDuration)
-				return nil, err
+				s.instances.Put(name, string(data.Status), opts.SessionDuration)
+				return nil, nil
 			})
 			promise.Catch[Instance](p, ctx, func(err error) error {
 				s.deleteSync(name)
-				return nil
+				return err
 			})
 		}
 	}
@@ -59,7 +54,7 @@ func (s *SessionManager) RequestBlockingAll(ctx context.Context, names []string,
 	return *instances, err
 }
 
-func (s *SessionManager) promiseBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (*promise.Promise[Instance], bool) {
+func (s *SessionManager) startBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (*promise.Promise[Instance], bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

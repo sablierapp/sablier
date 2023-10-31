@@ -1,40 +1,19 @@
 package api
 
 import (
-	"net/http"
-	"time"
-
 	"github.com/acouvreur/sablier/internal/session"
 	"github.com/acouvreur/sablier/version"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"net/http"
 )
 
-type DynamicRequestByNames struct {
-	Names            []string      `json:"names,omitempty"`
-	ShowDetails      bool          `json:"show_details,omitempty"`
-	DisplayName      string        `json:"display_name,omitempty"`
-	Theme            string        `json:"theme,omitempty"`
-	SessionDuration  time.Duration `json:"session_duration,omitempty"`
-	RefreshFrequency time.Duration `json:"refresh_frequency,omitempty"`
-}
-
-type DynamicRequestByGroup struct {
-	Group            string        `form:"group"`
-	ShowDetails      bool          `form:"show_details"`
-	DisplayName      string        `form:"display_name"`
-	Theme            string        `form:"theme"`
-	SessionDuration  time.Duration `form:"session_duration"`
-	RefreshFrequency time.Duration `form:"refresh_frequency"`
-}
-
-func (s *SessionHandler) RequestDynamicByNames(c *gin.Context) {
+func (s *SessionHandler) RequestDynamicByNames(c *gin.Context) error {
 
 	var body DynamicRequestByNames
 
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return c.AbortWithError(http.StatusBadRequest, err)
 	}
 
 	/* request := models.DynamicRequest{
