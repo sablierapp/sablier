@@ -33,7 +33,7 @@ func (client *Client) Events(ctx context.Context) (<-chan provider.Message, <-ch
 			case msg := <-msgs:
 				event, ignore := client.parseEvent(ctx, msg)
 
-				// Some event are ignored
+				// Some events are ignored
 				if !ignore {
 					messages <- event
 				}
@@ -50,8 +50,8 @@ func (client *Client) Events(ctx context.Context) (<-chan provider.Message, <-ch
 	return messages, closed
 }
 
-func (provider *Client) SubscribeOnce(ctx context.Context, name string, action provider.EventAction, wait chan<- error) {
-	msgs, errs := provider.Client.Events(ctx, types.EventsOptions{
+func (client *Client) SubscribeOnce(ctx context.Context, name string, action provider.EventAction, wait chan<- error) {
+	msgs, errs := client.Client.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("scope", "local"),
 			filters.Arg("type", events.ContainerEventType),
@@ -64,8 +64,8 @@ func (provider *Client) SubscribeOnce(ctx context.Context, name string, action p
 			case <-ctx.Done():
 				ctx.Err()
 			case msg := <-msgs:
-				event, ignore := provider.parseEvent(ctx, msg)
-				// Some event are ignored
+				event, ignore := client.parseEvent(ctx, msg)
+				// Some events are ignored
 				if !ignore {
 					if event.Name == name && event.Action == action {
 						wait <- nil
@@ -85,7 +85,7 @@ func (provider *Client) SubscribeOnce(ctx context.Context, name string, action p
 func (client *Client) parseEvent(ctx context.Context, msg events.Message) (provider.Message, bool) {
 	name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 
-	// When a 'start' action is incoming, we must check wether the container has an healthcheck
+	// When a 'start' action is incoming, we must check wether the container has a healthcheck,
 	// so we can wait for it to be healthy
 	switch msg.Action {
 

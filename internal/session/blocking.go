@@ -12,7 +12,7 @@ type RequestBlockingOptions struct {
 	SessionDuration time.Duration
 }
 
-func (s *SessionManager) RequestBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (Instance, error) {
+func (s *Manager) RequestBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (Instance, error) {
 	p, _ := s.startBlocking(ctx, name, opts)
 
 	instance, err := p.Await(ctx)
@@ -21,12 +21,12 @@ func (s *SessionManager) RequestBlocking(ctx context.Context, name string, opts 
 		return Instance{}, err
 	}
 
-	s.instances.Put(name, string(instance.Status), opts.SessionDuration)
+	s.timeouts.Put(name, string(instance.Status), opts.SessionDuration)
 
 	return *instance, err
 }
 
-func (s *SessionManager) RequestBlockingAll(ctx context.Context, names []string, opts RequestBlockingOptions) ([]Instance, error) {
+func (s *Manager) RequestBlockingAll(ctx context.Context, names []string, opts RequestBlockingOptions) ([]Instance, error) {
 	promises := make([]*promise.Promise[Instance], 0)
 
 	for _, name := range names {
@@ -34,7 +34,7 @@ func (s *SessionManager) RequestBlockingAll(ctx context.Context, names []string,
 		promises = append(promises, p)
 		if !ok {
 			promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
-				s.instances.Put(name, string(data.Status), opts.SessionDuration)
+				s.timeouts.Put(name, string(data.Status), opts.SessionDuration)
 				return nil, nil
 			})
 			promise.Catch[Instance](p, ctx, func(err error) error {
@@ -54,7 +54,7 @@ func (s *SessionManager) RequestBlockingAll(ctx context.Context, names []string,
 	return *instances, err
 }
 
-func (s *SessionManager) startBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (*promise.Promise[Instance], bool) {
+func (s *Manager) startBlocking(ctx context.Context, name string, opts RequestBlockingOptions) (*promise.Promise[Instance], bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

@@ -23,7 +23,7 @@ func TestRequestBlockingRunningInstance(t *testing.T) {
 			return true, nil
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	instance, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
 		Timeout: 10 * time.Second,
@@ -54,7 +54,7 @@ func TestRequestBlockingStartingInstance(t *testing.T) {
 			wait <- nil
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	instance, _ := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
 		Timeout: 10 * time.Second,
@@ -78,7 +78,7 @@ func TestRequestBlockingErrorInstance(t *testing.T) {
 			wait <- fmt.Errorf("%s does not exist", name)
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
 		Timeout: 10 * time.Second,

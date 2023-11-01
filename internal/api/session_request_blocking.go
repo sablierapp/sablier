@@ -37,8 +37,8 @@ type BlockingSessionResponse struct {
 
 type RequestBlockingSession struct {
 	defaults  BlockingSessionRequestDefaults
-	session   session.SessionManager
-	discovery provider.Discovery
+	session   *session.Manager
+	discovery *provider.Discovery
 }
 
 func (rbs *RequestBlockingSession) RequestBlockingByNames(c *gin.Context) {

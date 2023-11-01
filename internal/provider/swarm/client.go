@@ -129,10 +129,10 @@ func toDiscovered(service swarm.Service, opts provider.DiscoveryOptions) provide
 	// The service defined a label with its named group
 	if foundGroup, ok := service.Spec.Labels[opts.GroupLabel]; ok {
 		group = foundGroup
-	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStartegyUseInstanceName {
+	} else if opts.DefaultGroupStrategy == provider.DefaultGroupStrategyUseInstanceName {
 		// The service did not define a label and uses the instance name as group
 		group = name
-	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStrategyUseValue {
+	} else if opts.DefaultGroupStrategy == provider.DefaultGroupStrategyUseValue {
 		// The service did not define a label and uses the "default" group
 		group = provider.DefaultGroupValue
 	}

@@ -12,14 +12,14 @@ import (
 	"github.com/acouvreur/sablier/pkg/tinykv"
 )
 
-type SessionManager struct {
-	provider  provider.Client
-	promises  map[string]*promise.Promise[Instance]
-	instances tinykv.KV[string]
-	lock      *sync.Mutex
+type Manager struct {
+	provider provider.Client
+	promises map[string]*promise.Promise[Instance]
+	timeouts tinykv.KV[string]
+	lock     *sync.Mutex
 }
 
-func NewSessionManager(p provider.Client, config config.Sessions) *SessionManager {
+func NewManager(p provider.Client, config config.Sessions) *Manager {
 
 	lock := sync.Mutex{}
 	promises := make(map[string]*promise.Promise[Instance])
@@ -30,11 +30,11 @@ func NewSessionManager(p provider.Client, config config.Sessions) *SessionManage
 		p.Stop(context.Background(), k)
 	})
 
-	manager := SessionManager{
-		provider:  p,
-		promises:  promises,
-		instances: kv,
-		lock:      &lock,
+	manager := Manager{
+		provider: p,
+		promises: promises,
+		timeouts: kv,
+		lock:     &lock,
 	}
 
 	msgs, errs := p.Events(context.Background())
@@ -59,7 +59,7 @@ func NewSessionManager(p provider.Client, config config.Sessions) *SessionManage
 	return &manager
 }
 
-func (s *SessionManager) deleteSync(k string) {
+func (s *Manager) deleteSync(k string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	delete(s.promises, k)

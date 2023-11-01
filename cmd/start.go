@@ -9,14 +9,14 @@ import (
 var newStartCommand = func() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
-		Short: "Start the Sablier server",
-		Run: func(cmd *cobra.Command, args []string) {
-			viper.Unmarshal(&conf)
-
-			err := app.Start(conf)
+		Short: "Start the Sablier app",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := viper.Unmarshal(&conf)
 			if err != nil {
-				panic(err)
+				return err
 			}
+
+			return app.Start(conf)
 		},
 	}
 }

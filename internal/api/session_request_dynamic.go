@@ -42,9 +42,9 @@ type DynamicRequestByGroup struct {
 
 type RequestDynamicSession struct {
 	defaults  DynamicSessionRequestDefaults
-	theme     theme.Themes
-	session   session.SessionManager
-	discovery provider.Discovery
+	theme     *theme.Themes
+	session   *session.Manager
+	discovery *provider.Discovery
 }
 
 func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) {

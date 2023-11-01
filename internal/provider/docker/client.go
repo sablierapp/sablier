@@ -44,37 +44,37 @@ func (client *Client) Stop(ctx context.Context, name string) error {
 }
 
 func (client *Client) Status(ctx context.Context, name string) (bool, error) {
-	container, err := client.Client.ContainerInspect(ctx, name)
+	c, err := client.Client.ContainerInspect(ctx, name)
 	if err != nil {
 		return false, err
 	}
 
-	if container.State.Status != "running" {
+	if c.State.Status != "running" {
 		return false, nil
 	}
 
-	if container.State.Health != nil {
-		return container.State.Health.Status == "healthy", nil
+	if c.State.Health != nil {
+		return c.State.Health.Status == "healthy", nil
 	}
 
 	return true, nil
 }
 
 func (client *Client) Discover(ctx context.Context, opts provider.DiscoveryOptions) ([]provider.Discovered, error) {
-	filters := filters.NewArgs()
-	filters.Add("label", fmt.Sprintf("%s=true", opts.EnableLabel))
+	f := filters.NewArgs()
+	f.Add("label", fmt.Sprintf("%s=true", opts.EnableLabel))
 
 	containers, err := client.Client.ContainerList(ctx, types.ContainerListOptions{
 		All:     true,
-		Filters: filters,
+		Filters: f,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	discovered := make([]provider.Discovered, len(containers))
-	for index, container := range containers {
-		discovered[index] = toDiscovered(container, opts)
+	for index, c := range containers {
+		discovered[index] = toDiscovered(c, opts)
 	}
 
 	return discovered, nil
@@ -84,13 +84,13 @@ func toDiscovered(container types.Container, opts provider.DiscoveryOptions) pro
 	name := container.Names[0]
 	var group string
 
-	// The container defined a label with its named group
+	// The container defined a label with it's named group
 	if foundGroup, ok := container.Labels[opts.GroupLabel]; ok {
 		group = foundGroup
-	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStartegyUseInstanceName {
+	} else if opts.DefaultGroupStrategy == provider.DefaultGroupStrategyUseInstanceName {
 		// The container did not define a label and uses the instance name as group
 		group = name
-	} else if opts.DefaultGroupStartegy == provider.DefaultGroupStrategyUseValue {
+	} else if opts.DefaultGroupStrategy == provider.DefaultGroupStrategyUseValue {
 		// The container did not define a label and uses the "default" group
 		group = provider.DefaultGroupValue
 	}

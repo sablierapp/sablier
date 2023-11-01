@@ -23,7 +23,7 @@ func TestRequestRunningInstance(t *testing.T) {
 			return true, nil
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 
@@ -48,7 +48,7 @@ func TestRequestStartingInstance(t *testing.T) {
 			wait <- nil
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceStarting, instance.Status)
@@ -79,7 +79,7 @@ func TestRequestErrorInstance(t *testing.T) {
 			wait <- <-ch
 		},
 	}
-	manager := session.NewSessionManager(m, config.NewSessionsConfig())
+	manager := session.NewManager(m, config.NewSessionsConfig())
 
 	// The first request won't succeed
 	ch <- errors.New("unexpected error please retry")

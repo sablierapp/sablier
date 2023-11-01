@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	log "log/slog"
 	"sync"
 )
 
@@ -42,23 +43,50 @@ type Discovery struct {
 	lock     *sync.Mutex
 }
 
-func NewDiscovery(opts DiscoveryOptions) Discovery {
-	return Discovery{
+func NewDiscovery(opts DiscoveryOptions) *Discovery {
+	return &Discovery{
 		opts: opts,
 	}
 }
 
 // StartDiscovery retrieves from the provider all the available instances
-func (d *Discovery) StartDiscovery() {
+func (d *Discovery) StartDiscovery(ctx context.Context) {
 	// Initial scan
-	d.refresh()
+	d.scan(ctx)
 
 	// Start watching and rescan on event
-	d.provider.Events(context.Background())
+	ch, errs := d.provider.Events(ctx)
+
+	select {
+	case <-ctx.Done():
+		return
+	case msg := <-ch:
+		log.InfoContext(ctx, msg.Name, msg.Action)
+	case err := <-errs:
+		log.ErrorContext(ctx, err.Error())
+	}
+
 }
 
-func (d *Discovery) refresh() {
+func (d *Discovery) scan(ctx context.Context) {
+	discovereds, err := d.provider.Discover(ctx, d.opts)
+	if err != nil {
+		return
+	}
 
+	groups := make(map[string][]string, len(discovereds))
+	for _, discovered := range discovereds {
+		group, ok := groups[discovered.Group]
+		if !ok {
+			group = make([]string, 0)
+		}
+		group = append(group, discovered.Name)
+		groups[discovered.Group] = group
+	}
+
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.groups = groups
 }
 
 func (d *Discovery) Group(name string) ([]string, bool) {

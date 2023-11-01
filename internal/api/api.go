@@ -9,39 +9,37 @@ import (
 	"github.com/acouvreur/sablier/internal/session"
 	"github.com/acouvreur/sablier/internal/theme"
 	"github.com/gin-gonic/gin"
+	log "log/slog"
 	"net/http"
-	"os/signal"
 	"path"
-	"syscall"
 	"time"
 )
 
 const (
 	versionPath                       = "/version"
 	healthcheckPath                   = "/health"
+	listThemesPath                    = "/themes"
 	sessionRequestBlockingByNamesPath = "/sessions-blocking-by-names"
 	sessionRequestBlockingByGroupPath = "/sessions-blocking-by-group"
 	sessionRequestDynamicByNamesPath  = "/sessions-dynamic-by-names"
 	sessionRequestDynamicByGroupPath  = "/sessions-dynamic-by-group"
 )
 
-func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf config.Sessions, t theme.Themes, sm session.SessionManager, d provider.Discovery) {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session.Manager, d *provider.Discovery) {
 
 	r := gin.New()
 	r.Use(applyServerHeader)
 
 	// r.Use(Logger(log.New()), gin.Recovery())
 
-	base := r.Group(path.Join(serverConf.BasePath, "/api"))
+	base := r.Group(path.Join(conf.Server.BasePath, "/api"))
 	ServeHealthcheck(base, ctx)
 	ServeVersion(base)
 
 	rbs := RequestBlockingSession{
 		defaults: BlockingSessionRequestDefaults{
-			SessionDuration: sessionsConf.DefaultDuration,
-			Timeout:         strategyConf.Blocking.DefaultTimeout,
+			SessionDuration: conf.Sessions.DefaultDuration,
+			Timeout:         conf.Strategy.Blocking.DefaultTimeout,
 			DesiredReplicas: 1,
 		},
 		session:   sm,
@@ -51,13 +49,13 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 
 	rds := RequestDynamicSession{
 		defaults: DynamicSessionRequestDefaults{
-			SessionDuration: sessionsConf.DefaultDuration,
-			Theme:           strategyConf.Dynamic.DefaultTheme,
+			SessionDuration: conf.Sessions.DefaultDuration,
+			Theme:           conf.Strategy.Dynamic.DefaultTheme,
 			ThemeOptions: DynamicRequestThemeOptions{
 				Title:            "Sablier",
 				DisplayName:      "your app",
-				ShowDetails:      strategyConf.Dynamic.ShowDetailsByDefault,
-				RefreshFrequency: strategyConf.Dynamic.DefaultRefreshFrequency,
+				ShowDetails:      conf.Strategy.Dynamic.ShowDetailsByDefault,
+				RefreshFrequency: conf.Strategy.Dynamic.DefaultRefreshFrequency,
 			},
 			DesiredReplicas: 1,
 		},
@@ -68,7 +66,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 	ServeSessionRequestDynamic(base, rds)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", serverConf.Port),
+		Addr:    fmt.Sprintf(":%d", conf.Server.Port),
 		Handler: r,
 	}
 
@@ -78,7 +76,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 		log.Info("server listening ", srv.Addr)
 		logRoutes(r.Routes())
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen: %s\n", err)
+			log.Error("listen: %s\n", err)
 		}
 	}()
 
@@ -94,7 +92,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("server forced to shutdown: ", err)
+		log.Error("server forced to shutdown: ", err)
 	}
 
 	log.Info("server exiting")
@@ -119,6 +117,13 @@ func ServeHealthcheck(group *gin.RouterGroup, ctx context.Context) {
 	health.SetDefaults()
 	health.WithContext(ctx)
 	group.GET(healthcheckPath, health.ServeHTTP)
+}
+
+func ServeThemes(group *gin.RouterGroup, ctx context.Context) {
+	health := Health{}
+	health.SetDefaults()
+	health.WithContext(ctx)
+	group.GET(healthcheckPath, GetThemes)
 }
 
 func logRoutes(routes gin.RoutesInfo) {

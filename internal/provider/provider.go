@@ -19,6 +19,7 @@ const (
 
 type Message struct {
 	Name   string
+	Group  string
 	Action EventAction
 }
 

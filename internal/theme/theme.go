@@ -2,6 +2,7 @@ package theme
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -31,22 +32,40 @@ func New() *Themes {
 	return themes
 }
 
-func NewWithCustomThemes(custom fs.FS) *Themes {
+func NewWithCustomThemes(custom fs.FS) (*Themes, error) {
 	themes := &Themes{
 		themes: template.New("root"),
 	}
 
-	load(themes.themes, embeddedThemesFS)
-	load(themes.themes, custom)
+	err := load(themes.themes, embeddedThemesFS)
+	if err != nil {
+		// Should never happen
+		return nil, err
+	}
 
-	return themes
+	err = load(themes.themes, custom)
+	if err != nil {
+		return nil, err
+	}
+
+	return themes, nil
 }
 
-func load(t *template.Template, fs fs.FS) {
-	if t != nil {
-		t.ParseFS(fs, "*/*.html")
-		t.ParseFS(fs, "*.html")
+func load(t *template.Template, fs fs.FS) error {
+	if t == nil {
+		return errors.New("template is nil")
 	}
+
+	_, err := t.ParseFS(fs, "*/*.html")
+	if err != nil {
+		return err
+	}
+	_, err = t.ParseFS(fs, "*.html")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type InstanceInfo struct {
@@ -74,7 +93,6 @@ type templateData struct {
 }
 
 func (t *Themes) Execute(writer io.Writer, name string, opts Options) error {
-
 	var instances []InstanceInfo
 
 	if opts.ShowDetails {

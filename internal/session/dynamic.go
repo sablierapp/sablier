@@ -13,11 +13,11 @@ type RequestDynamicOptions struct {
 	SessionDuration time.Duration
 }
 
-func (s *SessionManager) RequestDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (Instance, error) {
+func (s *Manager) RequestDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (Instance, error) {
 	p, ok := s.startDynamic(ctx, name, opts)
 	if !ok {
 		promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
-			s.instances.Put(name, string(data.Status), opts.SessionDuration)
+			s.timeouts.Put(name, string(data.Status), opts.SessionDuration)
 			return nil, nil
 		})
 		promise.Catch[Instance](p, ctx, func(err error) error {
@@ -34,7 +34,7 @@ func (s *SessionManager) RequestDynamic(ctx context.Context, name string, opts R
 		}, nil
 	case promise.Fulfilled:
 		instance, _ := p.Await(ctx)
-		s.instances.Put(name, string(instance.Status), opts.SessionDuration)
+		s.timeouts.Put(name, string(instance.Status), opts.SessionDuration)
 		return Instance{
 			Name:   name,
 			Status: InstanceRunning,
@@ -47,7 +47,7 @@ func (s *SessionManager) RequestDynamic(ctx context.Context, name string, opts R
 	}
 }
 
-func (s *SessionManager) RequestDynamicAll(ctx context.Context, names []string, opts RequestDynamicOptions) ([]Instance, error) {
+func (s *Manager) RequestDynamicAll(ctx context.Context, names []string, opts RequestDynamicOptions) ([]Instance, error) {
 	promisesByName := make(map[string]*promise.Promise[Instance], len(names))
 	promises := make([]*promise.Promise[Instance], 0, len(names))
 
@@ -57,7 +57,7 @@ func (s *SessionManager) RequestDynamicAll(ctx context.Context, names []string, 
 		promises = append(promises, p)
 		if !ok {
 			promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
-				s.instances.Put(name, string(data.Status), opts.SessionDuration)
+				s.timeouts.Put(name, string(data.Status), opts.SessionDuration)
 				return nil, nil
 			})
 			promise.Catch[Instance](p, ctx, func(err error) error {
@@ -91,7 +91,7 @@ func (s *SessionManager) RequestDynamicAll(ctx context.Context, names []string, 
 	return instances, err
 }
 
-func (s *SessionManager) startDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (*promise.Promise[Instance], bool) {
+func (s *Manager) startDynamic(ctx context.Context, name string, opts RequestDynamicOptions) (*promise.Promise[Instance], bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

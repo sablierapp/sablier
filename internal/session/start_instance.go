@@ -17,7 +17,7 @@ const (
 
 // Instance holds the data representing an instance status
 type Instance struct {
-	// The Name of the targeted container, serivce, deployment
+	// The Name of the targeted container, service, deployment
 	// of which the state is being represented
 	Name   string         `json:"name"`
 	Status InstanceStatus `json:"status"`
