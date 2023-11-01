@@ -2,23 +2,24 @@ package api
 
 import (
 	"github.com/acouvreur/sablier/internal/provider"
-	"github.com/acouvreur/sablier/internal/theme"
-	"net/http"
-	"time"
-
 	"github.com/acouvreur/sablier/internal/session"
+	"github.com/acouvreur/sablier/internal/theme"
+	"github.com/acouvreur/sablier/pkg/durations"
 	"github.com/gin-gonic/gin"
+	log "log/slog"
+	"net/http"
+	"sort"
 )
 
 type DynamicRequestThemeOptions struct {
-	Title            string        `json:"title"`
-	DisplayName      string        `json:"displayName"`
-	ShowDetails      bool          `json:"showDetails"`
-	RefreshFrequency time.Duration `json:"refreshFrequency"`
+	Title            string             `json:"title"`
+	DisplayName      string             `json:"displayName"`
+	ShowDetails      bool               `json:"showDetails"`
+	RefreshFrequency durations.Duration `json:"refreshFrequency,format:units"`
 }
 
 type DynamicSessionRequestDefaults struct {
-	SessionDuration time.Duration
+	SessionDuration durations.Duration
 	Theme           string
 	ThemeOptions    DynamicRequestThemeOptions
 	DesiredReplicas uint32
@@ -26,7 +27,7 @@ type DynamicSessionRequestDefaults struct {
 
 type DynamicRequestByNames struct {
 	Names           []string                   `json:"names,omitempty"`
-	SessionDuration time.Duration              `json:"session_duration"`
+	SessionDuration durations.Duration         `json:"sessionDuration,format:units"`
 	Theme           string                     `json:"theme"`
 	ThemeOptions    DynamicRequestThemeOptions `json:"themeOptions"`
 	DesiredReplicas uint32                     `json:"desiredReplicas"`
@@ -34,7 +35,7 @@ type DynamicRequestByNames struct {
 
 type DynamicRequestByGroup struct {
 	Group           string                     `json:"group,omitempty"`
-	SessionDuration time.Duration              `json:"sessionDuration"`
+	SessionDuration durations.Duration         `json:"sessionDuration,format:units"`
 	Theme           string                     `json:"theme"`
 	ThemeOptions    DynamicRequestThemeOptions `json:"themeOptions"`
 	DesiredReplicas uint32                     `json:"desiredReplicas"`
@@ -59,6 +60,10 @@ func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) {
 		return
 	}
 
+	if len(body.Names) == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
 	rds.requestDynamic(c, body)
 }
 
@@ -70,6 +75,7 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
 		DesiredReplicas: rds.defaults.DesiredReplicas,
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Error("error:", err)
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -93,35 +99,41 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
 func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicRequestByNames) {
 	instances, err := rds.session.RequestDynamicAll(c.Request.Context(), req.Names, session.RequestDynamicOptions{
 		DesiredReplicas: req.DesiredReplicas,
-		SessionDuration: req.SessionDuration,
+		SessionDuration: req.SessionDuration.Duration,
 	})
 	if err != nil {
+		log.Error("error:", err)
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	instancesInfo := make([]theme.InstanceInfo, 0, len(instances))
-	for _, instance := range instances {
-		instancesInfo = append(instancesInfo, theme.InstanceInfo{
+	instancesInfo := make([]theme.InstanceInfo, len(instances))
+	for i, instance := range instances {
+		instancesInfo[i] = theme.InstanceInfo{
 			Name:   instance.Name,
 			Status: string(instance.Status),
 			Error:  instance.Error,
-		})
+		}
 	}
+
+	sort.SliceStable(instancesInfo, func(i, j int) bool {
+		return instancesInfo[i].Name < instancesInfo[j].Name
+	})
 
 	opts := theme.Options{
 		Title:            req.ThemeOptions.Title,
 		DisplayName:      req.ThemeOptions.DisplayName,
 		ShowDetails:      req.ThemeOptions.ShowDetails,
 		Instances:        instancesInfo,
-		SessionDuration:  req.SessionDuration,
-		RefreshFrequency: req.ThemeOptions.RefreshFrequency,
+		SessionDuration:  req.SessionDuration.Duration,
+		RefreshFrequency: req.ThemeOptions.RefreshFrequency.Duration,
 	}
 
 	applyStatusHeader(c, instances)
 
 	c.Header("Content-Type", "text/html")
 	if err := rds.theme.Execute(c.Writer, req.Theme, opts); err != nil {
+		log.Error("error:", err)
 		c.AbortWithError(http.StatusInternalServerError, err)
 	}
 }

@@ -3,14 +3,12 @@ package session_test
 import (
 	"context"
 	"fmt"
-	"testing"
-	"time"
-
 	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/acouvreur/sablier/internal/provider/mock"
 	"github.com/acouvreur/sablier/internal/session"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestRequestBlockingRunningInstance(t *testing.T) {
@@ -25,9 +23,7 @@ func TestRequestBlockingRunningInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	instance, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 
 	if err != nil {
 		t.Error(err)
@@ -56,9 +52,7 @@ func TestRequestBlockingStartingInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	instance, _ := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 	assert.Equal(t, session.InstanceRunning, instance.Status)
 }
 
@@ -80,9 +74,7 @@ func TestRequestBlockingErrorInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 
 	assert.Equal(t, "myinstance does not exist", err.Error())
 }

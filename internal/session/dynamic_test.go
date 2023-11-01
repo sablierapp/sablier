@@ -3,14 +3,12 @@ package session_test
 import (
 	"context"
 	"errors"
-	"testing"
-	"time"
-
 	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/acouvreur/sablier/internal/provider/mock"
 	"github.com/acouvreur/sablier/internal/session"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestRequestRunningInstance(t *testing.T) {
@@ -53,9 +51,7 @@ func TestRequestStartingInstance(t *testing.T) {
 	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
-	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 	assert.Equal(t, session.InstanceRunning, instance.Status)
 
 	instance, _ = manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
@@ -87,9 +83,7 @@ func TestRequestErrorInstance(t *testing.T) {
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
 	// We wait for the initial completion
-	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 	assert.Equal(t, "unexpected error please retry", err.Error())
 
 	// But the second request succeeds
@@ -98,8 +92,6 @@ func TestRequestErrorInstance(t *testing.T) {
 	assert.Equal(t, session.InstanceStarting, instance.Status)
 
 	// We wait for the second request completion
-	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{
-		Timeout: 10 * time.Second,
-	})
+	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
 	assert.Equal(t, session.InstanceRunning, instance.Status)
 }

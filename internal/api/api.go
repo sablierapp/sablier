@@ -8,6 +8,7 @@ import (
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/acouvreur/sablier/internal/session"
 	"github.com/acouvreur/sablier/internal/theme"
+	"github.com/acouvreur/sablier/pkg/durations"
 	"github.com/gin-gonic/gin"
 	log "log/slog"
 	"net/http"
@@ -19,15 +20,20 @@ const (
 	versionPath                       = "/version"
 	healthcheckPath                   = "/health"
 	listThemesPath                    = "/themes"
+	previewThemePath                  = "/themes/:theme"
 	sessionRequestBlockingByNamesPath = "/sessions-blocking-by-names"
 	sessionRequestBlockingByGroupPath = "/sessions-blocking-by-group"
 	sessionRequestDynamicByNamesPath  = "/sessions-dynamic-by-names"
 	sessionRequestDynamicByGroupPath  = "/sessions-dynamic-by-group"
+	sessionsListPath                  = "/sessions"
+	groupsListPath                    = "/groups"
 )
 
 func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session.Manager, d *provider.Discovery) {
-
 	r := gin.New()
+	gin.EnableJsonDecoderDisallowUnknownFields()
+	gin.EnableJsonDecoderUseNumber()
+
 	r.Use(applyServerHeader)
 
 	// r.Use(Logger(log.New()), gin.Recovery())
@@ -38,8 +44,8 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 
 	rbs := RequestBlockingSession{
 		defaults: BlockingSessionRequestDefaults{
-			SessionDuration: conf.Sessions.DefaultDuration,
-			Timeout:         conf.Strategy.Blocking.DefaultTimeout,
+			SessionDuration: durations.Duration{Duration: conf.Sessions.DefaultDuration},
+			Timeout:         durations.Duration{Duration: conf.Strategy.Blocking.DefaultTimeout},
 			DesiredReplicas: 1,
 		},
 		session:   sm,
@@ -49,13 +55,13 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 
 	rds := RequestDynamicSession{
 		defaults: DynamicSessionRequestDefaults{
-			SessionDuration: conf.Sessions.DefaultDuration,
+			SessionDuration: durations.Duration{Duration: conf.Sessions.DefaultDuration},
 			Theme:           conf.Strategy.Dynamic.DefaultTheme,
 			ThemeOptions: DynamicRequestThemeOptions{
 				Title:            "Sablier",
 				DisplayName:      "your app",
 				ShowDetails:      conf.Strategy.Dynamic.ShowDetailsByDefault,
-				RefreshFrequency: conf.Strategy.Dynamic.DefaultRefreshFrequency,
+				RefreshFrequency: durations.Duration{Duration: conf.Strategy.Dynamic.DefaultRefreshFrequency},
 			},
 			DesiredReplicas: 1,
 		},
@@ -64,6 +70,9 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 		discovery: d,
 	}
 	ServeSessionRequestDynamic(base, rds)
+	ServeThemes(base, t)
+	ServeSessions(base, sm)
+	ServeGroups(base, d)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", conf.Server.Port),
@@ -80,15 +89,8 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 		}
 	}()
 
-	// Listen for the interrupt signal.
 	<-ctx.Done()
 
-	// Restore default behavior on the interrupt signal and notify user of shutdown.
-	stop()
-	log.Info("shutting down gracefully, press Ctrl+C again to force")
-
-	// The context is used to inform the server it has 10 seconds to finish
-	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
@@ -108,6 +110,14 @@ func ServeSessionRequestDynamic(group *gin.RouterGroup, rds RequestDynamicSessio
 	group.POST(sessionRequestDynamicByNamesPath, rds.RequestDynamicByNames)
 }
 
+func ServeSessions(group *gin.RouterGroup, sm *session.Manager) {
+	group.GET(sessionsListPath, GetSessions(sm))
+}
+
+func ServeGroups(group *gin.RouterGroup, d *provider.Discovery) {
+	group.GET(groupsListPath, GetGroups(d))
+}
+
 func ServeVersion(group *gin.RouterGroup) {
 	group.GET(versionPath, GetVersion)
 }
@@ -119,15 +129,13 @@ func ServeHealthcheck(group *gin.RouterGroup, ctx context.Context) {
 	group.GET(healthcheckPath, health.ServeHTTP)
 }
 
-func ServeThemes(group *gin.RouterGroup, ctx context.Context) {
-	health := Health{}
-	health.SetDefaults()
-	health.WithContext(ctx)
-	group.GET(healthcheckPath, GetThemes)
+func ServeThemes(group *gin.RouterGroup, t *theme.Themes) {
+	group.GET(listThemesPath, GetThemes(t))
+	group.GET(previewThemePath, PreviewTheme(t))
 }
 
 func logRoutes(routes gin.RoutesInfo) {
 	for _, route := range routes {
-		log.Debug(fmt.Sprintf("%s %s %s", route.Method, route.Path, route.Handler))
+		log.Info(fmt.Sprintf("%s %s %s", route.Method, route.Path, route.Handler))
 	}
 }

@@ -49,12 +49,12 @@ func (s *Manager) RequestDynamic(ctx context.Context, name string, opts RequestD
 
 func (s *Manager) RequestDynamicAll(ctx context.Context, names []string, opts RequestDynamicOptions) ([]Instance, error) {
 	promisesByName := make(map[string]*promise.Promise[Instance], len(names))
-	promises := make([]*promise.Promise[Instance], 0, len(names))
+	promises := make([]*promise.Promise[Instance], len(names))
 
-	for _, name := range names {
+	for idx, name := range names {
 		p, ok := s.startDynamic(ctx, name, opts)
 		promisesByName[name] = p
-		promises = append(promises, p)
+		promises[idx] = p
 		if !ok {
 			promise.Then[Instance](p, ctx, func(data Instance) (any, error) {
 				s.timeouts.Put(name, string(data.Status), opts.SessionDuration)
@@ -75,17 +75,19 @@ func (s *Manager) RequestDynamicAll(ctx context.Context, names []string, opts Re
 	}
 
 	instances := make([]Instance, len(names))
+	idx := 0
 	for name, p := range promisesByName {
 		instance, err := p.Await(ctx)
 		if err != nil {
-			instances = append(instances, Instance{
+			instances[idx] = Instance{
 				Name:   name,
 				Status: InstanceError,
 				Error:  err,
-			})
+			}
 		} else {
-			instances = append(instances, *instance)
+			instances[idx] = *instance
 		}
+		idx++
 	}
 
 	return instances, err

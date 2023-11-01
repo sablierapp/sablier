@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-const (
-	day  = time.Minute * 60 * 24
-	year = 365 * day
-)
-
 func Humanize(d time.Duration) string {
 	days := int64(d.Hours() / 24)
 	hours := int64(math.Mod(d.Hours(), 24))
@@ -28,7 +23,7 @@ func Humanize(d time.Duration) string {
 		{"second", seconds},
 	}
 
-	parts := []string{}
+	var parts []string
 
 	for _, chunk := range chunks {
 		switch chunk.amount {

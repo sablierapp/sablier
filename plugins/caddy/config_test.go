@@ -12,8 +12,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 )
 
-var fals bool = false
-var tru bool = true
+var fals = false
+var tru = true
 var oneMinute = 1 * time.Minute
 
 func TestConfig_BuildRequest(t *testing.T) {

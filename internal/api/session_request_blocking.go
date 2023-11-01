@@ -4,31 +4,31 @@ import (
 	"context"
 	"errors"
 	"github.com/acouvreur/sablier/internal/provider"
-	"net/http"
-	"time"
-
 	"github.com/acouvreur/sablier/internal/session"
+	"github.com/acouvreur/sablier/pkg/durations"
 	"github.com/gin-gonic/gin"
+	log "log/slog"
+	"net/http"
 )
 
 type BlockingSessionRequestDefaults struct {
-	SessionDuration time.Duration
-	Timeout         time.Duration
+	SessionDuration durations.Duration
+	Timeout         durations.Duration
 	DesiredReplicas uint32
 }
 
 type BlockingSessionRequestByNames struct {
-	Names           []string      `json:"names,omitempty"`
-	SessionDuration time.Duration `json:"session_duration"`
-	Timeout         time.Duration `json:"timeout"`
-	DesiredReplicas uint32        `json:"desiredReplicas"`
+	Names           []string           `json:"names,omitempty"`
+	SessionDuration durations.Duration `json:"sessionDuration,format:units"`
+	Timeout         durations.Duration `json:"timeout,format:units"`
+	DesiredReplicas uint32             `json:"desiredReplicas"`
 }
 
 type BlockingSessionRequestByGroup struct {
-	Group           string        `json:"group,omitempty"`
-	SessionDuration time.Duration `json:"session_duration"`
-	Timeout         time.Duration `json:"timeout"`
-	DesiredReplicas uint32        `json:"desiredReplicas"`
+	Group           string             `json:"group,omitempty"`
+	SessionDuration durations.Duration `json:"sessionDuration,format:units"`
+	Timeout         durations.Duration `json:"timeout,format:units"`
+	DesiredReplicas uint32             `json:"desiredReplicas"`
 }
 
 type BlockingSessionResponse struct {
@@ -48,8 +48,13 @@ func (rbs *RequestBlockingSession) RequestBlockingByNames(c *gin.Context) {
 		DesiredReplicas: rbs.defaults.DesiredReplicas,
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn(err.Error())
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
+	}
+
+	if len(body.Names) == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
 	rbs.requestBlocking(c, body)
@@ -62,6 +67,7 @@ func (rbs *RequestBlockingSession) RequestBlockingByGroup(c *gin.Context) {
 		DesiredReplicas: rbs.defaults.DesiredReplicas,
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
+		log.Warn(err.Error())
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -82,19 +88,21 @@ func (rbs *RequestBlockingSession) RequestBlockingByGroup(c *gin.Context) {
 }
 
 func (rbs *RequestBlockingSession) requestBlocking(c *gin.Context, req BlockingSessionRequestByNames) {
-	ctx, cancel := context.WithTimeout(c, req.Timeout)
+	ctx, cancel := context.WithTimeout(c, req.Timeout.Duration)
 	defer cancel()
 
 	instances, err := rbs.session.RequestBlockingAll(ctx, req.Names, session.RequestBlockingOptions{
 		DesiredReplicas: req.DesiredReplicas,
-		SessionDuration: req.SessionDuration,
+		SessionDuration: req.SessionDuration.Duration,
 	})
 	if errors.Is(err, context.DeadlineExceeded) {
 		NotReady(c)
+		log.Error("error:", err)
 		c.AbortWithError(http.StatusGatewayTimeout, err)
 		return
 	}
 	if err != nil {
+		log.Error("error:", err)
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}

@@ -23,6 +23,11 @@ type Client struct {
 	Client ClientWrapper
 }
 
+func (client *Client) SubscribeOnce(ctx context.Context, name string, action provider.EventAction, wait chan<- error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewSwarmClient() (*Client, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -99,7 +104,7 @@ func (client *Client) Status(ctx context.Context, name string) (bool, error) {
 }
 
 func replicas(replicas uint32) *uint64 {
-	var value uint64 = uint64(replicas)
+	var value = uint64(replicas)
 	return &value
 }
 

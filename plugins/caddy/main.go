@@ -42,10 +42,10 @@ func (m *SablierMiddleware) Provision(ctx caddy.Context) error {
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
-func (sm SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
-	sablierRequest := sm.request.Clone(context.TODO())
+func (m SablierMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next caddyhttp.Handler) error {
+	sablierRequest := m.request.Clone(context.TODO())
 
-	resp, err := sm.client.Do(sablierRequest)
+	resp, err := m.client.Do(sablierRequest)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return nil

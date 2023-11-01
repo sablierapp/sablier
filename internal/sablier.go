@@ -39,7 +39,7 @@ func Start(conf config.Config) error {
 	sm := session.NewManager(client, conf.Sessions)
 
 	// Create the auto discovery for groups
-	d := provider.NewDiscovery(provider.DiscoveryOptions{
+	d := provider.NewDiscovery(client, provider.DiscoveryOptions{
 		EnableLabel:          provider.EnableLabel,
 		GroupLabel:           provider.GroupLabel,
 		DefaultGroupStrategy: provider.DefaultGroupStrategyUseValue,

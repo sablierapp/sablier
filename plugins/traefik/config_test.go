@@ -9,8 +9,8 @@ import (
 	"github.com/acouvreur/sablier/plugins/traefik"
 )
 
-var fals bool = false
-var tru bool = true
+var fals = false
+var tru = true
 
 func TestConfig_BuildRequest(t *testing.T) {
 	type fields struct {

@@ -43,9 +43,12 @@ type Discovery struct {
 	lock     *sync.Mutex
 }
 
-func NewDiscovery(opts DiscoveryOptions) *Discovery {
+func NewDiscovery(provider Client, opts DiscoveryOptions) *Discovery {
 	return &Discovery{
-		opts: opts,
+		provider: provider,
+		opts:     opts,
+		groups:   map[string][]string{},
+		lock:     &sync.Mutex{},
 	}
 }
 
@@ -94,4 +97,10 @@ func (d *Discovery) Group(name string) ([]string, bool) {
 	defer d.lock.Unlock()
 	group, ok := d.groups[name]
 	return group, ok
+}
+
+func (d *Discovery) Groups() map[string][]string {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	return d.groups
 }

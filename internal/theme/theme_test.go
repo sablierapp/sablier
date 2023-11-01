@@ -12,17 +12,17 @@ import (
 )
 
 var (
-	StartingInstanceInfo theme.InstanceInfo = theme.InstanceInfo{
+	StartingInstanceInfo = theme.InstanceInfo{
 		Name:   "starting-instance",
 		Status: "instance is starting...",
 		Error:  nil,
 	}
-	StartedInstanceInfo theme.InstanceInfo = theme.InstanceInfo{
+	StartedInstanceInfo = theme.InstanceInfo{
 		Name:   "started-instance",
 		Status: "instance is started.",
 		Error:  nil,
 	}
-	ErrorInstanceInfo theme.InstanceInfo = theme.InstanceInfo{
+	ErrorInstanceInfo = theme.InstanceInfo{
 		Name:  "error-instance",
 		Error: fmt.Errorf("instance does not exist"),
 	}

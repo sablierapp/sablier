@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/acouvreur/sablier/pkg/promise"
 	"github.com/acouvreur/sablier/pkg/tinykv"
+	log "log/slog"
 )
 
 type Manager struct {
@@ -27,7 +29,10 @@ func NewManager(p provider.Client, config config.Sessions) *Manager {
 		lock.Lock()
 		defer lock.Unlock()
 		delete(promises, k)
-		p.Stop(context.Background(), k)
+		err := p.Stop(context.Background(), k)
+		if err != nil {
+			log.Warn(fmt.Sprintf("stopping %s: ", k), err)
+		}
 	})
 
 	manager := Manager{
@@ -51,6 +56,7 @@ func NewManager(p provider.Client, config config.Sessions) *Manager {
 				if errors.Is(err, io.EOF) {
 					return
 				}
+				log.Warn("event: ", err)
 			}
 		}
 	}()

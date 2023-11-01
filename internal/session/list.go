@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"github.com/acouvreur/sablier/pkg/promise"
 )
 
@@ -17,16 +18,20 @@ func (s *Manager) List() []Instance {
 			instance = Instance{
 				Name:   name,
 				Status: InstanceStarting,
+				Error:  nil,
 			}
 		case promise.Fulfilled:
 			instance = Instance{
 				Name:   name,
 				Status: InstanceRunning,
+				Error:  nil,
 			}
 		case promise.Rejected:
+			_, err := p.Await(context.Background())
 			instance = Instance{
 				Name:   name,
 				Status: InstanceError,
+				Error:  err,
 			}
 		}
 		instances = append(instances, instance)
