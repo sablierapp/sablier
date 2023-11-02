@@ -6,7 +6,7 @@ info:
   description: Start your workloads for a given duration
 
 paths:
-  /sessions-blocking-by-names:
+  "/sessions-blocking-by-names":
     post:
       operationId: requestSessionBlockingByNames
       summary: Request a session creation by names
@@ -19,15 +19,130 @@ paths:
         200:
           $ref: "#/components/responses/BlockingSessionRequestResponse"
 
-  /sessions-blocking-by-group:
+  "/sessions-blocking-by-group":
+    post:
+      operationId: requestSessionBlockingByGroup
+      summary: Request a session creation by names
+      description: |-
+        Request a session creation by names.
+        Will reapply the session duration from this day
+      requestBody:
+        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+      responses:
+        200:
+          $ref: "#/components/responses/BlockingSessionRequestResponse"
   /sessions-dynamic-by-names:
+    post:
+      operationId: requestSessionDynamicByNames
+      summary: Request a session creation by names
+      description: |-
+        Request a session creation by names.
+        Will reapply the session duration from this day
+      requestBody:
+        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+      responses:
+        200:
+          $ref: "#/components/responses/BlockingSessionRequestResponse"
   /sessions-dynamic-by-group:
+    post:
+      operationId: requestSessionDynamicByGroup
+      summary: Request a session creation by names
+      description: |-
+        Request a session creation by names.
+        Will reapply the session duration from this day
+      requestBody:
+        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+      responses:
+        200:
+          $ref: "#/components/responses/BlockingSessionRequestResponse"
   /version:
+    get:
+      operationId: getVersion
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  branch:
+                    type: string
+                    description: "The branch from which the release was built"
+                  buildDate:
+                    type: string
+                    description: "When the release was built"
+                  buildUser:
+                    type: string
+                    description: "Who built the release"
+                  goVersion:
+                    type: string
+                    description: "The golang version"
+                  platform:
+                    type: string
+                    description: "The binary format architecture"
+                  program:
+                    type: string
+                    description: "When the release was built"
+                  revision:
+                    type: string
+                    description: "The git commit SHA"
+                  version:
+                    type: string
+                    description: "The semantic version (SemVer)"
+                    externalDocs:
+                      url: "https://semver.org/"
+
   /health:
+    get:
+      operationId: healthcheck
+      description: Endpoint to query
+      responses:
+        200:
+          description: "The application is able to receive and handle requests"
+          content:
+            text/plain:
+              example: "200"
+        503:
+          description: "The application terminating gracefully and won't accept new requests"
+          content:
+            text/plain:
+              example: "503"
   /themes:
+    get:
+      operationId: listThemes
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /themes/:theme:
+    get:
+      operationId: previewTheme
+      parameters:
+      responses:
+        200:
   /instances:
+    get:
+      operationId: listInstances
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /groups:
+    get:
+      operationId: listGroups
+      responses:
+        200:
 
 components:
   requestBodies:
@@ -37,16 +152,20 @@ components:
         application/json:
           schema:
             type: object
+            required:
+              - names
             properties:
               names:
-                required: true
                 type: array
+                items:
+                  type: string
               sessionDuration:
-                required: false
+                $ref: "#/components/schemas/Duration"
               timeout:
-                required: false
+                $ref: "#/components/schemas/Duration"
               desiredReplicas:
-                required: false
+                type: integer
+                minimum: 1
           example: |-
 
     BlockingSessionRequestByGroup:
@@ -55,15 +174,18 @@ components:
         application/json:
           schema:
             type: object
+            required:
+              - group
             properties:
               group:
-                required: true
+                type: string
               sessionDuration:
-                required: false
+                $ref: "#/components/schemas/Duration"
               timeout:
-                required: false
+                $ref: "#/components/schemas/Duration"
               desiredReplicas:
-                required: false
+                type: integer
+                minimum: 1
 
     DynamicSessionRequestByNames:
       required: true
@@ -71,27 +193,31 @@ components:
         application/json:
           schema:
             type: object
+            required:
+              - names
             properties:
               names:
-                required: true
+                type: array
+                items:
+                  type: string
               sessionDuration:
-                required: false
+                $ref: "#/components/schemas/Duration"
               theme:
-                required: false
+                type: string
               themeOptions:
-                required: false
                 type: object
                 properties:
                   title:
-                    required: false
+                    type: string
                   displayName:
-                    required: false
+                    type: string
                   showDetails:
-                    required: false
+                    type: boolean
                   refreshFrequency:
-                    required: false
+                    $ref: "#/components/schemas/Duration"
               desiredReplicas:
-                required: false
+                type: integer
+                minimum: 1
 
     DynamicSessionRequestByGroup:
       required: true
@@ -99,43 +225,79 @@ components:
         application/json:
           schema:
             type: object
+            required:
+              - group
             properties:
               group:
-                required: true
+                type: string
+                example: "default"
               sessionDuration:
-                required: false
+                $ref: "#/components/schemas/Duration"
               theme:
-                required: false
+                type: string
               themeOptions:
-                required: false
                 type: object
                 properties:
                   title:
-                    required: false
+                    type: string
                   displayName:
-                    required: false
+                    type: string
                   showDetails:
-                    required: false
+                    type: boolean
                   refreshFrequency:
-                    required: false
+                    $ref: "#/components/schemas/Duration"
               desiredReplicas:
-                required: false
+                type: integer
+                minimum: 1
 
   responses:
     BlockingSessionRequestResponse:
+      description: ""
+      headers:
+        X-Sablier-Status:
+          $ref: "#/components/headers/X-Sablier-Status"
       content:
         application/json:
           schema:
+            type: object
+            properties:
+              instances:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Instance"
 
     DynamicSessionRequestResponse:
+      description: ""
       content:
-        text/html:
+        text/html: {}
+
+  headers:
+    X-Sablier-Status:
+      description: ""
+      schema:
+        type: string
+        enum:
+          - "ready"
+          - "not-ready"
 
   schemas:
     Duration:
       type: string
       format: duration
-      examples:
-        -
+      example:
+        - "1h"
+        - "10m30s"
       minLength: 1
-
+    Instance:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - "starting"
+            - "running"
+            - "error"
+        error:
+          type: string
