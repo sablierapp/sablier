@@ -25,7 +25,7 @@ type DynamicSessionRequestDefaults struct {
 	DesiredReplicas uint32
 }
 
-type DynamicRequestByNames struct {
+type DynamicSessionRequestByNames struct {
 	Names           []string                   `json:"names,omitempty"`
 	SessionDuration durations.Duration         `json:"sessionDuration,format:units"`
 	Theme           string                     `json:"theme"`
@@ -33,7 +33,7 @@ type DynamicRequestByNames struct {
 	DesiredReplicas uint32                     `json:"desiredReplicas"`
 }
 
-type DynamicRequestByGroup struct {
+type DynamicSessionRequestByGroup struct {
 	Group           string                     `json:"group,omitempty"`
 	SessionDuration durations.Duration         `json:"sessionDuration,format:units"`
 	Theme           string                     `json:"theme"`
@@ -49,7 +49,7 @@ type RequestDynamicSession struct {
 }
 
 func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) {
-	body := DynamicRequestByNames{
+	body := DynamicSessionRequestByNames{
 		SessionDuration: rds.defaults.SessionDuration,
 		Theme:           rds.defaults.Theme,
 		ThemeOptions:    rds.defaults.ThemeOptions,
@@ -68,7 +68,7 @@ func (rds *RequestDynamicSession) RequestDynamicByNames(c *gin.Context) {
 }
 
 func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
-	body := DynamicRequestByGroup{
+	body := DynamicSessionRequestByGroup{
 		SessionDuration: rds.defaults.SessionDuration,
 		Theme:           rds.defaults.Theme,
 		ThemeOptions:    rds.defaults.ThemeOptions,
@@ -85,7 +85,7 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNotFound)
 	}
 
-	req := DynamicRequestByNames{
+	req := DynamicSessionRequestByNames{
 		Names:           names,
 		SessionDuration: body.SessionDuration,
 		Theme:           body.Theme,
@@ -96,7 +96,7 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
 	rds.requestDynamic(c, req)
 }
 
-func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicRequestByNames) {
+func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicSessionRequestByNames) {
 	instances, err := rds.session.RequestDynamicAll(c.Request.Context(), req.Names, session.RequestDynamicOptions{
 		DesiredReplicas: req.DesiredReplicas,
 		SessionDuration: req.SessionDuration.Duration,

@@ -6,8 +6,8 @@ import (
 	"net/http"
 )
 
-func GetSessions(sm *session.Manager) func(*gin.Context) {
+func GetInstances(sm *session.Manager) func(*gin.Context) {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, sm.List())
+		c.JSON(http.StatusOK, sm.Instances())
 	}
 }

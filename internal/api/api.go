@@ -10,6 +10,8 @@ import (
 	"github.com/acouvreur/sablier/internal/theme"
 	"github.com/acouvreur/sablier/pkg/durations"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel/propagation"
 	log "log/slog"
 	"net/http"
 	"path"
@@ -25,7 +27,7 @@ const (
 	sessionRequestBlockingByGroupPath = "/sessions-blocking-by-group"
 	sessionRequestDynamicByNamesPath  = "/sessions-dynamic-by-names"
 	sessionRequestDynamicByGroupPath  = "/sessions-dynamic-by-group"
-	sessionsListPath                  = "/sessions"
+	instancesListPath                 = "/instances"
 	groupsListPath                    = "/groups"
 )
 
@@ -34,9 +36,12 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 	gin.EnableJsonDecoderDisallowUnknownFields()
 	gin.EnableJsonDecoderUseNumber()
 
-	r.Use(applyServerHeader)
-
-	// r.Use(Logger(log.New()), gin.Recovery())
+	r.Use(
+		GinSlogMiddleware(InitLog()),
+		applyServerHeader,
+		otelgin.Middleware("sablier", otelgin.WithPropagators(propagation.TraceContext{})),
+		gin.Recovery(),
+	)
 
 	base := r.Group(path.Join(conf.Server.BasePath, "/api"))
 	ServeHealthcheck(base, ctx)
@@ -82,7 +87,7 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
 	go func() {
-		log.Info("server listening ", srv.Addr)
+		log.Info("server listening", "address", srv.Addr)
 		logRoutes(r.Routes())
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("listen: %s\n", err)
@@ -111,7 +116,7 @@ func ServeSessionRequestDynamic(group *gin.RouterGroup, rds RequestDynamicSessio
 }
 
 func ServeSessions(group *gin.RouterGroup, sm *session.Manager) {
-	group.GET(sessionsListPath, GetSessions(sm))
+	group.GET(instancesListPath, GetInstances(sm))
 }
 
 func ServeGroups(group *gin.RouterGroup, d *provider.Discovery) {

@@ -1,0 +1,141 @@
+openapi: '3.1.0'
+
+info:
+  title: Sablier
+  version: 2.0.0
+  description: Start your workloads for a given duration
+
+paths:
+  /sessions-blocking-by-names:
+    post:
+      operationId: requestSessionBlockingByNames
+      summary: Request a session creation by names
+      description: |-
+        Request a session creation by names.
+        Will reapply the session duration from this day
+      requestBody:
+        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+      responses:
+        200:
+          $ref: "#/components/responses/BlockingSessionRequestResponse"
+
+  /sessions-blocking-by-group:
+  /sessions-dynamic-by-names:
+  /sessions-dynamic-by-group:
+  /version:
+  /health:
+  /themes:
+  /themes/:theme:
+  /instances:
+  /groups:
+
+components:
+  requestBodies:
+    BlockingSessionRequestByNames:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              names:
+                required: true
+                type: array
+              sessionDuration:
+                required: false
+              timeout:
+                required: false
+              desiredReplicas:
+                required: false
+          example: |-
+
+    BlockingSessionRequestByGroup:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              group:
+                required: true
+              sessionDuration:
+                required: false
+              timeout:
+                required: false
+              desiredReplicas:
+                required: false
+
+    DynamicSessionRequestByNames:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              names:
+                required: true
+              sessionDuration:
+                required: false
+              theme:
+                required: false
+              themeOptions:
+                required: false
+                type: object
+                properties:
+                  title:
+                    required: false
+                  displayName:
+                    required: false
+                  showDetails:
+                    required: false
+                  refreshFrequency:
+                    required: false
+              desiredReplicas:
+                required: false
+
+    DynamicSessionRequestByGroup:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              group:
+                required: true
+              sessionDuration:
+                required: false
+              theme:
+                required: false
+              themeOptions:
+                required: false
+                type: object
+                properties:
+                  title:
+                    required: false
+                  displayName:
+                    required: false
+                  showDetails:
+                    required: false
+                  refreshFrequency:
+                    required: false
+              desiredReplicas:
+                required: false
+
+  responses:
+    BlockingSessionRequestResponse:
+      content:
+        application/json:
+          schema:
+
+    DynamicSessionRequestResponse:
+      content:
+        text/html:
+
+  schemas:
+    Duration:
+      type: string
+      format: duration
+      examples:
+        -
+      minLength: 1
+

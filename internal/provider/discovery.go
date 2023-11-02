@@ -90,6 +90,7 @@ func (d *Discovery) scan(ctx context.Context) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	d.groups = groups
+	log.InfoContext(ctx, "scan complete", "groups", groups)
 }
 
 func (d *Discovery) Group(name string) ([]string, bool) {

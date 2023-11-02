@@ -27,13 +27,17 @@ func Start(conf config.Config) error {
 
 	// Load themes
 	t, err := NewThemes(conf.Strategy.Dynamic.CustomThemesPath)
+	if err != nil {
+		return err
+	}
+	log.Info("themes loaded", "themes", t.List())
 
 	// Create client/provider
 	client, err := NewClient(conf.Provider)
 	if err != nil {
 		return err
 	}
-	log.Info("using provider \"%s\"", conf.Provider.Name)
+	log.Info("provider loaded", "provider", conf.Provider.Name)
 
 	// Create the session manager
 	sm := session.NewManager(client, conf.Sessions)
@@ -45,6 +49,7 @@ func Start(conf config.Config) error {
 		DefaultGroupStrategy: provider.DefaultGroupStrategyUseValue,
 		StopOnDiscover:       false,
 	})
+	log.Info("starting discovery", "enableLabel", provider.EnableLabel, "groupLabel", provider.GroupLabel)
 	go d.StartDiscovery(ctx)
 
 	// Start the api

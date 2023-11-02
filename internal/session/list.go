@@ -5,7 +5,7 @@ import (
 	"github.com/acouvreur/sablier/pkg/promise"
 )
 
-func (s *Manager) List() []Instance {
+func (s *Manager) Instances() []Instance {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
