@@ -23,11 +23,11 @@ func TestRequestRunningInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
+	instances, _ := manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
 
-	assert.Equal(t, "myinstance", instance.Name)
+	assert.Equal(t, "myinstance", instances[0].Name)
 	// An Instance which is ready will be "Starting" on the first request
-	assert.Equal(t, session.InstanceStarting, instance.Status)
+	assert.Equal(t, session.InstanceStarting, instances[0].Status)
 }
 
 func TestRequestStartingInstance(t *testing.T) {
@@ -48,14 +48,14 @@ func TestRequestStartingInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
-	assert.Equal(t, session.InstanceStarting, instance.Status)
+	instances, _ := manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceStarting, instances[0].Status)
 
-	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
-	assert.Equal(t, session.InstanceRunning, instance.Status)
+	instances, _ = manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
 
-	instance, _ = manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
-	assert.Equal(t, session.InstanceRunning, instance.Status)
+	instances, _ = manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
 }
 
 func TestRequestErrorInstance(t *testing.T) {
@@ -77,21 +77,28 @@ func TestRequestErrorInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	// The first request won't succeed
+	// The first request returns immediately before completion, so it's marked as starting
 	ch <- errors.New("unexpected error please retry")
-	instance, _ := manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
-	assert.Equal(t, session.InstanceStarting, instance.Status)
+	instances, _ := manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceStarting, instances[0].Status)
 
 	// We wait for the initial completion
-	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
+	_, err := manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
 	assert.Equal(t, "unexpected error please retry", err.Error())
 
-	// But the second request succeeds
+	// The second request will be marked as error because the initial requested completed with error
 	ch <- nil
-	instance, _ = manager.RequestDynamic(ctx, "myinstance", session.RequestDynamicOptions{})
-	assert.Equal(t, session.InstanceStarting, instance.Status)
+	instances, _ = manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceError, instances[0].Status)
 
-	// We wait for the second request completion
-	instance, _ = manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
-	assert.Equal(t, session.InstanceRunning, instance.Status)
+	// Then, the third call actually tells us that it's starting
+	instances, _ = manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceStarting, instances[0].Status)
+
+	// We wait for the second third completion
+	instances, _ = manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
+
+	instances, _ = manager.RequestDynamic(ctx, []string{"myinstance"}, session.RequestDynamicOptions{})
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
 }

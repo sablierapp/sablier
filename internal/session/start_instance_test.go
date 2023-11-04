@@ -16,7 +16,7 @@ func TestStartInstanceReady(t *testing.T) {
 		return true, nil
 	}}
 
-	p := session.StartInstance(ctx, "myinstance", session.StartOptions{}, m)
+	p := session.StartInstance("myinstance", session.StartOptions{}, m)
 	instance, _ := p.Await(ctx)
 
 	assert.Equal(t, "myinstance", instance.Name)
@@ -37,7 +37,7 @@ func TestStartInstanceStarting(t *testing.T) {
 		},
 	}
 
-	p := session.StartInstance(ctx, "myinstance", session.StartOptions{}, m)
+	p := session.StartInstance("myinstance", session.StartOptions{}, m)
 	instance, _ := p.Await(ctx)
 
 	assert.Equal(t, "myinstance", instance.Name)

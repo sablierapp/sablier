@@ -47,7 +47,7 @@ func Start(conf config.Config) error {
 		EnableLabel:          provider.EnableLabel,
 		GroupLabel:           provider.GroupLabel,
 		DefaultGroupStrategy: provider.DefaultGroupStrategyUseValue,
-		StopOnDiscover:       false,
+		StopOnDiscover:       true,
 	})
 	log.Info("starting discovery", "enableLabel", provider.EnableLabel, "groupLabel", provider.GroupLabel)
 	go d.StartDiscovery(ctx)

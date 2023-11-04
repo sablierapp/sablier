@@ -97,7 +97,7 @@ func (rds *RequestDynamicSession) RequestDynamicByGroup(c *gin.Context) {
 }
 
 func (rds *RequestDynamicSession) requestDynamic(c *gin.Context, req DynamicSessionRequestByNames) {
-	instances, err := rds.session.RequestDynamicAll(c.Request.Context(), req.Names, session.RequestDynamicOptions{
+	instances, err := rds.session.RequestDynamic(c.Request.Context(), req.Names, session.RequestDynamicOptions{
 		DesiredReplicas: req.DesiredReplicas,
 		SessionDuration: req.SessionDuration.Duration,
 	})

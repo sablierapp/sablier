@@ -37,8 +37,9 @@ func Start(ctx context.Context, conf config.Config, t *theme.Themes, sm *session
 	gin.EnableJsonDecoderUseNumber()
 
 	r.Use(
-		GinSlogMiddleware(InitLog()),
+		CORSMiddleware(),
 		applyServerHeader,
+		GinSlogMiddleware(InitLog()),
 		otelgin.Middleware("sablier", otelgin.WithPropagators(propagation.TraceContext{})),
 		gin.Recovery(),
 	)
@@ -142,5 +143,21 @@ func ServeThemes(group *gin.RouterGroup, t *theme.Themes) {
 func logRoutes(routes gin.RoutesInfo) {
 	for _, route := range routes {
 		log.Info(fmt.Sprintf("%s %s %s", route.Method, route.Path, route.Handler))
+	}
+}
+
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, accept, origin, Cache-Control")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
 	}
 }

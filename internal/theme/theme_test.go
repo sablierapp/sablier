@@ -55,7 +55,7 @@ func TestThemes_Execute(t *testing.T) {
 </body>
 </html>
 `
-	themes := theme.NewWithCustomThemes(fstest.MapFS{
+	themes, _ := theme.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
 	})
 	instances := []theme.InstanceInfo{
@@ -187,7 +187,7 @@ func ExampleThemes_Execute() {
 	</body>
 </html>
 `
-	themes := theme.NewWithCustomThemes(fstest.MapFS{
+	themes, _ := theme.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
 	})
 	instances := []theme.InstanceInfo{

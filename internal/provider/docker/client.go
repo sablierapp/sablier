@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/docker/docker/api/types"
@@ -81,7 +82,7 @@ func (client *Client) Discover(ctx context.Context, opts provider.DiscoveryOptio
 }
 
 func toDiscovered(container types.Container, opts provider.DiscoveryOptions) provider.Discovered {
-	name := container.Names[0]
+	name, _ := strings.CutPrefix(container.Names[0], "/")
 	var group string
 
 	// The container defined a label with it's named group

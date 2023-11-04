@@ -85,6 +85,13 @@ func (d *Discovery) scan(ctx context.Context) {
 		}
 		group = append(group, discovered.Name)
 		groups[discovered.Group] = group
+
+		if d.opts.StopOnDiscover {
+			err := d.provider.Stop(ctx, discovered.Name)
+			if err != nil {
+				log.Warn("could not stop instance", "instance", discovered.Name)
+			}
+		}
 	}
 
 	d.lock.Lock()

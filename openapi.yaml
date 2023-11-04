@@ -4,6 +4,16 @@ info:
   title: Sablier
   version: 2.0.0
   description: Start your workloads for a given duration
+  contact:
+    url: https://www.alexiscouvreur.fr
+    name: Alexis Couvreur
+    email: alexiscouvreur.pro@gmail.com
+  license:
+    name: GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+    url: https://www.gnu.org/licenses/agpl-3.0.en.html
+
+servers:
+  - url: "http://localhost:10000/api"
 
 paths:
   "/sessions-blocking-by-names":
@@ -11,8 +21,10 @@ paths:
       operationId: requestSessionBlockingByNames
       summary: Request a session creation by names
       description: |-
-        Request a session creation by names.
-        Will reapply the session duration from this day
+        Request a blocking session creation by names. It will start all specified instances and will hang the request until 
+        all are running (or exceeds the timeout).
+        Everytime this endpoint is reached, each requested instances duration is extended.
+        Reverse proxies can use the X-Sablier-Status header to know if it should proceed with the instance routing.
       requestBody:
         $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
       responses:
@@ -22,45 +34,55 @@ paths:
   "/sessions-blocking-by-group":
     post:
       operationId: requestSessionBlockingByGroup
-      summary: Request a session creation by names
+      summary: Request a blocking session creation by group
       description: |-
-        Request a session creation by names.
-        Will reapply the session duration from this day
+        Request a blocking session creation by group. It will start all instances associated to the group and will hang the 
+        request until all are running (or exceeds the timeout).
+        Everytime this endpoint is reached, each requested instances duration is extended.
+        Reverse proxies can use the X-Sablier-Status header to know if it should proceed with the instance routing.
       requestBody:
-        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+        $ref: "#/components/requestBodies/BlockingSessionRequestByGroup"
       responses:
         200:
           $ref: "#/components/responses/BlockingSessionRequestResponse"
+        404:
+          description: "The requested group does not exist"
   /sessions-dynamic-by-names:
     post:
       operationId: requestSessionDynamicByNames
-      summary: Request a session creation by names
+      summary: Request a dynamic session creation by names
       description: |-
-        Request a session creation by names.
-        Will reapply the session duration from this day
+        Request a dynamic session creation by names. It will start all specified instances and return immediately with 
+        a waiting page that can be configured (theme).
+        Everytime this endpoint is reached, each requested instances duration is extended.
+        Reverse proxies can use the X-Sablier-Status header to know if it should proceed with the instance routing.
       requestBody:
-        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+        $ref: "#/components/requestBodies/DynamicSessionRequestByNames"
       responses:
         200:
-          $ref: "#/components/responses/BlockingSessionRequestResponse"
+          $ref: "#/components/responses/DynamicSessionRequestResponse"
   /sessions-dynamic-by-group:
     post:
       operationId: requestSessionDynamicByGroup
-      summary: Request a session creation by names
+      summary: Request a dynamic session creation by group
       description: |-
-        Request a session creation by names.
-        Will reapply the session duration from this day
+        Request a session creation by group. It will start all instances associated to the group and will hang the 
+        request until all are running (or exceeds the timeout).
+        Everytime this endpoint is reached, each requested instances duration is extended. 
+        Reverse proxies can use the X-Sablier-Status header to know if it should proceed with the instance routing.
       requestBody:
-        $ref: "#/components/requestBodies/BlockingSessionRequestByNames"
+        $ref: "#/components/requestBodies/DynamicSessionRequestByGroup"
       responses:
         200:
-          $ref: "#/components/responses/BlockingSessionRequestResponse"
+          $ref: "#/components/responses/DynamicSessionRequestResponse"
+        404:
+          description: "The requested group does not exist"
   /version:
     get:
       operationId: getVersion
       responses:
         200:
-          description: ""
+          description: "Build and version information of Sablier"
           content:
             application/json:
               schema:
@@ -96,7 +118,7 @@ paths:
   /health:
     get:
       operationId: healthcheck
-      description: Endpoint to query
+      description: Endpoint to query to know if the application is healthy or not
       responses:
         200:
           description: "The application is able to receive and handle requests"
@@ -108,41 +130,61 @@ paths:
           content:
             text/plain:
               example: "503"
+
   /themes:
     get:
       operationId: listThemes
       responses:
         200:
-          description: ""
+          description: "List default and custom themes"
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
-  /themes/:theme:
+
+  /themes/{theme}:
     get:
+      description: "Preview a theme by having fake data for 3 instances, one running, one starting and one in error."
       operationId: previewTheme
       parameters:
+        - in: path
+          name: theme
+          required: true
+          schema:
+            type: string
+          description: The theme to preview
       responses:
         200:
+          $ref: "#/components/responses/DynamicSessionRequestResponse"
+        404:
+          description: "The requested theme does not exist"
+
   /instances:
     get:
       operationId: listInstances
       responses:
         200:
-          description: ""
+          description: "List all known instances and their statuses"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: string
+                  $ref: "#/components/schemas/Instance"
   /groups:
     get:
       operationId: listGroups
       responses:
         200:
+          description: "List all discovered groups and their related instances"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
 
 components:
   requestBodies:
@@ -159,6 +201,9 @@ components:
                 type: array
                 items:
                   type: string
+                example:
+                  - nginx
+                  - whoami
               sessionDuration:
                 $ref: "#/components/schemas/Duration"
               timeout:
@@ -166,7 +211,6 @@ components:
               desiredReplicas:
                 type: integer
                 minimum: 1
-          example: |-
 
     BlockingSessionRequestByGroup:
       required: true
@@ -179,6 +223,7 @@ components:
             properties:
               group:
                 type: string
+                example: "default"
               sessionDuration:
                 $ref: "#/components/schemas/Duration"
               timeout:
@@ -200,17 +245,23 @@ components:
                 type: array
                 items:
                   type: string
+                example:
+                  - nginx
+                  - whoami
               sessionDuration:
                 $ref: "#/components/schemas/Duration"
               theme:
                 type: string
+                example: "hacker-terminal"
               themeOptions:
                 type: object
                 properties:
                   title:
                     type: string
+                    example: "Sablier"
                   displayName:
                     type: string
+                    example: "my apps"
                   showDetails:
                     type: boolean
                   refreshFrequency:
@@ -218,6 +269,7 @@ components:
               desiredReplicas:
                 type: integer
                 minimum: 1
+                example: 1
 
     DynamicSessionRequestByGroup:
       required: true
@@ -235,13 +287,16 @@ components:
                 $ref: "#/components/schemas/Duration"
               theme:
                 type: string
+                example: "hacker-terminal"
               themeOptions:
                 type: object
                 properties:
                   title:
                     type: string
+                    example: "Sablier"
                   displayName:
                     type: string
+                    example: "my apps"
                   showDetails:
                     type: boolean
                   refreshFrequency:
@@ -249,10 +304,11 @@ components:
               desiredReplicas:
                 type: integer
                 minimum: 1
+                example: 1
 
   responses:
     BlockingSessionRequestResponse:
-      description: ""
+      description: "A JSON response that displays the status of the requested instances."
       headers:
         X-Sablier-Status:
           $ref: "#/components/headers/X-Sablier-Status"
@@ -267,13 +323,42 @@ components:
                   $ref: "#/components/schemas/Instance"
 
     DynamicSessionRequestResponse:
-      description: ""
+      description: "An HTML page that self-refreshes and displays the status of the requested instances."
+      headers:
+        X-Sablier-Status:
+          $ref: "#/components/headers/X-Sablier-Status"
       content:
-        text/html: {}
+        text/html:
+          example: |-
+            <html lang="en">
+            <head>
+              <title>Sablier</title>
+              <meta http-equiv="refresh" content="5" />
+            </head>
+            <body>
+              Starting my apps
+              Your instances will stop after 10 minutes of inactivity
+              <table>
+                <tr>
+                  <td>starting-instance</td>
+                  <td>instance is starting...</td>
+                </tr>
+                <tr>
+                  <td>started-instance</td>
+                  <td>instance is started.</td>
+                </tr>
+                <tr>
+                  <td>error-instance</td>
+                  <td>instance does not exist</td>
+                </tr>
+              </table>
+            </body>
+            </html>
+  
 
   headers:
     X-Sablier-Status:
-      description: ""
+      description: "Represents the readiness of the requested session. For a session to be considered 'ready', every instances must be 'running'."
       schema:
         type: string
         enum:
@@ -283,21 +368,33 @@ components:
   schemas:
     Duration:
       type: string
+      externalDocs:
+        url: "https://pkg.go.dev/time#ParseDuration"
       format: duration
-      example:
-        - "1h"
-        - "10m30s"
+      example: "1h"
       minLength: 1
     Instance:
       type: object
       properties:
         name:
           type: string
+          example: "nginx"
         status:
           type: string
           enum:
             - "starting"
             - "running"
             - "error"
+          example: "error"
         error:
           type: string
+          example: "container \"nginx\" does not exist"
+    Group:
+      type: object
+      properties:
+        name:
+          type: string
+        instances:
+          type: array
+          items:
+            $ref: "#/components/schemas/Instance"

@@ -23,15 +23,15 @@ func TestRequestBlockingRunningInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
+	instances, err := manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
 
 	if err != nil {
 		t.Error(err)
 		t.Fail()
 	}
 
-	assert.Equal(t, "myinstance", instance.Name)
-	assert.Equal(t, session.InstanceRunning, instance.Status)
+	assert.Equal(t, "myinstance", instances[0].Name)
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
 }
 
 func TestRequestBlockingStartingInstance(t *testing.T) {
@@ -52,8 +52,8 @@ func TestRequestBlockingStartingInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	instance, _ := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
-	assert.Equal(t, session.InstanceRunning, instance.Status)
+	instances, _ := manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
+	assert.Equal(t, session.InstanceRunning, instances[0].Status)
 }
 
 func TestRequestBlockingErrorInstance(t *testing.T) {
@@ -74,7 +74,7 @@ func TestRequestBlockingErrorInstance(t *testing.T) {
 	}
 	manager := session.NewManager(m, config.NewSessionsConfig())
 
-	_, err := manager.RequestBlocking(ctx, "myinstance", session.RequestBlockingOptions{})
+	_, err := manager.RequestBlocking(ctx, []string{"myinstance"}, session.RequestBlockingOptions{})
 
 	assert.Equal(t, "myinstance does not exist", err.Error())
 }

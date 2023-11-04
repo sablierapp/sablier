@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/internal/provider"
@@ -14,10 +15,24 @@ import (
 	log "log/slog"
 )
 
+type Session struct {
+	ExpiresOn       time.Time
+	SessionDuration time.Duration
+	StartedAt       time.Time
+}
+
+func NewSession(duration time.Duration) Session {
+	return Session{
+		ExpiresOn:       time.Now().Add(duration),
+		SessionDuration: duration,
+		StartedAt:       time.Now(),
+	}
+}
+
 type Manager struct {
 	provider provider.Client
 	promises map[string]*promise.Promise[Instance]
-	timeouts tinykv.KV[string]
+	timeouts tinykv.KV[Session]
 	lock     *sync.Mutex
 }
 
@@ -25,11 +40,12 @@ func NewManager(p provider.Client, config config.Sessions) *Manager {
 
 	lock := sync.Mutex{}
 	promises := make(map[string]*promise.Promise[Instance])
-	kv := tinykv.New[string](config.ExpirationInterval, func(k, v string) {
+	kv := tinykv.New[Session](config.ExpirationInterval, func(k string, v Session) {
 		lock.Lock()
 		defer lock.Unlock()
 		delete(promises, k)
 		err := p.Stop(context.Background(), k)
+		log.Info("stopping instance", "instance", k)
 		if err != nil {
 			log.Warn(fmt.Sprintf("stopping %s: ", k), err)
 		}

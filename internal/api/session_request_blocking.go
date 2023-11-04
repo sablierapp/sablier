@@ -91,7 +91,7 @@ func (rbs *RequestBlockingSession) requestBlocking(c *gin.Context, req BlockingS
 	ctx, cancel := context.WithTimeout(c, req.Timeout.Duration)
 	defer cancel()
 
-	instances, err := rbs.session.RequestBlockingAll(ctx, req.Names, session.RequestBlockingOptions{
+	instances, err := rbs.session.RequestBlocking(ctx, req.Names, session.RequestBlockingOptions{
 		DesiredReplicas: req.DesiredReplicas,
 		SessionDuration: req.SessionDuration.Duration,
 	})
