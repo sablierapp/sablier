@@ -74,9 +74,10 @@ func NewManager(p provider.Client, config config.Sessions) *Manager {
 				}
 			case err := <-errs:
 				if errors.Is(err, io.EOF) {
+					log.Warn("event stream closed: ", "error", err.Error())
 					return
 				}
-				log.Warn("event: ", err)
+				log.Error("event stream error occurred: ", "error", err.Error())
 			}
 		}
 	}()
