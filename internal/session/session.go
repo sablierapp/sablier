@@ -65,8 +65,12 @@ func NewManager(p provider.Client, config config.Sessions) *Manager {
 		for {
 			select {
 			case msg := <-msgs:
-				if msg.Action == provider.EventActionStop {
-					manager.deleteSync(msg.Name)
+				if msg.Action == provider.EventActionStop || msg.Action == provider.EventActionDestroy {
+					if _, ok := promises[msg.Name]; ok {
+						log.Info("instance was stopped from external source", "instance", msg.Name)
+						manager.deleteSync(msg.Name)
+						kv.Delete(msg.Name)
+					}
 				}
 			case err := <-errs:
 				if errors.Is(err, io.EOF) {

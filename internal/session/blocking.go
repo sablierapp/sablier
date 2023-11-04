@@ -13,21 +13,39 @@ type RequestBlockingOptions struct {
 }
 
 func (s *Manager) RequestBlocking(ctx context.Context, names []string, opts RequestBlockingOptions) ([]Instance, error) {
+	promisesByName := make(map[string]*promise.Promise[Instance], len(names))
 	promises := make([]*promise.Promise[Instance], len(names))
 
 	for idx, name := range names {
 		p, _ := s.startBlocking(name, opts)
+		promisesByName[name] = p
 		promises[idx] = p
 	}
 
-	p := promise.All[Instance](ctx, promises...)
+	p := promise.AllSettled[Instance](ctx, promises...)
 
-	instances, err := p.Await(ctx)
+	_, err := p.Await(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return *instances, err
+	instances := make([]Instance, len(names))
+	idx := 0
+	for name, p := range promisesByName {
+		instance, err := p.Await(ctx)
+		if err != nil {
+			instances[idx] = Instance{
+				Name:   name,
+				Status: InstanceError,
+				Error:  err,
+			}
+		} else {
+			instances[idx] = *instance
+		}
+		idx++
+	}
+
+	return instances, err
 }
 
 func (s *Manager) startBlocking(name string, opts RequestBlockingOptions) (*promise.Promise[Instance], bool) {

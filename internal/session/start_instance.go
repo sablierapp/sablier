@@ -2,29 +2,11 @@ package session
 
 import (
 	"context"
-
 	log "log/slog"
 
 	"github.com/acouvreur/sablier/internal/provider"
 	"github.com/acouvreur/sablier/pkg/promise"
 )
-
-type InstanceStatus string
-
-const (
-	InstanceStarting InstanceStatus = "starting"
-	InstanceRunning  InstanceStatus = "running"
-	InstanceError    InstanceStatus = "error"
-)
-
-// Instance holds the data representing an instance status
-type Instance struct {
-	// The Name of the targeted container, service, deployment
-	// of which the state is being represented
-	Name   string         `json:"name"`
-	Status InstanceStatus `json:"status"`
-	Error  error          `json:"error"`
-}
 
 type StartOptions struct {
 	DesiredReplicas uint32 `json:"desiredReplicas"`
