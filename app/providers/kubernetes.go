@@ -120,6 +120,28 @@ func (provider *KubernetesProvider) GetGroups() (map[string][]string, error) {
 		groups[groupName] = group
 	}
 
+
+	statefulSets, err := provider.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+		LabelSelector: enableLabel,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, statefulSet := range statefulSets.Items {
+		groupName := statefulSet.Labels[groupLabel]
+		if len(groupName) == 0 {
+			groupName = defaultGroupValue
+		}
+
+		group := groups[groupName]
+		// TOOD: Use annotation for scale
+		name := fmt.Sprintf("%s_%s_%s_%d", "statefulset", statefulSet.Namespace, statefulSet.Name, 1)
+		group = append(group, name)
+		groups[groupName] = group
+	}
+
 	return groups, nil
 }
 
