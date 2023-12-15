@@ -27,7 +27,7 @@ jobs:
           outputs: type=docker,dest=/tmp/sablier.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sablier-image-tar
           path: /tmp/sablier.tar
@@ -136,7 +136,7 @@ jobs:
           outputs: type=docker,dest=/tmp/caddy.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: caddy-image-tar
           path: /tmp/caddy.tar
