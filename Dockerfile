@@ -17,7 +17,7 @@ ARG TARGETOS
 ARG TARGETARCH
 RUN make BUILDTIME=${BUILDTIME} VERSION=${VERSION} GIT_REVISION=${REVISION} ${TARGETOS}/${TARGETARCH}
 
-FROM alpine:3.19.0
+FROM alpine:3.19.1
 
 COPY --from=build /go/src/sablier/sablier* /etc/sablier/sablier
 COPY docker/sablier.yaml /etc/sablier/sablier.yaml
