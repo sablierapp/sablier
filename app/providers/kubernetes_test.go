@@ -90,7 +90,8 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
 			provider := KubernetesProvider{
-				Client: mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				delimiter: "_",
 			}
 
 			deploymentAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
@@ -188,7 +189,8 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
 			provider := KubernetesProvider{
-				Client: mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				delimiter: "_",
 			}
 
 			deploymentAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
@@ -316,7 +318,8 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
 			provider := KubernetesProvider{
-				Client: mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
+				delimiter: "_",
 			}
 
 			deploymentAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getDeployment, nil)

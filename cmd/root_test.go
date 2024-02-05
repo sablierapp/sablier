@@ -17,6 +17,32 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestDefault(t *testing.T) {
+	testDir, err := os.Getwd()
+	require.NoError(t, err, "error getting the current working directory")
+
+	wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_default.json"))
+	require.NoError(t, err, "error reading test config file")
+
+	// CHANGE `startCmd` behavior to only print the config, this is for testing purposes only
+	newStartCommand = mockStartCommand
+
+	t.Run("config file", func(t *testing.T) {
+		conf = config.NewConfig()
+		cmd := NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{
+			"start",
+		})
+		cmd.Execute()
+
+		gotOutput := output.String()
+
+		assert.Equal(t, string(wantConfig), gotOutput)
+	})
+}
+
 func TestPrecedence(t *testing.T) {
 	testDir, err := os.Getwd()
 	require.NoError(t, err, "error getting the current working directory")
@@ -82,6 +108,7 @@ func TestPrecedence(t *testing.T) {
 			"--provider.name", "cli",
 			"--provider.kubernetes.qps", "256",
 			"--provider.kubernetes.burst", "512",
+			"--provider.kubernetes.delimiter", "_",
 			"--server.port", "3333",
 			"--server.base-path", "/cli/",
 			"--storage.file", "/tmp/cli.json",

@@ -46,10 +46,12 @@ It provides an integrations with multiple reverse proxies and different loading 
 	// Provider flags
 	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
 	viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
-	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, fmt.Sprintf("QPS limit for K8S API access client-side throttling"))
+	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
 	viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
-	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, fmt.Sprintf("Maximum burst for K8S API acees client-side throttling"))
+	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API acees client-side throttling")
 	viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
+	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
+	viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
 	viper.BindPFlag("server.port", startCmd.Flags().Lookup("server.port"))

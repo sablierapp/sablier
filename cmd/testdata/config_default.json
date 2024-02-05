@@ -1,0 +1,35 @@
+{
+  "Server": {
+    "Port": 10000,
+    "BasePath": "/"
+  },
+  "Storage": {
+    "File": ""
+  },
+  "Provider": {
+    "Name": "docker",
+    "Kubernetes": {
+      "QPS": 5,
+      "Burst": 10,
+      "Delimiter": "_"
+    }
+  },
+  "Sessions": {
+    "DefaultDuration": 300000000000,
+    "ExpirationInterval": 20000000000
+  },
+  "Logging": {
+    "Level": "info"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "",
+      "ShowDetailsByDefault": true,
+      "DefaultTheme": "hacker-terminal",
+      "DefaultRefreshFrequency": 5000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 60000000000
+    }
+  }
+}

@@ -22,9 +22,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// Delimiter is used to split name into kind,namespace,name,replicacount
-const Delimiter = "_"
-
 type Config struct {
 	OriginalName string
 	Kind         string // deployment or statefulset
@@ -38,11 +35,10 @@ type Workload interface {
 	UpdateScale(ctx context.Context, workloadName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error)
 }
 
-func convertName(name string) (*Config, error) {
-	// name format kind_namespace_name_replicas
-	s := strings.Split(name, Delimiter)
+func (provider *KubernetesProvider) convertName(name string) (*Config, error) {
+	s := strings.Split(name, provider.delimiter)
 	if len(s) < 4 {
-		return nil, errors.New("invalid name should be: kind" + Delimiter + "namespace" + Delimiter + "name" + Delimiter + "replicas")
+		return nil, errors.New("invalid name should be: kind" + provider.delimiter + "namespace" + provider.delimiter + "name" + provider.delimiter + "replicas")
 	}
 	replicas, err := strconv.Atoi(s[3])
 	if err != nil {
@@ -58,8 +54,18 @@ func convertName(name string) (*Config, error) {
 	}, nil
 }
 
+func (provider *KubernetesProvider) convertStatefulset(ss *appsv1.StatefulSet, replicas int32) string {
+	return fmt.Sprintf("statefulset%s%s%s%s%s%d", provider.delimiter, ss.Namespace, provider.delimiter, ss.Name, provider.delimiter, replicas)
+}
+
+func (provider *KubernetesProvider) convertDeployment(d *appsv1.Deployment, replicas int32) string {
+	return fmt.Sprintf("statefulset%s%s%s%s%s%d", provider.delimiter, d.Namespace, provider.delimiter, d.Name, provider.delimiter, replicas)
+
+}
+
 type KubernetesProvider struct {
-	Client kubernetes.Interface
+	Client    kubernetes.Interface
+	delimiter string
 }
 
 func NewKubernetesProvider(providerConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
@@ -79,13 +85,14 @@ func NewKubernetesProvider(providerConfig providerConfig.Kubernetes) (*Kubernete
 	}
 
 	return &KubernetesProvider{
-		Client: client,
+		Client:    client,
+		delimiter: providerConfig.Delimiter,
 	}, nil
 
 }
 
 func (provider *KubernetesProvider) Start(ctx context.Context, name string) (instance.State, error) {
-	config, err := convertName(name)
+	config, err := provider.convertName(name)
 	if err != nil {
 		return instance.UnrecoverableInstanceState(name, err.Error(), int(config.Replicas))
 	}
@@ -94,7 +101,7 @@ func (provider *KubernetesProvider) Start(ctx context.Context, name string) (ins
 }
 
 func (provider *KubernetesProvider) Stop(ctx context.Context, name string) (instance.State, error) {
-	config, err := convertName(name)
+	config, err := provider.convertName(name)
 	if err != nil {
 		return instance.UnrecoverableInstanceState(name, err.Error(), int(config.Replicas))
 	}
@@ -121,11 +128,10 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 
 		group := groups[groupName]
 		// TOOD: Use annotation for scale
-		name := fmt.Sprintf("%s_%s_%s_%d", "deployment", deployment.Namespace, deployment.Name, 1)
+		name := provider.convertDeployment(&deployment, 1)
 		group = append(group, name)
 		groups[groupName] = group
 	}
-
 
 	statefulSets, err := provider.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: enableLabel,
@@ -143,7 +149,7 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 
 		group := groups[groupName]
 		// TOOD: Use annotation for scale
-		name := fmt.Sprintf("%s_%s_%s_%d", "statefulset", statefulSet.Namespace, statefulSet.Name, 1)
+		name := provider.convertStatefulset(&statefulSet, 1)
 		group = append(group, name)
 		groups[groupName] = group
 	}
@@ -179,7 +185,7 @@ func (provider *KubernetesProvider) scale(ctx context.Context, config *Config, r
 }
 
 func (provider *KubernetesProvider) GetState(ctx context.Context, name string) (instance.State, error) {
-	config, err := convertName(name)
+	config, err := provider.convertName(name)
 	if err != nil {
 		return instance.UnrecoverableInstanceState(name, err.Error(), int(config.Replicas))
 	}
@@ -243,12 +249,12 @@ func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cach
 			}
 
 			if *newDeployment.Spec.Replicas == 0 {
-				instance <- fmt.Sprintf("deployment_%s_%s_%d", newDeployment.Namespace, newDeployment.Name, *oldDeployment.Spec.Replicas)
+				instance <- provider.convertDeployment(newDeployment, *oldDeployment.Spec.Replicas)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
-			instance <- fmt.Sprintf("deployment_%s_%s_%d", deletedDeployment.Namespace, deletedDeployment.Name, *deletedDeployment.Spec.Replicas)
+			instance <- provider.convertDeployment(deletedDeployment, *deletedDeployment.Spec.Replicas)
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
@@ -269,12 +275,12 @@ func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) ca
 			}
 
 			if *newStatefulSet.Spec.Replicas == 0 {
-				instance <- fmt.Sprintf("statefulset_%s_%s_%d", newStatefulSet.Namespace, newStatefulSet.Name, *oldStatefulSet.Spec.Replicas)
+				instance <- provider.convertStatefulset(newStatefulSet, *oldStatefulSet.Spec.Replicas)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedStatefulSet := obj.(*appsv1.StatefulSet)
-			instance <- fmt.Sprintf("statefulset__%s_%s_%d", deletedStatefulSet.Namespace, deletedStatefulSet.Name, *deletedStatefulSet.Spec.Replicas)
+			instance <- provider.convertStatefulset(deletedStatefulSet, *deletedStatefulSet.Spec.Replicas)
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))

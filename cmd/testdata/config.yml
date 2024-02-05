@@ -3,6 +3,7 @@ provider:
   kubernetes:
     qps: 64
     burst: 128
+    delimiter: .
 server:
   port: 1111
   base-path: /configfile/

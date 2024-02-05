@@ -4,10 +4,11 @@ import (
 	"fmt"
 )
 
-// Provider holds the provider description
-// It can be either docker, swarm or kubernetes
+// Provider holds the provider configurations
 type Provider struct {
-	Name       string `mapstructure:"NAME" yaml:"provider,omitempty"`
+	// The provider name to use
+	// It can be either docker, swarm or kubernetes. Defaults to "docker"
+	Name       string `mapstructure:"NAME" yaml:"provider,omitempty" default:"docker"`
 	Kubernetes Kubernetes
 }
 
@@ -16,16 +17,20 @@ type Kubernetes struct {
 	QPS float32 `mapstructure:"QPS" yaml:"QPS" default:"5"`
 	//Maximum burst for client-side throttle
 	Burst int `mapstructure:"BURST" yaml:"Burst" default:"10"`
+	//Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
+	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
 }
 
 var providers = []string{"docker", "swarm", "kubernetes"}
 
 func NewProviderConfig() Provider {
 	return Provider{
+
 		Name: "docker",
 		Kubernetes: Kubernetes{
-			QPS:   5,
-			Burst: 10,
+			QPS:       5,
+			Burst:     10,
+			Delimiter: "_", //Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
 		},
 	}
 }

@@ -10,7 +10,8 @@
     "Name": "configfile",
     "Kubernetes": {
       "QPS": 64,
-      "Burst": 128
+      "Burst": 128,
+      "Delimiter": "."
     }
   },
   "Sessions": {

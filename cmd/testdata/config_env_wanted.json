@@ -10,7 +10,8 @@
     "Name": "envvar",
     "Kubernetes": {
       "QPS": 16,
-      "Burst": 32
+      "Burst": 32,
+      "Delimiter": "/"
     }
   },
   "Sessions": {

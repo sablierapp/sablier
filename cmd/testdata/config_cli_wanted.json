@@ -10,7 +10,8 @@
     "Name": "cli",
     "Kubernetes": {
       "QPS": 256,
-      "Burst": 512
+      "Burst": 512,
+      "Delimiter": "_"
     }
   },
   "Sessions": {
