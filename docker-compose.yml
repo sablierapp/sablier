@@ -16,7 +16,7 @@ services:
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
 
   sablier:
-    image: acouvreur/sablier:1.5.0-beta.1
+    image: acouvreur/sablier:2.1.0-beta.1
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     labels:
