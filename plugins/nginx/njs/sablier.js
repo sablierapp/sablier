@@ -102,7 +102,6 @@ function buildRequest(c) {
  function createBlockingUrl(config) {
   const url = `${config.sablierUrl}/api/strategies/blocking`
   const query = { 
-    names: config.names.split(",").map(name => name.trim()),
     session_duration: config.sessionDuration,
     timeout:config.timeout,
   };
