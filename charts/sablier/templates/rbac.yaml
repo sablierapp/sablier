@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sablier-{{ .Release.Name }}
+rules:
+  - apiGroups:
+      - apps
+      - ""
+    resources:
+      - deployments
+      - deployments/scale
+      - statefulsets
+      - statefulsets/scale
+    verbs:
+      - patch # Scale up and down
+      - get # Retrieve info about specific dep
+      - update # Scale up and down
+      - list # Events
+      - watch # Events
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sablier-{{ .Release.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sablier-{{ .Release.Name }}
+subjects:
+  - kind: ServiceAccount
+    name: sablier
+    namespace: {{ .Release.Namespace }}

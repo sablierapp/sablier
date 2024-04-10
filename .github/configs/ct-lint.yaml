@@ -1,0 +1,9 @@
+---
+remote: origin
+target-branch: main
+chart-dirs:
+  - charts
+check-version-increment: false
+validate-maintainers: false
+exclude-deprecated: true
+excluded-charts: []

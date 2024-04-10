@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: Sablier ServiceAccount Generation manifest
+templates:
+  - "sa.yaml"
+release:
+  name: test-sablier
+  namespace: sablier
+tests:
+  - it: should create sablier service
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: should correctly name sablier serviceAccount
+    asserts:
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.name
+          value: sablier-test-sablier
+      - equal:
+          path: metadata.namespace
+          value: sablier

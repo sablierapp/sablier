@@ -1,0 +1,14 @@
+apiVersion: v2
+name: sablier
+description: An free and open-source software to start workloads on demand and stop them after a period of inactivity.
+type: application
+version: "0.1.0"
+appVersion: 1.6.0
+deprecated: false
+sources:
+  - "https://github.com/acouvreur/sablier"
+keywords:
+  - Orchestration & Management
+maintainers:
+  - email: TODO
+    name: TODO

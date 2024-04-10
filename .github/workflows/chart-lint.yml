@@ -1,0 +1,72 @@
+---
+name: "Lint and Test Chart"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  linter-artifacthub:
+    runs-on: ubuntu-latest
+    container:
+      image: public.ecr.aws/artifacthub/ah:v1.14.0
+      options: --user 1001
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run ah lint
+        working-directory: ./charts
+        run: ah lint
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Run helm unittest
+        uses: d3adb5/helm-unittest-action@v2
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          charts: charts/sablier
+
+      - name: Setup Chart Linting
+        id: lint
+        uses: helm/chart-testing-action@v2
+
+      - name: List changed charts
+        id: list-changed
+        run: |
+          changed=$(ct --config ./.github/configs/ct-lint.yaml list-changed)
+          charts=$(echo "$changed" | tr '\n' ' ' | xargs)
+          if [[ -n "$changed" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed_charts=$charts" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run chart-testing (lint)
+        run: ct lint --debug --config ./.github/configs/ct-lint.yaml
+
+      - name: Run docs-testing (helm-docs)
+        id: helm-docs
+        run: |
+          ./scripts/helm-docs.sh
+          if [[ $(git diff --stat) != '' ]]; then
+            echo -e '\033[0;31mDocumentation outdated!\033[0m ❌'
+            git diff --color
+            exit 1
+          else
+            echo -e '\033[0;32mDocumentation up to date\033[0m ✔'
+          fi

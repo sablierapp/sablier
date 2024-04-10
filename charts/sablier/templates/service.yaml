@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sablier-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: sablier-{{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 10000
+      targetPort: 10000
