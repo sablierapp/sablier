@@ -1,0 +1,12 @@
+---
+remote: origin
+target-branch: main
+chart-dirs:
+  - charts
+chart-repos:
+helm-extra-args: --timeout 180s
+check-version-increment: false
+validate-maintainers: false
+validate-yaml: true
+exclude-deprecated: true
+excluded-charts: []
