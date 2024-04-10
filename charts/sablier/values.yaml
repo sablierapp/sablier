@@ -36,7 +36,7 @@ imagePullPolicy: IfNotPresent
 # -- Sablier readinessProbe
 readinessProbe:
   httpGet:
-    path: /healthz
+    path: /health
     port: 10000
   initialDelaySeconds: 5
   periodSeconds: 5
@@ -47,7 +47,7 @@ readinessProbe:
 # -- Sablier livenessProbe
 livenessProbe:
   httpGet:
-    path: /healthz
+    path: /health
     port: 10000
   initialDelaySeconds: 5
   periodSeconds: 5
