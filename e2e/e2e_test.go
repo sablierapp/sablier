@@ -11,7 +11,43 @@ import (
 	"time"
 
 	"github.com/gavv/httpexpect/v2"
+	"github.com/gorilla/websocket"
 )
+
+func Test_Blocking_WebSocket(t *testing.T) {
+	wsURL := "ws://localhost:8080/echo"
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatal("WebSocket connection failed:", err)
+	}
+	defer conn.Close()
+
+	done := make(chan bool)
+	go func() {
+		defer close(done)
+		endTime := time.Now().Add(1 * time.Minute)
+		for time.Now().Before(endTime) {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte("Hello WebSocket")); err != nil {
+				t.Error("Write error:", err)
+				return
+			}
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				t.Error("Read error:", err)
+				return
+			}
+			t.Logf("Received: %s", message)
+			time.Sleep(20 * time.Second)
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Minute * 2 + 30*time.Second):
+		t.Fatal("Test did not complete in time")
+	}
+}
 
 func Test_Dynamic(t *testing.T) {
 	e := httpexpect.Default(t, "http://localhost:8080/dynamic/")
