@@ -48,10 +48,12 @@ destroy_stateful_set() {
 
 run_kubernetes_deployment_test() {
   echo "---- Running Kubernetes Test: $1 ----"
+  TIMEOUT=${2:-30s}
+  echo "TimeOut set to ${TIMEOUT}"
   prepare_deployment
   sleep 10
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout ${TIMEOUT} -run ^${1}$ github.com/acouvreur/sablier/e2e; then
     errors=1
     kubectl -n kube-system logs deployments/sablier-deployment
     kubectl -n kube-system logs deployments/traefik
@@ -68,5 +70,6 @@ run_kubernetes_deployment_test Test_Dynamic
 run_kubernetes_deployment_test Test_Blocking
 run_kubernetes_deployment_test Test_Multiple
 run_kubernetes_deployment_test Test_Healthy
+run_kubernetes_deployment_test Test_Blocking_WebSocket 3m
 
 exit $errors

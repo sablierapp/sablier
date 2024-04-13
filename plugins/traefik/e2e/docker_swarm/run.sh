@@ -29,10 +29,12 @@ destroy_docker_swarm() {
 
 run_docker_swarm_test() {
   echo "Running Docker Swarm Test: $1"
+  TIMEOUT=${2:-30s}
+  echo "TimeOut set to ${TIMEOUT}"
   prepare_docker_stack
   sleep 10
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout ${TIMEOUT} -run ^${1}$ github.com/acouvreur/sablier/e2e; then
     errors=1
     docker service logs ${DOCKER_STACK_NAME}_sablier
     docker service logs ${DOCKER_STACK_NAME}_traefik
@@ -47,5 +49,6 @@ run_docker_swarm_test Test_Dynamic
 run_docker_swarm_test Test_Blocking
 run_docker_swarm_test Test_Multiple
 run_docker_swarm_test Test_Healthy
+run_docker_swarm_test Test_Blocking_WebSocket 3m
 
 exit $errors

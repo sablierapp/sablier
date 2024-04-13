@@ -19,7 +19,7 @@ http:
       service: "whoami"
 
     whoami-blocking:
-      rule: PathPrefix(`/blocking/whoami`)
+      rule: PathPrefix(`/blocking/whoami`) || PathPrefix(`/echo`)
       entryPoints:
         - "http"
       middlewares:

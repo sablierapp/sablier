@@ -19,10 +19,12 @@ destroy_docker_classic() {
 
 run_docker_classic_test() {
   echo "Running Docker Classic Test: $1"
+  TIMEOUT=${2:-30s}
+  echo "TimeOut set to ${TIMEOUT}"
   prepare_docker_classic
   sleep 2
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout ${TIMEOUT} -run ^${1}$ github.com/acouvreur/sablier/e2e; then
     errors=1
     docker compose -f ${DOCKER_COMPOSE_FILE} -p ${DOCKER_COMPOSE_PROJECT_NAME} logs sablier traefik
   fi
@@ -35,5 +37,6 @@ run_docker_classic_test Test_Dynamic
 run_docker_classic_test Test_Blocking
 run_docker_classic_test Test_Multiple
 run_docker_classic_test Test_Healthy
+run_docker_classic_test Test_Blocking_WebSocket 3m
 
 exit $errors

@@ -112,6 +112,13 @@ spec:
             name: whoami-service
             port:
               number: 80
+      - path: /echo
+        pathType: Prefix
+        backend:
+          service:
+            name: whoami-service
+            port:
+              number: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

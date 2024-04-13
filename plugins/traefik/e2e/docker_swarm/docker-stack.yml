@@ -69,7 +69,7 @@ services:
         - traefik.http.routers.whoami-dynamic.rule=PathPrefix(`/dynamic/whoami`)
         - traefik.http.routers.whoami-dynamic.service=whoami
         - traefik.http.routers.whoami-blocking.middlewares=blocking@docker
-        - traefik.http.routers.whoami-blocking.rule=PathPrefix(`/blocking/whoami`)
+        - traefik.http.routers.whoami-blocking.rule=PathPrefix(`/blocking/whoami`) || PathPrefix(`/echo`)
         - traefik.http.routers.whoami-blocking.service=whoami
         - traefik.http.routers.whoami-multiple.middlewares=multiple@docker
         - traefik.http.routers.whoami-multiple.rule=PathPrefix(`/multiple/whoami`)
