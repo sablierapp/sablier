@@ -272,6 +272,11 @@ func monitorWebSocketActivity(sablierRequest *http.Request, sm *SablierMiddlewar
 
 			case WebSocketClose:
 				fmt.Println("WebSocket closed")
+				_, err := sm.client.Do(sablierRequest)
+				if err != nil {
+					fmt.Println("Error in sending request to update websocket alive to sablier", err)
+				}
+				alertTicker.Stop()
 				activeDuringAlert = false // Do not reset ticker on close
 			}
 
