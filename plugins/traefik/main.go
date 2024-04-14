@@ -21,7 +21,7 @@ const (
 	WebSocketClose
 )
 
-var wsEventChan = make(chan WebSocketEvent, 10)
+var wsEventChan = make(chan WebSocketEvent)
 
 type SablierMiddleware struct {
 	client      *http.Client
