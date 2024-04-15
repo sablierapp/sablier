@@ -44,8 +44,9 @@ update-doc-version-middleware:
 	sed -i 's/SABLIER_VERSION=v$(LAST)/SABLIER_VERSION=v$(NEXT)/g' plugins/caddy/Dockerfile.remote
 	sed -i 's/v$(LAST)/v$(NEXT)/g' plugins/caddy/README.md
 
+.PHONY: docs
 docs:
-	docsify serve docs
+	npx --yes docsify-cli serve docs
 
 # End to end tests
 e2e: e2e-caddy e2e-nginx e2e-traefik

@@ -9,10 +9,10 @@ You can also extend the themes by providing your own and they will be templated 
 
 |       Name        |                                                  Preview                                                  |
 | :---------------: | :-------------------------------------------------------------------------------------------------------: |
-|      `ghost`      |           ![ghost](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/ghost.png)           |
-|     `shuffle`     |         ![shuffle](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/shuffle.png)         |
-| `hacker-terminal` | ![hacker-terminal](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/hacker-terminal.png) |
-|     `matrix`      |          ![matrix](https://raw.githubusercontent.com/acouvreur/sablier/main/docs/img/matrix.png)          |
+|      `ghost`      |           ![ghost](assets/img/ghost.png)           |
+|     `shuffle`     |         ![shuffle](assets/img/shuffle.png)         |
+| `hacker-terminal` | ![hacker-terminal](assets/img/hacker-terminal.png) |
+|     `matrix`      |          ![matrix](assets/img/matrix.png)          |
 
 
 
