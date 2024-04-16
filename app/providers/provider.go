@@ -22,12 +22,16 @@ type Provider interface {
 }
 
 func NewProvider(config config.Provider) (Provider, error) {
-	switch {
-	case config.Name == "swarm":
+	if err := config.IsValid(); err != nil {
+		return nil, err
+	}
+
+	switch config.Name {
+	case "swarm", "docker_swarm":
 		return NewDockerSwarmProvider()
-	case config.Name == "docker":
+	case "docker":
 		return NewDockerClassicProvider()
-	case config.Name == "kubernetes":
+	case "kubernetes":
 		return NewKubernetesProvider(config.Kubernetes)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)

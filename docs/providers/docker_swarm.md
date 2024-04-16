@@ -12,19 +12,19 @@ In order to use the docker provider you can configure the [provider.name](TODO) 
 
 ```yaml
 provider:
-  name: docker_swarm
+  name: docker_swarm # or swarm
 ```
 
 #### **CLI**
 
 ```bash
-sablier start --provider.name=docker_swarm
+sablier start --provider.name=docker_swarm # or swarm
 ```
 
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=docker_swarm
+PROVIDER_NAME=docker_swarm # or swarm
 ```
 
 <!-- tabs:end -->
@@ -38,7 +38,7 @@ services:
     image: acouvreur/sablier:1.6.0
     command:
       - start
-      - --provider.name=docker_swarm
+      - --provider.name=docker_swarm # or swarm
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```

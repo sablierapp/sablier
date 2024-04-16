@@ -18,7 +18,7 @@ type Kubernetes struct {
 	Burst int `mapstructure:"BURST" yaml:"Burst" default:"10"`
 }
 
-var providers = []string{"docker", "swarm", "kubernetes"}
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes"}
 
 func NewProviderConfig() Provider {
 	return Provider{
