@@ -1,0 +1,40 @@
+services:
+  proxy:
+    image: envoyproxy/envoy:v1.28-latest
+    command: /usr/local/bin/envoy -c /etc/envoy.yaml
+    volumes:
+      - ./envoy.yaml:/etc/envoy.yaml
+      - ../../sablierproxywasm.wasm:/etc/sablierproxywasm.wasm
+    networks:
+      - envoymesh
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+
+  web_service:
+    image: nginx:1.23.1
+    labels:
+      - sablier.enable=true
+      - sablier.group=demo
+    networks:
+      envoymesh:
+        aliases:
+          - web_service.cluster.local
+
+  sablier:
+    image: acouvreur/sablier:main
+    ports:
+      - 10000:10000
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=info
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    networks:
+      envoymesh:
+        aliases:
+          - sablier.cluster.local
+
+networks:
+  envoymesh: {}

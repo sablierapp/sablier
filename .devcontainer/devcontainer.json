@@ -1,6 +1,6 @@
 {
 	"name": "Go",
-	"image": "mcr.microsoft.com/devcontainers/go:1.22-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/go:1.22",
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {
 			"version": "lts"

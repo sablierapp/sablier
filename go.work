@@ -6,4 +6,5 @@ use (
 	.
 	./plugins/caddy
 	./plugins/traefik
+	./plugins/proxywasm
 )

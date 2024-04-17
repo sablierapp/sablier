@@ -16,6 +16,7 @@
   - [Traefik](/plugins/traefik)
   - [Nginx](/plugins/nginx)
   - [Caddy](/plugins/caddy)
+  - [ProxyWasm](/plugins/proxywasm)
 - **Guides**
   - [Overview](/guides/overview)
   - [VSCode Server with Traefik and Kubernetes](/guides/code-server-traefik-kubernetes.md)

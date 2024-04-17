@@ -45,6 +45,12 @@ caddy:
 	docker build -t caddy:local plugins/caddy
 
 release: $(PLATFORMS)
+
+proxywasm:
+	go generate ./plugins/proxywasm
+	tinygo build -ldflags "-X 'main.Version=$(VERSION)'" -o ./plugins/proxywasm/sablierproxywasm.wasm -scheduler=none -target=wasi ./plugins/proxywasm
+	cp ./plugins/proxywasm/sablierproxywasm.wasm ./sablierproxywasm_$(VERSION).wasm
+
 .PHONY: release $(PLATFORMS)
 
 LAST = 0.0.0

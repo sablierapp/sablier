@@ -7,7 +7,7 @@ module.exports = {
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     ["@semantic-release/exec", {
-      "publishCmd": "make VERSION=${nextRelease.version} release -j 3"
+      "publishCmd": "make VERSION=${nextRelease.version} release -j 3 && make VERSION=${nextRelease.version} proxywasm"
     }],
     ["@semantic-release/github", {
       "assets": [

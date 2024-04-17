@@ -1,0 +1,11 @@
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+wasm:
+  plugins:
+    - name: proxywasm_sablier_plugin
+      priority: 7997
+      file: /wasm/sablierproxywasm.wasm
+
