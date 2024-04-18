@@ -22,7 +22,6 @@ jobs:
       matrix:
         platform:
           - linux/amd64
-          - linux/arm/v6
           - linux/arm/v7
           - linux/arm64
     
@@ -49,6 +48,19 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+
+      - name: Go Build Cache for Docker
+        uses: actions/cache@v4
+        with:
+          path: go-build-cache
+          key: ${{ runner.os }}-go-build-cache-${{ hashFiles('**/go.sum') }}
+
+      - name: inject go-build-cache into docker
+        # v1 was composed of two actions: "inject" and "extract".
+        # v2 is unified to a single action.
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          cache-source: go-build-cache
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -77,6 +89,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: |
