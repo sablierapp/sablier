@@ -60,12 +60,10 @@ jobs:
         # v2 is unified to a single action.
         uses: reproducible-containers/buildkit-cache-dance@v3
         with:
-          cache-source: 
           cache-map: |
             {
               "go-build-cache": "/root/.cache/go-build"
             }
-          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
