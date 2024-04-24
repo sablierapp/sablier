@@ -58,7 +58,7 @@ services:
     #  - traefik.http.routers.whoami.middlewares=ondemand
 
   nginx:
-    image: nginx:1.25.5
+    image: nginx:1.26.0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
