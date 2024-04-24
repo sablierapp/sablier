@@ -33,7 +33,7 @@ docker build https://github.com/acouvreur/sablier.git#v1.4.0-beta.3:plugins/cadd
 ARG CADDY_VERSION=2.6.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com  /acouvreur/sablier.git#v1.4.0-beta.3 /sablier
+ADD https://github.com/acouvreur/sablier.git#v1.4.0-beta.3 /sablier
 
 RUN xcaddy build \
     --with github.com/acouvreur/sablier/plugins/caddy=/sablier/plugins/caddy
