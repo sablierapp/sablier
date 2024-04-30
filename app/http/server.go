@@ -13,11 +13,13 @@ import (
 	"github.com/acouvreur/sablier/app/http/middleware"
 	"github.com/acouvreur/sablier/app/http/routes"
 	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/app/theme"
 	"github.com/acouvreur/sablier/config"
 	"github.com/gin-gonic/gin"
 )
 
-func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf config.Sessions, sessionManager sessions.Manager) {
+func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf config.Sessions, sessionManager sessions.Manager, t *theme.Themes) {
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -29,7 +31,7 @@ func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf 
 	{
 		api := base.Group("/api")
 		{
-			strategy := routes.NewServeStrategy(sessionManager, strategyConf, sessionsConf)
+			strategy := routes.NewServeStrategy(sessionManager, strategyConf, sessionsConf, t)
 			api.GET("/strategies/dynamic", strategy.ServeDynamic)
 			api.GET("/strategies/dynamic/themes", strategy.ServeDynamicThemes)
 			api.GET("/strategies/blocking", strategy.ServeBlocking)

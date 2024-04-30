@@ -1,7 +1,3 @@
-# traefik helm values
-image:
-  tag: "2.9.1"
-
 additionalArguments:
   - "--experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier"
 

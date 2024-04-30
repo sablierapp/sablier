@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"sync"
 	"testing"
 	"testing/fstest"
@@ -18,6 +16,7 @@ import (
 	"github.com/acouvreur/sablier/app/http/routes/models"
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/app/theme"
 	"github.com/acouvreur/sablier/config"
 	"github.com/gin-gonic/gin"
 	"gotest.tools/v3/assert"
@@ -96,11 +95,16 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
+			theme, err := theme.NewWithCustomThemes(fstest.MapFS{})
+			if err != nil {
+				panic(err)
+			}
 			s := &ServeStrategy{
 				SessionsManager: &SessionsManagerMock{
 					SessionState: tt.arg.session,
 				},
 				StrategyConfig: config.NewStrategyConfig(),
+				Theme: theme,
 			}
 			recorder := httptest.NewRecorder()
 			c := GetTestGinContext(recorder)
@@ -260,196 +264,4 @@ func createMap(instances []*instance.State) (store *sync.Map) {
 	}
 
 	return
-}
-
-func TestNewServeStrategy(t *testing.T) {
-	type args struct {
-		sessionsManager sessions.Manager
-		strategyConf    config.Strategy
-		sessionsConf    config.Sessions
-	}
-	tests := []struct {
-		name    string
-		args    args
-		osDirFS fs.FS
-		want    map[string]bool
-	}{
-		{
-			name: "load custom themes",
-			args: args{
-				sessionsManager: &SessionsManagerMock{},
-				strategyConf: config.Strategy{
-					Dynamic: config.DynamicStrategy{
-						CustomThemesPath: "my/path/to/themes",
-					},
-				},
-			},
-			osDirFS: fstest.MapFS{
-				"my/path/to/themes/marvel.html":    {Data: []byte("thor")},
-				"my/path/to/themes/dc-comics.html": {Data: []byte("batman")},
-			},
-			want: map[string]bool{
-				"marvel":    true,
-				"dc-comics": true,
-			},
-		},
-		{
-			name: "load custom themes recursively",
-			args: args{
-				sessionsManager: &SessionsManagerMock{},
-				strategyConf: config.Strategy{
-					Dynamic: config.DynamicStrategy{
-						CustomThemesPath: "my/path/to/themes",
-					},
-				},
-			},
-			osDirFS: fstest.MapFS{
-				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
-				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
-				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
-			},
-			want: map[string]bool{
-				"marvel":          true,
-				"dc-comics":       true,
-				"inner/dc-comics": true,
-			},
-		},
-		{
-			name: "do not load custom themes outside of path",
-			args: args{
-				sessionsManager: &SessionsManagerMock{},
-				strategyConf: config.Strategy{
-					Dynamic: config.DynamicStrategy{
-						CustomThemesPath: "my/path/to/themes",
-					},
-				},
-			},
-			osDirFS: fstest.MapFS{
-				"my/path/to/superman.html":               {Data: []byte("superman")},
-				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
-				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
-				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
-			},
-			want: map[string]bool{
-				"marvel":          true,
-				"dc-comics":       true,
-				"inner/dc-comics": true,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			oldosDirFS := osDirFS
-			defer func() { osDirFS = oldosDirFS }()
-
-			myOsDirFS := func(dir string) fs.FS {
-				fs, err := fs.Sub(tt.osDirFS, dir)
-
-				if err != nil {
-					panic(err)
-				}
-
-				return fs
-			}
-
-			osDirFS = myOsDirFS
-
-			if got := NewServeStrategy(tt.args.sessionsManager, tt.args.strategyConf, tt.args.sessionsConf); !reflect.DeepEqual(got.customThemes, tt.want) {
-				t.Errorf("NewServeStrategy() = %v, want %v", got.customThemes, tt.want)
-			}
-		})
-	}
-}
-
-func TestServeStrategy_ServeDynamicThemes(t *testing.T) {
-	type fields struct {
-		StrategyConfig config.Strategy
-		SessionsConfig config.Sessions
-	}
-	tests := []struct {
-		name     string
-		fields   fields
-		osDirFS  fs.FS
-		expected map[string]any
-	}{
-		{
-			name: "load custom themes",
-			fields: fields{StrategyConfig: config.Strategy{
-				Dynamic: config.DynamicStrategy{
-					CustomThemesPath: "my/path/to/themes",
-				},
-			}},
-			osDirFS: fstest.MapFS{
-				"my/path/to/superman.html":               {Data: []byte("superman")},
-				"my/path/to/themes/marvel.html":          {Data: []byte("thor")},
-				"my/path/to/themes/dc-comics.html":       {Data: []byte("batman")},
-				"my/path/to/themes/inner/dc-comics.html": {Data: []byte("batman")},
-			},
-			expected: map[string]any{
-				"custom": []any{
-					"dc-comics",
-					"inner/dc-comics",
-					"marvel",
-				},
-				"embedded": []any{
-					"ghost",
-					"hacker-terminal",
-					"matrix",
-					"shuffle",
-				},
-			},
-		},
-		{
-			name: "load without custom themes",
-			expected: map[string]any{
-				"custom": []any{},
-				"embedded": []any{
-					"ghost",
-					"hacker-terminal",
-					"matrix",
-					"shuffle",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			oldosDirFS := osDirFS
-			defer func() { osDirFS = oldosDirFS }()
-
-			myOsDirFS := func(dir string) fs.FS {
-				fs, err := fs.Sub(tt.osDirFS, dir)
-
-				if err != nil {
-					panic(err)
-				}
-
-				return fs
-			}
-
-			osDirFS = myOsDirFS
-
-			s := NewServeStrategy(nil, tt.fields.StrategyConfig, tt.fields.SessionsConfig)
-
-			recorder := httptest.NewRecorder()
-			c := GetTestGinContext(recorder)
-
-			s.ServeDynamicThemes(c)
-
-			res := recorder.Result()
-			defer res.Body.Close()
-
-			jsonRes := make(map[string]interface{})
-			err := json.NewDecoder(res.Body).Decode(&jsonRes)
-
-			if err != nil {
-				panic(err)
-			}
-
-			assert.DeepEqual(t, jsonRes, tt.expected)
-
-		})
-	}
 }

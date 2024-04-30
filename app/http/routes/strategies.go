@@ -2,7 +2,6 @@ package routes
 
 import (
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"sort"
@@ -10,38 +9,31 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/acouvreur/sablier/app/http/pages"
 	"github.com/acouvreur/sablier/app/http/routes/models"
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/sessions"
+	"github.com/acouvreur/sablier/app/theme"
 	"github.com/acouvreur/sablier/config"
-	"github.com/acouvreur/sablier/version"
 	"github.com/gin-gonic/gin"
 )
 
 var osDirFS = os.DirFS
 
 type ServeStrategy struct {
-	customThemesFS fs.FS
-	customThemes   map[string]bool
+	Theme *theme.Themes
 
 	SessionsManager sessions.Manager
 	StrategyConfig  config.Strategy
 	SessionsConfig  config.Sessions
 }
 
-func NewServeStrategy(sessionsManager sessions.Manager, strategyConf config.Strategy, sessionsConf config.Sessions) *ServeStrategy {
+func NewServeStrategy(sessionsManager sessions.Manager, strategyConf config.Strategy, sessionsConf config.Sessions, themes *theme.Themes) *ServeStrategy {
 
 	serveStrategy := &ServeStrategy{
+		Theme:           themes,
 		SessionsManager: sessionsManager,
 		StrategyConfig:  strategyConf,
 		SessionsConfig:  sessionsConf,
-	}
-
-	if strategyConf.Dynamic.CustomThemesPath != "" {
-		customThemesFs := osDirFS(strategyConf.Dynamic.CustomThemesPath)
-		serveStrategy.customThemesFS = customThemesFs
-		serveStrategy.customThemes = listThemes(customThemesFs)
 	}
 
 	return serveStrategy
@@ -78,44 +70,20 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
-	renderOptions := pages.RenderOptions{
-		DisplayName:         request.DisplayName,
-		ShowDetails:         request.ShowDetails,
-		SessionDuration:     request.SessionDuration,
-		Theme:               request.Theme,
-		CustomThemes:        s.customThemesFS,
-		AllowedCustomThemes: s.customThemes,
-		Version:             version.Version,
-		RefreshFrequency:    request.RefreshFrequency,
-		InstanceStates:      sessionStateToRenderOptionsInstanceState(sessionState),
+	renderOptions := theme.Options{
+		DisplayName:      request.DisplayName,
+		ShowDetails:      request.ShowDetails,
+		SessionDuration:  request.SessionDuration,
+		RefreshFrequency: request.RefreshFrequency,
+		InstanceStates:   sessionStateToRenderOptionsInstanceState(sessionState),
 	}
 
 	c.Header("Content-Type", "text/html")
-	if err := pages.Render(renderOptions, c.Writer); err != nil {
+	if err := s.Theme.Render(request.Theme, renderOptions, c.Writer); err != nil {
 		log.Error(err)
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-}
-
-func (s *ServeStrategy) ServeDynamicThemes(c *gin.Context) {
-
-	customThemes := []string{}
-	for theme := range s.customThemes {
-		customThemes = append(customThemes, theme)
-	}
-	sort.Strings(customThemes)
-
-	embeddedThemes := []string{}
-	for theme := range listThemes(pages.Themes) {
-		embeddedThemes = append(embeddedThemes, strings.TrimPrefix(theme, "themes/"))
-	}
-	sort.Strings(embeddedThemes)
-
-	c.JSON(http.StatusOK, map[string]interface{}{
-		"custom":   customThemes,
-		"embedded": embeddedThemes,
-	})
 }
 
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
@@ -161,7 +129,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]interface{}{"session": sessionState})
 }
 
-func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []pages.RenderOptionsInstanceState) {
+func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme.Instance) {
 	sessionState.Instances.Range(func(key, value any) bool {
 		instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
 		return true
@@ -174,7 +142,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pages.RenderOptionsInstanceState {
+func instanceStateToRenderOptionsRequestState(instanceState *instance.State) theme.Instance {
 
 	var err error
 	if instanceState.Message == "" {
@@ -183,33 +151,11 @@ func instanceStateToRenderOptionsRequestState(instanceState *instance.State) pag
 		err = fmt.Errorf(instanceState.Message)
 	}
 
-	return pages.RenderOptionsInstanceState{
+	return theme.Instance{
 		Name:            instanceState.Name,
 		Status:          instanceState.Status,
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
 		Error:           err,
 	}
-}
-
-func listThemes(dir fs.FS) (themes map[string]bool) {
-	themes = make(map[string]bool)
-	fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(d.Name(), ".html") {
-			log.Debugf("found theme at \"%s\" can be loaded using \"%s\"", path, strings.TrimSuffix(path, ".html"))
-			themes[strings.TrimSuffix(path, ".html")] = true
-		} else {
-			log.Tracef("ignoring file \"%s\" because it has no .html suffix", path)
-		}
-		return nil
-	})
-	return
 }

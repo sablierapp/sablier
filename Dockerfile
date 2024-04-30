@@ -20,10 +20,11 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM alpine:3.19.1
 
+RUN mkdir -p /etc/sablier/themes
+EXPOSE 10000
+
 COPY --from=build /src/sablier* /etc/sablier/sablier
 COPY docker/sablier.yaml /etc/sablier/sablier.yaml
-
-EXPOSE 10000
 
 ENTRYPOINT [ "/etc/sablier/sablier" ]
 CMD [ "--configFile=/etc/sablier/sablier.yaml", "start" ]

@@ -21,7 +21,7 @@ func Test_Dynamic(t *testing.T) {
 		Status(http.StatusOK).
 		Body().
 		Contains(`Dynamic Whoami`).
-		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
+		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/whoami").
 		WithMaxRetries(10).
@@ -62,7 +62,7 @@ func Test_Multiple(t *testing.T) {
 		Status(http.StatusOK).
 		Body().
 		Contains(`Multiple Whoami`).
-		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
+		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/whoami").
 		WithMaxRetries(10).
@@ -114,7 +114,7 @@ func Test_Healthy(t *testing.T) {
 		Status(http.StatusOK).
 		Body().
 		Contains(`Healthy Nginx`).
-		Contains(`Your instance(s) will stop after 1 minutes of inactivity`)
+		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/nginx").
 		WithMaxRetries(10).

@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"os"
 
 	"github.com/acouvreur/sablier/app/http"
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers"
 	"github.com/acouvreur/sablier/app/sessions"
 	"github.com/acouvreur/sablier/app/storage"
+	"github.com/acouvreur/sablier/app/theme"
 	"github.com/acouvreur/sablier/config"
 	"github.com/acouvreur/sablier/pkg/tinykv"
 	"github.com/acouvreur/sablier/version"
@@ -49,7 +51,24 @@ func Start(conf config.Config) error {
 		loadSessions(storage, sessionsManager)
 	}
 
-	http.Start(conf.Server, conf.Strategy, conf.Sessions, sessionsManager)
+	var t *theme.Themes
+
+	if conf.Strategy.Dynamic.CustomThemesPath != "" {
+		log.Tracef("loading themes with custom theme path: %s", conf.Strategy.Dynamic.CustomThemesPath)
+		custom := os.DirFS(conf.Strategy.Dynamic.CustomThemesPath)
+		t, err = theme.NewWithCustomThemes(custom)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Trace("loading themes without custom themes")
+		t, err = theme.New()
+		if err != nil {
+			return err
+		}
+	}
+
+	http.Start(conf.Server, conf.Strategy, conf.Sessions, sessionsManager, t)
 
 	return nil
 }
