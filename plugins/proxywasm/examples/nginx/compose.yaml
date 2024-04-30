@@ -1,0 +1,25 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../../sablierproxywasm.wasm:/wasm/sablierproxywasm.wasm
+    ports:
+      - "9000:9000"
+
+  web_service:
+    image: nginx:1.23.1
+    labels:
+      - sablier.enable=true
+      - sablier.group=demo
+
+  sablier:
+    image: acouvreur/sablier:1.7.0-beta.8
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=info
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
