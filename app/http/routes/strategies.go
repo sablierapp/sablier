@@ -1,10 +1,13 @@
 package routes
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -78,12 +81,18 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 		InstanceStates:   sessionStateToRenderOptionsInstanceState(sessionState),
 	}
 
-	c.Header("Content-Type", "text/html")
-	if err := s.Theme.Render(request.Theme, renderOptions, c.Writer); err != nil {
+	buf := new(bytes.Buffer)
+	writer := bufio.NewWriter(buf)
+	if err := s.Theme.Render(request.Theme, renderOptions, writer); err != nil {
 		log.Error(err)
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+	writer.Flush()
+
+	c.Header("Content-Type", "text/html")
+	c.Header("Content-Length", strconv.Itoa(buf.Len()))
+	c.Writer.Write(buf.Bytes())
 }
 
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
