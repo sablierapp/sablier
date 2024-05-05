@@ -1,0 +1,24 @@
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: sablier
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  phase: UNSPECIFIED_PHASE
+  pluginConfig:
+    {
+      "sablier_url": "sablier.kube-system.svc.cluster.local",
+      "sablier_port": 10000,
+      "group": "demo",
+      "session_duration": "30s",
+      "dynamic": {
+        "display_dame": "From wasm",
+        "show_details": true,
+        "theme": "hacker-terminal",
+        "refresh_frequency": "5s"
+      }
+    }

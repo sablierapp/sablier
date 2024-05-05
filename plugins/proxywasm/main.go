@@ -241,7 +241,7 @@ func (ctx *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpOnDemand{
 		contextID: contextID,
 		headers:   headers,
-		cluster:   ctx.configuration.authority, // This should be calling GetCluster in the context of istio ?
+		cluster:   ctx.configuration.getCluster(), // This should be calling GetCluster in the context of istio ?
 		timeout:   ctx.configuration.timeout,
 	}
 }

@@ -3,3 +3,4 @@ sablier.yaml
 node_modules
 .DS_Store
 *.wasm
+kubeconfig.yaml

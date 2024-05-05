@@ -1,0 +1,8 @@
+volumes:
+  - name: wasmfilter
+    configMap:
+      name: sablier-wasm-plugin
+
+volumeMounts:
+  - name: wasmfilter
+    mountPath: /opt/filters/sablierproxywasm.wasm
