@@ -59,7 +59,7 @@ func (provider *KubernetesProvider) convertStatefulset(ss *appsv1.StatefulSet, r
 }
 
 func (provider *KubernetesProvider) convertDeployment(d *appsv1.Deployment, replicas int32) string {
-	return fmt.Sprintf("statefulset%s%s%s%s%s%d", provider.delimiter, d.Namespace, provider.delimiter, d.Name, provider.delimiter, replicas)
+	return fmt.Sprintf("deployment%s%s%s%s%s%d", provider.delimiter, d.Namespace, provider.delimiter, d.Name, provider.delimiter, replicas)
 
 }
 
