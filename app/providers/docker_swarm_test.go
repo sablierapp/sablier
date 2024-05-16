@@ -7,7 +7,6 @@ import (
 
 	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers/mocks"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/stretchr/testify/mock"
@@ -22,7 +21,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		args        args
 		want        instance.State
 		serviceList []swarm.Service
-		response    types.ServiceUpdateResponse
+		response    swarm.ServiceUpdateResponse
 		wantService swarm.Service
 		wantErr     bool
 	}{
@@ -34,7 +33,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceReplicated("nginx", 0),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{
@@ -56,7 +55,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 				mocks.ServiceReplicated("STACK1_nginx", 0),
 				mocks.ServiceReplicated("STACK2_nginx", 0),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{
@@ -76,7 +75,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceGlobal("nginx"),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{
@@ -122,7 +121,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		args        args
 		want        instance.State
 		serviceList []swarm.Service
-		response    types.ServiceUpdateResponse
+		response    swarm.ServiceUpdateResponse
 		wantService swarm.Service
 		wantErr     bool
 	}{
@@ -134,7 +133,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceReplicated("nginx", 1),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{
@@ -156,7 +155,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 				mocks.ServiceReplicated("STACK1_nginx", 1),
 				mocks.ServiceReplicated("STACK2_nginx", 1),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{
@@ -176,7 +175,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceGlobal("nginx"),
 			},
-			response: types.ServiceUpdateResponse{
+			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
 			want: instance.State{

@@ -7,7 +7,7 @@ toolchain go1.22.3
 replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
 
 require (
-	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/docker v26.1.3+incompatible
 	github.com/gavv/httpexpect/v2 v2.15.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/pkg/errors v0.9.1
@@ -75,6 +75,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

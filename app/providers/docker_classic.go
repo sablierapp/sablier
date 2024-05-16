@@ -36,12 +36,12 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 }
 
 func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
-	filters := filters.NewArgs()
-	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
+	args := filters.NewArgs()
+	args.Add("label", fmt.Sprintf("%s=true", enableLabel))
 
-	containers, err := provider.Client.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := provider.Client.ContainerList(ctx, container.ListOptions{
 		All:     true,
-		Filters: filters,
+		Filters: args,
 	})
 
 	if err != nil {
@@ -49,13 +49,13 @@ func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[strin
 	}
 
 	groups := make(map[string][]string)
-	for _, container := range containers {
-		groupName := container.Labels[groupLabel]
+	for _, c := range containers {
+		groupName := c.Labels[groupLabel]
 		if len(groupName) == 0 {
 			groupName = defaultGroupValue
 		}
 		group := groups[groupName]
-		group = append(group, strings.TrimPrefix(container.Names[0], "/"))
+		group = append(group, strings.TrimPrefix(c.Names[0], "/"))
 		groups[groupName] = group
 	}
 
@@ -65,7 +65,7 @@ func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[strin
 }
 
 func (provider *DockerClassicProvider) Start(ctx context.Context, name string) (instance.State, error) {
-	err := provider.Client.ContainerStart(ctx, name, types.ContainerStartOptions{})
+	err := provider.Client.ContainerStart(ctx, name, container.StartOptions{})
 
 	if err != nil {
 		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)

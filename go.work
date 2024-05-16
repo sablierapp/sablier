@@ -4,6 +4,6 @@ toolchain go1.22.3
 
 use (
 	.
-	./plugins/traefik
 	./plugins/caddy
+	./plugins/traefik
 )

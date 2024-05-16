@@ -38,7 +38,7 @@ func NewDockerAPIClientMockWithEvents(messages []events.Message, errors []error)
 	}
 }
 
-func (client *DockerAPIClientMock) ContainerStart(ctx context.Context, container string, options types.ContainerStartOptions) error {
+func (client *DockerAPIClientMock) ContainerStart(ctx context.Context, container string, options container.StartOptions) error {
 	args := client.Mock.Called(ctx, container, options)
 	return args.Error(0)
 }
@@ -197,9 +197,9 @@ func ContainerStoppedEvent(name string) events.Message {
 	}
 }
 
-func (client *DockerAPIClientMock) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (types.ServiceUpdateResponse, error) {
+func (client *DockerAPIClientMock) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (swarm.ServiceUpdateResponse, error) {
 	args := client.Mock.Called(ctx, serviceID, version, service, options)
-	return args.Get(0).(types.ServiceUpdateResponse), args.Error(1)
+	return args.Get(0).(swarm.ServiceUpdateResponse), args.Error(1)
 }
 
 func (client *DockerAPIClientMock) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
