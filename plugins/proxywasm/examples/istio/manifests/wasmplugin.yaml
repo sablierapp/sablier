@@ -8,11 +8,13 @@ spec:
     matchLabels:
       istio: ingressgateway
   url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  # Use https://istio.io/latest/docs/reference/config/proxy_extensions/wasm-plugin/#WasmPlugin-TrafficSelector
+  # To specify which service to apply this filter only
   phase: UNSPECIFIED_PHASE
   pluginConfig:
     {
       "sablier_url": "sablier.kube-system.svc.cluster.local",
-      "sablier_port": 10000,
+      "cluster": "outbound|10000||sablier.kube-system.svc.cluster.local",
       "group": "demo",
       "session_duration": "30s",
       "dynamic": {

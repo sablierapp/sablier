@@ -42,25 +42,21 @@ type pluginContext struct {
 }
 
 type pluginConfiguration struct {
+	cluster   string
 	method    string
 	path      string
 	authority string
-	port      int
 	timeout   uint32
-}
-
-func (c pluginConfiguration) getCluster() string {
-	return fmt.Sprintf("%s|%d||%s", "outbound", c.port, c.authority)
 }
 
 // newPluginConfiguration creates a pluginConfiguration with default values
 func newPluginConfiguration() pluginConfiguration {
 	return pluginConfiguration{
+		cluster:   "sablier:10000",
 		method:    "GET",
 		path:      "/",
 		authority: "sablier.cluster.local",
 		timeout:   5000, // timeout in milliseconds
-		port:      10000,
 	}
 }
 
@@ -100,8 +96,14 @@ type BlockingConfiguration struct {
 
 //go:generate go run github.com/json-iterator/tinygo/gen
 type Config struct {
-	SablierURL      string                 `json:"sablier_url"`
-	SablierPort     *int                   `json:"sablier_port"`
+	// SablierURL in the format of hostname:port. The scheme is excluded
+	SablierURL string `json:"sablier_url"`
+	// Cluster is an optional value that allows you to set override the
+	// first argument to `proxywasm.DispatchHttpCall`.
+	// In istio for exemple, the expected value would be: "outbound|port||hostname", e.g.: "outbound|10000||sablier"
+	// In APISIX and Nginx for example, the value would be the same as SablierURL, e.g.: sablier:10000
+	// Defaults to the same value of `SablierURL`.
+	Cluster         string                 `json:"cluster"`
 	Names           []string               `json:"names"`
 	Group           string                 `json:"group"`
 	SessionDuration string                 `json:"session_duration"`
@@ -218,10 +220,13 @@ func parsePluginConfiguration(data []byte) (pluginConfiguration, error) {
 
 	if c.SablierURL != "" {
 		pluginConf.authority = c.SablierURL
+
+		// Default to SablierURL
+		pluginConf.cluster = c.SablierURL
 	}
 
-	if c.SablierPort != nil {
-		pluginConf.port = *c.SablierPort
+	if c.Cluster != "" {
+		pluginConf.cluster = c.Cluster
 	}
 
 	pluginConf.path = c.GetPath()
@@ -241,7 +246,7 @@ func (ctx *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpOnDemand{
 		contextID: contextID,
 		headers:   headers,
-		cluster:   ctx.configuration.getCluster(), // This should be calling GetCluster in the context of istio ?
+		cluster:   ctx.configuration.cluster,
 		timeout:   ctx.configuration.timeout,
 	}
 }

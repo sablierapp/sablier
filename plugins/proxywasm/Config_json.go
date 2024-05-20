@@ -29,11 +29,11 @@ func Config_json_unmarshal_field(iter *jsoniter.Iterator, field string, out *Con
   case field == `sablier_url`:
     iter.ReadString(&(*out).SablierURL)
     return true
-  case field == `sablier_port`:
-    Config_ptr1_json_unmarshal(iter, &(*out).SablierPort)
+  case field == `cluster`:
+    iter.ReadString(&(*out).Cluster)
     return true
   case field == `names`:
-    Config_array2_json_unmarshal(iter, &(*out).Names)
+    Config_array1_json_unmarshal(iter, &(*out).Names)
     return true
   case field == `group`:
     iter.ReadString(&(*out).Group)
@@ -42,22 +42,15 @@ func Config_json_unmarshal_field(iter *jsoniter.Iterator, field string, out *Con
     iter.ReadString(&(*out).SessionDuration)
     return true
   case field == `dynamic`:
-    Config_ptr3_json_unmarshal(iter, &(*out).Dynamic)
+    Config_ptr2_json_unmarshal(iter, &(*out).Dynamic)
     return true
   case field == `blocking`:
-    Config_ptr4_json_unmarshal(iter, &(*out).Blocking)
+    Config_ptr3_json_unmarshal(iter, &(*out).Blocking)
     return true
   }
   return false
 }
-func Config_ptr1_json_unmarshal (iter *jsoniter.Iterator, out **int) {
-    var val int
-    iter.ReadInt(&val)
-    if iter.Error == nil {
-      *out = &val
-    }
-}
-func Config_array2_json_unmarshal (iter *jsoniter.Iterator, out *[]string) {
+func Config_array1_json_unmarshal (iter *jsoniter.Iterator, out *[]string) {
   i := 0
   val := *out
   more := iter.ReadArrayHead()
@@ -75,14 +68,14 @@ func Config_array2_json_unmarshal (iter *jsoniter.Iterator, out *[]string) {
     *out = val[:i]
   }
 }
-func Config_ptr3_json_unmarshal (iter *jsoniter.Iterator, out **DynamicConfiguration) {
+func Config_ptr2_json_unmarshal (iter *jsoniter.Iterator, out **DynamicConfiguration) {
     var val DynamicConfiguration
     DynamicConfiguration_json_unmarshal(iter, &val)
     if iter.Error == nil {
       *out = &val
     }
 }
-func Config_ptr4_json_unmarshal (iter *jsoniter.Iterator, out **BlockingConfiguration) {
+func Config_ptr3_json_unmarshal (iter *jsoniter.Iterator, out **BlockingConfiguration) {
     var val BlockingConfiguration
     BlockingConfiguration_json_unmarshal(iter, &val)
     if iter.Error == nil {
@@ -98,15 +91,11 @@ func Config_json_marshal_field(stream *jsoniter.Stream, val Config) {
     stream.WriteObjectField(`sablier_url`)
     stream.WriteString(val.SablierURL)
     stream.WriteMore()
-    stream.WriteObjectField(`sablier_port`)
-    if val.SablierPort == nil {
-       stream.WriteNull()
-    } else {
-    stream.WriteInt(*val.SablierPort)
-    }
+    stream.WriteObjectField(`cluster`)
+    stream.WriteString(val.Cluster)
     stream.WriteMore()
     stream.WriteObjectField(`names`)
-    Config_array5_json_marshal(stream, val.Names)
+    Config_array4_json_marshal(stream, val.Names)
     stream.WriteMore()
     stream.WriteObjectField(`group`)
     stream.WriteString(val.Group)
@@ -129,7 +118,7 @@ func Config_json_marshal_field(stream *jsoniter.Stream, val Config) {
     }
     stream.WriteMore()
 }
-func Config_array5_json_marshal (stream *jsoniter.Stream, val []string) {
+func Config_array4_json_marshal (stream *jsoniter.Stream, val []string) {
   if len(val) == 0 {
     stream.WriteEmptyArray()
   } else {

@@ -25,6 +25,3 @@ kubectl apply -f ./manifests/sablier.yml
 
 # Build proxywasm
 make docker
-
-# Load proxywasm image
-docker save acouvreur/sablierproxywasm:latest | docker exec -i istio-server-1 ctr images import -

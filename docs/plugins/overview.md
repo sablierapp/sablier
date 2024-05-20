@@ -12,12 +12,16 @@ It leverages the API calls to plugin integration to catch in-flight requests to 
 
 ## Available Reverse Proxies
 
-| Reverse Proxy                | Docker | Docker Swarm mode | Kubernetes |                          Podman                           |
-| ---------------------------- | :----: | :---------------: | :--------: | :-------------------------------------------------------: |
-| [Traefik](/plugins/traefik) |   ✅    |         ✅         |     ✅      | [See #70](https://github.com/acouvreur/sablier/issues/70) |
-| [Nginx](/plugins/nginx)     |   ✅    |         ✅         |     ❌      |
-| [Caddy](/plugins/caddy)     |   ✅    |         ✅         |     ❌      |
-| [ProxyWasm](/plugins/proxywasm)     |   ✅    |         ✅         |     ✅      |
+| Reverse Proxy                          | Docker | Docker Swarm mode | Kubernetes |                          Podman                           |
+| -------------------------------------- | :----: | :---------------: | :--------: | :-------------------------------------------------------: |
+| [Apache APISIX](/plugins/apacheapisix) |   ✅    |         ✅         |     ✅      |                                                           |
+| [Caddy](/plugins/caddy)                |   ✅    |         ✅         |     ❌      |                                                           |
+| [Envoy](/plugins/envoy)                |   ✅    |         ✅         |     ✅      |                                                           |
+| [Istio](plugins/istio)                 |   ❌    |         ❌         |     ✅      |                                                           |
+| [Nginx (NJS Module)](/plugins/nginx_njs)                |   ✅    |         ✅         |     ❌      |
+| [Nginx (WASM Module)](/plugins/nginx_proxywasm)                |   ✅    |         ✅         |     ❌      |
+| [Traefik](/plugins/traefik)            |   ✅    |         ✅         |     ✅      | [See #70](https://github.com/acouvreur/sablier/issues/70) |
+| [ProxyWasm](/plugins/proxywasm)        |   ✅    |         ✅         |     ✅      |
 
 *Your Reverse Proxy is not on the list? [Open an issue to request the missing reverse proxy integration here!](https://github.com/acouvreur/sablier/issues/new?assignees=&labels=enhancement%2C+reverse-proxy&projects=&template=reverse-proxy-integration-request.md&title=Add+%60%5BREVERSE+PROXY%5D%60+reverse+proxy+integration)*
 

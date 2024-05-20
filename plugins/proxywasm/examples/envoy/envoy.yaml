@@ -37,7 +37,7 @@ static_resources:
                     value: |
                       {
                         "sablier_url": "sablier",
-                        "sablier_port": 10000,
+                        "cluster": "sablier:10000",
                         "group": "demo",
                         "session_duration": "30s",
                         "dynamic": {
