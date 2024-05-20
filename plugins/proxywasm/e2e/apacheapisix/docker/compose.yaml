@@ -1,0 +1,28 @@
+services:
+  apisix:
+    image: apache/apisix:3.9.0-debian
+    restart: always
+    volumes:
+      - ./config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+      - ../../../sablierproxywasm.wasm:/wasm/sablierproxywasm.wasm
+    ports:
+      - "8080:9080/tcp"
+
+  sablier:
+    image: acouvreur/sablier:beta
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=trace
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  whoami:
+    image: containous/whoami:v1.5.0
+
+  nginx:
+    image: nginx:1.26.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 5s

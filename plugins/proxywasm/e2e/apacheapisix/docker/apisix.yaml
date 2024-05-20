@@ -1,0 +1,46 @@
+routes:
+  - uri: "/dynamic/whoami"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "names": ["docker_classic_e2e-whoami-1"], "session_duration": "1m", "dynamic": { "display_name": "Dynamic Whoami", "theme": "hacker-terminal" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "whoami:80": 1
+
+  - uri: "/blocking/whoami"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "names": ["docker_classic_e2e-whoami-1"], "session_duration": "1m", "blocking": { "timeout": "30s" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "whoami:80": 1
+
+  - uri: "/multiple/whoami"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "names": ["docker_classic_e2e-whoami-1", "docker_classic_e2e-nginx-1"], "session_duration": "1m", "dynamic": { "display_name": "Multiple Whoami" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "whoami:80": 1
+
+  - uri: "/multiple/nginx"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "names": ["docker_classic_e2e-whoami-1", "docker_classic_e2e-nginx-1"], "session_duration": "1m", "dynamic": { "display_name": "Multiple Whoami" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "nginx:80": 1
+
+  - uri: "/healthy/nginx"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "names": ["docker_classic_e2e-nginx-1"], "session_duration": "1m", "dynamic": { "display_name": "Healthy Nginx" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "nginx:80": 1
+#END
