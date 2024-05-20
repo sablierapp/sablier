@@ -1,0 +1,28 @@
+services:
+  reverseproxy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../../../sablierproxywasm.wasm:/wasm/sablierproxywasm.wasm
+    ports:
+      - "8080:8080"
+
+  sablier:
+    image: acouvreur/sablier:1.7.0-beta.8
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=trace
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  whoami:
+    image: containous/whoami:v1.5.0
+
+  nginx:
+    image: nginx:1.26.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 5s

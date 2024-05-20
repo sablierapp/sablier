@@ -210,6 +210,14 @@ func parsePluginConfiguration(data []byte) (pluginConfiguration, error) {
 		return pluginConf, fmt.Errorf("you must specify only one strategy")
 	}
 
+	if c.Blocking != nil && c.Blocking.Timeout != "" {
+		timeout, err := time.ParseDuration(c.Blocking.Timeout)
+		if err != nil {
+			return pluginConf, fmt.Errorf("cannot parse blocking timeout duration: %v", err)
+		}
+		pluginConf.timeout = uint32(timeout.Milliseconds())
+	}
+
 	if len(c.Names) == 0 && len(c.Group) == 0 {
 		return pluginConf, fmt.Errorf("you must specify names or group")
 	}
