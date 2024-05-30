@@ -23,6 +23,20 @@ build:
 test:
 	go test -v ./...
 
+plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
+
+build-plugin-traefik:
+	cd plugins/traefik && go build -v .
+
+test-plugin-traefik:
+	cd plugins/traefik && go test -v ./...
+
+build-plugin-caddy:
+	cd plugins/caddy && go build -v .
+
+test-plugin-caddy:
+	cd plugins/caddy && go test -v .
+
 .PHONY: docker
 docker:
 	docker build -t acouvreur/sablier:local .

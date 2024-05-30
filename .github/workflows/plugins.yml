@@ -39,10 +39,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
           cache-dependency-path: plugins/traefik/go.sum
 
       - name: Build
@@ -63,10 +63,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
           cache-dependency-path: |
             go.sum
             plugins/traefik/go.sum
@@ -98,10 +98,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
           cache-dependency-path: |
             go.sum
 
@@ -130,10 +130,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
           cache-dependency-path: plugins/caddy/go.sum
 
       - name: Build
@@ -180,10 +180,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
           cache-dependency-path: |
             go.sum
 
