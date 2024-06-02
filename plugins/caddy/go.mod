@@ -2,7 +2,7 @@ module github.com/acouvreur/sablier/plugins/caddy
 
 go 1.22.3
 
-require github.com/caddyserver/caddy/v2 v2.8.2
+require github.com/caddyserver/caddy/v2 v2.8.4
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
