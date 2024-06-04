@@ -152,8 +152,14 @@ func (provider *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context
 				log.Debug("provider event stream closed")
 				return
 			}
+            		if err != nil {
+                		log.Error("error while processing Docker events:", err)
+            		}			
 		case <-ctx.Done():
 			return
+        	default:
+            		// Add a small delay to prevent high CPU usage
+            		time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
