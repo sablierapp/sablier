@@ -2,7 +2,7 @@ module github.com/acouvreur/sablier
 
 go 1.22.0
 
-toolchain go1.22.3
+toolchain go1.22.4
 
 replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
 
