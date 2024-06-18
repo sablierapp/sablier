@@ -10,7 +10,7 @@ services:
       - "8080:9080/tcp"
 
   sablier:
-    image: acouvreur/sablier:beta
+    image: acouvreur/sablier:local
     command:
       - start
       - --provider.name=docker

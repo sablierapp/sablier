@@ -1,11 +1,10 @@
 services:
-  reverseproxy:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+  envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    command: /usr/local/bin/envoy -c /etc/envoy.yaml
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ../../../sablierproxywasm.wasm:/wasm/sablierproxywasm.wasm
+      - ./envoy.yaml:/etc/envoy.yaml
+      - ../../../sablierproxywasm.wasm:/etc/sablierproxywasm.wasm
     ports:
       - "8080:8080"
 

@@ -16,10 +16,10 @@ It leverages the API calls to plugin integration to catch in-flight requests to 
 | -------------------------------------- | :----: | :---------------: | :--------: | :-------------------------------------------------------: |
 | [Apache APISIX](/plugins/apacheapisix) |   ✅    |         ✅         |     ✅      |                                                           |
 | [Caddy](/plugins/caddy)                |   ✅    |         ✅         |     ❌      |                                                           |
-| [Envoy](/plugins/envoy)                |   ✅    |         ✅         |     ✅      |                                                           |
-| [Istio](plugins/istio)                 |   ❌    |         ❌         |     ✅      |                                                           |
-| [Nginx (NJS Module)](/plugins/nginx_njs)                |   ✅    |         ✅         |     ❌      |
-| [Nginx (WASM Module)](/plugins/nginx_proxywasm)                |   ✅    |         ✅         |     ❌      |
+| [Envoy](/plugins/envoy)                |   ⚠️    |         ⚠️         |     ⚠️      |                                                           |
+| [Istio](plugins/istio)                 |   ❌    |         ❌         |     ⚠️      |                                                           |
+| [Nginx (NJS Module)](/plugins/nginx_njs)                |   ✅    |         ✅         |     ✅      |
+| [Nginx (WASM Module)](/plugins/nginx_proxywasm)                |   ✅    |         ✅         |     ✅      |
 | [Traefik](/plugins/traefik)            |   ✅    |         ✅         |     ✅      | [See #70](https://github.com/acouvreur/sablier/issues/70) |
 | [ProxyWasm](/plugins/proxywasm)        |   ✅    |         ✅         |     ✅      |
 
