@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   traefik:
-    image: traefik:v2.11.5
+    image: traefik:v3.0.3
     command:
       - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier
       - --experimental.plugins.sablier.version=v1.7.0
