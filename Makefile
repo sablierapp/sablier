@@ -99,4 +99,7 @@ e2e-traefik-swarm:
 e2e-traefik-kubernetes:
 	cd plugins/traefik/e2e/kubernetes && bash ./run.sh
 
+e2e-traefik-nomad:
+	cd plugins/traefik/e2e/nomad && bash ./run.sh
+
 e2e-traefik: e2e-traefik-docker e2e-traefik-swarm e2e-traefik-kubernetes

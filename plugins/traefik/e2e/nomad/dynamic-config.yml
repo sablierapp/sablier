@@ -1,0 +1,51 @@
+http:
+  services:
+    whoami:
+      loadBalancer:
+        servers:
+        - url: "http://127.0.0.1:8082"
+    nginx:
+      loadBalancer:
+        servers:
+        - url: "http://127.0.0.1:8081"
+
+  routers:
+    whoami-dynamic:
+      rule: PathPrefix(`/dynamic/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - dynamic@nomad
+      service: "whoami"
+
+    whoami-blocking:
+      rule: PathPrefix(`/blocking/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - blocking@nomad
+      service: "whoami"
+
+    whoami-multiple:
+      rule: PathPrefix(`/multiple/whoami`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - multiple@nomad
+      service: "whoami"
+
+    nginx-multiple:
+      rule: PathPrefix(`/multiple/nginx`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - multiple@nomad
+      service: "nginx"
+
+    whoami-healthy:
+      rule: PathPrefix(`/healthy/nginx`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - healthy@nomad
+      service: "nginx"

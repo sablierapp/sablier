@@ -21,7 +21,7 @@ type Kubernetes struct {
 	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes"}
+var providers = []string{"docker", "swarm", "kubernetes", "nomad"}
 
 func NewProviderConfig() Provider {
 	return Provider{
