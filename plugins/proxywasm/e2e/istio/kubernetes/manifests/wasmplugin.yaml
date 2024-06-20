@@ -1,0 +1,96 @@
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: sablier-wasm-whoami-dynamic
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  # Use https://istio.io/latest/docs/reference/config/proxy_extensions/wasm-plugin/#WasmPlugin-TrafficSelector
+  # To specify which service to apply this filter only
+  phase: UNSPECIFIED_PHASE
+  pluginConfig:
+    {
+      "sablier_url": "sablier.sablier-system.svc.cluster.local",
+      "cluster": "outbound|10000||sablier.sablier-system.svc.cluster.local",
+      "names": [ "deployment_default_whoami_1" ],
+      "session_duration": "1m",
+      "dynamic": {
+        "display_name": "Dynamic Whoami",
+        "theme": "hacker-terminal"
+      }
+    }
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: sablier-wasm-whoami-blocking
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  # Use https://istio.io/latest/docs/reference/config/proxy_extensions/wasm-plugin/#WasmPlugin-TrafficSelector
+  # To specify which service to apply this filter only
+  phase: UNSPECIFIED_PHASE
+  pluginConfig:
+    {
+      "sablier_url": "sablier.sablier-system.svc.cluster.local",
+      "cluster": "outbound|10000||sablier.sablier-system.svc.cluster.local",
+      "names": [ "deployment_default_whoami_1" ],
+      "session_duration": "1m",
+      "blocking": {
+        "timeout": "30s"
+      }
+    }
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: sablier-wasm-multiple
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  # Use https://istio.io/latest/docs/reference/config/proxy_extensions/wasm-plugin/#WasmPlugin-TrafficSelector
+  # To specify which service to apply this filter only
+  phase: UNSPECIFIED_PHASE
+  pluginConfig:
+    {
+      "sablier_url": "sablier.sablier-system.svc.cluster.local",
+      "cluster": "outbound|10000||sablier.sablier-system.svc.cluster.local",
+      "names": [ "deployment_default_whoami_1", "deployment_default_nginx_1" ],
+      "session_duration": "1m",
+      "dynamic": {
+        "display_name": "Multiple Whoami"
+      }
+    }
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: sablier-wasm-healthy
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  url: file:///opt/filters/sablierproxywasm.wasm/..data/sablierproxywasm.wasm
+  # Use https://istio.io/latest/docs/reference/config/proxy_extensions/wasm-plugin/#WasmPlugin-TrafficSelector
+  # To specify which service to apply this filter only
+  phase: UNSPECIFIED_PHASE
+  pluginConfig:
+    {
+      "sablier_url": "sablier.sablier-system.svc.cluster.local",
+      "cluster": "outbound|10000||sablier.sablier-system.svc.cluster.local",
+      "names": [ "deployment_default_nginx_1" ],
+      "session_duration": "1m",
+      "dynamic": {
+        "display_name": "Healthy Nginx"
+      }
+    }
