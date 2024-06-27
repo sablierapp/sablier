@@ -210,3 +210,27 @@ jobs:
 
       - name: Test ${{ matrix.provider }}
         run: cd plugins/caddy/e2e/${{ matrix.provider }} && bash ./run.sh
+
+  build-proxywasm:
+    name: Build ProxyWasm Plugin once and share it to ProxyWasm E2E jobs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: plugins/caddy
+          file: plugins/caddy/Dockerfile
+          tags: caddy:local
+          outputs: type=docker,dest=/tmp/caddy.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: caddy-image-tar
+          path: /tmp/caddy.tar
