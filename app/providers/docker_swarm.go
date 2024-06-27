@@ -23,8 +23,16 @@ type DockerSwarmProvider struct {
 func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot create docker client: %v", err)
 	}
+
+	serverVersion, err := cli.ServerVersion(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
+	}
+
+	log.Trace(fmt.Sprintf("connection established with docker %s (API %s)", serverVersion.Version, serverVersion.APIVersion))
+
 	return &DockerSwarmProvider{
 		Client:          cli,
 		desiredReplicas: 1,
@@ -161,17 +169,26 @@ func (provider *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, 
 	go func() {
 		for {
 			select {
-			case msg := <-msgs:
+			case msg, ok := <-msgs:
+				if !ok {
+					log.Error("provider event stream is closed")
+					return
+				}
 				if msg.Actor.Attributes["replicas.new"] == "0" {
 					instance <- msg.Actor.Attributes["name"]
 				} else if msg.Action == "remove" {
 					instance <- msg.Actor.Attributes["name"]
 				}
-			case err := <-errs:
+			case err, ok := <-errs:
+				if !ok {
+					log.Error("provider event stream is closed", err)
+					return
+				}
 				if errors.Is(err, io.EOF) {
 					log.Debug("provider event stream closed")
 					return
 				}
+				log.Error("provider event stream error", err)
 			case <-ctx.Done():
 				return
 			}

@@ -25,9 +25,15 @@ type DockerClassicProvider struct {
 func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Fatal(fmt.Errorf("%+v", "Could not connect to docker API"))
-		return nil, err
+		return nil, fmt.Errorf("cannot create docker client: %v", err)
 	}
+
+	serverVersion, err := cli.ServerVersion(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
+	}
+
+	log.Trace(fmt.Sprintf("connection established with docker %s (API %s)", serverVersion.Version, serverVersion.APIVersion))
 
 	return &DockerClassicProvider{
 		Client:          cli,
@@ -144,14 +150,23 @@ func (provider *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context
 	})
 	for {
 		select {
-		case msg := <-msgs:
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Error("provider event stream is closed")
+				return
+			}
 			// Send the container that has died to the channel
 			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
-		case err := <-errs:
+		case err, ok := <-errs:
+			if !ok {
+				log.Error("provider event stream is closed", err)
+				return
+			}
 			if errors.Is(err, io.EOF) {
 				log.Debug("provider event stream closed")
 				return
 			}
+			log.Error("provider event stream error", err)
 		case <-ctx.Done():
 			return
 		}
