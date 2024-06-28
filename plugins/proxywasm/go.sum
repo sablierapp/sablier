@@ -10,8 +10,12 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tetratelabs/proxy-wasm-go-sdk v0.23.0 h1:e0dm/ypyd1xudIrg8VTsd8dawuYaSy2gqewH5zD4rU8=
 github.com/tetratelabs/proxy-wasm-go-sdk v0.23.0/go.mod h1:YqR8JZaY3Ev9ihXgjzAQAMkXEzPKKmy4Q5rsVWt4XGk=
+github.com/tetratelabs/proxy-wasm-go-sdk v0.24.0 h1:Xuwzknb4+OHBSYFXif0aBdV0F4MShL8L5YYFda9uUIs=
+github.com/tetratelabs/proxy-wasm-go-sdk v0.24.0/go.mod h1:niJQcnEDtftzrVC0/qqlSs2Kzr1dwb7VxpIPHBO2XXk=
 github.com/tetratelabs/wazero v1.6.0 h1:z0H1iikCdP8t+q341xqepY4EWvHEw8Es7tlqiVzlP3g=
 github.com/tetratelabs/wazero v1.6.0/go.mod h1:0U0G41+ochRKoPKCJlh0jMg1CHkyfK8kDqiirMmKY8A=
+github.com/tetratelabs/wazero v1.7.2 h1:1+z5nXJNwMLPAWaTePFi49SSTL0IMx/i3Fg8Yc25GDc=
+github.com/tetratelabs/wazero v1.7.2/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
 github.com/tidwall/gjson v1.14.4/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/gjson v1.17.1 h1:wlYEnwqAHgzmhNUFfw7Xalt2JzQvsMx2Se4PcoFCT/U=
 github.com/tidwall/gjson v1.17.1/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
