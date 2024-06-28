@@ -218,6 +218,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup TinyGo
+        uses: acifani/setup-tinygo@v2
+        with:
+          tinygo-version: '0.32.0'
+
       - name: Build
         run: make proxywasm
 
