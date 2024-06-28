@@ -17,7 +17,8 @@
   - [<img src="assets/img/caddy.png" height=24px width=24px />Caddy](/plugins/caddy) 
   - [<img src="assets/img/envoy.png" height=24px width=24px />Envoy](/plugins/envoy)
   - [<img src="assets/img/istio.png" height=24px width=24px />Istio](/plugins/istio)
-  - [<img src="assets/img/nginx.svg" height=24px width=24px />Nginx](/plugins/nginx)
+  - [<img src="assets/img/nginx.svg" height=24px width=24px />Nginx (NJS)](/plugins/nginx)
+  - [<img src="assets/img/nginx.svg" height=24px width=24px />Nginx (ProxyWasm)](/plugins/nginx_proxywasm)
   - [<img src="assets/img/traefik.png" height=24px /> Traefik](/plugins/traefik)
 - **Guides**
   - [Overview](/guides/overview)

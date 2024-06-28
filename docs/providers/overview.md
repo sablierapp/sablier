@@ -13,7 +13,7 @@ A Provider typically have the following capabilities:
 ## Available providers
 
 | Provider                                | Name                      | Details                                                          |
-| --------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
+|-----------------------------------------|---------------------------|------------------------------------------------------------------|
 | [Docker](/providers/docker)             | `docker`                  | Stop and start **containers** on demand                          |
 | [Docker Swarm](/providers/docker_swarm) | `docker_swarm` or `swarm` | Scale down to zero and up **services** on demand                 |
 | [Kubernetes](/providers/kubernetes)     | `kubernetes`              | Scale down and up **deployments** and **statefulsets** on demand |
