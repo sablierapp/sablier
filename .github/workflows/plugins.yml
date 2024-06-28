@@ -221,7 +221,7 @@ jobs:
       - name: Setup TinyGo
         uses: acifani/setup-tinygo@v2
         with:
-          tinygo-version: '0.32.0'
+          tinygo-version: '0.31.2'
 
       - name: Build
         run: make proxywasm
