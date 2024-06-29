@@ -1,0 +1,36 @@
+name: Github Pages
+on:
+  push:
+    branches:
+      - main
+      - beta
+      - 332-create-mainbeta-docs-branch-with-docsify-versioned-plugin
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'docs/**'
+
+env:
+  # Publish the main documentation in 'public' folder, and the beta in 'public/beta'
+  # Routing and version selection is handled in
+  DESTINATION_DIR: ${{ github.ref == 'refs/heads/main' && 'public' || 'public/beta' }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          destination_dir: ${{ env.DESTINATION_DIR }}
+          # Docs from main and from beta will be overlapping each other, so we must not clean them.
+          # However, that means that deleted files from doc will have to be cleaned manually.
+          keep_files: true

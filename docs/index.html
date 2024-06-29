@@ -19,16 +19,28 @@
   <div id="app"></div>
   <script>
     window.$docsify = {
-      name: 'sablier',
+      name: '<a id="home-link" class="app-name-link" data-nosearch href="/">Home</a>' +
+              '<select id="version-selector" name="version">' +
+              '<option value="">main</value>' +
+              '<option value="beta">beta</value>' +
+              '</select>',
+      // disable automatic linking to avoid navigating when clicking on select
+      nameLink: false,
       repo: 'https://github.com/acouvreur/sablier',
       notFoundPage: true,
       loadSidebar: true,
-      alias: {
-        '/.*/_sidebar.md': '/_sidebar.md'
-      },
       auto2top   : true,
       maxLevel   : 3,
       subMaxLevel: 3,
+      namespaces: [
+        {
+          id: "version",
+          values: ["beta"],
+          optional: true,
+          // Specify select element query selector
+          selector: "#version-selector",
+        }
+      ],
       tabs: {
         persist    : true,      // default
         sync       : true,      // default
@@ -49,6 +61,7 @@
   <script src="//unpkg.com/prismjs/components/prism-nginx.min.js"></script>
 
   <!-- plugins -->
+  <script src="https://unpkg.com/docsify-namespaced"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
   <script src="https://unpkg.com/docsify-copy-code@2"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-edit-on-github"></script>
