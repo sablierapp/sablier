@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sablier-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: sablier-{{ .Release.Name }}
+{{- with .Values.deploymentLabels }}
+  {{ toYaml . | nindent 4 }}
+{{- end }}
+{{- with .Values.deploymentAnnotations }}
+  annotations:
+{{ toYaml . | nindent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicas }}
+{{- with .Values.deploymentStrategy }}
+  strategy:
+  {{- toYaml . | nindent 4 }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: sablier-{{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: sablier-{{ .Release.Name }}
+{{- with .Values.podLabels }}
+    {{ toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.podAnnotations }}
+      annotations:
+    {{ toYaml . | nindent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: sablier-{{ .Release.Name }}
+      containers:
+        - name: sablier
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          args: ["start", "--provider.name=kubernetes", "--logging.level={{ .Values.logLevel}}"]
+          ports:
+            - containerPort: 10000
+        {{- with .Values.livenessProbe }}
+          livenessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+          readinessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+          resources:
+        {{- toYaml .Values.resources | nindent 12 }}
