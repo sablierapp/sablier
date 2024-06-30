@@ -12,7 +12,7 @@ on:
 env:
   # Publish the main documentation in 'public' folder, and the beta in 'public/beta'
   # Routing and version selection is handled in
-  DESTINATION_DIR: ${{ github.ref == 'refs/heads/main' && 'docs' || 'docs' }}
+  DESTINATION_DIR: ${{ github.ref == 'refs/heads/main' && 'docs' || 'docs/beta' }}
 
 jobs:
   release:
