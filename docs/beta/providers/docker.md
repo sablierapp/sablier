@@ -34,7 +34,7 @@ PROVIDER_NAME=docker
 ```yaml
 services:
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.5
+    image: acouvreur/sablier:1.8.0-beta.6
     command:
       - start
       - --provider.name=docker
