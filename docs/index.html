@@ -7,6 +7,7 @@
   <meta name="description" content="Description">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+  <link rel="stylesheet" href="assets/style.css">
   <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico">
   <style>
    :root {
@@ -18,26 +19,35 @@
 <body>
   <div id="app"></div>
   <script>
+    console.log("Loading docs/index.html")
     window.$docsify = {
-      name: '<a id="home-link" class="app-name-link" data-nosearch href="/">Home</a>' +
-              '<select id="version-selector" name="version">' +
-              '<option value="">main</value>' +
+      name: '<a id="home-link" class="app-name-link">Sablier</a><div>' +
+              '<select id="version-selector" class="sidebar-version-select" name="version">' +
+              '<option value="main">main</value>' +
               '<option value="beta">beta</value>' +
-              '</select>',
+              '</select></div>',
       // disable automatic linking to avoid navigating when clicking on select
       nameLink: false,
       repo: 'https://github.com/acouvreur/sablier',
       notFoundPage: true,
       loadSidebar: true,
+      relativePath: true,
+      alias: {
+        // Uncomment lines below for local development.
+        // '/main/': 'README.md',
+        // '/main/(.*)': '$1',
+        '/beta/.*/_sidebar.md': '/beta/_sidebar.md',
+        '/main/.*/_sidebar.md': '/main/_sidebar.md',
+      },
       auto2top   : true,
       maxLevel   : 3,
       subMaxLevel: 3,
       namespaces: [
         {
           id: "version",
-          values: ["beta"],
+          values: ["main", "beta"],
+          default: "main",
           optional: true,
-          // Specify select element query selector
           selector: "#version-selector",
         }
       ],
@@ -47,13 +57,19 @@
         theme      : 'classic', // default
         tabComments: true,      // default
         tabHeadings: true       // default
+      },
+      search: {
+        paths: 'auto',
+        hideOtherSidebarContent: true,
+        depth: 3,
+        pathNamespaces: ['/main', '/beta']
       }
     }
   </script>
   <!-- Docsify v4 -->
   <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/js/docsify-themeable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-tabs@1"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-themeable@0/dist/js/docsify-themeable.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-tabs@1"></script>
   <script src="//unpkg.com/prismjs/components/prism-go.min.js"></script>
   <script src="//unpkg.com/prismjs/components/prism-yaml.min.js"></script>
   <script src="//unpkg.com/prismjs/components/prism-bash.min.js"></script>
@@ -61,12 +77,12 @@
   <script src="//unpkg.com/prismjs/components/prism-nginx.min.js"></script>
 
   <!-- plugins -->
-  <script src="https://unpkg.com/docsify-namespaced"></script>
+  <script src="//unpkg.com/docsify-namespaced@0.1.1/dist/docsify-namespaced.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-  <script src="https://unpkg.com/docsify-copy-code@2"></script>
+  <script src="//unpkg.com/docsify-copy-code@2"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-edit-on-github"></script>
   <script src="//unpkg.com/docsify-pagination/dist/docsify-pagination.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
   <script src="//unpkg.com/docsify-plantuml/dist/docsify-plantuml.min.js"></script>
 </body>
 </html>

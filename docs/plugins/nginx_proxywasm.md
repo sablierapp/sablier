@@ -6,9 +6,9 @@ The Nginx Plugin is a WASM Plugin written with the Proxy Wasm SDK.
 
 | Provider                                | Dynamic | Blocking |
 |-----------------------------------------|:-------:|:--------:|
-| [Docker](/providers/docker)             |    ✅    |    ✅     |
-| [Docker Swarm](/providers/docker_swarm) |    ❓    |    ❓     |
-| [Kubernetes](/providers/kubernetes)     |    ❓    |    ❓     |
+| [Docker](../providers/docker)             |    ✅    |    ✅     |
+| [Docker Swarm](../providers/docker_swarm) |    ❓    |    ❓     |
+| [Kubernetes](../providers/kubernetes)     |    ❓    |    ❓     |
 
 # Install ngx_wasm_module
 

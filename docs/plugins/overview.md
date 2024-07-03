@@ -14,14 +14,14 @@ It leverages the API calls to plugin integration to catch in-flight requests to 
 
 | Reverse Proxy                                   | Docker | Docker Swarm mode | Kubernetes |                  
 |-------------------------------------------------|:------:|:-----------------:|:----------:|
-| [Apache APISIX](/plugins/apacheapisix)          |   ✅    |         ✅         |     ✅      |                                                           
-| [Caddy](/plugins/caddy)                         |   ✅    |         ✅         |     ❌      |                                                           
-| [Envoy](/plugins/envoy)                         |   ✅    |         ❓         |     ❓      |                                                           
-| [Istio](plugins/istio)                          |   ❌    |         ❌         |     ⚠️     |                                                           
-| [Nginx (NJS Module)](/plugins/nginx_njs)        |   ✅    |         ✅         |     ✅      |
-| [Nginx (WASM Module)](/plugins/nginx_proxywasm) |   ✅    |         ❓         |     ❓      |
-| [Traefik](/plugins/traefik)                     |   ✅    |         ✅         |     ✅      |
-| [ProxyWasm](/plugins/proxywasm)                 |   ✅    |         ✅         |     ✅      |
+| [Apache APISIX](apacheapisix)          |   ✅    |         ✅         |     ✅      |                                                           
+| [Caddy](caddy)                         |   ✅    |         ✅         |     ❌      |                                                           
+| [Envoy](envoy)                         |   ✅    |         ❓         |     ❓      |                                                           
+| [Istio](istio)                          |   ❌    |         ❌         |     ⚠️     |                                                           
+| [Nginx (NJS Module)](nginx_njs)        |   ✅    |         ✅         |     ✅      |
+| [Nginx (WASM Module)](nginx_proxywasm) |   ✅    |         ❓         |     ❓      |
+| [Traefik](traefik)                     |   ✅    |         ✅         |     ✅      |
+| [ProxyWasm](proxywasm)                 |   ✅    |         ✅         |     ✅      |
 
 > ✅ **Fully compatible**
 > 

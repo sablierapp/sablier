@@ -2,28 +2,28 @@
 
 This Getting Started will get you through what you need to understand how to use Sablier as a scale to zero middleware with a reverse proxy.
 
-![integration](assets/img/integration.png)
+![integration](/assets/img/integration.png)
 
 ## Identify your provider
 
-The first thing you need to do is to identify your [Provider](/providers/overview).
+The first thing you need to do is to identify your [Provider](providers/overview).
 
 ?> A Provider is how Sablier can interact with your instances and scale them up and down to zero.
 
-You can check the available providers [here](/providers/overview?id=available-providers).
+You can check the available providers [here](providers/overview?id=available-providers).
 
 ## Identify your reverse proxy
 
-Once you've identified you're [Provider](/providers/overview), you'll want to identify your [Reverse Proxy](/plugins/overview).
+Once you've identified you're [Provider](providers/overview), you'll want to identify your [Reverse Proxy](plugins/overview).
 
 ?> Because Sablier is designed as an API that can be used on its own, reverse proxy integrations acts as a client of that API.
 
-You can check the available reverse proxy plugins [here](/plugins/overview?id=available-reverse-proxies)
+You can check the available reverse proxy plugins [here](plugins/overview?id=available-reverse-proxies)
 
 ## Connect it all together
 
-- Let's say we're using the [Docker Provider](/providers/docker).
-- Let's say we're using the [Caddy Reverse Proxy Plugin](/plugins/caddy).
+- Let's say we're using the [Docker Provider](providers/docker).
+- Let's say we're using the [Caddy Reverse Proxy Plugin](plugins/caddy).
 
 ### 1. Initial setup with Caddy
 

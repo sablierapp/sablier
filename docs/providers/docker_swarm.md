@@ -4,7 +4,7 @@ The Docker Swarm provider communicates with the `docker.sock` socket to scale se
 
 ## Use the Docker Swarm provider
 
-In order to use the docker provider you can configure the [provider.name](TODO) property.
+In order to use the docker swarm provider you can configure the [provider.name](TODO) property.
 
 <!-- tabs:start -->
 

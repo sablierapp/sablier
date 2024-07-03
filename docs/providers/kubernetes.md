@@ -4,7 +4,7 @@ Sablier assumes that it is deployed within the Kubernetes cluster to use the Kub
 
 ## Use the Kubernetes provider
 
-In order to use the docker provider you can configure the [provider.name](TODO) property.
+In order to use the kubernetes provider you can configure the [provider.name](TODO) property.
 
 <!-- tabs:start -->
 

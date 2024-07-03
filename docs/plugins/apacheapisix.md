@@ -4,11 +4,11 @@ The Apache APISIX Plugin is a WASM Plugin written with the Proxy Wasm SDK.
 
 ## Provider compatibility grid
 
-| Provider                                | Dynamic | Blocking |
-|-----------------------------------------|:-------:|:--------:|
-| [Docker](/providers/docker)             |    ✅    |    ✅     |
-| [Docker Swarm](/providers/docker_swarm) |    ❓    |    ❓     |
-| [Kubernetes](/providers/kubernetes)     |    ❓    |    ❓     |
+| Provider                               | Dynamic | Blocking |
+|----------------------------------------|:-------:|:--------:|
+| [Docker](../providers/docker)          |    ✅    |    ✅     |
+| [Docker Swarm](../providers/docker_swarm) |    ❓    |    ❓     |
+| [Kubernetes](../providers/kubernetes)     |    ❓    |    ❓     |
 
 ## Install the plugin to Apache APISIX
 

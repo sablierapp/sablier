@@ -1,7 +1,5 @@
 # Strategies
 
-When configuring 
-
 ## Dynamic Strategy
 
 The **Dynamic Strategy** provides a waiting page for your session.

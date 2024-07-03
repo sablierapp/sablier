@@ -6,9 +6,9 @@ The [Traefik Sablier Plugin](https://plugins.traefik.io/plugins/633b4658a4caa9dd
 
 | Provider                                | Dynamic |                        Blocking                         |
 | --------------------------------------- | :-----: | :-----------------------------------------------------: |
-| [Docker](/providers/docker)             |    ✅    |                            ✅                            |
-| [Docker Swarm](/providers/docker_swarm) |    ✅    |                            ✅                            |
-| [Kubernetes](/providers/kubernetes)     |    ✅    |                            ✅                            |
+| [Docker](../providers/docker)             |    ✅    |                            ✅                            |
+| [Docker Swarm](../providers/docker_swarm) |    ✅    |                            ✅                            |
+| [Kubernetes](../providers/kubernetes)     |    ✅    |                            ✅                            |
 
 ## Prerequisites
 

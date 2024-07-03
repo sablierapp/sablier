@@ -6,9 +6,9 @@ Caddy Sablier Plugin.
 
 | Provider                                | Dynamic | Blocking |
 | --------------------------------------- | :-----: | :------: |
-| [Docker](/providers/docker)             |    ✅    |    ✅     |
-| [Docker Swarm](/providers/docker_swarm) |    ✅    |    ✅     |
-| [Kubernetes](/providers/kubernetes)     |    ❌    |    ❌     |
+| [Docker](../providers/docker)             |    ✅    |    ✅     |
+| [Docker Swarm](../providers/docker_swarm) |    ✅    |    ✅     |
+| [Kubernetes](../providers/kubernetes)     |    ❌    |    ❌     |
 
 ## Install the plugin to Caddy
 

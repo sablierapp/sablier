@@ -6,9 +6,9 @@ The Nginx Sablier Plugin is a javascript file that runs through the NJS Module.
 
 | Provider                                | Dynamic | Blocking |
 | --------------------------------------- | :-----: | :------: |
-| [Docker](/providers/docker)             |    ✅    |    ✅     |
-| [Docker Swarm](/providers/docker_swarm) |    ✅    |    ✅     |
-| [Kubernetes](/providers/kubernetes)     |    ❌    |    ❌     |
+| [Docker](../providers/docker)             |    ✅    |    ✅     |
+| [Docker Swarm](../providers/docker_swarm) |    ✅    |    ✅     |
+| [Kubernetes](../providers/kubernetes)     |    ❌    |    ❌     |
 
 
 ## Install the plugin to NGINX
