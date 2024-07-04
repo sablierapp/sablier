@@ -72,16 +72,16 @@ services:
         # If you do not use the swarm load balancer, traefik will evict the service from its pool
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
         - traefik.docker.lbswarm=true
-        - traefik.http.routers.whoami-dynamic.middlewares=dynamic@docker
+        - traefik.http.routers.whoami-dynamic.middlewares=dynamic@swarm
         - traefik.http.routers.whoami-dynamic.rule=PathPrefix(`/dynamic/whoami`)
         - traefik.http.routers.whoami-dynamic.service=whoami
-        - traefik.http.routers.whoami-blocking.middlewares=blocking@docker
+        - traefik.http.routers.whoami-blocking.middlewares=blocking@swarm
         - traefik.http.routers.whoami-blocking.rule=PathPrefix(`/blocking/whoami`)
         - traefik.http.routers.whoami-blocking.service=whoami
-        - traefik.http.routers.whoami-multiple.middlewares=multiple@docker
+        - traefik.http.routers.whoami-multiple.middlewares=multiple@swarm
         - traefik.http.routers.whoami-multiple.rule=PathPrefix(`/multiple/whoami`)
         - traefik.http.routers.whoami-multiple.service=whoami
-        - traefik.http.routers.whoami-group.middlewares=group@docker
+        - traefik.http.routers.whoami-group.middlewares=group@swarm
         - traefik.http.routers.whoami-group.rule=PathPrefix(`/group`)
         - traefik.http.routers.whoami-group.service=whoami
         - traefik.http.services.whoami.loadbalancer.server.port=80
@@ -100,10 +100,10 @@ services:
         # If you do not use the swarm load balancer, traefik will evict the service from its pool
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
         - traefik.docker.lbswarm=true
-        - traefik.http.routers.nginx-multiple.middlewares=multiple@docker
+        - traefik.http.routers.nginx-multiple.middlewares=multiple@swarm
         - traefik.http.routers.nginx-multiple.rule=PathPrefix(`/multiple/nginx`)
         - traefik.http.routers.nginx-multiple.service=nginx
-        - traefik.http.routers.nginx-healthy.middlewares=healthy@docker
+        - traefik.http.routers.nginx-healthy.middlewares=healthy@swarm
         - traefik.http.routers.nginx-healthy.rule=PathPrefix(`/healthy/nginx`)
         - traefik.http.routers.nginx-healthy.service=nginx
         - traefik.http.services.nginx.loadbalancer.server.port=80
