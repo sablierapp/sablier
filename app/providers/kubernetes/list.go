@@ -72,7 +72,7 @@ func (provider *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.
 	parsed := DeploymentName(d, ParseOptions{Delimiter: provider.delimiter})
 
 	return types.Instance{
-		Name:            parsed.Name,
+		Name:            parsed.Original,
 		Kind:            parsed.Kind,
 		Status:          d.Status.String(),
 		Replicas:        uint64(d.Status.Replicas),
@@ -127,7 +127,7 @@ func (provider *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) typ
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: provider.delimiter})
 
 	return types.Instance{
-		Name:            parsed.Name,
+		Name:            parsed.Original,
 		Kind:            parsed.Kind,
 		Status:          ss.Status.String(),
 		Replicas:        uint64(ss.Status.Replicas),

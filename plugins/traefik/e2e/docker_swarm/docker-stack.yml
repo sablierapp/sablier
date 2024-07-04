@@ -81,6 +81,9 @@ services:
         - traefik.http.routers.whoami-multiple.middlewares=multiple@docker
         - traefik.http.routers.whoami-multiple.rule=PathPrefix(`/multiple/whoami`)
         - traefik.http.routers.whoami-multiple.service=whoami
+        - traefik.http.routers.whoami-group.middlewares=group@docker
+        - traefik.http.routers.whoami-group.rule=PathPrefix(`/group`)
+        - traefik.http.routers.whoami-group.service=whoami
         - traefik.http.services.whoami.loadbalancer.server.port=80
 
   nginx:
