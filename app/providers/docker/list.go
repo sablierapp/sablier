@@ -27,7 +27,7 @@ func (provider *DockerClassicProvider) InstanceList(ctx context.Context, options
 		return nil, err
 	}
 
-	instances := make([]types.Instance, len(containers))
+	instances := make([]types.Instance, 0, len(containers))
 	for _, c := range containers {
 		instance := containerToInstance(c)
 		instances = append(instances, instance)

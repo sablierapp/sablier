@@ -36,7 +36,7 @@ func (provider *KubernetesProvider) deploymentList(ctx context.Context, options 
 		return nil, err
 	}
 
-	instances := make([]types.Instance, len(deployments.Items))
+	instances := make([]types.Instance, 0, len(deployments.Items))
 	for _, d := range deployments.Items {
 		instance := provider.deploymentToInstance(d)
 		instances = append(instances, instance)
@@ -91,7 +91,7 @@ func (provider *KubernetesProvider) statefulSetList(ctx context.Context, options
 		return nil, err
 	}
 
-	instances := make([]types.Instance, len(statefulSets.Items))
+	instances := make([]types.Instance, 0, len(statefulSets.Items))
 	for _, ss := range statefulSets.Items {
 		instance := provider.statefulSetToInstance(ss)
 		instances = append(instances, instance)

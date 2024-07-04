@@ -4,8 +4,8 @@ metadata:
   name: whoami-deployment
   labels:
     app: whoami
-    sablier.enable: true
-    sablier.group: E2E
+    sablier.enable: "true"
+    sablier.group: "E2E"
 spec:
   replicas: 0
   selector:
@@ -156,8 +156,8 @@ metadata:
   name: nginx-deployment
   labels:
     app: nginx
-    sablier.enable: true
-    sablier.group: E2E
+    sablier.enable: "true"
+    sablier.group: "E2E"
 spec:
   replicas: 0
   selector:

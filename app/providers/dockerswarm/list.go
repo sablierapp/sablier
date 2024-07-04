@@ -28,7 +28,7 @@ func (provider *DockerSwarmProvider) InstanceList(ctx context.Context, options p
 		return nil, err
 	}
 
-	instances := make([]types.Instance, len(services))
+	instances := make([]types.Instance, 0, len(services))
 	for _, s := range services {
 		instance := serviceToInstance(s)
 		instances = append(instances, instance)
