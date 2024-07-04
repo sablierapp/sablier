@@ -32,7 +32,7 @@ spec:
   selector:
     app: whoami
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: dynamic
@@ -46,7 +46,7 @@ spec:
       dynamic:
         displayName: 'Dynamic Whoami'
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: blocking
@@ -61,7 +61,7 @@ spec:
         timeout: 30s
 
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: multiple
@@ -75,7 +75,7 @@ spec:
       dynamic:
         displayName: 'Multiple Whoami'
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: group
@@ -183,7 +183,7 @@ spec:
   selector:
     app: nginx
 ---
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: healthy
