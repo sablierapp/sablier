@@ -119,9 +119,8 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 		}
 
 		group := groups[groupName]
-		// TOOD: Use annotation for scale
 		parsed := DeploymentName(deployment, ParseOptions{Delimiter: provider.delimiter})
-		group = append(group, parsed.Name)
+		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
 
@@ -141,7 +140,7 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 
 		group := groups[groupName]
 		parsed := StatefulSetName(statefulSet, ParseOptions{Delimiter: provider.delimiter})
-		group = append(group, parsed.Name)
+		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
 
@@ -241,13 +240,13 @@ func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cach
 
 			if *newDeployment.Spec.Replicas == 0 {
 				parsed := DeploymentName(*newDeployment, ParseOptions{Delimiter: provider.delimiter})
-				instance <- parsed.Name
+				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
 			parsed := DeploymentName(*deletedDeployment, ParseOptions{Delimiter: provider.delimiter})
-			instance <- parsed.Name
+			instance <- parsed.Original
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
@@ -269,13 +268,13 @@ func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) ca
 
 			if *newStatefulSet.Spec.Replicas == 0 {
 				parsed := StatefulSetName(*newStatefulSet, ParseOptions{Delimiter: provider.delimiter})
-				instance <- parsed.Name
+				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedStatefulSet := obj.(*appsv1.StatefulSet)
 			parsed := StatefulSetName(*deletedStatefulSet, ParseOptions{Delimiter: provider.delimiter})
-			instance <- parsed.Name
+			instance <- parsed.Original
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
