@@ -25,7 +25,7 @@ destroy_kubernetes() {
 prepare_traefik() {
   helm repo add traefik https://traefik.github.io/charts
   helm repo update
-  helm install traefik --version 27.0.2 traefik/traefik -f values.yaml --namespace kube-system
+  helm install traefik --version 28.3.0 traefik/traefik -f values.yaml --namespace kube-system
 }
 
 prepare_deployment() {
