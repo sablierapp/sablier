@@ -87,7 +87,7 @@ spec:
       sablierUrl: 'http://sablier:10000'
       sessionDuration: 1m
       dynamic:
-        displayName: 'Multiple Whoami'
+        displayName: 'Group E2E'
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
