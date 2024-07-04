@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +20,7 @@ func TestDefault(t *testing.T) {
 	testDir, err := os.Getwd()
 	require.NoError(t, err, "error getting the current working directory")
 
-	wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_default.json"))
+	wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_default.json"))
 	require.NoError(t, err, "error reading test config file")
 
 	// CHANGE `startCmd` behavior to only print the config, this is for testing purposes only
@@ -51,7 +50,7 @@ func TestPrecedence(t *testing.T) {
 	newStartCommand = mockStartCommand
 
 	t.Run("config file", func(t *testing.T) {
-		wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_yaml_wanted.json"))
+		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_yaml_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
 		conf = config.NewConfig()
@@ -95,7 +94,7 @@ func TestPrecedence(t *testing.T) {
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 
-		wantConfig, err := ioutil.ReadFile(filepath.Join(testDir, "testdata", "config_cli_wanted.json"))
+		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_cli_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
 		cmd := NewRootCommand()

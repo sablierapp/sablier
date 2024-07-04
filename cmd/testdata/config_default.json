@@ -8,6 +8,7 @@
   },
   "Provider": {
     "Name": "docker",
+    "AutoStopOnStartup": true,
     "Kubernetes": {
       "QPS": 5,
       "Burst": 10,

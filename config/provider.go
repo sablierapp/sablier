@@ -8,8 +8,9 @@ import (
 type Provider struct {
 	// The provider name to use
 	// It can be either docker, swarm or kubernetes. Defaults to "docker"
-	Name       string `mapstructure:"NAME" yaml:"provider,omitempty" default:"docker"`
-	Kubernetes Kubernetes
+	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
+	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
+	Kubernetes        Kubernetes
 }
 
 type Kubernetes struct {

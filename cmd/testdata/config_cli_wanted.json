@@ -8,6 +8,7 @@
   },
   "Provider": {
     "Name": "cli",
+    "AutoStopOnStartup": false,
     "Kubernetes": {
       "QPS": 256,
       "Burst": 512,

@@ -1,9 +1,10 @@
-package providers
+package kubernetes
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/acouvreur/sablier/app/discovery"
 	"strconv"
 	"strings"
 	"time"
@@ -52,15 +53,6 @@ func (provider *KubernetesProvider) convertName(name string) (*Config, error) {
 		Name:         s[2],
 		Replicas:     int32(replicas),
 	}, nil
-}
-
-func (provider *KubernetesProvider) convertStatefulset(ss *appsv1.StatefulSet, replicas int32) string {
-	return fmt.Sprintf("statefulset%s%s%s%s%s%d", provider.delimiter, ss.Namespace, provider.delimiter, ss.Name, provider.delimiter, replicas)
-}
-
-func (provider *KubernetesProvider) convertDeployment(d *appsv1.Deployment, replicas int32) string {
-	return fmt.Sprintf("deployment%s%s%s%s%s%d", provider.delimiter, d.Namespace, provider.delimiter, d.Name, provider.delimiter, replicas)
-
 }
 
 type KubernetesProvider struct {
@@ -112,7 +104,7 @@ func (provider *KubernetesProvider) Stop(ctx context.Context, name string) (inst
 
 func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
 	deployments, err := provider.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: enableLabel,
+		LabelSelector: discovery.LabelEnable,
 	})
 
 	if err != nil {
@@ -121,20 +113,20 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 
 	groups := make(map[string][]string)
 	for _, deployment := range deployments.Items {
-		groupName := deployment.Labels[groupLabel]
+		groupName := deployment.Labels[discovery.LabelGroup]
 		if len(groupName) == 0 {
-			groupName = defaultGroupValue
+			groupName = discovery.LabelGroupDefaultValue
 		}
 
 		group := groups[groupName]
 		// TOOD: Use annotation for scale
-		name := provider.convertDeployment(&deployment, 1)
-		group = append(group, name)
+		parsed := DeploymentName(deployment, ParseOptions{Delimiter: provider.delimiter})
+		group = append(group, parsed.Name)
 		groups[groupName] = group
 	}
 
 	statefulSets, err := provider.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: enableLabel,
+		LabelSelector: discovery.LabelEnable,
 	})
 
 	if err != nil {
@@ -142,15 +134,14 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 	}
 
 	for _, statefulSet := range statefulSets.Items {
-		groupName := statefulSet.Labels[groupLabel]
+		groupName := statefulSet.Labels[discovery.LabelGroup]
 		if len(groupName) == 0 {
-			groupName = defaultGroupValue
+			groupName = discovery.LabelGroupDefaultValue
 		}
 
 		group := groups[groupName]
-		// TOOD: Use annotation for scale
-		name := provider.convertStatefulset(&statefulSet, 1)
-		group = append(group, name)
+		parsed := StatefulSetName(statefulSet, ParseOptions{Delimiter: provider.delimiter})
+		group = append(group, parsed.Name)
 		groups[groupName] = group
 	}
 
@@ -249,12 +240,14 @@ func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cach
 			}
 
 			if *newDeployment.Spec.Replicas == 0 {
-				instance <- provider.convertDeployment(newDeployment, *oldDeployment.Spec.Replicas)
+				parsed := DeploymentName(*newDeployment, ParseOptions{Delimiter: provider.delimiter})
+				instance <- parsed.Name
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
-			instance <- provider.convertDeployment(deletedDeployment, *deletedDeployment.Spec.Replicas)
+			parsed := DeploymentName(*deletedDeployment, ParseOptions{Delimiter: provider.delimiter})
+			instance <- parsed.Name
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
@@ -275,12 +268,14 @@ func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) ca
 			}
 
 			if *newStatefulSet.Spec.Replicas == 0 {
-				instance <- provider.convertStatefulset(newStatefulSet, *oldStatefulSet.Spec.Replicas)
+				parsed := StatefulSetName(*newStatefulSet, ParseOptions{Delimiter: provider.delimiter})
+				instance <- parsed.Name
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedStatefulSet := obj.(*appsv1.StatefulSet)
-			instance <- provider.convertStatefulset(deletedStatefulSet, *deletedStatefulSet.Spec.Replicas)
+			parsed := StatefulSetName(*deletedStatefulSet, ParseOptions{Delimiter: provider.delimiter})
+			instance <- parsed.Name
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))

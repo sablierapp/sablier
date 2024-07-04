@@ -1,9 +1,10 @@
-package providers
+package docker
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/acouvreur/sablier/app/discovery"
 	"io"
 	"strings"
 
@@ -33,7 +34,7 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
 	}
 
-	log.Trace(fmt.Sprintf("connection established with docker %s (API %s)", serverVersion.Version, serverVersion.APIVersion))
+	log.Tracef("connection established with docker %s (API %s)", serverVersion.Version, serverVersion.APIVersion)
 
 	return &DockerClassicProvider{
 		Client:          cli,
@@ -43,7 +44,7 @@ func NewDockerClassicProvider() (*DockerClassicProvider, error) {
 
 func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
 	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", enableLabel))
+	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
 	containers, err := provider.Client.ContainerList(ctx, container.ListOptions{
 		All:     true,
@@ -56,9 +57,9 @@ func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[strin
 
 	groups := make(map[string][]string)
 	for _, c := range containers {
-		groupName := c.Labels[groupLabel]
+		groupName := c.Labels[discovery.LabelEnable]
 		if len(groupName) == 0 {
-			groupName = defaultGroupValue
+			groupName = discovery.LabelEnable
 		}
 		group := groups[groupName]
 		group = append(group, strings.TrimPrefix(c.Names[0], "/"))

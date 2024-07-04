@@ -8,6 +8,7 @@
   },
   "Provider": {
     "Name": "envvar",
+    "AutoStopOnStartup": false,
     "Kubernetes": {
       "QPS": 16,
       "Burst": 32,

@@ -2,6 +2,11 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"github.com/acouvreur/sablier/app/discovery"
+	"github.com/acouvreur/sablier/app/providers/docker"
+	"github.com/acouvreur/sablier/app/providers/dockerswarm"
+	"github.com/acouvreur/sablier/app/providers/kubernetes"
 	"os"
 
 	"github.com/acouvreur/sablier/app/http"
@@ -29,7 +34,7 @@ func Start(conf config.Config) error {
 
 	log.Info(version.Info())
 
-	provider, err := providers.NewProvider(conf.Provider)
+	provider, err := NewProvider(conf.Provider)
 	if err != nil {
 		return err
 	}
@@ -49,6 +54,13 @@ func Start(conf config.Config) error {
 	if storage.Enabled() {
 		defer saveSessions(storage, sessionsManager)
 		loadSessions(storage, sessionsManager)
+	}
+
+	if conf.Provider.AutoStopOnStartup {
+		err := discovery.StopAllUnregisteredInstances(context.Background(), provider, store.Keys())
+		if err != nil {
+			log.Warnf("Stopping unregistered instances had an error: %v", err)
+		}
 	}
 
 	var t *theme.Themes
@@ -109,4 +121,20 @@ func saveSessions(storage storage.Storage, sessions sessions.Manager) {
 	if err != nil {
 		log.Error("error saving sessions", err)
 	}
+}
+
+func NewProvider(config config.Provider) (providers.Provider, error) {
+	if err := config.IsValid(); err != nil {
+		return nil, err
+	}
+
+	switch config.Name {
+	case "swarm", "docker_swarm":
+		return dockerswarm.NewDockerSwarmProvider()
+	case "docker":
+		return docker.NewDockerClassicProvider()
+	case "kubernetes":
+		return kubernetes.NewKubernetesProvider(config.Kubernetes)
+	}
+	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }

@@ -1,5 +1,6 @@
 provider:
   name: configfile
+  auto-stop-on-startup: false
   kubernetes:
     qps: 64
     burst: 128

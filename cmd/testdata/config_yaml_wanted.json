@@ -8,6 +8,7 @@
   },
   "Provider": {
     "Name": "configfile",
+    "AutoStopOnStartup": false,
     "Kubernetes": {
       "QPS": 64,
       "Burst": 128,

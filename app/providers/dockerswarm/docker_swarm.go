@@ -1,9 +1,10 @@
-package providers
+package dockerswarm
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/acouvreur/sablier/app/discovery"
 	"io"
 	"strings"
 
@@ -78,7 +79,7 @@ func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, rep
 
 func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
 	filters := filters.NewArgs()
-	filters.Add("label", fmt.Sprintf("%s=true", enableLabel))
+	filters.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
 	services, err := provider.Client.ServiceList(ctx, types.ServiceListOptions{
 		Filters: filters,
@@ -90,9 +91,9 @@ func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string]
 
 	groups := make(map[string][]string)
 	for _, service := range services {
-		groupName := service.Spec.Labels[groupLabel]
+		groupName := service.Spec.Labels[discovery.LabelGroup]
 		if len(groupName) == 0 {
-			groupName = defaultGroupValue
+			groupName = discovery.LabelGroupDefaultValue
 		}
 
 		group := groups[groupName]
