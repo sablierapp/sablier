@@ -94,7 +94,7 @@ kind: Ingress
 metadata:
   name: whoami-dynamic-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-dynamic@kubernetescrd
 spec:
   rules:
@@ -114,7 +114,7 @@ kind: Ingress
 metadata:
   name: whoami-blocking-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-blocking@kubernetescrd
 spec:
   rules:
@@ -134,7 +134,7 @@ kind: Ingress
 metadata:
   name: whoami-multiple-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-multiple@kubernetescrd
 spec:
   rules:
@@ -202,7 +202,7 @@ kind: Ingress
 metadata:
   name: nginx-multiple-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-multiple@kubernetescrd
 spec:
   rules:
@@ -222,7 +222,7 @@ kind: Ingress
 metadata:
   name: nginx-healthy-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-healthy@kubernetescrd
 spec:
   rules:
@@ -242,7 +242,7 @@ kind: Ingress
 metadata:
   name: group-ingress
   annotations:
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: default-group@kubernetescrd
 spec:
   rules:
