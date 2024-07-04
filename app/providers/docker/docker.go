@@ -57,9 +57,9 @@ func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[strin
 
 	groups := make(map[string][]string)
 	for _, c := range containers {
-		groupName := c.Labels[discovery.LabelEnable]
+		groupName := c.Labels[discovery.LabelGroup]
 		if len(groupName) == 0 {
-			groupName = discovery.LabelEnable
+			groupName = discovery.LabelGroupDefaultValue
 		}
 		group := groups[groupName]
 		group = append(group, strings.TrimPrefix(c.Names[0], "/"))
