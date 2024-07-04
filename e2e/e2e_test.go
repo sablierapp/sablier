@@ -139,7 +139,7 @@ func Test_Healthy(t *testing.T) {
 }
 
 func Test_Group(t *testing.T) {
-	e := httpexpect.Default(t, "http://localhost:8080/group/")
+	e := httpexpect.Default(t, "http://localhost:8080/")
 
 	e.GET("/group").
 		Expect().
