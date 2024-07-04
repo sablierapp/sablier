@@ -57,4 +57,16 @@
 		}
 		reverse_proxy nginx:80
 	}
+
+	route /group {
+        sablier http://sablier:10000 {
+            group E2E
+            session_duration 1m
+            dynamic {
+                display_name Group E2E
+                theme hacker-terminal
+            }
+        }
+        reverse_proxy whoami:80
+    }
 }

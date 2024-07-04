@@ -69,6 +69,16 @@ static_resources:
                           config: # Note this config field could not be empty because the xDS API requirement.
                             "@type": type.googleapis.com/google.protobuf.Empty  # Empty as a placeholder.
                           is_optional: true
+                    - match:
+                        path: "/group"
+                      route:
+                        cluster: whoami
+                      typed_per_filter_config:
+                        sablier-wasm-group:
+                          "@type": type.googleapis.com/envoy.config.route.v3.FilterConfig
+                          config: # Note this config field could not be empty because the xDS API requirement.
+                            "@type": type.googleapis.com/google.protobuf.Empty  # Empty as a placeholder.
+                          is_optional: true
 
             http_filters:
               - name: sablier-wasm-whoami-dynamic
@@ -180,6 +190,34 @@ static_resources:
                       vm_config:
                         runtime: "envoy.wasm.runtime.v8"
                         vm_id: "vm.sablier.sablier-wasm-healthy"
+                        code:
+                          local:
+                            filename: "/etc/sablierproxywasm.wasm"
+                        configuration: { }
+              - name: sablier-wasm-group
+                disabled: true
+                typed_config:
+                  "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+                  type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                  value:
+                    config:
+                      name: "sablier-wasm-group"
+                      root_id: "sablier-wasm-group"
+                      configuration:
+                        "@type": "type.googleapis.com/google.protobuf.StringValue"
+                        value: |
+                          {
+                            "sablier_url": "sablier:10000",
+                            "cluster": "sablier",
+                            "group": "E2E",
+                            "session_duration": "1m",
+                            "dynamic": { 
+                              "display_name": "Group E2E" 
+                            }
+                          }
+                      vm_config:
+                        runtime: "envoy.wasm.runtime.v8"
+                        vm_id: "vm.sablier.sablier-wasm-group"
                         code:
                           local:
                             filename: "/etc/sablierproxywasm.wasm"

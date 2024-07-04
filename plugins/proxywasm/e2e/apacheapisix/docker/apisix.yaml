@@ -43,4 +43,13 @@ routes:
       type: roundrobin
       nodes:
         "nginx:80": 1
+
+  - uri: "/group"
+    plugins:
+      proxywasm_sablier_plugin:
+        conf: '{ "sablier_url": "sablier:10000", "group": "E2E", "session_duration": "1m", "dynamic": { "display_name": "Group E2E" } }'
+    upstream:
+      type: roundrobin
+      nodes:
+        "whoami:80": 1
 #END

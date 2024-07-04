@@ -4,6 +4,8 @@ metadata:
   name: whoami-deployment
   labels:
     app: whoami
+    sablier.enable: true
+    sablier.group: E2E
 spec:
   replicas: 0
   selector:
@@ -36,6 +38,8 @@ metadata:
   name: nginx-deployment
   labels:
     app: nginx
+    sablier.enable: true
+    sablier.group: E2E
 spec:
   replicas: 0
   selector:
@@ -99,3 +103,22 @@ spec:
             name: nginx-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: group-ingress
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /group
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service
+                port:
+                  number: 80

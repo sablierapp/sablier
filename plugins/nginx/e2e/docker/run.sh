@@ -10,7 +10,6 @@ docker version
 
 prepare_docker_classic() {
   docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME up -d
-  docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME stop whoami nginx
 }
 
 destroy_docker_classic() {
@@ -35,5 +34,6 @@ run_docker_classic_test Test_Dynamic
 run_docker_classic_test Test_Blocking
 run_docker_classic_test Test_Multiple
 run_docker_classic_test Test_Healthy
+run_docker_classic_test Test_Group
 
 exit $errors

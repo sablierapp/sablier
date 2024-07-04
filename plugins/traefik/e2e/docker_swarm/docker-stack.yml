@@ -54,6 +54,11 @@ services:
         - traefik.http.middlewares.healthy.plugin.sablier.sablierUrl=http://tasks.sablier:10000
         - traefik.http.middlewares.healthy.plugin.sablier.sessionDuration=1m
         - traefik.http.middlewares.healthy.plugin.sablier.dynamic.displayName=Healthy Nginx
+        # Group Middleware
+        - traefik.http.middlewares.group.plugin.sablier.group=E2E
+        - traefik.http.middlewares.group.plugin.sablier.sablierUrl=http://tasks.sablier:10000
+        - traefik.http.middlewares.group.plugin.sablier.sessionDuration=1m
+        - traefik.http.middlewares.group.plugin.sablier.dynamic.displayName=Group E2E
         - traefik.http.services.sablier.loadbalancer.server.port=10000
 
   whoami:
@@ -61,6 +66,8 @@ services:
     deploy:
       replicas: 0
       labels:
+        - sablier.enable=true
+        - sablier.group=E2E
         - traefik.enable=true
         # If you do not use the swarm load balancer, traefik will evict the service from its pool
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.
@@ -84,6 +91,8 @@ services:
     deploy:
       replicas: 0
       labels:
+        - sablier.enable=true
+        - sablier.group=E2E
         - traefik.enable=true
         # If you do not use the swarm load balancer, traefik will evict the service from its pool
         # as soon as the service is 0/0. If you do not set that, fallback to dynamic-config.yml file usage.

@@ -4,6 +4,8 @@ metadata:
   name: whoami-deployment
   labels:
     app: whoami
+    sablier.enable: true
+    sablier.group: E2E
 spec:
   replicas: 0
   selector:
@@ -68,6 +70,20 @@ spec:
   plugin:
     sablier:
       names: deployment_default_whoami-deployment_1,deployment_default_nginx-deployment_1
+      sablierUrl: 'http://sablier:10000'
+      sessionDuration: 1m
+      dynamic:
+        displayName: 'Multiple Whoami'
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: group
+  namespace: default
+spec:
+  plugin:
+    sablier:
+      group: E2E
       sablierUrl: 'http://sablier:10000'
       sessionDuration: 1m
       dynamic:
@@ -140,6 +156,8 @@ metadata:
   name: nginx-deployment
   labels:
     app: nginx
+    sablier.enable: true
+    sablier.group: E2E
 spec:
   replicas: 0
   selector:
@@ -219,3 +237,23 @@ spec:
             name: nginx-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: group-ingress
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.middlewares: default-group@kubernetescrd
+spec:
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /group
+            pathType: Prefix
+            backend:
+              service:
+                name: whoami-service
+                port:
+                  number: 80

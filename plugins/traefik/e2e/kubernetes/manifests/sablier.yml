@@ -16,7 +16,6 @@ spec:
         app: sablier
     spec:
       serviceAccountName: sablier
-      serviceAccount: sablier
       containers:
       - name: sablier
         image: acouvreur/sablier:local

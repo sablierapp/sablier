@@ -47,12 +47,19 @@ services:
       - traefik.http.middlewares.healthy.plugin.sablier.sablierUrl=http://sablier:10000
       - traefik.http.middlewares.healthy.plugin.sablier.sessionDuration=1m
       - traefik.http.middlewares.healthy.plugin.sablier.dynamic.displayName=Healthy Nginx
+      # Group Middleware
+      - traefik.http.middlewares.group.plugin.sablier.group=E2E
+      - traefik.http.middlewares.group.plugin.sablier.sablierUrl=http://sablier:10000
+      - traefik.http.middlewares.group.plugin.sablier.sessionDuration=1m
+      - traefik.http.middlewares.group.plugin.sablier.dynamic.displayName=Group E2E
 
   whoami:
     image: containous/whoami:v1.5.0
     # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.
-    # labels:
+    labels:
+      - sablier.enable=true
+      - sablier.group=E2E
     #  - traefik.enable
     #  - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
     #  - traefik.http.routers.whoami.middlewares=ondemand
@@ -64,7 +71,9 @@ services:
       interval: 5s
     # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.
-    # labels:
+    labels:
+      - sablier.enable=true
+      - sablier.group=E2E
     #  - traefik.enable
     #  - traefik.http.routers.nginx.rule=PathPrefix(`/nginx`)
     #  - traefik.http.routers.nginx.middlewares=ondemand

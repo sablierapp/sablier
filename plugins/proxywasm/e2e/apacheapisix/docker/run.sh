@@ -35,5 +35,6 @@ run_docker_classic_test Test_Dynamic
 run_docker_classic_test Test_Blocking
 run_docker_classic_test Test_Multiple
 run_docker_classic_test Test_Healthy
+run_docker_classic_test Test_Group
 
 exit $errors

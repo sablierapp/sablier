@@ -137,3 +137,35 @@ func Test_Healthy(t *testing.T) {
 		Status(http.StatusNotFound).
 		Body().Contains(`nginx/`)
 }
+
+func Test_Group(t *testing.T) {
+	e := httpexpect.Default(t, "http://localhost:8080/group/")
+
+	e.GET("/group").
+		Expect().
+		Status(http.StatusOK).
+		Body().
+		Contains(`Group E2E`).
+		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
+
+	e.GET("/group").
+		WithMaxRetries(10).
+		WithRetryDelay(time.Second, time.Second*2).
+		WithRetryPolicy(httpexpect.RetryCustomHandler).
+		WithCustomHandler(func(resp *http.Response, _ error) bool {
+			if resp.Body != nil {
+
+				// Check body if available, etc.
+				body, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					return true
+				}
+				return !strings.Contains(string(body), "Host: localhost:8080")
+			}
+			return false
+		}).
+		Expect().
+		Status(http.StatusOK).
+		Body().Contains(`Host: localhost:8080`)
+}

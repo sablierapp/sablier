@@ -49,3 +49,11 @@ http:
       middlewares:
         - healthy@docker
       service: "nginx"
+
+    group:
+      rule: PathPrefix(`/group`)
+      entryPoints:
+        - "http"
+      middlewares:
+        - group@docker
+      service: "whoami"

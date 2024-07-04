@@ -68,5 +68,6 @@ run_kubernetes_deployment_test Test_Dynamic
 run_kubernetes_deployment_test Test_Blocking
 run_kubernetes_deployment_test Test_Multiple
 run_kubernetes_deployment_test Test_Healthy
+run_kubernetes_deployment_test Test_Group
 
 exit $errors
