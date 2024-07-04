@@ -62,11 +62,12 @@ func serviceToInstance(s swarm.Service) (i types.Instance) {
 	}
 
 	return types.Instance{
-		Name:            s.Spec.Name,
-		Kind:            "service",
-		Status:          string(s.UpdateStatus.State),
-		Replicas:        s.ServiceStatus.RunningTasks,
-		DesiredReplicas: s.ServiceStatus.DesiredTasks,
+		Name: s.Spec.Name,
+		Kind: "service",
+		// TODO
+		// Status:          string(s.UpdateStatus.State),
+		// Replicas:        s.ServiceStatus.RunningTasks,
+		// DesiredReplicas: s.ServiceStatus.DesiredTasks,
 		ScalingReplicas: replicas,
 		Group:           group,
 	}

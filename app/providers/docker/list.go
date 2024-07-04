@@ -9,6 +9,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"strings"
 )
 
 func (provider *DockerClassicProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
@@ -48,7 +49,7 @@ func containerToInstance(c dockertypes.Container) types.Instance {
 	}
 
 	return types.Instance{
-		Name:   c.Names[0],
+		Name:   strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
 		Kind:   "container",
 		Status: c.Status,
 		// Replicas:        c.Status,
