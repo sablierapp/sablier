@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Interface guard
+var _ providers.Provider = (*ProviderMock)(nil)
+
 // ProviderMock is a structure that allows to define the behavior of a Provider
 type ProviderMock struct {
 	mock.Mock

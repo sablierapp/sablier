@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/acouvreur/sablier/app/discovery"
+	"github.com/acouvreur/sablier/app/providers"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
+
+// Interface guard
+var _ providers.Provider = (*KubernetesProvider)(nil)
 
 type Config struct {
 	OriginalName string

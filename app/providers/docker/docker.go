@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/acouvreur/sablier/app/discovery"
+	"github.com/acouvreur/sablier/app/providers"
 	"io"
 	"strings"
 
@@ -17,6 +18,9 @@ import (
 	"github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 )
+
+// Interface guard
+var _ providers.Provider = (*DockerClassicProvider)(nil)
 
 type DockerClassicProvider struct {
 	Client          client.APIClient
