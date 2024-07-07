@@ -45,40 +45,37 @@ func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
 
 }
 
-func (provider *DockerSwarmProvider) Start(ctx context.Context, name string) (instance.State, error) {
+func (provider *DockerSwarmProvider) Start(ctx context.Context, name string) error {
 	return provider.scale(ctx, name, uint64(provider.desiredReplicas))
 }
 
-func (provider *DockerSwarmProvider) Stop(ctx context.Context, name string) (instance.State, error) {
+func (provider *DockerSwarmProvider) Stop(ctx context.Context, name string) error {
 	return provider.scale(ctx, name, 0)
 }
 
-func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) (instance.State, error) {
+func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) error {
 	service, err := provider.getServiceByName(name, ctx)
-
 	if err != nil {
-		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
+		return err
 	}
 
 	foundName := provider.getInstanceName(name, *service)
-
 	if service.Spec.Mode.Replicated == nil {
-		return instance.UnrecoverableInstanceState(foundName, "swarm service is not in \"replicated\" mode", provider.desiredReplicas)
+		return errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	service.Spec.Mode.Replicated.Replicas = &replicas
 
 	response, err := provider.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
-
 	if err != nil {
-		return instance.ErrorInstanceState(foundName, err, provider.desiredReplicas)
+		return err
 	}
 
 	if len(response.Warnings) > 0 {
-		return instance.UnrecoverableInstanceState(foundName, strings.Join(response.Warnings, ", "), provider.desiredReplicas)
+		return fmt.Errorf("warning received updating swarm service [%s]: %s", foundName, strings.Join(response.Warnings, ", "))
 	}
 
-	return instance.NotReadyInstanceState(foundName, 0, provider.desiredReplicas)
+	return nil
 }
 
 func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {

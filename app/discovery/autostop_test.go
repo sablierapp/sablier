@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/instance"
 	"github.com/acouvreur/sablier/app/providers"
 	"github.com/acouvreur/sablier/app/providers/mock"
 	"github.com/acouvreur/sablier/app/types"
@@ -30,8 +29,8 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	}).Return(instances, nil)
 
 	// Set up expectations for Stop
-	mockProvider.On("Stop", ctx, "instance2").Return(instance.State{}, nil)
-	mockProvider.On("Stop", ctx, "instance3").Return(instance.State{}, nil)
+	mockProvider.On("Stop", ctx, "instance2").Return(nil)
+	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
 	err := discovery.StopAllUnregisteredInstances(ctx, mockProvider, registered)
@@ -62,8 +61,8 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	}).Return(instances, nil)
 
 	// Set up expectations for Stop with error
-	mockProvider.On("Stop", ctx, "instance2").Return(instance.State{}, errors.New("stop error"))
-	mockProvider.On("Stop", ctx, "instance3").Return(instance.State{}, nil)
+	mockProvider.On("Stop", ctx, "instance2").Return(errors.New("stop error"))
+	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
 	err := discovery.StopAllUnregisteredInstances(ctx, mockProvider, registered)

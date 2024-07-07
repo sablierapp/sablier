@@ -271,7 +271,6 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    instance.State
 		wantErr bool
 		err     error
 	}{
@@ -283,13 +282,6 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			args: args{
 				name: "nginx",
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "container with name \"nginx\" was not found",
-			},
 			wantErr: true,
 			err:     fmt.Errorf("container with name \"nginx\" was not found"),
 		},
@@ -300,12 +292,6 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			},
 			args: args{
 				name: "nginx",
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
 			},
 			wantErr: false,
 			err:     nil,
@@ -320,13 +306,10 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 
 			tt.fields.Client.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
-			got, err := provider.Stop(context.Background(), tt.args.name)
+			err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerClassicProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerClassicProvider.Stop() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -343,7 +326,6 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    instance.State
 		wantErr bool
 		err     error
 	}{
@@ -355,13 +337,6 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			args: args{
 				name: "nginx",
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "container with name \"nginx\" was not found",
-			},
 			wantErr: true,
 			err:     fmt.Errorf("container with name \"nginx\" was not found"),
 		},
@@ -372,12 +347,6 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			},
 			args: args{
 				name: "nginx",
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
 			},
 			wantErr: false,
 			err:     nil,
@@ -392,13 +361,10 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 
 			tt.fields.Client.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
-			got, err := provider.Start(context.Background(), tt.args.name)
+			err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerClassicProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerClassicProvider.Start() = %v, want %v", got, tt.want)
 			}
 		})
 	}

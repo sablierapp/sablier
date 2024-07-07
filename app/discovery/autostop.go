@@ -48,7 +48,7 @@ func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provid
 func stopFunc(ctx context.Context, name string, provider providers.Provider) func() error {
 	return func() error {
 		log.Tracef("Stopping %v...", name)
-		_, err := provider.Stop(ctx, name)
+		err := provider.Stop(ctx, name)
 		if err != nil {
 			log.Errorf("Could not stop %v: %v", name, err)
 			return err

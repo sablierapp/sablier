@@ -75,39 +75,16 @@ func (provider *DockerClassicProvider) GetGroups(ctx context.Context) (map[strin
 	return groups, nil
 }
 
-func (provider *DockerClassicProvider) Start(ctx context.Context, name string) (instance.State, error) {
-	err := provider.Client.ContainerStart(ctx, name, container.StartOptions{})
-
-	if err != nil {
-		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
-	}
-
-	return instance.State{
-		Name:            name,
-		CurrentReplicas: 0,
-		DesiredReplicas: provider.desiredReplicas,
-		Status:          instance.NotReady,
-	}, err
+func (provider *DockerClassicProvider) Start(ctx context.Context, name string) error {
+	return provider.Client.ContainerStart(ctx, name, container.StartOptions{})
 }
 
-func (provider *DockerClassicProvider) Stop(ctx context.Context, name string) (instance.State, error) {
-	err := provider.Client.ContainerStop(ctx, name, container.StopOptions{})
-
-	if err != nil {
-		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
-	}
-
-	return instance.State{
-		Name:            name,
-		CurrentReplicas: 0,
-		DesiredReplicas: provider.desiredReplicas,
-		Status:          instance.NotReady,
-	}, nil
+func (provider *DockerClassicProvider) Stop(ctx context.Context, name string) error {
+	return provider.Client.ContainerStop(ctx, name, container.StopOptions{})
 }
 
 func (provider *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := provider.Client.ContainerInspect(ctx, name)
-
 	if err != nil {
 		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
 	}

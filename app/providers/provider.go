@@ -8,8 +8,8 @@ import (
 )
 
 type Provider interface {
-	Start(ctx context.Context, name string) (instance.State, error)
-	Stop(ctx context.Context, name string) (instance.State, error)
+	Start(ctx context.Context, name string) error
+	Stop(ctx context.Context, name string) error
 	GetState(ctx context.Context, name string) (instance.State, error)
 	GetGroups(ctx context.Context) (map[string][]string, error)
 	InstanceList(ctx context.Context, options InstanceListOptions) ([]types.Instance, error)

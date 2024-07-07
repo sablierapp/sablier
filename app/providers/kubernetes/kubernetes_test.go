@@ -34,12 +34,6 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: instance.State{
-				Name:            "deployment_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.NotReady,
-			},
 			data: data{
 				name:   "nginx",
 				get:    mocks.V1Scale(0),
@@ -51,12 +45,6 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			name: "scale nginx statefulset to 2 replicas",
 			args: args{
 				name: "statefulset_default_nginx_2",
-			},
-			want: instance.State{
-				Name:            "statefulset_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -70,19 +58,12 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: instance.State{
-				Name:            "gateway_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.Unrecoverable,
-				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
-			},
 			data: data{
 				name:   "nginx",
 				get:    mocks.V1Scale(0),
 				update: mocks.V1Scale(0),
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -100,13 +81,10 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			got, err := provider.Start(context.Background(), tt.args.name)
+			err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KubernetesProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("KubernetesProvider.Start() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -133,12 +111,6 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			args: args{
 				name: "deployment_default_nginx_2",
 			},
-			want: instance.State{
-				Name:            "deployment_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.NotReady,
-			},
 			data: data{
 				name:   "nginx",
 				get:    mocks.V1Scale(2),
@@ -150,12 +122,6 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			name: "scale nginx statefulset to 2 replicas",
 			args: args{
 				name: "statefulset_default_nginx_2",
-			},
-			want: instance.State{
-				Name:            "statefulset_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.NotReady,
 			},
 			data: data{
 				name:   "nginx",
@@ -169,19 +135,12 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: instance.State{
-				Name:            "gateway_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.Unrecoverable,
-				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
-			},
 			data: data{
 				name:   "nginx",
 				get:    mocks.V1Scale(0),
 				update: mocks.V1Scale(0),
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -199,13 +158,10 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			got, err := provider.Stop(context.Background(), tt.args.name)
+			err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KubernetesProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("KubernetesProvider.Stop() = %v, want %v", got, tt.want)
 			}
 		})
 	}

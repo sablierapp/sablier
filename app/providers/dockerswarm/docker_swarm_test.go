@@ -19,7 +19,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        instance.State
 		serviceList []swarm.Service
 		response    swarm.ServiceUpdateResponse
 		wantService swarm.Service
@@ -35,12 +34,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			},
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
 			wantErr:     false,
@@ -58,12 +51,6 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
 			wantErr:     false,
 		},
@@ -78,15 +65,8 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "swarm service is not in \"replicated\" mode",
-			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
-			wantErr:     false,
+			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {
@@ -100,13 +80,10 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
-			got, err := provider.Start(context.Background(), tt.args.name)
+			err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerSwarmProvider.Start() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -119,7 +96,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        instance.State
 		serviceList []swarm.Service
 		response    swarm.ServiceUpdateResponse
 		wantService swarm.Service
@@ -135,12 +111,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			},
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
 			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
 			wantErr:     false,
@@ -158,12 +128,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
 			wantService: mocks.ServiceReplicated("nginx", 0),
 			wantErr:     false,
 		},
@@ -178,15 +142,8 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			response: swarm.ServiceUpdateResponse{
 				Warnings: []string{},
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "swarm service is not in \"replicated\" mode",
-			},
 			wantService: mocks.ServiceReplicated("nginx", 1),
-			wantErr:     false,
+			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {
@@ -200,13 +157,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
 
-			got, err := provider.Stop(context.Background(), tt.args.name)
+			err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerSwarmProvider.Stop() = %v, want %v", got, tt.want)
 			}
 		})
 	}

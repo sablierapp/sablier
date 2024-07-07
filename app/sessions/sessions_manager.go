@@ -184,17 +184,22 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	if !exists {
 		log.Debugf("starting %s...", name)
 
-		state, err := s.provider.Start(s.ctx, name)
-
+		err := s.provider.Start(s.ctx, name)
 		if err != nil {
-			log.Errorf("an error occurred starting %s: %s", name, err.Error())
+			errState, _ := instance.ErrorInstanceState(name, err, 1)
+			requestState.Name = errState.Name
+			requestState.CurrentReplicas = errState.CurrentReplicas
+			requestState.DesiredReplicas = errState.DesiredReplicas
+			requestState.Status = errState.Status
+			requestState.Message = errState.Message
+		} else {
+			state, _ := s.provider.GetState(s.ctx, name)
+			requestState.CurrentReplicas = state.CurrentReplicas
+			requestState.DesiredReplicas = state.DesiredReplicas
+			requestState.Status = state.Status
+			requestState.Message = state.Message
 		}
 
-		requestState.Name = state.Name
-		requestState.CurrentReplicas = state.CurrentReplicas
-		requestState.DesiredReplicas = state.DesiredReplicas
-		requestState.Status = state.Status
-		requestState.Message = state.Message
 		log.Debugf("status for %s=%s", name, requestState.Status)
 	} else if requestState.Status != instance.Ready {
 		log.Debugf("checking %s...", name)

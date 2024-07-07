@@ -89,7 +89,7 @@ func onSessionExpires(provider providers.Provider) func(key string, instance ins
 	return func(_key string, _instance instance.State) {
 		go func(key string, instance instance.State) {
 			log.Debugf("stopping %s...", key)
-			_, err := provider.Stop(context.Background(), key)
+			err := provider.Stop(context.Background(), key)
 
 			if err != nil {
 				log.Warnf("error stopping %s: %s", key, err.Error())

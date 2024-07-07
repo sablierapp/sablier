@@ -87,19 +87,19 @@ func NewKubernetesProvider(providerConfig providerConfig.Kubernetes) (*Kubernete
 
 }
 
-func (provider *KubernetesProvider) Start(ctx context.Context, name string) (instance.State, error) {
+func (provider *KubernetesProvider) Start(ctx context.Context, name string) error {
 	config, err := provider.convertName(name)
 	if err != nil {
-		return instance.UnrecoverableInstanceState(name, err.Error(), int(config.Replicas))
+		return err
 	}
 
 	return provider.scale(ctx, config, config.Replicas)
 }
 
-func (provider *KubernetesProvider) Stop(ctx context.Context, name string) (instance.State, error) {
+func (provider *KubernetesProvider) Stop(ctx context.Context, name string) error {
 	config, err := provider.convertName(name)
 	if err != nil {
-		return instance.UnrecoverableInstanceState(name, err.Error(), int(config.Replicas))
+		return err
 	}
 
 	return provider.scale(ctx, config, 0)
@@ -151,7 +151,7 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 	return groups, nil
 }
 
-func (provider *KubernetesProvider) scale(ctx context.Context, config *Config, replicas int32) (instance.State, error) {
+func (provider *KubernetesProvider) scale(ctx context.Context, config *Config, replicas int32) error {
 	var workload Workload
 
 	switch config.Kind {
@@ -160,22 +160,18 @@ func (provider *KubernetesProvider) scale(ctx context.Context, config *Config, r
 	case "statefulset":
 		workload = provider.Client.AppsV1().StatefulSets(config.Namespace)
 	default:
-		return instance.UnrecoverableInstanceState(config.OriginalName, fmt.Sprintf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind), int(config.Replicas))
+		return fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind)
 	}
 
 	s, err := workload.GetScale(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
-		return instance.ErrorInstanceState(config.OriginalName, err, int(config.Replicas))
+		return err
 	}
 
 	s.Spec.Replicas = replicas
 	_, err = workload.UpdateScale(ctx, config.Name, s, metav1.UpdateOptions{})
 
-	if err != nil {
-		return instance.ErrorInstanceState(config.OriginalName, err, int(config.Replicas))
-	}
-
-	return instance.NotReadyInstanceState(config.OriginalName, 0, int(config.Replicas))
+	return err
 }
 
 func (provider *KubernetesProvider) GetState(ctx context.Context, name string) (instance.State, error) {
