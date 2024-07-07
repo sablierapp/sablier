@@ -94,7 +94,7 @@ services:
       - traefik.http.middlewares.dynamic.plugin.sablier.dynamic.sessionDuration=1m
 
   whoami:
-    image: containous/whoami:v1.5.0
+    image: acouvreur/whoami:v1.10.2
     # Cannot use labels because as soon as the container is stopped, the labels are not treated by Traefik
     # The route doesn't exist anymore. Use dynamic-config.yml file instead.
     # labels:
@@ -130,7 +130,7 @@ http:
     ```yaml
     services:
       whoami:
-        image: containous/whoami:v1.5.0
+        image: acouvreur/whoami:v1.10.2
         deploy:
           replicas: 0
           labels:

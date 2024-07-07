@@ -23,7 +23,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
 
   whoami:
-    image: containous/whoami:v1.5.0
+    image: acouvreur/whoami:v1.10.2
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 5s

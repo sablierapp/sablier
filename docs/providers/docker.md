@@ -51,7 +51,7 @@ You have to register your containers by opting-in with labels.
 ```yaml
 services:
   whoami:
-    image: containous/whoami:v1.5.0
+    image: acouvreur/whoami:v1.10.2
     labels:
       - sablier.enable=true
       - sablier.group=mygroup
