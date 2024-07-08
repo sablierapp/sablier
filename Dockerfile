@@ -23,8 +23,8 @@ FROM alpine:3.20.1
 RUN mkdir -p /etc/sablier/themes
 EXPOSE 10000
 
-COPY --from=build /src/sablier* /etc/sablier/sablier
+COPY --from=build /src/sablier* /bin/sablier
 COPY docker/sablier.yaml /etc/sablier/sablier.yaml
 
-ENTRYPOINT [ "/etc/sablier/sablier" ]
+ENTRYPOINT [ "sablier" ]
 CMD [ "--configFile=/etc/sablier/sablier.yaml", "start" ]
