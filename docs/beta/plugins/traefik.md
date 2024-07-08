@@ -26,7 +26,7 @@ You have to use the dynamic config file provider instead.
 
 ```yaml
 whoami:
-  image: containous/whoami:v1.5.0
+  image: acouvreur/whoami:v1.10.2
   labels:
     - traefik.enable
     - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
@@ -66,7 +66,7 @@ See also [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/provi
 ```yaml
 services:
   whoami:
-    image: containous/whoami:v1.5.0
+    image: acouvreur/whoami:v1.10.2
     deploy:
       replicas: 0
       labels:
@@ -96,14 +96,14 @@ experimental:
   plugins:
     sablier:
       moduleName: "github.com/acouvreur/sablier"
-      version: "v1.8.0-beta.6"
+      version: "v1.8.0-beta.8"
 ```
 
 #### **CLI**
 
 ```bash
 --experimental.plugins.sablier.modulename=github.com/acouvreur/sablier
---experimental.plugins.sablier.version=v1.8.0-beta.6
+--experimental.plugins.sablier.version=v1.8.0-beta.8
 ```
 
 <!-- tabs:end -->
