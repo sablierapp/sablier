@@ -227,13 +227,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			args: args{
 				name: "nginx",
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "container with name \"nginx\" was not found",
-			},
+			want:          instance.State{},
 			wantErr:       true,
 			containerSpec: types.ContainerJSON{},
 			err:           fmt.Errorf("container with name \"nginx\" was not found"),

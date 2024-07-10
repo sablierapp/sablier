@@ -13,8 +13,8 @@ type Instance struct {
 	Name            string
 	Status          string
 	Error           error
-	CurrentReplicas int
-	DesiredReplicas int
+	CurrentReplicas int32
+	DesiredReplicas int32
 }
 
 // Options holds the customizable input to template

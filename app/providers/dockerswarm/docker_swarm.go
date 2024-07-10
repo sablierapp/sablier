@@ -22,7 +22,7 @@ var _ providers.Provider = (*DockerSwarmProvider)(nil)
 
 type DockerSwarmProvider struct {
 	Client          client.APIClient
-	desiredReplicas int
+	desiredReplicas int32
 }
 
 func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
@@ -109,20 +109,20 @@ func (provider *DockerSwarmProvider) GetState(ctx context.Context, name string) 
 
 	service, err := provider.getServiceByName(name, ctx)
 	if err != nil {
-		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
+		return instance.State{}, err
 	}
 
 	foundName := provider.getInstanceName(name, *service)
 
 	if service.Spec.Mode.Replicated == nil {
-		return instance.UnrecoverableInstanceState(foundName, "swarm service is not in \"replicated\" mode", provider.desiredReplicas)
+		return instance.State{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return instance.NotReadyInstanceState(foundName, 0, provider.desiredReplicas)
+		return instance.NotReadyInstanceState(foundName, 0, provider.desiredReplicas), nil
 	}
 
-	return instance.ReadyInstanceState(foundName, provider.desiredReplicas)
+	return instance.ReadyInstanceState(foundName, provider.desiredReplicas), nil
 }
 
 func (provider *DockerSwarmProvider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {

@@ -16,9 +16,9 @@ func TestParseName(t *testing.T) {
 	}{
 		{
 			name:     "Valid name with default delimiter",
-			input:    "deployment:namespace:name",
+			input:    "deployment:namespace:name:2",
 			opts:     ParseOptions{Delimiter: ":"},
-			expected: ParsedName{Original: "deployment:namespace:name", Kind: "deployment", Namespace: "namespace", Name: "name"},
+			expected: ParsedName{Original: "deployment:namespace:name:2", Kind: "deployment", Namespace: "namespace", Name: "name", Replicas: 2},
 			hasError: false,
 		},
 		{
@@ -30,14 +30,14 @@ func TestParseName(t *testing.T) {
 		},
 		{
 			name:     "Valid name with custom delimiter",
-			input:    "statefulset#namespace#name",
+			input:    "statefulset#namespace#name#1",
 			opts:     ParseOptions{Delimiter: "#"},
-			expected: ParsedName{Original: "statefulset#namespace#name", Kind: "statefulset", Namespace: "namespace", Name: "name"},
+			expected: ParsedName{Original: "statefulset#namespace#name#1", Kind: "statefulset", Namespace: "namespace", Name: "name", Replicas: 1},
 			hasError: false,
 		},
 		{
 			name:     "Invalid name with incorrect delimiter",
-			input:    "statefulset:namespace:name",
+			input:    "statefulset:namespace:name:1",
 			opts:     ParseOptions{Delimiter: "#"},
 			expected: ParsedName{},
 			hasError: true,
@@ -76,6 +76,7 @@ func TestDeploymentName(t *testing.T) {
 		Kind:      "deployment",
 		Namespace: "test-namespace",
 		Name:      "test-deployment",
+		Replicas:  1,
 	}
 
 	result := DeploymentName(deployment, opts)
@@ -97,6 +98,7 @@ func TestStatefulSetName(t *testing.T) {
 		Kind:      "statefulset",
 		Namespace: "test-namespace",
 		Name:      "test-statefulset",
+		Replicas:  1,
 	}
 
 	result := StatefulSetName(statefulSet, opts)

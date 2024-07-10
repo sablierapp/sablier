@@ -24,7 +24,7 @@ var _ providers.Provider = (*DockerClassicProvider)(nil)
 
 type DockerClassicProvider struct {
 	Client          client.APIClient
-	desiredReplicas int
+	desiredReplicas int32
 }
 
 func NewDockerClassicProvider() (*DockerClassicProvider, error) {
@@ -86,39 +86,39 @@ func (provider *DockerClassicProvider) Stop(ctx context.Context, name string) er
 func (provider *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := provider.Client.ContainerInspect(ctx, name)
 	if err != nil {
-		return instance.ErrorInstanceState(name, err, provider.desiredReplicas)
+		return instance.State{}, err
 	}
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {
 	case "created", "paused", "restarting", "removing":
-		return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas)
+		return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas), nil
 	case "running":
 		if spec.State.Health != nil {
 			// // "starting", "healthy" or "unhealthy"
 			if spec.State.Health.Status == "healthy" {
-				return instance.ReadyInstanceState(name, provider.desiredReplicas)
+				return instance.ReadyInstanceState(name, provider.desiredReplicas), nil
 			} else if spec.State.Health.Status == "unhealthy" {
 				if len(spec.State.Health.Log) >= 1 {
 					lastLog := spec.State.Health.Log[len(spec.State.Health.Log)-1]
-					return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode), provider.desiredReplicas)
+					return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode), provider.desiredReplicas), nil
 				} else {
-					return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available", provider.desiredReplicas)
+					return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available", provider.desiredReplicas), nil
 				}
 			} else {
-				return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas)
+				return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas), nil
 			}
 		}
-		return instance.ReadyInstanceState(name, provider.desiredReplicas)
+		return instance.ReadyInstanceState(name, provider.desiredReplicas), nil
 	case "exited":
 		if spec.State.ExitCode != 0 {
-			return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container exited with code \"%d\"", spec.State.ExitCode), provider.desiredReplicas)
+			return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container exited with code \"%d\"", spec.State.ExitCode), provider.desiredReplicas), nil
 		}
-		return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas)
+		return instance.NotReadyInstanceState(name, 0, provider.desiredReplicas), nil
 	case "dead":
-		return instance.UnrecoverableInstanceState(name, "container in \"dead\" state cannot be restarted", provider.desiredReplicas)
+		return instance.UnrecoverableInstanceState(name, "container in \"dead\" state cannot be restarted", provider.desiredReplicas), nil
 	default:
-		return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status), provider.desiredReplicas)
+		return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status), provider.desiredReplicas), nil
 	}
 }
 

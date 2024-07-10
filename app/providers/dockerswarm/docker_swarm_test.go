@@ -217,14 +217,8 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			serviceList: []swarm.Service{
 				mocks.ServiceGlobal("nginx"),
 			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "swarm service is not in \"replicated\" mode",
-			},
-			wantErr: false,
+			want:    instance.State{},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

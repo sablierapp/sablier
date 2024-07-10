@@ -256,17 +256,11 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			args: args{
 				name: "gateway_default_nginx_2",
 			},
-			want: instance.State{
-				Name:            "gateway_default_nginx_2",
-				CurrentReplicas: 0,
-				DesiredReplicas: 2,
-				Status:          instance.Unrecoverable,
-				Message:         "unsupported kind \"gateway\" must be one of \"deployment\", \"statefulset\"",
-			},
+			want: instance.State{},
 			data: data{
 				name: "nginx",
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

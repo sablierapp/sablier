@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/apps/v1"
@@ -12,6 +13,7 @@ type ParsedName struct {
 	Kind      string // deployment or statefulset
 	Namespace string
 	Name      string
+	Replicas  int32
 }
 
 type ParseOptions struct {
@@ -21,8 +23,13 @@ type ParseOptions struct {
 func ParseName(name string, opts ParseOptions) (ParsedName, error) {
 
 	split := strings.Split(name, opts.Delimiter)
-	if len(split) < 3 {
-		return ParsedName{}, fmt.Errorf("invalid name should be: kind%snamespace%sname (have %s)", opts.Delimiter, opts.Delimiter, name)
+	if len(split) != 4 {
+		return ParsedName{}, fmt.Errorf("invalid name [%s] should be: kind%snamespace%sname%sreplicas", name, opts.Delimiter, opts.Delimiter, opts.Delimiter)
+	}
+
+	replicas, err := strconv.Atoi(split[3])
+	if err != nil {
+		return ParsedName{}, err
 	}
 
 	return ParsedName{
@@ -30,6 +37,7 @@ func ParseName(name string, opts ParseOptions) (ParsedName, error) {
 		Kind:      split[0],
 		Namespace: split[1],
 		Name:      split[2],
+		Replicas:  int32(replicas),
 	}, nil
 }
 
@@ -45,6 +53,7 @@ func DeploymentName(deployment v1.Deployment, opts ParseOptions) ParsedName {
 		Kind:      kind,
 		Namespace: namespace,
 		Name:      name,
+		Replicas:  1,
 	}
 }
 
@@ -60,5 +69,6 @@ func StatefulSetName(statefulSet v1.StatefulSet, opts ParseOptions) ParsedName {
 		Kind:      kind,
 		Namespace: namespace,
 		Name:      name,
+		Replicas:  1,
 	}
 }
