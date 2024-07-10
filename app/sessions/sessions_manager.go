@@ -3,6 +3,7 @@ package sessions
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -178,36 +179,36 @@ func (s *SessionsManager) RequestSessionGroup(group string, duration time.Durati
 }
 
 func (s *SessionsManager) requestSessionInstance(name string, duration time.Duration) (*instance.State, error) {
+	if name == "" {
+		return nil, errors.New("instance name cannot be empty")
+	}
 
 	requestState, exists := s.store.Get(name)
 
 	if !exists {
-		log.Debugf("starting %s...", name)
+		log.Debugf("starting [%s]...", name)
 
 		err := s.provider.Start(s.ctx, name)
 		if err != nil {
-			errState, _ := instance.ErrorInstanceState(name, err, 1)
-			requestState.Name = errState.Name
-			requestState.CurrentReplicas = errState.CurrentReplicas
-			requestState.DesiredReplicas = errState.DesiredReplicas
-			requestState.Status = errState.Status
-			requestState.Message = errState.Message
-		} else {
-			state, _ := s.provider.GetState(s.ctx, name)
-			requestState.CurrentReplicas = state.CurrentReplicas
-			requestState.DesiredReplicas = state.DesiredReplicas
-			requestState.Status = state.Status
-			requestState.Message = state.Message
+			return nil, err
 		}
 
-		log.Debugf("status for %s=%s", name, requestState.Status)
-	} else if requestState.Status != instance.Ready {
-		log.Debugf("checking %s...", name)
-
 		state, err := s.provider.GetState(s.ctx, name)
-
 		if err != nil {
-			log.Errorf("an error occurred checking state %s: %s", name, err.Error())
+			return nil, err
+		}
+
+		requestState.CurrentReplicas = state.CurrentReplicas
+		requestState.DesiredReplicas = state.DesiredReplicas
+		requestState.Status = state.Status
+		requestState.Message = state.Message
+
+		log.Debugf("status for [%s]=[%s]", name, requestState.Status)
+	} else if requestState.Status != instance.Ready {
+		log.Debugf("checking [%s]...", name)
+		state, err := s.provider.GetState(s.ctx, name)
+		if err != nil {
+			return nil, err
 		}
 
 		requestState.Name = state.Name
