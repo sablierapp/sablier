@@ -1,6 +1,6 @@
 services:
   envoy:
-    image: envoyproxy/envoy:v1.30-latest
+    image: envoyproxy/envoy:v1.31-latest
     command: /usr/local/bin/envoy -c /etc/envoy.yaml
     volumes:
       - ./envoy.yaml:/etc/envoy.yaml
