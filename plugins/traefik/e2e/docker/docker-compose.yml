@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   traefik:
-    image: traefik:v3.1.1
+    image: traefik:v3.1.2
     command:
       - --experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier
       - --entryPoints.http.address=:80
