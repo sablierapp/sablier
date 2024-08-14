@@ -1,4 +1,4 @@
-FROM golang:1.22 AS build
+FROM golang:1.23 AS build
 
 WORKDIR /src
 RUN go env -w GOMODCACHE=/root/.cache/go-build
