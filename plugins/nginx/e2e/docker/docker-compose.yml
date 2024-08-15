@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   proxy:
-    image: nginx:1.27.0
+    image: nginx:1.27.1
     ports:
       - 8080:80
     volumes:
@@ -32,7 +32,7 @@ services:
       - sablier.group=E2E
 
   nginx:
-    image: nginx:1.27.0
+    image: nginx:1.27.1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
