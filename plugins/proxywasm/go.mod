@@ -6,7 +6,7 @@ require (
 	github.com/json-iterator/tinygo v0.0.0-20211221071957-84b5b690c8a0
 	github.com/stretchr/testify v1.9.0
 	github.com/tetratelabs/proxy-wasm-go-sdk v0.24.0
-	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 )
 
 require (
