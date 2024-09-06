@@ -90,6 +90,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 	}
 	writer.Flush()
 
+	c.Header("Cache-Control", "no-cache")
 	c.Header("Content-Type", "text/html")
 	c.Header("Content-Length", strconv.Itoa(buf.Len()))
 	c.Writer.Write(buf.Bytes())
