@@ -74,6 +74,24 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 			expectedHeaderValue: "not-ready",
 		},
 		{
+			name: "header requests no caching",
+			arg: arg{
+				body: models.DynamicRequest{
+					Names:           []string{"nginx"},
+					DisplayName:     "Test",
+					Theme:           "hacker-terminal",
+					SessionDuration: 1 * time.Minute,
+				},
+				session: sessions.SessionState{
+					Instances: createMap([]*instance.State{
+						{Name: "nginx", Status: instance.NotReady},
+					}),
+				},
+			},
+			expectedHeaderKey:   "Cache-Control",
+			expectedHeaderValue: "no-cache",
+		},
+		{
 			name: "header has ready value when session is ready",
 			arg: arg{
 				body: models.DynamicRequest{
@@ -104,7 +122,7 @@ func TestServeStrategy_ServeDynamic(t *testing.T) {
 					SessionState: tt.arg.session,
 				},
 				StrategyConfig: config.NewStrategyConfig(),
-				Theme: theme,
+				Theme:          theme,
 			}
 			recorder := httptest.NewRecorder()
 			c := GetTestGinContext(recorder)
