@@ -18,7 +18,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     make BUILDTIME=${BUILDTIME} VERSION=${VERSION} GIT_REVISION=${REVISION} ${TARGETOS}/${TARGETARCH}
 
-FROM alpine:3.20.2
+FROM alpine:3.20.3
 
 RUN mkdir -p /etc/sablier/themes
 EXPOSE 10000
