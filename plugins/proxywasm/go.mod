@@ -1,12 +1,14 @@
 module github.com/acouvreur/sablier/plugins/proxy-wasm
 
-go 1.22
+go 1.22.0
+
+toolchain go1.23.1
 
 require (
 	github.com/json-iterator/tinygo v0.0.0-20211221071957-84b5b690c8a0
 	github.com/stretchr/testify v1.9.0
 	github.com/tetratelabs/proxy-wasm-go-sdk v0.24.0
-	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
+	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
 )
 
 require (
