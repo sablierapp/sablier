@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM scratch
 
+EXPOSE 10000
 COPY --from=build /etc/sablier/themes /etc/sablier/themes
 COPY --from=build /src/sablier* /bin/sablier
 COPY docker/sablier.yaml /etc/sablier/sablier.yaml
