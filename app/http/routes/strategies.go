@@ -140,8 +140,17 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 }
 
 func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme.Instance) {
+	if sessionState == nil {
+		log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState is nil")
+		return
+	}
 	sessionState.Instances.Range(func(key, value any) bool {
-		instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
+		if value != nil {
+			instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
+		} else {
+			log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState instance is nil, key: %v", key)
+		}
+
 		return true
 	})
 
