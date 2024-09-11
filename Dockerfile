@@ -1,5 +1,6 @@
 FROM golang:1.22 AS build
 
+RUN mkdir -p /etc/sablier/themes
 WORKDIR /src
 RUN go env -w GOMODCACHE=/root/.cache/go-build
 
@@ -18,11 +19,9 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     make BUILDTIME=${BUILDTIME} VERSION=${VERSION} GIT_REVISION=${REVISION} ${TARGETOS}/${TARGETARCH}
 
-FROM alpine:3.20.3
+FROM scratch
 
-RUN mkdir -p /etc/sablier/themes
-EXPOSE 10000
-
+COPY --from=build /etc/sablier/themes /etc/sablier/themes
 COPY --from=build /src/sablier* /bin/sablier
 COPY docker/sablier.yaml /etc/sablier/sablier.yaml
 

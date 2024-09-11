@@ -39,7 +39,7 @@ test-plugin-caddy:
 
 .PHONY: docker
 docker:
-	docker build -t acouvreur/sablier:local .
+	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t acouvreur/sablier:local .
 
 caddy:
 	docker build -t caddy:local plugins/caddy
