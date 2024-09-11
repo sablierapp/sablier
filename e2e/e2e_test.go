@@ -24,22 +24,10 @@ func Test_Dynamic(t *testing.T) {
 		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/whoami").
-		WithMaxRetries(10).
-		WithRetryDelay(time.Second, time.Second*2).
+		WithMaxRetries(20).
+		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(func(resp *http.Response, _ error) bool {
-			if resp.Body != nil {
-
-				// Check body if available, etc.
-				body, err := io.ReadAll(resp.Body)
-				defer resp.Body.Close()
-				if err != nil {
-					return true
-				}
-				return !strings.Contains(string(body), "Host: localhost:8080")
-			}
-			return false
-		}).
+		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
@@ -65,42 +53,19 @@ func Test_Multiple(t *testing.T) {
 		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/whoami").
-		WithMaxRetries(10).
-		WithRetryDelay(time.Second, time.Second*2).
+		WithMaxRetries(20).
+		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(func(resp *http.Response, _ error) bool {
-			if resp.Body != nil {
-				// Check body if available, etc.
-				body, err := io.ReadAll(resp.Body)
-				defer resp.Body.Close()
-				if err != nil {
-					return true
-				}
-				return !strings.Contains(string(body), "Host: localhost:8080")
-			}
-			return false
-		}).
+		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
 
 	e.GET("/nginx").
-		WithMaxRetries(10).
-		WithRetryDelay(time.Second, time.Second*2).
+		WithMaxRetries(20).
+		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(func(resp *http.Response, _ error) bool {
-			if resp.Body != nil {
-
-				// Check body if available, etc.
-				body, err := io.ReadAll(resp.Body)
-				defer resp.Body.Close()
-				if err != nil {
-					return true
-				}
-				return !strings.Contains(string(body), "nginx/")
-			}
-			return false
-		}).
+		WithCustomHandler(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
 		Body().Contains(`nginx/`)
@@ -117,22 +82,10 @@ func Test_Healthy(t *testing.T) {
 		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/nginx").
-		WithMaxRetries(10).
-		WithRetryDelay(time.Second, time.Second*2).
+		WithMaxRetries(20).
+		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(func(resp *http.Response, _ error) bool {
-			if resp.Body != nil {
-
-				// Check body if available, etc.
-				body, err := io.ReadAll(resp.Body)
-				defer resp.Body.Close()
-				if err != nil {
-					return true
-				}
-				return !strings.Contains(string(body), "nginx/")
-			}
-			return false
-		}).
+		WithCustomHandler(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
 		Body().Contains(`nginx/`)
@@ -149,23 +102,29 @@ func Test_Group(t *testing.T) {
 		Contains(`Your instance(s) will stop after 1 minute of inactivity`)
 
 	e.GET("/group").
-		WithMaxRetries(10).
-		WithRetryDelay(time.Second, time.Second*2).
+		WithMaxRetries(20).
+		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(func(resp *http.Response, _ error) bool {
-			if resp.Body != nil {
-
-				// Check body if available, etc.
-				body, err := io.ReadAll(resp.Body)
-				defer resp.Body.Close()
-				if err != nil {
-					return true
-				}
-				return !strings.Contains(string(body), "Host: localhost:8080")
-			}
-			return false
-		}).
+		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
+}
+
+func RetryUntilBodyContains(contains string) func(resp *http.Response, err error) bool {
+	return func(resp *http.Response, err error) bool {
+		if err != nil {
+			return true
+		}
+		if resp.Body != nil {
+			// Check body if available, etc.
+			body, err := io.ReadAll(resp.Body)
+			defer resp.Body.Close()
+			if err != nil {
+				return true
+			}
+			return !strings.Contains(string(body), contains)
+		}
+		return true
+	}
 }
