@@ -29,7 +29,7 @@ prepare_traefik() {
 }
 
 prepare_sablier() {
-  helm install sablier ../../../../helm --set image.tag=local --namespace kube-system
+  helm install sablier ../../../../helm --set image.tag=local --set logLevel=trace --namespace kube-system
 }
 
 prepare_deployment() {
