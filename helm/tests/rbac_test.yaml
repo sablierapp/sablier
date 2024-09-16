@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: Sablier RBAC Generation manifest
+templates:
+  - "rbac.yaml"
+release:
+  name: test-sablier
+  namespace: sablier
+tests:
+  - it: should create rbac
+    asserts:
+      - hasDocuments:
+          count: 2
+  - it: should correctly set ClusterRole
+    documentSelector:
+      path: kind
+      value: ClusterRole
+    asserts:
+      - equal:
+          path: metadata.name
+          value: sablier-test-sablier
+      - equal:
+          path: rules
+          value:
+            - apiGroups:
+                - apps
+                - ""
+              resources:
+                - deployments
+                - deployments/scale
+                - statefulsets
+                - statefulsets/scale
+              verbs:
+                - patch # Scale up and down
+                - get # Retrieve info about specific dep
+                - update # Scale up and down
+                - list # Events
+                - watch # Events
+  - it: should correctly set ClusterRoleBinding
+    documentSelector:
+      path: kind
+      value: ClusterRoleBinding
+    asserts:
+      - equal:
+          path: metadata.name
+          value: sablier-test-sablier
+      - equal:
+          path: roleRef
+          value:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: sablier-test-sablier
+      - equal:
+          path: subjects
+          value:
+            - kind: ServiceAccount
+              name: sablier
+              namespace: sablier

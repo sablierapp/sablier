@@ -28,6 +28,10 @@ prepare_traefik() {
   helm install traefik --version 28.3.0 traefik/traefik -f values.yaml --namespace kube-system
 }
 
+prepare_sablier() {
+  helm install sablier ../../../../helm --set image.tag=local --namespace kube-system
+}
+
 prepare_deployment() {
   kubectl apply -f ./manifests/sablier.yml
   kubectl apply -f ./manifests/deployment.yml
@@ -35,19 +39,15 @@ prepare_deployment() {
 
 destroy_deployment() {
   kubectl delete -f ./manifests/deployment.yml
-  kubectl delete -f ./manifests/sablier.yml
 }
 
-prepare_stateful_set() {
-  kubectl apply -f ./manifests/statefulset.yml
-}
-
-destroy_stateful_set() {
-  kubectl delete -f ./manifests/statefulset.yml
+destroy_sablier() {
+  helm uninstall --namespace kube-system
 }
 
 run_kubernetes_deployment_test() {
   echo "---- Running Kubernetes Test: $1 ----"
+  prepare_sablier
   prepare_deployment
   sleep 10
   go clean -testcache
@@ -58,6 +58,7 @@ run_kubernetes_deployment_test() {
   fi
 
   destroy_deployment
+  destroy_sablier
 }
 
 trap destroy_kubernetes EXIT

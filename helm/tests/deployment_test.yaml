@@ -1,0 +1,203 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: Sablier Deployment Generation manifest
+templates:
+  - "deployment.yaml"
+release:
+  name: test-sablier
+  namespace: sablier
+tests:
+  - it: should create 1 sablier deployment
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: sablier-test-sablier
+      - equal:
+          path: metadata.namespace
+          value: sablier
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app: sablier-test-sablier
+  - it: should add deploymentLabels
+    set:
+      deploymentLabels:
+        random: test
+        random2: test2
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: sablier-test-sablier
+            random: test
+            random2: test2
+  - it: should not add deployments labels
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: sablier-test-sablier
+  - it: should add deploymentAnnotations
+    set:
+      deploymentAnnotations:
+        random: test
+        random2: test2
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            random: test
+            random2: test2
+  - it: should not add deployment annotations
+    asserts:
+      - notExists:
+          path: metadata.annotations
+  - it: should override replicas
+    set:
+      replicas: 10
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 10
+  - it: should add podLabels
+    set:
+      podLabels:
+        label1: hello
+        labels2: world
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels
+          value:
+            app: sablier-test-sablier
+            label1: hello
+            labels2: world
+
+  - it: should not add podLabels
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels
+          value:
+            app: sablier-test-sablier
+  - it: should add podAnnotations
+    set:
+      podAnnotations:
+        annotations1: hello
+        annotations2: world
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations
+          value:
+            annotations1: hello
+            annotations2: world
+  - it: should not add podAnnotations
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations
+  - it: shoudl set sablier loglevel
+    set:
+      logLevel: debug
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            ["start", "--provider.name=kubernetes", "--logging.level=debug"]
+  - it: should set sablier livenessProbe
+    set:
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: 10001
+        initialDelaySeconds: 7
+        timeoutSeconds: 2
+        successThreshold: 1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: 10001
+            initialDelaySeconds: 7
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+  - it: should set sablier readinessProbe
+    set:
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 10000
+        initialDelaySeconds: 7
+        periodSeconds: 5
+        timeoutSeconds: 1
+        successThreshold: 1
+        failureThreshold: 3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: 10000
+            initialDelaySeconds: 7
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+  - it: should set sablier resource
+    set:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "250m"
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+  - it: should set empty resource
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+  - it: should set new tag and image repository
+    set:
+      image:
+        tag: 1.1.1
+        repository: test
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: test:1.1.1
+  - it: should set new tag only
+    set:
+      image:
+        tag: 1.1.1
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: acouvreur/sablier:1.1.1
+  - it: should override deployment strategy
+    set:
+      deploymentStrategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 50%
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 50%
+              maxSurge: 25%

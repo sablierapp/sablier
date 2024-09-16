@@ -1,0 +1,67 @@
+
+# -- Annotations for all deployed Deployments
+deploymentAnnotations: {}
+
+# -- Labels for all deployed Deployments
+deploymentLabels: {}
+
+# -- Annotations for all deployed pods
+podAnnotations: {}
+
+# -- Labels for all deployed pods
+podLabels: {}
+
+# -- Deployment strategy for all deployed Deployments
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+
+# -- Sablier's replicas
+replicas: 1
+
+# -- Sablier log level
+logLevel: "trace"
+
+image:
+  # -- Sablier image repository
+  repository: "acouvreur/sablier"
+
+  # -- Sablier image tag
+  # (deafult) appVersion
+  tag: ""
+
+# -- Sablier imagePullPolicy
+imagePullPolicy: IfNotPresent
+
+# -- Sablier readinessProbe
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 10000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+# -- Sablier livenessProbe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 10000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+# -- Resource limits and requests for sablier
+resources: {}
+# requests:
+#   memory: "64Mi"
+#   cpu: "250m"
+# limits:
+#   memory: "128Mi"
+#   cpu: "500m"
