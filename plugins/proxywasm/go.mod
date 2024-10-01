@@ -2,7 +2,7 @@ module github.com/acouvreur/sablier/plugins/proxy-wasm
 
 go 1.22.0
 
-toolchain go1.23.1
+toolchain go1.23.2
 
 require (
 	github.com/json-iterator/tinygo v0.0.0-20211221071957-84b5b690c8a0
