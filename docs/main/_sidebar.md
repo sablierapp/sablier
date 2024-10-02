@@ -1,0 +1,28 @@
+- [Introduction](/)
+- [Getting started](/getting-started)
+- [Installation](/installation)
+- [Configuration](/configuration)
+- [Strategies](/strategies)
+- [Themes](/themes)
+- [FAQ](/faq)
+- [Versioning](/versioning)
+- **Providers**
+  - [Overview](/providers/overview)
+  - [<img src="assets/img/docker.svg" height=24px width=24px />Docker](/providers/docker)
+  - [<img src="assets/img/docker_swarm.png" height=24px width=24px />Docker Swarm](/providers/docker_swarm)
+  - [<img src="assets/img/kubernetes.png" height=24px width=24px />Kubernetes](/providers/kubernetes)
+- **Reverse Proxy Plugins**
+  - [Overview](/plugins/overview)
+  - [<img src="assets/img/apacheapisix.png" height=24px width=24px />Apache APISIX](/plugins/apacheapisix)
+  - [<img src="assets/img/caddy.png" height=24px width=24px />Caddy](/plugins/caddy) 
+  - [<img src="assets/img/envoy.png" height=24px width=24px />Envoy](/plugins/envoy)
+  - [<img src="assets/img/istio.png" height=24px width=24px />Istio](/plugins/istio)
+  - [<img src="assets/img/nginx.svg" height=24px width=24px />Nginx (NJS)](/plugins/nginx)
+  - [<img src="assets/img/nginx.svg" height=24px width=24px />Nginx (ProxyWasm)](/plugins/nginx_proxywasm)
+  - [<img src="assets/img/traefik.png" height=24px /> Traefik](/plugins/traefik)
+- **Guides**
+  - [Overview](/guides/overview)
+  - [VSCode Server with Traefik and Kubernetes](/guides/code-server-traefik-kubernetes.md)
+- **Links**
+- [<img src="assets/img/github.svg" />Github](https://github.com/acouvreur/sablier)
+- [<img src="assets/img/docker.svg" height=24px />Docker Hub](https://hub.docker.com/r/acouvreur/sablier)
