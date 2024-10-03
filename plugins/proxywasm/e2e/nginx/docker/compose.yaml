@@ -28,7 +28,7 @@ services:
       - sablier.group=E2E
 
   nginx:
-    image: nginx:1.27.1
+    image: nginx:1.27.2
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
