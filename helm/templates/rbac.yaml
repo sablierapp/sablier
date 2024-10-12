@@ -28,5 +28,5 @@ roleRef:
   name: sablier-{{ .Release.Name }}
 subjects:
   - kind: ServiceAccount
-    name: sablier
+    name: sablier-{{ .Release.Name }}
     namespace: {{ .Release.Namespace }}
