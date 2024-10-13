@@ -61,7 +61,7 @@ http:
 
 In order to use service labels, you have to add the following option on top of each services that will use this plugin.
 
-See also [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/providers/docker/#traefikdockerlbswarm) label
+See also [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/providers/swarm/#traefikdockerlbswarm) label
 
 ```yaml
 services:
