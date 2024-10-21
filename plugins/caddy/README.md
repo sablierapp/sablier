@@ -16,12 +16,12 @@ Here I'll show you two options with Docker.
 ### By using the provided Dockerfile
 
 ```
-docker build https://github.com/sablierapp/sablier.git#v1.8.0-beta.22:plugins/caddy 
+docker build https://github.com/sablierapp/sablier.git#v1.8.1-beta.22:plugins/caddy 
   --build-arg=CADDY_VERSION=2.6.4
   -t caddy:2.6.4-with-sablier
 ```
 
-**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.8.0-beta.22`)
+**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.8.1-beta.22`)
 
 ### By updating your Caddy Dockerfile
 
@@ -29,7 +29,7 @@ docker build https://github.com/sablierapp/sablier.git#v1.8.0-beta.22:plugins/ca
 ARG CADDY_VERSION=2.6.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com/sablierapp/sablier.git#v1.8.0-beta.22 /sablier
+ADD https://github.com/sablierapp/sablier.git#v1.8.1-beta.22 /sablier
 
 RUN xcaddy build \
     --with github.com/sablierapp/sablier/plugins/caddy=/sablier/plugins/caddy

@@ -103,7 +103,7 @@ experimental:
 
 ```bash
 --experimental.plugins.sablier.modulename=github.com/sablierapp/sablier
---experimental.plugins.sablier.version=v1.8.0-beta.22
+--experimental.plugins.sablier.version=v1.8.1-beta.22
 ```
 
 <!-- tabs:end -->
