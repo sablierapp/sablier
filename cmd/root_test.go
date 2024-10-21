@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/acouvreur/sablier/config"
+	"github.com/sablierapp/sablier/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"

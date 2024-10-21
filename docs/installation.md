@@ -9,21 +9,21 @@ You can install Sablier with the following flavors:
 
 ## Use the Docker image
 
-- **Docker Hub**: [acouvreur/sablier](https://hub.docker.com/r/acouvreur/sablier)
-- **Github Container Registry**: [ghcr.io/acouvreur/sablier](https://github.com/acouvreur/sablier/pkgs/container/sablier)
+- **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
+- **Github Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
   
 Choose one of the Docker images and run it with one sample configuration file:
 
-- [sablier.yaml](https://raw.githubusercontent.com/acouvreur/sablier/main/sablier.sample.yaml)
+- [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
 
 ```bash
 docker run -d -p 10000:10000 \
-    -v $PWD/sablier.yml:/etc/sablier/sablier.yml acouvreur/sablier:1.8.0-beta.22
+    -v $PWD/sablier.yml:/etc/sablier/sablier.yml sablierapp/sablier:1.8.0-beta.22
 ```
 
 ## Use the binary distribution
 
-Grab the latest binary from the [releases](https://github.com/acouvreur/sablier/releases) page.
+Grab the latest binary from the [releases](https://github.com/sablierapp/sablier/releases) page.
 
 And run it:
 
@@ -34,7 +34,7 @@ And run it:
 ## Compile your binary from the sources
 
 ```bash
-git clone git@github.com:acouvreur/sablier.git
+git clone git@github.com:sablierapp/sablier.git
 cd sablier
 make
 # Output will change depending on your distro

@@ -10,7 +10,7 @@ on:
       - "v**"
 
 env:
-  REGISTRY_IMAGE: acouvreur/sablier
+  REGISTRY_IMAGE: sablierapp/sablier
 
 jobs:
   build:

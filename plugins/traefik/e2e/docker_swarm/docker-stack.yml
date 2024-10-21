@@ -4,7 +4,7 @@ services:
   traefik:
     image: traefik:v3.0.4
     command:
-      - --experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier
+      - --experimental.localPlugins.sablier.moduleName=github.com/sablierapp/sablier
       - --entryPoints.http.address=:80
       - --providers.swarm=true
       - --providers.swarm.refreshSeconds=1 # Default is 15s
@@ -16,7 +16,7 @@ services:
         mode: host # Won't work in github actions otherwise
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '../../../..:/plugins-local/src/github.com/acouvreur/sablier'
+      - '../../../..:/plugins-local/src/github.com/sablierapp/sablier'
     deploy:
       labels:
         - traefik.http.services.traefik.loadbalancer.server.port=8080
@@ -24,7 +24,7 @@ services:
         condition: none # Do not restart on setup failure
     
   sablier:
-    image: acouvreur/sablier:local
+    image: sablierapp/sablier:local
     command:
       - start
       - --provider.name=swarm
@@ -62,7 +62,7 @@ services:
         - traefik.http.services.sablier.loadbalancer.server.port=10000
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 5s

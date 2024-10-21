@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/acouvreur/sablier/config"
+	"github.com/sablierapp/sablier/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

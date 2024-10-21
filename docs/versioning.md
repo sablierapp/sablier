@@ -12,4 +12,4 @@ Additional labels for pre-release and build metadata are available as extensions
 
 This process is fully automated using [Semantic Release](https://github.com/semantic-release/semantic-release).
 
-The configuration is [release.config.js](https://github.com/acouvreur/sablier/blob/main/release.config.js).
+The configuration is [release.config.js](https://github.com/sablierapp/sablier/blob/main/release.config.js).

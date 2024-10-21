@@ -13,12 +13,12 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/acouvreur/sablier/app/http/routes/models"
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/sessions"
-	"github.com/acouvreur/sablier/app/theme"
-	"github.com/acouvreur/sablier/config"
 	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/app/http/routes/models"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/app/theme"
+	"github.com/sablierapp/sablier/config"
 	"gotest.tools/v3/assert"
 )
 

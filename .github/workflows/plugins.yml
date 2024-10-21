@@ -23,7 +23,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: acouvreur/sablier:local
+          tags: sablierapp/sablier:local
           outputs: type=docker,dest=/tmp/sablier.tar
 
       - name: Upload artifact

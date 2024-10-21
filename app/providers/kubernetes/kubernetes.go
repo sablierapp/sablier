@@ -3,15 +3,15 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/providers"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 
-	"github.com/acouvreur/sablier/app/instance"
-	providerConfig "github.com/acouvreur/sablier/config"
+	"github.com/sablierapp/sablier/app/instance"
+	providerConfig "github.com/sablierapp/sablier/config"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

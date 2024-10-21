@@ -12,7 +12,7 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
 
   sablier:
-    image: acouvreur/sablier:local
+    image: sablierapp/sablier:local
     ports:
       - 10000:10000
     command:
@@ -23,7 +23,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 5s

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/acouvreur/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/providers"
 	log "github.com/sirupsen/logrus"
 )
 

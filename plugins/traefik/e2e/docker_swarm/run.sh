@@ -32,7 +32,7 @@ run_docker_swarm_test() {
   prepare_docker_stack
   sleep 10
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/sablierapp/sablier/e2e; then
     errors=1
     docker service logs ${DOCKER_STACK_NAME}_sablier
     docker service logs ${DOCKER_STACK_NAME}_traefik

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/acouvreur/sablier/app"
+	"github.com/sablierapp/sablier/app"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

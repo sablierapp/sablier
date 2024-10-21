@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/acouvreur/sablier/config"
+	"github.com/sablierapp/sablier/config"
 	log "github.com/sirupsen/logrus"
 )
 

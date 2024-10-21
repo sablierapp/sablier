@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/acouvreur/sablier/version"
 	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/version"
 	"gotest.tools/v3/assert"
 )
 

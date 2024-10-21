@@ -10,12 +10,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/acouvreur/sablier/app/http/middleware"
-	"github.com/acouvreur/sablier/app/http/routes"
-	"github.com/acouvreur/sablier/app/sessions"
-	"github.com/acouvreur/sablier/app/theme"
-	"github.com/acouvreur/sablier/config"
 	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/app/http/middleware"
+	"github.com/sablierapp/sablier/app/http/routes"
+	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/app/theme"
+	"github.com/sablierapp/sablier/config"
 )
 
 func Start(serverConf config.Server, strategyConf config.Strategy, sessionsConf config.Sessions, sessionManager sessions.Manager, t *theme.Themes) {

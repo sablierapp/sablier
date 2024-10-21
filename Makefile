@@ -11,7 +11,7 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDUSER := $(shell whoami)@$(shell hostname)
 
-VPREFIX := github.com/acouvreur/sablier/version
+VPREFIX := github.com/sablierapp/sablier/version
 GO_LDFLAGS := -s -w -X $(VPREFIX).Branch=$(GIT_BRANCH) -X $(VPREFIX).Version=$(VERSION) -X $(VPREFIX).Revision=$(GIT_REVISION) -X $(VPREFIX).BuildUser=$(BUILDUSER) -X $(VPREFIX).BuildDate=$(BUILDTIME)
 
 $(PLATFORMS):
@@ -39,7 +39,7 @@ test-plugin-caddy:
 
 .PHONY: docker
 docker:
-	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t acouvreur/sablier:local .
+	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t sablierapp/sablier:local .
 
 caddy:
 	docker build -t caddy:local plugins/caddy
@@ -56,7 +56,7 @@ proxywasm:
 LAST = 0.0.0
 NEXT = 1.0.0
 update-doc-version:
-	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/acouvreur\/sablier:$(LAST)/acouvreur\/sablier:$(NEXT)/g' {} +
+	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/sablierapp\/sablier:$(LAST)/sablierapp\/sablier:$(NEXT)/g' {} +
 
 update-doc-version-middleware:
 	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/version: "v$(LAST)"/version: "v$(NEXT)"/g' {} +

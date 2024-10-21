@@ -3,7 +3,7 @@ image:
   tag: "2.9.1"
 
 additionalArguments:
-  - "--experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier"
+  - "--experimental.localPlugins.sablier.moduleName=github.com/sablierapp/sablier"
 
 providers:
   kubernetesIngress:
@@ -13,13 +13,13 @@ providers:
 
 additionalVolumeMounts:
   - name: local-sablier-plugin
-    mountPath: /plugins-local/src/github.com/acouvreur/sablier
+    mountPath: /plugins-local/src/github.com/sablierapp/sablier
 
 deployment:
   additionalVolumes:
     - name: local-sablier-plugin
       hostPath:
         # directory location on host
-        path: /plugins-local/src/github.com/acouvreur/sablier
+        path: /plugins-local/src/github.com/sablierapp/sablier
         # this field is optional
         type: Directory 

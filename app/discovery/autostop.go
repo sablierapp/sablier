@@ -2,8 +2,8 @@ package discovery
 
 import (
 	"context"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/pkg/arrays"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/pkg/arrays"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )

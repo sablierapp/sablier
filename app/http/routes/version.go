@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/acouvreur/sablier/version"
+	"github.com/sablierapp/sablier/version"
 )
 
 func GetVersion(c *gin.Context) {

@@ -8,8 +8,8 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/acouvreur/sablier/app/theme"
-	"github.com/acouvreur/sablier/version"
+	"github.com/sablierapp/sablier/app/theme"
+	"github.com/sablierapp/sablier/version"
 )
 
 var (

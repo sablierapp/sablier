@@ -3,10 +3,10 @@ package discovery_test
 import (
 	"context"
 	"errors"
-	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/app/providers/mock"
-	"github.com/acouvreur/sablier/app/types"
+	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/providers/mock"
+	"github.com/sablierapp/sablier/app/types"
 	"testing"
 )
 

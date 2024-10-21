@@ -34,7 +34,7 @@ PROVIDER_NAME=docker
 ```yaml
 services:
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.22
+    image: sablierapp/sablier:1.8.0-beta.22
     command:
       - start
       - --provider.name=docker
@@ -51,7 +51,7 @@ You have to register your containers by opting-in with labels.
 ```yaml
 services:
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     labels:
       - sablier.enable=true
       - sablier.group=mygroup

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/acouvreur/sablier/app/http/healthcheck"
+	"github.com/sablierapp/sablier/app/http/healthcheck"
 	"github.com/spf13/cobra"
 )
 

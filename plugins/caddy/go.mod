@@ -1,4 +1,4 @@
-module github.com/acouvreur/sablier/plugins/caddy
+module github.com/sablierapp/sablier/plugins/caddy
 
 go 1.22.3
 

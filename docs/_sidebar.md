@@ -24,5 +24,5 @@
   - [Overview](/guides/overview)
   - [VSCode Server with Traefik and Kubernetes](/guides/code-server-traefik-kubernetes.md)
 - **Links**
-- [<img src="assets/img/github.svg" />Github](https://github.com/acouvreur/sablier)
-- [<img src="assets/img/docker.svg" height=24px />Docker Hub](https://hub.docker.com/r/acouvreur/sablier)
+- [<img src="assets/img/github.svg" />Github](https://github.com/sablierapp/sablier)
+- [<img src="assets/img/docker.svg" height=24px />Docker Hub](https://hub.docker.com/r/sablierapp/sablier)

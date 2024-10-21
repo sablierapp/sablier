@@ -1,3 +1,3 @@
-module github.com/acouvreur/sablier/plugins/traefik
+module github.com/sablierapp/sablier/plugins/traefik
 
 go 1.22.3

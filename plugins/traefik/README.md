@@ -16,7 +16,7 @@
 experimental:
   plugins:
     sablier:
-      moduleName: "github.com/acouvreur/sablier"
+      moduleName: "github.com/sablierapp/sablier"
       version: "v1.8.0-beta.22"
 ```
 

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/sessions/mocks"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/sessions/mocks"
 	"github.com/stretchr/testify/mock"
 	"gotest.tools/v3/assert"
 )

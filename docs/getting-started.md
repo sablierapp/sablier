@@ -43,7 +43,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
 ```
 
 #### **Caddyfile**
@@ -75,10 +75,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
 
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.22
+    image: sablierapp/sablier:1.8.0-beta.22
     command:
         - start
         - --provider.name=docker
@@ -93,7 +93,7 @@ Because Caddy does not provide any runtime evaluation for the plugins, we need t
 I'll use the provided Dockerfile to build the custom Caddy image.
 
 ```bash
-docker build https://github.com/acouvreur/sablier.git#v1.4.0-beta.3:plugins/caddy 
+docker build https://github.com/sablierapp/sablier.git#v1.4.0-beta.3:plugins/caddy 
   --build-arg=CADDY_VERSION=2.6.4
   -t caddy:2.6.4-with-sablier
 ```
@@ -110,10 +110,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
 
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.22
+    image: sablierapp/sablier:1.8.0-beta.22
     command:
         - start
         - --provider.name=docker
@@ -139,13 +139,13 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     labels:
       - sablier.enable=true
       - sablier.group=demo
   
   sablier:
-    image: acouvreur/sablier:local
+    image: sablierapp/sablier:local
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```

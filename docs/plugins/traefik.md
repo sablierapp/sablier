@@ -26,7 +26,7 @@ You have to use the dynamic config file provider instead.
 
 ```yaml
 whoami:
-  image: acouvreur/whoami:v1.10.2
+  image: sablierapp/whoami:v1.10.2
   labels:
     - traefik.enable
     - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
@@ -66,7 +66,7 @@ See also [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/provi
 ```yaml
 services:
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     deploy:
       replicas: 0
       labels:
@@ -81,7 +81,7 @@ Traefik also have [allowEmptyServices](https://doc.traefik.io/traefik/providers/
 
 You must use [`allowEmptyServices`](https://doc.traefik.io/traefik/providers/kubernetes-ingress/#allowemptyservices)
 
-The blocking strategy is supported by issuing redirect which force client to retry request. It might fail if client do not support redirections (e.g. `curl` without `-L`). The limitation is caused by Traefik architecture. Everytime the underlying configuration changes, the whole router is regenrated, thus changing the router during a request will still map to the old router. For more details, see [#62](https://github.com/acouvreur/sablier/issues/62).
+The blocking strategy is supported by issuing redirect which force client to retry request. It might fail if client do not support redirections (e.g. `curl` without `-L`). The limitation is caused by Traefik architecture. Everytime the underlying configuration changes, the whole router is regenrated, thus changing the router during a request will still map to the old router. For more details, see [#62](https://github.com/sablierapp/sablier/issues/62).
 
 <!-- tabs:end -->
 
@@ -95,14 +95,14 @@ The blocking strategy is supported by issuing redirect which force client to ret
 experimental:
   plugins:
     sablier:
-      moduleName: "github.com/acouvreur/sablier"
+      moduleName: "github.com/sablierapp/sablier"
       version: "v1.8.0-beta.22"
 ```
 
 #### **CLI**
 
 ```bash
---experimental.plugins.sablier.modulename=github.com/acouvreur/sablier
+--experimental.plugins.sablier.modulename=github.com/sablierapp/sablier
 --experimental.plugins.sablier.version=v1.8.0-beta.22
 ```
 

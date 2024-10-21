@@ -1,8 +1,9 @@
 displayName: Sablier
 type: middleware
-iconPath: ./docs/img/hourglass.png
+iconPath: ./docs/img/icon.png
+bannerPath: ./docs/img/banner.png
 
-import: github.com/acouvreur/sablier/plugins/traefik
+import: github.com/sablierapp/sablier/plugins/traefik
 
 summary: "Start your containers on demand, shut them down automatically when there's no activity. Docker, Docker Swarm Mode and Kubernetes compatible."
 

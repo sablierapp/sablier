@@ -58,7 +58,7 @@
         enabled: true
 
     additionalArguments:
-      - "--experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier"
+      - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier"
       - "--experimental.plugins.sablier.version=v1.8.0-beta.22"
 
     providers:
@@ -143,7 +143,7 @@
           serviceAccount: sablier
           containers:
           - name: sablier
-            image: acouvreur/sablier:1.8.0-beta.22
+            image: sablierapp/sablier:1.8.0-beta.22
             args: 
             - "start"
             - "--provider.name=kubernetes"

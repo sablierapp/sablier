@@ -22,7 +22,7 @@ run_docker_classic_test() {
   prepare_docker_classic
   sleep 2
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/sablierapp/sablier/e2e; then
     errors=1
     docker compose -f ${DOCKER_COMPOSE_FILE} -p ${DOCKER_COMPOSE_PROJECT_NAME} logs sablier proxy
   fi

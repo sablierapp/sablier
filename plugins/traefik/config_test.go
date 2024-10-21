@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/acouvreur/sablier/plugins/traefik"
+	"github.com/sablierapp/sablier/plugins/traefik"
 )
 
 var fals bool = false

@@ -13,8 +13,8 @@ docker version
 prepare_kubernetes() {
   docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME up -d
   until kubectl get nodes | grep " Ready "; do sleep 1; done
-  echo "Loading acouvreur/sablier:local into k3s..."
-  docker save acouvreur/sablier:local | docker exec -i ${DOCKER_COMPOSE_PROJECT_NAME}-server-1 ctr images import -
+  echo "Loading sablierapp/sablier:local into k3s..."
+  docker save sablierapp/sablier:local | docker exec -i ${DOCKER_COMPOSE_PROJECT_NAME}-server-1 ctr images import -
   echo "Loading succeeded."
 }
 
@@ -45,7 +45,7 @@ run_kubernetes_deployment_test() {
   prepare_deployment
   sleep 10
   go clean -testcache
-  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/acouvreur/sablier/e2e; then
+  if ! go test -count=1 -tags e2e -timeout 30s -run ^${1}$ github.com/sablierapp/sablier/e2e; then
     errors=1
     kubectl -n kube-system logs deployments/sablier-deployment
     # kubectl -n kube-system logs deployments/caddy

@@ -13,8 +13,8 @@ docker version
 prepare_kubernetes() {
   docker compose -f $DOCKER_COMPOSE_FILE -p $DOCKER_COMPOSE_PROJECT_NAME up -d
   until kubectl get nodes | grep " Ready "; do sleep 1; done
-  echo "Loading acouvreur/sablier:local into k3s..."
-  docker save acouvreur/sablier:local | docker exec -i ${DOCKER_COMPOSE_PROJECT_NAME}-server-1 ctr images import -
+  echo "Loading sablierapp/sablier:local into k3s..."
+  docker save sablierapp/sablier:local | docker exec -i ${DOCKER_COMPOSE_PROJECT_NAME}-server-1 ctr images import -
   echo "Loading succeeded."
 }
 

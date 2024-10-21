@@ -4,7 +4,7 @@ FROM caddy:${CADDY_VERSION}-builder AS builder
 COPY . .
 
 RUN xcaddy build \
-    --with github.com/acouvreur/sablier/plugins/caddy=.
+    --with github.com/sablierapp/sablier/plugins/caddy=.
 
 FROM caddy:${CADDY_VERSION}
 

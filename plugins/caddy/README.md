@@ -16,7 +16,7 @@ Here I'll show you two options with Docker.
 ### By using the provided Dockerfile
 
 ```
-docker build https://github.com/acouvreur/sablier.git#v1.8.0-beta.22:plugins/caddy 
+docker build https://github.com/sablierapp/sablier.git#v1.8.0-beta.22:plugins/caddy 
   --build-arg=CADDY_VERSION=2.6.4
   -t caddy:2.6.4-with-sablier
 ```
@@ -29,10 +29,10 @@ docker build https://github.com/acouvreur/sablier.git#v1.8.0-beta.22:plugins/cad
 ARG CADDY_VERSION=2.6.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com/acouvreur/sablier.git#v1.8.0-beta.22 /sablier
+ADD https://github.com/sablierapp/sablier.git#v1.8.0-beta.22 /sablier
 
 RUN xcaddy build \
-    --with github.com/acouvreur/sablier/plugins/caddy=/sablier/plugins/caddy
+    --with github.com/sablierapp/sablier/plugins/caddy=/sablier/plugins/caddy
 
 FROM caddy:${CADDY_VERSION}
 
@@ -86,6 +86,6 @@ Almost all options are optional and you can setup very simple rules to use the s
 1. Build local sablier
   `docker build -t caddy:local .`
 2. Build local caddy
-  `docker build -t acouvreur/sablier:local ../..`
+  `docker build -t sablierapp/sablier:local ../..`
 3. Run test
   `cd e2e/docker && bash ./run.sh`

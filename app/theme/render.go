@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/acouvreur/sablier/pkg/durations"
-	"github.com/acouvreur/sablier/version"
+	"github.com/sablierapp/sablier/pkg/durations"
+	"github.com/sablierapp/sablier/version"
 )
 
 func (t *Themes) Render(name string, opts Options, writer io.Writer) error {

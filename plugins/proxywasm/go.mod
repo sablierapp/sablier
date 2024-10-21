@@ -1,4 +1,4 @@
-module github.com/acouvreur/sablier/plugins/proxy-wasm
+module github.com/sablierapp/sablier/plugins/proxy-wasm
 
 go 1.22.0
 

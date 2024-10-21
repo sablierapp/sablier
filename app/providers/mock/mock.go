@@ -2,9 +2,9 @@ package mock
 
 import (
 	"context"
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/app/types"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/types"
 	"github.com/stretchr/testify/mock"
 )
 

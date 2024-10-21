@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/acouvreur/sablier/plugins/caddy"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/sablierapp/sablier/plugins/caddy"
 )
 
 var fals bool = false

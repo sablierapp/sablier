@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/providers/mocks"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 )
 

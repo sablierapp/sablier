@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/acouvreur/sablier/cmd"
 	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/cmd"
 )
 
 func main() {

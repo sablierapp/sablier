@@ -35,7 +35,7 @@ PROVIDER_NAME=docker_swarm # or swarm
 ```yaml
 services:
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.22
+    image: sablierapp/sablier:1.8.0-beta.22
     command:
       - start
       - --provider.name=docker_swarm # or swarm
@@ -52,7 +52,7 @@ You have to register your services by opting-in with labels.
 ```yaml
 services:
   whoami:
-    image: acouvreur/whoami:v1.10.2
+    image: sablierapp/whoami:v1.10.2
     deploy:
       labels:
         - sablier.enable=true

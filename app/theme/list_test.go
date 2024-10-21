@@ -4,7 +4,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/acouvreur/sablier/app/theme"
+	"github.com/sablierapp/sablier/app/theme"
 	"github.com/stretchr/testify/assert"
 )
 

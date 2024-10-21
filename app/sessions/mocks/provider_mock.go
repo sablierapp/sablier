@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/pkg/tinykv"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/pkg/tinykv"
 	"github.com/stretchr/testify/mock"
 )
 

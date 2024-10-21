@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/providers"
 	"io"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
 
-	"github.com/acouvreur/sablier/app/instance"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/sablierapp/sablier/app/instance"
 	log "github.com/sirupsen/logrus"
 )
 

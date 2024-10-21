@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/acouvreur/sablier/app/instance"
-	"github.com/acouvreur/sablier/app/providers/mocks"
+	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"

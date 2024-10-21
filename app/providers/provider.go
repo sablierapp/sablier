@@ -2,9 +2,9 @@ package providers
 
 import (
 	"context"
-	"github.com/acouvreur/sablier/app/types"
+	"github.com/sablierapp/sablier/app/types"
 
-	"github.com/acouvreur/sablier/app/instance"
+	"github.com/sablierapp/sablier/app/instance"
 )
 
 type Provider interface {

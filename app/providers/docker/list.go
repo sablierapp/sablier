@@ -3,12 +3,12 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/app/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/types"
 	"strings"
 )
 

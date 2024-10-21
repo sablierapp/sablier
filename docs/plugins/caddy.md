@@ -22,7 +22,7 @@ Here I'll show you two options with Docker.
 #### **Using the provided Dockerfile**
 
 ```bash
-docker build https://github.com/acouvreur/sablier.git#v1.4.0-beta.3:plugins/caddy 
+docker build https://github.com/sablierapp/sablier.git#v1.4.0-beta.3:plugins/caddy 
   --build-arg=CADDY_VERSION=2.6.4
   -t caddy:2.6.4-with-sablier
 ```
@@ -33,10 +33,10 @@ docker build https://github.com/acouvreur/sablier.git#v1.4.0-beta.3:plugins/cadd
 ARG CADDY_VERSION=2.6.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com/acouvreur/sablier.git#v1.4.0-beta.3 /sablier
+ADD https://github.com/sablierapp/sablier.git#v1.4.0-beta.3 /sablier
 
 RUN xcaddy build \
-    --with github.com/acouvreur/sablier/plugins/caddy=/sablier/plugins/caddy
+    --with github.com/sablierapp/sablier/plugins/caddy=/sablier/plugins/caddy
 
 FROM caddy:${CADDY_VERSION}
 

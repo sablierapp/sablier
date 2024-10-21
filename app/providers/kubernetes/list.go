@@ -2,9 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/acouvreur/sablier/app/discovery"
-	"github.com/acouvreur/sablier/app/providers"
-	"github.com/acouvreur/sablier/app/types"
+	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/app/types"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
