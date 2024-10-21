@@ -1,7 +1,7 @@
 displayName: Sablier
 type: middleware
-iconPath: ./docs/img/icon.png
-bannerPath: ./docs/img/banner.png
+iconPath: ./docs/assets/img/icon.png
+bannerPath: ./docs/assets/img/banner.png
 
 import: github.com/sablierapp/sablier/plugins/traefik
 
