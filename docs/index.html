@@ -19,13 +19,8 @@
 <body>
   <div id="app"></div>
   <script>
-    console.log("Loading docs/index.html")
     window.$docsify = {
-      name: '<a id="home-link" class="app-name-link">Sablier</a><div>' +
-              '<select id="version-selector" class="sidebar-version-select" name="version">' +
-              '<option value="main">main</value>' +
-              '<option value="beta">beta</value>' +
-              '</select></div>',
+      name: 'Sablier',
       // disable automatic linking to avoid navigating when clicking on select
       nameLink: false,
       repo: 'https://github.com/sablierapp/sablier',
@@ -34,23 +29,12 @@
       relativePath: true,
       alias: {
         // Uncomment lines below for local development.
-        // '/main/': 'README.md',
-        // '/main/(.*)': '$1',
-        '/beta/.*/_sidebar.md': '/beta/_sidebar.md',
-        '/main/.*/_sidebar.md': '/main/_sidebar.md',
+        '/': 'README.md',
+        '/(.*)': '$1',
       },
       auto2top   : true,
-      maxLevel   : 3,
-      subMaxLevel: 3,
-      namespaces: [
-        {
-          id: "version",
-          values: ["main", "beta"],
-          default: "main",
-          optional: true,
-          selector: "#version-selector",
-        }
-      ],
+      maxLevel   : 2,
+      subMaxLevel: 2,
       tabs: {
         persist    : true,      // default
         sync       : true,      // default
@@ -62,7 +46,6 @@
         paths: 'auto',
         hideOtherSidebarContent: true,
         depth: 3,
-        pathNamespaces: ['/main', '/beta']
       }
     }
   </script>
@@ -77,7 +60,6 @@
   <script src="//unpkg.com/prismjs/components/prism-nginx.min.js"></script>
 
   <!-- plugins -->
-  <script src="//unpkg.com/docsify-namespaced@0.1.1/dist/docsify-namespaced.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
   <script src="//unpkg.com/docsify-copy-code@2"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-edit-on-github"></script>
