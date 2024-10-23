@@ -1,6 +1,6 @@
 FROM golang:1.23 AS build
 
-ADD https://github.com/tinygo-org/tinygo/releases/download/v0.32.0/tinygo_0.32.0_amd64.deb tinygo_amd64.deb
+ADD https://github.com/tinygo-org/tinygo/releases/download/v0.33.0/tinygo_0.33.0_amd64.deb tinygo_amd64.deb
 RUN dpkg -i tinygo_amd64.deb
 
 WORKDIR /go/src/sablier/plugins/proxywasm
