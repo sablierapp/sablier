@@ -71,7 +71,7 @@ services:
       - --entryPoints.http.address=:80
       - --providers.docker=true
       - --providers.file.filename=/etc/traefik/dynamic-config.yml
-      - --experimental.plugins.sablier.moduleName=github.com/acouvreur/sablier/plugins/traefik
+      - --experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier/plugins/traefik
       - --experimental.plugins.sablier.version=v1.8.1-beta.22
     ports:
       - "8080:80"
@@ -80,7 +80,7 @@ services:
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
 
   sablier:
-    image: acouvreur/sablier:1.8.0-beta.22
+    image: sablierapp/sablier:1.8.0
     command:
       - start
       - --provider.name=docker
@@ -166,14 +166,14 @@ services:
   traefik:
     image: traefik:2.9.1
     command:
-      - --experimental.localPlugins.sablier.moduleName=github.com/acouvreur/sablier
+      - --experimental.localPlugins.sablier.moduleName=github.com/sablierapp/sablier
       - --entryPoints.http.address=:80
       - --providers.docker=true
     ports:
       - "8080:80"
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '../../..:/plugins-local/src/github.com/acouvreur/sablier'
+      - '../../..:/plugins-local/src/github.com/sablierapp/sablier'
       - './dynamic-config.yml:/etc/traefik/dynamic-config.yml'
 ```
 

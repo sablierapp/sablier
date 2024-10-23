@@ -23,7 +23,7 @@ spec:
       serviceAccountName: sablier
       containers:
       - name: sablier
-        image: acouvreur/sablier:local
+        image: sablierapp/sablier:local
         args: ["start", "--provider.name=kubernetes", "--logging.level=trace"]
         ports:
         - containerPort: 10000
