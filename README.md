@@ -21,19 +21,23 @@ Either because you don't want to overload your raspberry pi or because your QA e
 
 ## 🎯 Features
 
-- [Supports the following providers](https://sablierapp.dev/sablier/#/providers/overview)
+- [Supports the following providers](https://sablierapp.dev/#/providers/overview)
   - Docker
   - Docker Swarm
   - Kubernetes
-- [Supports multiple reverse proxies](https://sablierapp.dev/sablier/#/plugins/overview)
-  - Nginx
-  - Traefik
+- [Supports multiple reverse proxies](https://sablierapp.dev/#/plugins/overview)
+  - Apache APISIX
   - Caddy
+  - Envoy
+  - Istio
+  - Nginx (NJS Module)
+  - Nginx (WASM Module)
+  - Traefik
 - Scale up your workload automatically upon the first request
-  - [with a themable waiting page](https://sablierapp.dev/sablier/#/themes)
-  - [with a hanging request (hang until service is up)](https://sablierapp.dev/sablier/#/strategies?id=blocking-strategy)
+  - [with a themable waiting page](https://sablierapp.dev/#/themes)
+  - [with a hanging request (hang until service is up)](https://sablierapp.dev/#/strategies?id=blocking-strategy)
 - Scale your workload to zero automatically after a period of inactivity
 
 ## 📝 Documentation
 
-[See the documentation here](https://sablierapp.dev/sablier/#/)
+[See the documentation here](https://sablierapp.dev)
