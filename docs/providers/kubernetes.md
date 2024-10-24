@@ -88,7 +88,7 @@ spec:
     spec:
       containers:
       - name: whoami
-        image: sablierapp/whoami:v1.10.2
+        image: acouvreur/whoami:v1.10.2
 ```
 
 ## How does Sablier knows when a deployment is ready?

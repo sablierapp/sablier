@@ -9,7 +9,7 @@ services:
       - "8080:8080"
 
   sablier:
-    image: acouvreur/sablier:local
+    image: sablierapp/sablier:local
     command:
       - start
       - --provider.name=docker

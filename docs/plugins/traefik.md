@@ -26,7 +26,7 @@ You have to use the dynamic config file provider instead.
 
 ```yaml
 whoami:
-  image: sablierapp/whoami:v1.10.2
+  image: acouvreur/whoami:v1.10.2
   labels:
     - traefik.enable
     - traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)
@@ -66,7 +66,7 @@ See also [`traefik.docker.lbswarm`](https://doc.traefik.io/traefik/routing/provi
 ```yaml
 services:
   whoami:
-    image: sablierapp/whoami:v1.10.2
+    image: acouvreur/whoami:v1.10.2
     deploy:
       replicas: 0
       labels:

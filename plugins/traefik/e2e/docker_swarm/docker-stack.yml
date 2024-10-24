@@ -62,7 +62,7 @@ services:
         - traefik.http.services.sablier.loadbalancer.server.port=10000
 
   whoami:
-    image: sablierapp/whoami:v1.10.2
+    image: acouvreur/whoami:v1.10.2
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 5s
