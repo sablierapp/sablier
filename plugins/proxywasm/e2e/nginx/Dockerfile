@@ -1,6 +1,6 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.10
 
-RUN apt update && apt install libatomic1
+RUN apt update && apt install -y libatomic1
 
 ADD https://github.com/Kong/ngx_wasm_module/releases/download/prerelease-0.3.0/wasmx-prerelease-0.3.0-v8-x86_64-ubuntu22.04.tar.gz wasmx.tar.gz
 
