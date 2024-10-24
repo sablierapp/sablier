@@ -43,7 +43,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/sablier:v1.10.2
+    image: acouvreur/whoami:v1.10.2
 ```
 
 #### **Caddyfile**
@@ -75,7 +75,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/sablier:v1.10.2
+    image: acouvreur/whoami:v1.10.2
 
   sablier:
     image: sablierapp/sablier:1.8.1-beta.22
@@ -110,7 +110,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/sablier:v1.10.2
+    image: acouvreur/whoami:v1.10.2
 
   sablier:
     image: sablierapp/sablier:1.8.1-beta.22
@@ -139,7 +139,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   whoami:
-    image: acouvreur/sablier:v1.10.2
+    image: acouvreur/whoami:v1.10.2
     labels:
       - sablier.enable=true
       - sablier.group=demo

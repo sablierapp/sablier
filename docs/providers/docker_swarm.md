@@ -52,7 +52,7 @@ You have to register your services by opting-in with labels.
 ```yaml
 services:
   whoami:
-    image: acouvreur/sablier:v1.10.2
+    image: acouvreur/whoami:v1.10.2
     deploy:
       labels:
         - sablier.enable=true
