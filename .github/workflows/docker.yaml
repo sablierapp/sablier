@@ -9,6 +9,9 @@ on:
     tags:
       - "v**"
 
+permissions:
+  packages: write # For GHCR
+
 env:
   REGISTRY_IMAGE: sablierapp/sablier
 
