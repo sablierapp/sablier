@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directories:
+      - "/"
+      - "/plugins/caddy"
+      - "/plugins/proxywasm"
+      - "/plugins/traefik"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "acouvreur"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "acouvreur"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    # Look for a `Dockerfile` in the `root` directory
+    directory: "**/*"
+    # Check for updates once a week
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "acouvreur"
