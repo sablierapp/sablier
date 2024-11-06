@@ -61,7 +61,7 @@ update-doc-version:
 update-doc-version-middleware:
 	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/version: "v$(LAST)"/version: "v$(NEXT)"/g' {} +
 	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/version=v$(LAST)/version=v$(NEXT)/g' {} +
-	sed -i 's/SABLIER_VERSION=v$(LAST)/SABLIER_VERSION=v$(NEXT)/g' plugins/caddy/Dockerfile.remote
+	sed -i 's/SABLIER_VERSION=v$(LAST)/SABLIER_VERSION=v$(NEXT)/g' plugins/caddy/remote.Dockerfile
 	sed -i 's/v$(LAST)/v$(NEXT)/g' plugins/caddy/README.md
 
 .PHONY: docs
