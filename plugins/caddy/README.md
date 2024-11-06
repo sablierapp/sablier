@@ -15,24 +15,20 @@ Here I'll show you two options with Docker.
 
 ### By using the provided Dockerfile
 
-```
-docker build https://github.com/sablierapp/sablier.git#v1.8.1-beta.22:plugins/caddy 
-  --build-arg=CADDY_VERSION=2.6.4
-  -t caddy:2.6.4-with-sablier
+```bash
+docker build https://github.com/sablierapp/sablier.git#v1.8.1:plugins/caddy -t caddy:with-sablier
 ```
 
-**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.8.1-beta.22`)
+**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.8.1`)
 
 ### By updating your Caddy Dockerfile
 
-```
-ARG CADDY_VERSION=2.6.4
+```Dockerfile
+ARG CADDY_VERSION=2.8.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com/sablierapp/sablier.git#v1.8.1-beta.22 /sablier
-
 RUN xcaddy build \
-    --with github.com/sablierapp/sablier/plugins/caddy=/sablier/plugins/caddy
+    --with github.com/sablierapp/sablier/plugins/caddy
 
 FROM caddy:${CADDY_VERSION}
 
@@ -43,7 +39,7 @@ COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 You can have the following configuration:
 
-```	
+```Caddyfile
 :80 {
 	route /my/route {
     sablier [<sablierURL>=http://sablier:10000] {
@@ -69,7 +65,7 @@ You can have the following configuration:
 
 Almost all options are optional and you can setup very simple rules to use the server default values.
 
-```	
+```Caddyfile
 :80 {
 	route /my/route {
     sablier {
@@ -81,7 +77,7 @@ Almost all options are optional and you can setup very simple rules to use the s
 }
 ```
 
-## Running end to end tests
+## Running end-to-end tests
 
 1. Build local sablier
   `docker build -t caddy:local .`
