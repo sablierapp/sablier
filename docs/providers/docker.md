@@ -4,7 +4,7 @@ The Docker provider communicates with the `docker.sock` socket to start and stop
 
 ## Use the Docker provider
 
-In order to use the docker provider you can configure the [provider.name](TODO) property.
+In order to use the docker provider you can configure the [provider.name](../configuration) property.
 
 <!-- tabs:start -->
 
@@ -61,4 +61,4 @@ services:
 
 If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
 
-If the containers does not define a Healthcheck, then as soon as the container has the status `started`
+If the containers do not define a Healthcheck, then as soon as the container has the status `started`

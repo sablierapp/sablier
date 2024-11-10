@@ -140,7 +140,6 @@
             app: sablier
         spec:
           serviceAccountName: sablier
-          serviceAccount: sablier
           containers:
           - name: sablier
             image: sablierapp/sablier:1.8.1

@@ -10,7 +10,7 @@ You can install Sablier with the following flavors:
 ## Use the Docker image
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
-- **Github Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
+- **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
   
 Choose one of the Docker images and run it with one sample configuration file:
 

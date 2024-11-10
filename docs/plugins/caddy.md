@@ -22,21 +22,19 @@ Here I'll show you two options with Docker.
 #### **Using the provided Dockerfile**
 
 ```bash
-docker build https://github.com/sablierapp/sablier.git#v1.4.0-beta.3:plugins/caddy 
-  --build-arg=CADDY_VERSION=2.6.4
-  -t caddy:2.6.4-with-sablier
+docker build https://github.com/sablierapp/sablier.git#v1.8.1:plugins/caddy 
+  --build-arg=CADDY_VERSION=2.8.4
+  -t caddy:2.8.4-with-sablier
 ```
 
 #### **Updating your Caddy Dockerfile**
 
 ```docker
-ARG CADDY_VERSION=2.6.4
+ARG CADDY_VERSION=2.8.4
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD https://github.com/sablierapp/sablier.git#v1.4.0-beta.3 /sablier
-
 RUN xcaddy build \
-    --with github.com/sablierapp/sablier/plugins/caddy=/sablier/plugins/caddy
+    --with github.com/sablierapp/sablier/plugins/caddy
 
 FROM caddy:${CADDY_VERSION}
 
@@ -73,7 +71,7 @@ You can have the following configuration:
 
 ### Exemple with a minimal configuration
 
-Almost all options are optional and you can setup very simple rules to use the server default values.
+Almost all options are optional, and you can set up very simple rules to use the server default values.
 
 ```Caddyfile
 :80 {

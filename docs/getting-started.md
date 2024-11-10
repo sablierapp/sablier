@@ -36,7 +36,7 @@ Suppose this is your initial setup with Caddy. You have your reverse proxy with 
 ```yaml
 services:
   proxy:
-    image: caddy:2.6.4
+    image: caddy:2.8.4
     ports:
       - "8080:80"
     volumes:
@@ -68,7 +68,7 @@ Add the Sablier container in the `docker-compose.yaml` file.
 ```yaml
 services:
   proxy:
-    image: caddy:2.6.4
+    image: caddy:2.8.4
     ports:
       - "8080:80"
     volumes:
@@ -93,17 +93,17 @@ Because Caddy does not provide any runtime evaluation for the plugins, we need t
 I'll use the provided Dockerfile to build the custom Caddy image.
 
 ```bash
-docker build https://github.com/sablierapp/sablier.git#v1.4.0-beta.3:plugins/caddy 
-  --build-arg=CADDY_VERSION=2.6.4
-  -t caddy:2.6.4-with-sablier
+docker build https://github.com/sablierapp/sablier.git#v1.8.1:plugins/caddy 
+  --build-arg=CADDY_VERSION=2.8.4
+  -t caddy:2.8.4-with-sablier
 ```
 
-Then change the image to from `caddy:2.6.4` to `caddy:2.6.4-with-sablier`
+Then change the image to from `caddy:2.8.4` to `caddy:2.8.4-with-sablier`
 
 ```yaml
 services:
   proxy:
-    image: caddy:2.6.4-with-sablier
+    image: caddy:2.8.4-with-sablier
     ports:
       - "8080:80"
     volumes:
@@ -123,7 +123,7 @@ services:
 
 ### 4. Configure Caddy to use the Sablier Caddy Plugin on the `whoami` service
 
-This is how you opt-in your services and link them with the plugin.
+This is how you opt in your services and link them with the plugin.
 
 <!-- tabs:start -->
 
@@ -145,7 +145,7 @@ services:
       - sablier.group=demo
   
   sablier:
-    image: sablierapp/sablier:local
+    image: sablierapp/sablier:1.8.1
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```
@@ -175,4 +175,4 @@ Here we've configured the following things when we're accessing the service on `
 
 <!-- tabs:end -->
 
-?> We've assigned the group `demo` to the service and we use this to identify the workload i
+?> We've assigned the group `demo` to the service, and we use this to identify the workload i
