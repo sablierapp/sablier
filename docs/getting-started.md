@@ -78,7 +78,7 @@ services:
     image: acouvreur/whoami:v1.10.2
 
   sablier:
-    image: sablierapp/sablier:1.8.1-beta.22
+    image: sablierapp/sablier:1.8.1
     command:
         - start
         - --provider.name=docker
@@ -113,7 +113,7 @@ services:
     image: acouvreur/whoami:v1.10.2
 
   sablier:
-    image: sablierapp/sablier:1.8.1-beta.22
+    image: sablierapp/sablier:1.8.1
     command:
         - start
         - --provider.name=docker
