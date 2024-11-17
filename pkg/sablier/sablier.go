@@ -1,32 +1,35 @@
 package sablier
 
 import (
-	"context"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/sablierapp/sablier/pkg/promise"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/tinykv"
+	log "github.com/sirupsen/logrus"
 	"sync"
+	"time"
 )
 
-type PubSub interface {
-	message.Publisher
-	message.Subscriber
-}
-
-type Provider interface {
-	Start(ctx context.Context, name string, opts StartOptions) error
-	Stop(ctx context.Context, name string) error
-	Status(ctx context.Context, name string) (bool, error)
-
-	Events(ctx context.Context) (<-chan Message, <-chan error)
-}
-
 type Sablier struct {
-	provider    Provider
+	Provider    provider.Provider
 	promises    map[string]*promise.Promise[Instance]
 	expirations tinykv.KV[string]
 
-	pubsub PubSub
+	lock *sync.RWMutex
+}
 
-	lock sync.RWMutex
+func NewSablier(provider provider.Provider) *Sablier {
+	lock := &sync.RWMutex{}
+	promises := make(map[string]*promise.Promise[Instance])
+	expirations := tinykv.New(time.Second, func(k string, _ string) {
+		lock.Lock()
+		defer lock.Unlock()
+		log.Printf("instance [%s] expired - removing from promises", k)
+		delete(promises, k)
+	})
+	return &Sablier{
+		Provider:    provider,
+		promises:    promises,
+		expirations: expirations,
+		lock:        lock,
+	}
 }

@@ -1,0 +1,9 @@
+with-expecter: True
+packages:
+  github.com/sablierapp/sablier/pkg/provider:
+    interfaces:
+      Provider:
+        config:
+          dir: pkg/provider/mock
+          filename: mock.go
+          outpkg: mock

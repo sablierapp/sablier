@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
 	"context"
 	"fmt"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers/docker"
 	"github.com/sablierapp/sablier/app/providers/dockerswarm"
@@ -17,8 +17,8 @@ import (
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	"github.com/sablierapp/sablier/version"
 	log "github.com/sirupsen/logrus"

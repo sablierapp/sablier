@@ -2,100 +2,145 @@ package sablier_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	log "log/slog"
-	"time"
-
+	"fmt"
 	"github.com/sablierapp/sablier/pkg/promise"
+	"github.com/sablierapp/sablier/pkg/provider"
+	pmock "github.com/sablierapp/sablier/pkg/provider/mock"
+	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"testing"
+	"time"
 )
 
-type StartOptions struct {
-	DesiredReplicas uint32
-}
-
-// StartInstance allows you to start an instance of a workload.
-// An instance
-func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise[Instance] {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	log.Info("request to start instance [%v] received", name)
-
-	// If there is an ongoing request, return it
-	// If the last request was rejected, recreate one
-	pr, ok := s.promises[name]
-	if ok && !pr.Rejected() {
-		log.Info("request to start instance %v is already in progress", name)
-		return pr
+func TestStartInstance(t *testing.T) {
+	ctx := context.Background()
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 5 * time.Second,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       1 * time.Minute,
 	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(nil).Once()
+	s := sablier.NewSablier(m)
 
-	// Otherwise, create a new request
-	pr = s.StartInstancePromise(name, opts)
-	log.Info("request to start instance %v created", name)
-	s.promises[name] = pr
+	p := s.StartInstance(name, opts)
+	instance, err := p.Await(ctx)
 
-	return pr
+	assert.NoError(t, err)
+	assert.Equal(t, "myinstance", instance.Name)
+	assert.Equal(t, sablier.InstanceRunning, instance.Status)
 }
 
-func (s *Sablier) StartInstancePromise(name string, opts StartOptions) *promise.Promise[Instance] {
-	return promise.New(func(resolve func(Instance), reject func(error)) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-		defer cancel()
+func TestStartSamePromise(t *testing.T) {
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 5 * time.Second,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       1 * time.Minute,
+	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(nil).Once()
 
-		log.Info("starting instance", "instance", name)
-		ready, err := s.provider.Status(ctx, name)
-		if err != nil {
-			log.Error("error starting instance %v: %v", name, err)
-			reject(err)
-			return
-		}
+	s := sablier.NewSablier(m)
 
-		if !ready {
-			messages, err := s.pubsub.Subscribe(ctx, "sablier.instance")
-			if err != nil {
-				reject(err)
-				return
-			}
+	p1 := s.StartInstance(name, opts)
+	p2 := s.StartInstance(name, opts)
 
-			if err := s.provider.Start(ctx, name, opts); err != nil {
-				log.Info("error starting instance", "instance", name, "error", err)
-				reject(err)
-			}
+	_, err := promise.All(context.Background(), p1, p2).Await(context.Background())
+	assert.NoError(t, err)
 
-			for {
-				select {
-				case msg, ok := <-messages:
-					if !ok {
-						reject(errors.New("publisher channel closed"))
-						return
-					}
+	assert.Same(t, p1, p2)
+}
 
-					var event Message
-					err := json.Unmarshal(msg.Payload, &event)
-					if err != nil {
-						return
-					}
-					if event.Name == name {
-						cancel()
-						if event.Action == EventActionReady {
-							cancel()
-						}
-						if event.Action == Eve {
-							// Something else ?
-						}
-					}
-				case <-ctx.Done():
-					reject(ctx.Err())
-					return
-				}
-			}
-		}
+func TestStartExpires(t *testing.T) {
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 5 * time.Second,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       1 * time.Second,
+	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(nil).Twice()
 
-		started := Instance{
-			Name:   name,
-			Status: InstanceRunning,
-		}
-		log.Info("successfully started instance", "instance", name)
-		resolve(started)
-	})
+	s := sablier.NewSablier(m)
+
+	p1 := s.StartInstance(name, opts)
+	_, err := p1.Await(context.Background())
+	assert.NoError(t, err)
+
+	<-time.After(opts.ExpiresAfter * 2)
+
+	p2 := s.StartInstance(name, opts)
+	_, err = p2.Await(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotSame(t, p1, p2)
+}
+
+func TestStartAgainOnError(t *testing.T) {
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 5 * time.Second,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       5 * time.Second,
+	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(fmt.Errorf("some error happened")).Once()
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(nil).Once()
+
+	s := sablier.NewSablier(m)
+
+	p1 := s.StartInstance(name, opts)
+	_, err := p1.Await(context.Background())
+	assert.Error(t, err)
+
+	p2 := s.StartInstance(name, opts)
+	_, err = p2.Await(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotSame(t, p1, p2)
+}
+
+func TestStartInstanceError(t *testing.T) {
+	ctx := context.Background()
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 5 * time.Second,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       1 * time.Minute,
+	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).Return(errors.New("myinstance container not found")).Once()
+	s := sablier.NewSablier(m)
+
+	p := s.StartInstance(name, opts)
+	_, err := p.Await(ctx)
+
+	assert.Error(t, err)
 }

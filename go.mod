@@ -7,11 +7,14 @@ toolchain go1.23.2
 replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
 
 require (
+	github.com/ThreeDotsLabs/watermill v1.4.1
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/gavv/httpexpect/v2 v2.15.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/panjf2000/ants/v2 v2.10.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
+	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
@@ -25,7 +28,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/ThreeDotsLabs/watermill v1.4.1 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
@@ -94,7 +96,6 @@ require (
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sanity-io/litter v1.5.5 // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
-	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

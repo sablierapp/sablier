@@ -18,6 +18,7 @@ $(PLATFORMS):
 	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) go build -trimpath -tags=nomsgpack -v -ldflags="${GO_LDFLAGS}" -o 'sablier_$(VERSION)_$(os)-$(arch)' .
 
 build:
+	mockery
 	go build -v .
 
 test:
