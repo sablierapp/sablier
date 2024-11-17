@@ -1,6 +1,7 @@
 package sablier
 
 import (
+	"context"
 	"github.com/sablierapp/sablier/pkg/promise"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/tinykv"
@@ -24,6 +25,10 @@ func NewSablier(provider provider.Provider) *Sablier {
 		lock.Lock()
 		defer lock.Unlock()
 		log.Printf("instance [%s] expired - removing from promises", k)
+		err := provider.Stop(context.Background(), k)
+		if err != nil {
+			log.Printf("error stopping instance [%s]: %v", k, err)
+		}
 		delete(promises, k)
 	})
 	return &Sablier{

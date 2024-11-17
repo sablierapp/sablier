@@ -76,6 +76,7 @@ func TestStartExpires(t *testing.T) {
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Twice()
+	m.EXPECT().Stop(mock.Anything, name).Return(nil).Once()
 
 	s := sablier.NewSablier(m)
 
@@ -125,6 +126,9 @@ func TestStartRefreshes(t *testing.T) {
 	p3 := s.StartInstance(name, opts)
 
 	assert.Same(t, p1, p2, p3)
+
+	_, err := promise.AllSettled(context.Background(), p1, p2, p3).Await(context.Background())
+	assert.NoError(t, err)
 }
 
 func TestStartAgainOnError(t *testing.T) {
