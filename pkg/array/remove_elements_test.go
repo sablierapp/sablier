@@ -1,4 +1,4 @@
-package arrays
+package array
 
 import (
 	"reflect"

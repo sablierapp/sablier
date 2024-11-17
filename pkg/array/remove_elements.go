@@ -1,4 +1,4 @@
-package arrays
+package array
 
 // RemoveElements returns a new slice containing all elements from `allElements` that are not in `elementsToRemove`
 func RemoveElements(allElements, elementsToRemove []string) []string {

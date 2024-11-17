@@ -1,13 +1,16 @@
 package app
 
 import (
+	"github.com/ThreeDotsLabs/watermill/message"
 	"context"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers/docker"
 	"github.com/sablierapp/sablier/app/providers/dockerswarm"
 	"github.com/sablierapp/sablier/app/providers/kubernetes"
+	"github.com/sablierapp/sablier/pkg/promise"
 	"os"
+	"sync"
 
 	"github.com/sablierapp/sablier/app/http"
 	"github.com/sablierapp/sablier/app/instance"
@@ -20,6 +23,26 @@ import (
 	"github.com/sablierapp/sablier/version"
 	log "github.com/sirupsen/logrus"
 )
+
+// TODO:
+// For blocking: retry policy
+// For retrieving result: global timeout
+// Publisher / Reconcile loop with providers
+
+type PubSub interface {
+	message.Publisher
+	message.Subscriber
+}
+
+type Sablier struct {
+	provider    Provider
+	promises    map[string]*promise.Promise[Instance]
+	expirations tinykv.KV[string]
+
+	pubsub PubSub
+
+	lock sync.RWMutex
+}
 
 func Start(conf config.Config) error {
 

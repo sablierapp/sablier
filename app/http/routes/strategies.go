@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	theme2 "github.com/sablierapp/sablier/pkg/theme"
 	"net/http"
 	"os"
 	"sort"
@@ -16,21 +17,20 @@ import (
 	"github.com/sablierapp/sablier/app/http/routes/models"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 )
 
 var osDirFS = os.DirFS
 
 type ServeStrategy struct {
-	Theme *theme.Themes
+	Theme *theme2.Themes
 
 	SessionsManager sessions.Manager
 	StrategyConfig  config.Strategy
 	SessionsConfig  config.Sessions
 }
 
-func NewServeStrategy(sessionsManager sessions.Manager, strategyConf config.Strategy, sessionsConf config.Sessions, themes *theme.Themes) *ServeStrategy {
+func NewServeStrategy(sessionsManager sessions.Manager, strategyConf config.Strategy, sessionsConf config.Sessions, themes *theme2.Themes) *ServeStrategy {
 
 	serveStrategy := &ServeStrategy{
 		Theme:           themes,
@@ -73,7 +73,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 		c.Header("X-Sablier-Session-Status", "not-ready")
 	}
 
-	renderOptions := theme.Options{
+	renderOptions := theme2.Options{
 		DisplayName:      request.DisplayName,
 		ShowDetails:      request.ShowDetails,
 		SessionDuration:  request.SessionDuration,
@@ -139,7 +139,7 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]interface{}{"session": sessionState})
 }
 
-func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme.Instance) {
+func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme2.Instance) {
 	if sessionState == nil {
 		log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState is nil")
 		return
@@ -161,7 +161,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState *instance.State) theme.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState *instance.State) theme2.Instance {
 
 	var err error
 	if instanceState.Message == "" {
@@ -170,7 +170,7 @@ func instanceStateToRenderOptionsRequestState(instanceState *instance.State) the
 		err = fmt.Errorf(instanceState.Message)
 	}
 
-	return theme.Instance{
+	return theme2.Instance{
 		Name:            instanceState.Name,
 		Status:          instanceState.Status,
 		CurrentReplicas: instanceState.CurrentReplicas,

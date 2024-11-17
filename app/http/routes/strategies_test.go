@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,6 @@ import (
 	"github.com/sablierapp/sablier/app/http/routes/models"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 	"gotest.tools/v3/assert"
 )

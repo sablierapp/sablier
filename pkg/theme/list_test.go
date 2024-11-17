@@ -1,10 +1,10 @@
 package theme_test
 
 import (
+	"github.com/sablierapp/sablier/pkg/theme"
 	"testing"
 	"testing/fstest"
 
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/stretchr/testify/assert"
 )
 

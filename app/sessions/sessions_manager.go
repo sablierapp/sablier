@@ -169,7 +169,10 @@ func (s *SessionsManager) RequestSessionGroup(group string, duration time.Durati
 		return nil
 	}
 
-	names := s.groups[group]
+	names, ok := s.groups[group]
+	if !ok {
+
+	}
 
 	if len(names) == 0 {
 		return nil

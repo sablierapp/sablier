@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -14,7 +15,6 @@ import (
 	"github.com/sablierapp/sablier/app/http/middleware"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/sessions"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 )
 

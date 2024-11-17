@@ -3,7 +3,7 @@ package discovery
 import (
 	"context"
 	"github.com/sablierapp/sablier/app/providers"
-	"github.com/sablierapp/sablier/pkg/arrays"
+	"github.com/sablierapp/sablier/pkg/array"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,7 +30,7 @@ func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provid
 		names = append(names, instance.Name)
 	}
 
-	unregistered := arrays.RemoveElements(names, registered)
+	unregistered := array.RemoveElements(names, registered)
 	log.Tracef("Found %v unregistered instances ", len(instances))
 
 	waitGroup := errgroup.Group{}
