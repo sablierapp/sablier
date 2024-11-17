@@ -25,8 +25,17 @@ func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise
 	// If there is an ongoing request, return it
 	// If the last request was rejected, recreate one
 	pr, ok := s.promises[name]
-	if ok && !pr.Rejected() {
+	if ok && pr.Pending() {
 		log.Printf("request to start instance [%v] is already in progress", name)
+		return pr
+	}
+
+	if ok && pr.Fulfilled() {
+		log.Printf("request to start instance [%v] is already started, refreshing duration", name)
+		err := s.expirations.Put(name, name, opts.ExpiresAfter)
+		if err != nil {
+			log.Printf("failed to refresh instance [%v]: %v", name, err)
+		}
 		return pr
 	}
 

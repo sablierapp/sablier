@@ -92,6 +92,41 @@ func TestStartExpires(t *testing.T) {
 	assert.NotSame(t, p1, p2)
 }
 
+func TestStartRefreshes(t *testing.T) {
+	name := "myinstance"
+	opts := sablier.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 0,
+		Timeout:            30 * time.Second,
+		ExpiresAfter:       2 * time.Second,
+	}
+	m := pmock.NewMockProvider(t)
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+		DesiredReplicas:    opts.DesiredReplicas,
+		ConsiderReadyAfter: opts.ConsiderReadyAfter,
+	}).RunAndReturn(func(_ context.Context, _ string, _ provider.StartOptions) error {
+		<-time.After(1000 * time.Millisecond)
+		return nil
+	}).Once()
+
+	s := sablier.NewSablier(m)
+
+	// First call creates a new promise
+	p1 := s.StartInstance(name, opts)
+
+	<-time.After(500 * time.Millisecond)
+
+	// Second call returns the pending promise
+	p2 := s.StartInstance(name, opts)
+
+	<-time.After(1500 * time.Millisecond)
+
+	// Third call refreshes the duration on the already fulfilled promise
+	p3 := s.StartInstance(name, opts)
+
+	assert.Same(t, p1, p2, p3)
+}
+
 func TestStartAgainOnError(t *testing.T) {
 	name := "myinstance"
 	opts := sablier.StartOptions{
