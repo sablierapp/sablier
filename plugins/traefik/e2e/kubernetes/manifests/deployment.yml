@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: whoami-deployment
+  name: whoami
   labels:
-    app: whoami
-    sablier.enable: "true"
-    sablier.group: "E2E"
+    app.kubernetes.io/name: whoami
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: "E2E"
 spec:
   replicas: 0
   selector:
     matchLabels:
-      app: whoami
+      app.kubernetes.io/name: whoami
   template:
     metadata:
       labels:
-        app: whoami
+        app.kubernetes.io/name: whoami
     spec:
       containers:
       - name: whoami
@@ -36,7 +36,7 @@ spec:
     targetPort: 80
     port: 80
   selector:
-    app: whoami
+    app.kubernetes.io/name: whoami
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -160,18 +160,18 @@ kind: Deployment
 metadata:
   name: nginx-deployment
   labels:
-    app: nginx
-    sablier.enable: "true"
-    sablier.group: "E2E"
+    app.kubernetes.io/name: nginx
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: "E2E"
 spec:
   replicas: 0
   selector:
     matchLabels:
-      app: nginx
+      app.kubernetes.io/name: nginx
   template:
     metadata:
       labels:
-        app: nginx
+        app.kubernetes.io/name: nginx
     spec:
       containers:
       - name: nginx
@@ -195,7 +195,7 @@ spec:
     targetPort: 80
     port: 80
   selector:
-    app: nginx
+    app.kubernetes.io/name: nginx
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
