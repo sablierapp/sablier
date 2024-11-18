@@ -15,7 +15,9 @@ import (
 )
 
 func TestStartInstance(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -28,7 +30,7 @@ func TestStartInstance(t *testing.T) {
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	p := s.StartInstance(name, opts)
 	instance, err := p.Await(ctx)
@@ -39,6 +41,9 @@ func TestStartInstance(t *testing.T) {
 }
 
 func TestStartSamePromise(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -52,7 +57,7 @@ func TestStartSamePromise(t *testing.T) {
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
 
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	p1 := s.StartInstance(name, opts)
 	p2 := s.StartInstance(name, opts)
@@ -64,6 +69,9 @@ func TestStartSamePromise(t *testing.T) {
 }
 
 func TestStartExpires(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -78,7 +86,7 @@ func TestStartExpires(t *testing.T) {
 	}).Return(nil).Twice()
 	m.EXPECT().Stop(mock.Anything, name).Return(nil).Once()
 
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	p1 := s.StartInstance(name, opts)
 	_, err := p1.Await(context.Background())
@@ -94,6 +102,9 @@ func TestStartExpires(t *testing.T) {
 }
 
 func TestStartRefreshes(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -110,7 +121,7 @@ func TestStartRefreshes(t *testing.T) {
 		return nil
 	}).Once()
 
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	// First call creates a new promise
 	p1 := s.StartInstance(name, opts)
@@ -132,6 +143,9 @@ func TestStartRefreshes(t *testing.T) {
 }
 
 func TestStartAgainOnError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -149,7 +163,7 @@ func TestStartAgainOnError(t *testing.T) {
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
 
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	p1 := s.StartInstance(name, opts)
 	_, err := p1.Await(context.Background())
@@ -163,7 +177,9 @@ func TestStartAgainOnError(t *testing.T) {
 }
 
 func TestStartInstanceError(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	name := "myinstance"
 	opts := sablier.StartOptions{
 		DesiredReplicas:    1,
@@ -176,7 +192,7 @@ func TestStartInstanceError(t *testing.T) {
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(errors.New("myinstance container not found")).Once()
-	s := sablier.NewSablier(m)
+	s := sablier.NewSablier(ctx, m)
 
 	p := s.StartInstance(name, opts)
 	_, err := p.Await(ctx)
