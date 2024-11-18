@@ -2,12 +2,14 @@ package sablier
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/sablierapp/sablier/pkg/promise"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
-	"sync"
-	"time"
+	"golang.org/x/exp/maps"
 )
 
 type Sablier struct {
@@ -31,14 +33,22 @@ func NewSablier(ctx context.Context, provider provider.Provider) *Sablier {
 		}
 		delete(promises, k)
 	})
+
 	go func() {
 		<-ctx.Done()
 		expirations.Stop()
 	}()
+
 	return &Sablier{
 		Provider:    provider,
 		promises:    promises,
 		expirations: expirations,
 		lock:        lock,
 	}
+}
+
+func (s *Sablier) RegisteredInstances() []string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return maps.Keys(s.promises)
 }

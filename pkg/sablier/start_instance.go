@@ -2,11 +2,11 @@ package sablier
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/pkg/provider"
 	"log"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
+	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 type StartOptions struct {

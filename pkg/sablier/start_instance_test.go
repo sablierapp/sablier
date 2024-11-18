@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/sablierapp/sablier/pkg/promise"
 	"github.com/sablierapp/sablier/pkg/provider"
 	pmock "github.com/sablierapp/sablier/pkg/provider/mock"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 )
 
 func TestStartInstance(t *testing.T) {

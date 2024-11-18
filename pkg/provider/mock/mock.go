@@ -82,9 +82,9 @@ func (_c *MockProvider_Events_Call) RunAndReturn(run func(context.Context) (<-ch
 	return _c
 }
 
-// List provides a mock function with given fields: ctx, name
-func (_m *MockProvider) List(ctx context.Context, name string) ([]string, error) {
-	ret := _m.Called(ctx, name)
+// List provides a mock function with given fields: ctx, opts
+func (_m *MockProvider) List(ctx context.Context, opts provider.ListOptions) ([]string, error) {
+	ret := _m.Called(ctx, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -92,19 +92,19 @@ func (_m *MockProvider) List(ctx context.Context, name string) ([]string, error)
 
 	var r0 []string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) ([]string, error)); ok {
-		return rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, provider.ListOptions) ([]string, error)); ok {
+		return rf(ctx, opts)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) []string); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, provider.ListOptions) []string); ok {
+		r0 = rf(ctx, opts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
+	if rf, ok := ret.Get(1).(func(context.Context, provider.ListOptions) error); ok {
+		r1 = rf(ctx, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -119,14 +119,14 @@ type MockProvider_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-//   - name string
-func (_e *MockProvider_Expecter) List(ctx interface{}, name interface{}) *MockProvider_List_Call {
-	return &MockProvider_List_Call{Call: _e.mock.On("List", ctx, name)}
+//   - opts provider.ListOptions
+func (_e *MockProvider_Expecter) List(ctx interface{}, opts interface{}) *MockProvider_List_Call {
+	return &MockProvider_List_Call{Call: _e.mock.On("List", ctx, opts)}
 }
 
-func (_c *MockProvider_List_Call) Run(run func(ctx context.Context, name string)) *MockProvider_List_Call {
+func (_c *MockProvider_List_Call) Run(run func(ctx context.Context, opts provider.ListOptions)) *MockProvider_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(provider.ListOptions))
 	})
 	return _c
 }
@@ -136,7 +136,7 @@ func (_c *MockProvider_List_Call) Return(_a0 []string, _a1 error) *MockProvider_
 	return _c
 }
 
-func (_c *MockProvider_List_Call) RunAndReturn(run func(context.Context, string) ([]string, error)) *MockProvider_List_Call {
+func (_c *MockProvider_List_Call) RunAndReturn(run func(context.Context, provider.ListOptions) ([]string, error)) *MockProvider_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

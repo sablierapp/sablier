@@ -36,11 +36,16 @@ type StartOptions struct {
 	ConsiderReadyAfter time.Duration
 }
 
+type ListOptions struct {
+	// All list all instances whatever their status (up or down)
+	All bool
+}
+
 type Provider interface {
 	Start(ctx context.Context, name string, opts StartOptions) error
 	Stop(ctx context.Context, name string) error
 	Status(ctx context.Context, name string) (bool, error)
-	List(ctx context.Context, name string) ([]string, error)
+	List(ctx context.Context, opts ListOptions) ([]string, error)
 
 	Events(ctx context.Context) (<-chan Message, <-chan error)
 }
