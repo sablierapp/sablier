@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
+	"github.com/sablierapp/sablier/pkg/provider"
 	pmock "github.com/sablierapp/sablier/pkg/provider/mock"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestStartInstance(t *testing.T) {
 		ExpiresAfter:       1 * time.Minute,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
@@ -52,7 +53,7 @@ func TestStartSamePromise(t *testing.T) {
 		ExpiresAfter:       1 * time.Minute,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
@@ -80,7 +81,7 @@ func TestStartExpires(t *testing.T) {
 		ExpiresAfter:       1 * time.Second,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Twice()
@@ -113,10 +114,10 @@ func TestStartRefreshes(t *testing.T) {
 		ExpiresAfter:       2 * time.Second,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
-	}).RunAndReturn(func(_ context.Context, _ string, _ sablier.StartOptions) error {
+	}).RunAndReturn(func(_ context.Context, _ string, _ provider.StartOptions) error {
 		<-time.After(1000 * time.Millisecond)
 		return nil
 	}).Once()
@@ -154,11 +155,11 @@ func TestStartAgainOnError(t *testing.T) {
 		ExpiresAfter:       5 * time.Second,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(fmt.Errorf("some error happened")).Once()
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
@@ -188,7 +189,7 @@ func TestStartInstanceError(t *testing.T) {
 		ExpiresAfter:       1 * time.Minute,
 	}
 	m := pmock.NewMockProvider(t)
-	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(errors.New("myinstance container not found")).Once()

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
+	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 type StartOptions struct {
@@ -16,7 +17,7 @@ type StartOptions struct {
 }
 
 // StartInstance allows you to start an instance of a workload.
-func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise[Instance] {
+func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise[InstanceInfo] {
 	s.pmu.Lock()
 	defer s.pmu.Unlock()
 	log.Printf("request to start instance [%v] received", name)
@@ -46,17 +47,19 @@ func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise
 	return pr
 }
 
-func (s *Sablier) startInstancePromise(name string, opts StartOptions) *promise.Promise[Instance] {
-	return promise.New(func(resolve func(Instance), reject func(error)) {
+func (s *Sablier) startInstancePromise(name string, opts StartOptions) *promise.Promise[InstanceInfo] {
+	return promise.New(func(resolve func(InstanceInfo), reject func(error)) {
 		err := s.startInstance(name, opts)
 		if err != nil {
 			reject(err)
 			return
 		}
 
-		started := Instance{
-			Name:   name,
-			Status: InstanceRunning,
+		started := InstanceInfo{
+			Name:            name,
+			CurrentReplicas: opts.DesiredReplicas, // Current replicas are assumed
+			DesiredReplicas: opts.DesiredReplicas,
+			Status:          InstanceRunning,
 		}
 		resolve(started)
 	})
@@ -67,7 +70,7 @@ func (s *Sablier) startInstance(name string, opts StartOptions) error {
 	defer cancel()
 
 	log.Printf("starting instance [%s]", name)
-	err := s.Provider.Start(ctx, name, StartOptions{
+	err := s.Provider.Start(ctx, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	})

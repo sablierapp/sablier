@@ -13,13 +13,9 @@ const (
 	EventActionCreate EventAction = "create"
 
 	// EventActionRemove describes when a workload has been destroyed
-	EventActionRemove EventAction = "destroy"
+	EventActionRemove EventAction = "remove"
 
-	// EventActionReady describes when a workload is ready to handle traffic
-	EventActionReady EventAction = "ready"
-
-	// EventActionStart describes when a workload is started but not necessarily ready
-
+	// EventActionStart describes when a workload is started and ready
 	EventActionStart EventAction = "start"
 
 	// EventActionStop describes when a workload is stopped
@@ -27,16 +23,16 @@ const (
 )
 
 type Message struct {
-	Instance Instance
+	Instance InstanceConfig
 	Action   EventAction
 }
 
 type Provider interface {
 	Start(ctx context.Context, name string, opts provider.StartOptions) error
 	Stop(ctx context.Context, name string) error
-	Status(ctx context.Context, name string) (bool, error)
+	Info(ctx context.Context, name string) (InstanceInfo, error)
 
-	List(ctx context.Context, opts provider.ListOptions) ([]Instance, error)
+	List(ctx context.Context, opts provider.ListOptions) ([]InstanceConfig, error)
 
 	Events(ctx context.Context) (<-chan Message, <-chan error)
 }

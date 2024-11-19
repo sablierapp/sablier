@@ -13,10 +13,10 @@ import (
 
 type Sablier struct {
 	Provider Provider
-	promises map[string]*promise.Promise[Instance]
+	promises map[string]*promise.Promise[InstanceInfo]
 	pmu      *sync.RWMutex
 
-	groups map[string][]Instance
+	groups map[string][]InstanceConfig
 	gmu    *sync.RWMutex
 
 	expirations tinykv.KV[string]
@@ -24,10 +24,10 @@ type Sablier struct {
 
 func NewSablier(ctx context.Context, provider Provider) *Sablier {
 	pmu := &sync.RWMutex{}
-	promises := make(map[string]*promise.Promise[Instance])
+	promises := make(map[string]*promise.Promise[InstanceInfo])
 
 	gmu := &sync.RWMutex{}
-	groups := make(map[string][]Instance)
+	groups := make(map[string][]InstanceConfig)
 
 	expirations := tinykv.New(time.Second, func(k string, _ string) {
 		pmu.Lock()
@@ -65,7 +65,7 @@ func (s *Sablier) RegisteredInstances() []string {
 	return maps.Keys(s.promises)
 }
 
-func (s *Sablier) SetGroups(groups map[string][]Instance) {
+func (s *Sablier) SetGroups(groups map[string][]InstanceConfig) {
 	s.gmu.Lock()
 	defer s.gmu.Unlock()
 	s.groups = groups

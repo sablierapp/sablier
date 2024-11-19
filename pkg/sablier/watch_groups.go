@@ -49,7 +49,7 @@ func (s *Sablier) updateGroups(ctx context.Context) {
 	if err != nil {
 		log.Printf("error listing instances: %v", err)
 	}
-	groups := array.GroupByProperty(instances, func(t Instance) string {
+	groups := array.GroupByProperty(instances, func(t InstanceConfig) string {
 		return t.Name
 	})
 	s.SetGroups(groups)

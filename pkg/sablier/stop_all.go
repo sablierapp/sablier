@@ -16,9 +16,12 @@ func (s *Sablier) StopAllUnregistered(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	names := array.Map(instances, func(t InstanceConfig) string {
+		return t.Name
+	})
 
 	registered := s.RegisteredInstances()
-	unregistered := array.RemoveElements(instances, registered)
+	unregistered := array.RemoveElements(names, registered)
 	log.Tracef("Found %v unregistered instances ", len(unregistered))
 
 	waitGroup := errgroup.Group{}

@@ -1,6 +1,6 @@
 with-expecter: True
 packages:
-  github.com/sablierapp/sablier/pkg/provider:
+  github.com/sablierapp/sablier/pkg/sablier:
     interfaces:
       Provider:
         config:
