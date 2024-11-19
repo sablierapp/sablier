@@ -6,26 +6,32 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
-	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 )
 
 type Sablier struct {
-	Provider    provider.Provider
-	promises    map[string]*promise.Promise[Instance]
-	expirations tinykv.KV[string]
+	Provider Provider
+	promises map[string]*promise.Promise[Instance]
+	pmu      *sync.RWMutex
 
-	lock *sync.RWMutex
+	groups map[string][]Instance
+	gmu    *sync.RWMutex
+
+	expirations tinykv.KV[string]
 }
 
-func NewSablier(ctx context.Context, provider provider.Provider) *Sablier {
-	lock := &sync.RWMutex{}
+func NewSablier(ctx context.Context, provider Provider) *Sablier {
+	pmu := &sync.RWMutex{}
 	promises := make(map[string]*promise.Promise[Instance])
+
+	gmu := &sync.RWMutex{}
+	groups := make(map[string][]Instance)
+
 	expirations := tinykv.New(time.Second, func(k string, _ string) {
-		lock.Lock()
-		defer lock.Unlock()
+		pmu.Lock()
+		defer pmu.Unlock()
 		log.Printf("instance [%s] expired - removing from promises", k)
 		err := provider.Stop(ctx, k)
 		if err != nil {
@@ -34,21 +40,33 @@ func NewSablier(ctx context.Context, provider provider.Provider) *Sablier {
 		delete(promises, k)
 	})
 
-	go func() {
-		<-ctx.Done()
-		expirations.Stop()
-	}()
-
-	return &Sablier{
+	s := &Sablier{
 		Provider:    provider,
 		promises:    promises,
+		pmu:         pmu,
+		groups:      groups,
+		gmu:         gmu,
 		expirations: expirations,
-		lock:        lock,
 	}
+
+	go s.stop(ctx)
+
+	return s
+}
+
+func (s *Sablier) stop(ctx context.Context) {
+	<-ctx.Done()
+	s.expirations.Stop()
 }
 
 func (s *Sablier) RegisteredInstances() []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.pmu.RLock()
+	defer s.pmu.RUnlock()
 	return maps.Keys(s.promises)
+}
+
+func (s *Sablier) SetGroups(groups map[string][]Instance) {
+	s.gmu.Lock()
+	defer s.gmu.Unlock()
+	s.groups = groups
 }

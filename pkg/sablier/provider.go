@@ -1,8 +1,9 @@
-package provider
+package sablier
 
 import (
 	"context"
-	"time"
+
+	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 type EventAction string
@@ -26,26 +27,16 @@ const (
 )
 
 type Message struct {
-	Name   string
-	Group  string
-	Action EventAction
-}
-
-type StartOptions struct {
-	DesiredReplicas    uint32
-	ConsiderReadyAfter time.Duration
-}
-
-type ListOptions struct {
-	// All list all instances whatever their status (up or down)
-	All bool
+	Instance Instance
+	Action   EventAction
 }
 
 type Provider interface {
-	Start(ctx context.Context, name string, opts StartOptions) error
+	Start(ctx context.Context, name string, opts provider.StartOptions) error
 	Stop(ctx context.Context, name string) error
 	Status(ctx context.Context, name string) (bool, error)
-	List(ctx context.Context, opts ListOptions) ([]string, error)
+
+	List(ctx context.Context, opts provider.ListOptions) ([]Instance, error)
 
 	Events(ctx context.Context) (<-chan Message, <-chan error)
 }

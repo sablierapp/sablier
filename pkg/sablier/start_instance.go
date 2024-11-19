@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
-	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 type StartOptions struct {
@@ -18,8 +17,8 @@ type StartOptions struct {
 
 // StartInstance allows you to start an instance of a workload.
 func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise[Instance] {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.pmu.Lock()
+	defer s.pmu.Unlock()
 	log.Printf("request to start instance [%v] received", name)
 
 	// If there is an ongoing request, return it
@@ -68,7 +67,7 @@ func (s *Sablier) startInstance(name string, opts StartOptions) error {
 	defer cancel()
 
 	log.Printf("starting instance [%s]", name)
-	err := s.Provider.Start(ctx, name, provider.StartOptions{
+	err := s.Provider.Start(ctx, name, StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	})

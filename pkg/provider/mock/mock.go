@@ -5,7 +5,7 @@ package mock
 import (
 	context "context"
 
-	provider "github.com/sablierapp/sablier/pkg/provider"
+	provider "github.com/sablierapp/sablier/pkg/sablier"
 	mock "github.com/stretchr/testify/mock"
 )
 

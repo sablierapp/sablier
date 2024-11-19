@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sablierapp/sablier/pkg/provider"
 	pmock "github.com/sablierapp/sablier/pkg/provider/mock"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +19,7 @@ func TestStopAllUnregistered(t *testing.T) {
 	s := sablier.NewSablier(ctx, m)
 
 	m.EXPECT().
-		List(ctx, provider.ListOptions{All: false}).
+		List(ctx, sablier.ListOptions{All: false}).
 		Return([]string{"instance1", "instance2"}, nil)
 	m.EXPECT().Stop(ctx, "instance1").Return(nil).Once()
 	m.EXPECT().Stop(ctx, "instance2").Return(nil).Once()
@@ -42,7 +41,7 @@ func TestStopAllUnregisteredWithAlreadyRegistered(t *testing.T) {
 	m := pmock.NewMockProvider(t)
 	s := sablier.NewSablier(ctx, m)
 
-	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
+	m.EXPECT().Start(mock.Anything, name, sablier.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
@@ -51,7 +50,7 @@ func TestStopAllUnregisteredWithAlreadyRegistered(t *testing.T) {
 	assert.NoError(t, err)
 
 	m.EXPECT().
-		List(ctx, provider.ListOptions{All: false}).
+		List(ctx, sablier.ListOptions{All: false}).
 		Return([]string{"instance1", "instance2"}, nil)
 	m.EXPECT().Stop(ctx, "instance2").Return(nil).Once()
 	err = s.StopAllUnregistered(ctx)
