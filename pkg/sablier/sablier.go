@@ -70,3 +70,16 @@ func (s *Sablier) SetGroups(groups map[string][]InstanceConfig) {
 	defer s.gmu.Unlock()
 	s.groups = groups
 }
+
+func (s *Sablier) GetGroup(group string) ([]InstanceConfig, bool) {
+	s.gmu.Lock()
+	defer s.gmu.Unlock()
+	instances, ok := s.groups[group]
+	return instances, ok
+}
+
+func (s *Sablier) Groups() any {
+	s.gmu.Lock()
+	defer s.gmu.Unlock()
+	return maps.Keys(s.groups)
+}
