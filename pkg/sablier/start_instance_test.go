@@ -38,7 +38,7 @@ func TestStartInstance(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "myinstance", instance.Name)
-	assert.Equal(t, sablier.InstanceRunning, instance.Status)
+	assert.Equal(t, sablier.InstanceReady, instance.Status)
 }
 
 func TestStartSamePromise(t *testing.T) {

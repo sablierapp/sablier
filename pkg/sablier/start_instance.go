@@ -59,7 +59,7 @@ func (s *Sablier) startInstancePromise(name string, opts StartOptions) *promise.
 			Name:            name,
 			CurrentReplicas: opts.DesiredReplicas, // Current replicas are assumed
 			DesiredReplicas: opts.DesiredReplicas,
-			Status:          InstanceRunning,
+			Status:          InstanceReady,
 		}
 		resolve(started)
 	})

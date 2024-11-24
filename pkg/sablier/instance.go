@@ -1,11 +1,15 @@
 package sablier
 
+import (
+	"time"
+)
+
 type InstanceStatus string
 
 const (
-	InstanceStopped  InstanceStatus = "stopped"
+	InstanceDown     InstanceStatus = "down"
 	InstanceStarting InstanceStatus = "starting"
-	InstanceRunning  InstanceStatus = "running"
+	InstanceReady    InstanceStatus = "ready"
 	InstanceError    InstanceStatus = "error"
 )
 
@@ -16,6 +20,7 @@ type InstanceInfo struct {
 	CurrentReplicas uint32
 	DesiredReplicas uint32
 	Status          InstanceStatus
+	StartedAt       time.Time
 }
 
 type InstanceConfig struct {
