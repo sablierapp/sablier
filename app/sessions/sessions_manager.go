@@ -20,8 +20,8 @@ const defaultRefreshFrequency = 2 * time.Second
 type Manager interface {
 	RequestSession(names []string, duration time.Duration) *SessionState
 	RequestSessionGroup(group string, duration time.Duration) *SessionState
-	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
-	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
+	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration, frequency time.Duration) (*SessionState, error)
+	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration, frequency time.Duration) (*SessionState, error)
 
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
@@ -226,14 +226,14 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 	return &requestState, nil
 }
 
-func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration, frequency time.Duration) (*SessionState, error) {
 
 	session := s.RequestSession(names, duration)
 	if session.IsReady() {
 		return session, nil
 	}
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(frequency)
 	readiness := make(chan *SessionState)
 	quit := make(chan struct{})
 
@@ -266,7 +266,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 	}
 }
 
-func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
+func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration, frequency time.Duration) (sessionState *SessionState, err error) {
 
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
@@ -278,7 +278,7 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.RequestReadySession(ctx, names, duration, timeout)
+	return s.RequestReadySession(ctx, names, duration, timeout, frequency)
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {

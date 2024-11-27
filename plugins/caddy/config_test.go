@@ -183,6 +183,19 @@ func TestConfig_BuildRequest(t *testing.T) {
 			want:    createRequest("GET", "http://sablier:10000/api/strategies/blocking?names=nginx&names=apache&session_duration=1m&timeout=5m", nil),
 			wantErr: false,
 		},
+		{
+			name: "blocking session with refresh frequency",
+			fields: caddy.Config{
+				SablierURL:      "http://sablier:10000",
+				Names:           []string{"nginx", "apache"},
+				SessionDuration: &oneMinute,
+				Dynamic: &caddy.DynamicConfiguration{
+					RefreshFrequency: &oneMinute,
+				},
+			},
+			want:    createRequest("GET", "http://sablier:10000/api/strategies/blocking?names=nginx&names=apache&refresh_frequency=1m&session_duration=1m", nil),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -296,6 +309,7 @@ func TestConfig_UnmarshalCaddyfile(t *testing.T) {
 				session_duration 1m
 				blocking {
 					timeout 1m
+					refresh_frequency 1m
 				}
 			}`,
 			want: caddy.Config{
