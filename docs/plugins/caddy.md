@@ -62,6 +62,7 @@ You can have the following configuration:
 			}
 			blocking {
 				[timeout 1m]
+				[refresh_frequency 2s]
 			}
 		}
     reverse_proxy myservice:port

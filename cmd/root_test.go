@@ -120,6 +120,7 @@ func TestPrecedence(t *testing.T) {
 			"--strategy.dynamic.default-theme", "cli",
 			"--strategy.dynamic.default-refresh-frequency", "3h",
 			"--strategy.blocking.default-timeout", "3h",
+			"--strategy.blocking.default-refresh-frequency", "3h",
 		})
 		cmd.Execute()
 

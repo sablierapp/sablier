@@ -140,7 +140,7 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(ctx, []string{"nginx", "whoami"}, time.Minute, time.Minute)
+			_, err := s.RequestReadySession(ctx, []string{"nginx", "whoami"}, time.Minute, time.Minute, time.Second)
 			errchan <- err
 		}()
 
@@ -167,7 +167,7 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second, time.Second)
 			errchan <- err
 		}()
 
@@ -190,7 +190,7 @@ func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second, time.Second)
 			errchan <- err
 		}()
 

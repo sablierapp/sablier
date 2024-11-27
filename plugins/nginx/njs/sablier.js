@@ -30,12 +30,12 @@ function call(r) {
  * @property {string} theme
  * @property {string} refreshFrequency
  * @property {string} timeout
- * 
+ *
  */
 
 /**
- * 
- * @param {*} headers 
+ *
+ * @param {*} headers
  * @returns {SablierConfig}
  */
 function createConfigurationFromVariables(r) {
@@ -56,9 +56,9 @@ function createConfigurationFromVariables(r) {
 }
 
 /**
- * 
- * @param {SablierConfig} c 
- * @returns 
+ *
+ * @param {SablierConfig} c
+ * @returns
  */
 function buildRequest(c) {
 	if (c.timeout == undefined || c.timeout == "") {
@@ -69,9 +69,9 @@ function buildRequest(c) {
 }
 
 /**
- * 
- * @param {SablierConfig} config 
- * @returns 
+ *
+ * @param {SablierConfig} config
+ * @returns
  */
  function createDynamicUrl(config) {
   const url = `${config.sablierUrl}/api/strategies/dynamic`
@@ -88,21 +88,22 @@ function buildRequest(c) {
   } else if(config.group) {
     query.group = config.group
   } else {
-    throw new Error('you must specify names or group'); 
+    throw new Error('you must specify names or group');
   }
 
 	return {url, query: querystring.stringify(query)}
 }
 
 /**
- * 
- * @param {SablierConfig} config 
- * @returns 
+ *
+ * @param {SablierConfig} config
+ * @returns
  */
  function createBlockingUrl(config) {
   const url = `${config.sablierUrl}/api/strategies/blocking`
-  const query = { 
+  const query = {
     session_duration: config.sessionDuration,
+    refresh_frequency: config.refreshFrequency,
     timeout:config.timeout,
   };
 
@@ -111,10 +112,10 @@ function buildRequest(c) {
   } else if(config.group) {
     query.group = config.group
   } else {
-    throw new Error('you must specify names or group'); 
+    throw new Error('you must specify names or group');
   }
 
-	return {url, query: querystring.stringify(query)} 
+	return {url, query: querystring.stringify(query)}
 }
 
 export default { call };

@@ -25,7 +25,8 @@ type DynamicConfiguration struct {
 }
 
 type BlockingConfiguration struct {
-	Timeout *time.Duration
+	Timeout          *time.Duration
+	RefreshFrequency *time.Duration
 }
 
 type Config struct {
@@ -49,21 +50,20 @@ func CreateConfig() *Config {
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler. Syntax:
 //
-//		sablier [<sablierURL>] {
-//			[names container1,container2,...]
-//			[group mygroup]
-//			[session_duration 30m]
-//			dynamic {
-//				[display_name This is my display name]
-//				[show_details yes|true|on]
-//				[theme hacker-terminal]
-//				[refresh_frequency 2s]
-//			}
-//			blocking {
-//				[timeout 1m]
-//			}
+//	sablier [<sablierURL>] {
+//		[names container1,container2,...]
+//		[group mygroup]
+//		[session_duration 30m]
+//		dynamic {
+//			[display_name This is my display name]
+//			[show_details yes|true|on]
+//			[theme hacker-terminal]
+//			[refresh_frequency 2s]
 //		}
-//
+//		blocking {
+//			[timeout 1m]
+//		}
+//	}
 func (c *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		if d.NextArg() {
@@ -172,6 +172,12 @@ func parseBlocking(d *caddyfile.Dispenser) (*BlockingConfiguration, error) {
 				return nil, err
 			}
 			conf.Timeout = &duration
+		case "refresh_frequency":
+			duration, err := time.ParseDuration(args)
+			if err != nil {
+				return nil, err
+			}
+			conf.RefreshFrequency = &duration
 		}
 	}
 	return conf, nil
