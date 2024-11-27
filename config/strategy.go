@@ -10,7 +10,8 @@ type DynamicStrategy struct {
 }
 
 type BlockingStrategy struct {
-	DefaultTimeout time.Duration `mapstructure:"DEFAULT_TIMEOUT" yaml:"defaultTimeout" default:"1m"`
+	DefaultTimeout          time.Duration `mapstructure:"DEFAULT_TIMEOUT" yaml:"defaultTimeout" default:"1m"`
+	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULT_REFRESH_FREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
 }
 
 type Strategy struct {
