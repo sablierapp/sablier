@@ -99,7 +99,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	request := models.BlockingRequest{
 		Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
-		RefreshFrequency: s.StrategyConfig.Blocking.DefaultRefreshFrequency
+		RefreshFrequency: s.StrategyConfig.Blocking.DefaultRefreshFrequency,
 	}
 
 	if err := c.ShouldBind(&request); err != nil {
