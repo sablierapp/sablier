@@ -23,3 +23,4 @@ strategy:
     default-refresh-frequency: 1h
   blocking:
     default-timeout: 1h
+    default-refresh-frequency: 1h
