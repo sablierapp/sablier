@@ -155,7 +155,7 @@ services:
 ```Caddyfile
 :80 {
 	route /whoami {
-      sablier url=http://sablier:10000 {
+      sablier http://sablier:10000 {
         group demo
         session_duration 1m 
         dynamic {
