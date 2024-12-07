@@ -10,7 +10,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"os"
-	"time"
 )
 
 var _ sablier.Provider = (*DockerProvider)(nil)
@@ -60,16 +59,6 @@ func (d *DockerProvider) Stop(ctx context.Context, name string) error {
 	}
 
 	return d.Client.ContainerStop(ctx, name, container.StopOptions{})
-}
-
-func (d *DockerProvider) Info(ctx context.Context, name string) (sablier.InstanceInfo, error) {
-	return sablier.InstanceInfo{
-		Name:            name,
-		CurrentReplicas: 0,
-		DesiredReplicas: 0,
-		Status:          sablier.InstanceStarting,
-		StartedAt:       time.Now(),
-	}, nil
 }
 
 func (d *DockerProvider) List(ctx context.Context, opts provider.ListOptions) ([]sablier.InstanceConfig, error) {

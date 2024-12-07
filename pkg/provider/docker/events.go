@@ -11,10 +11,13 @@ import (
 
 func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan error {
 	ch := make(chan error, 1)
+	started := make(chan struct{})
 
 	go func() {
+		defer close(ch)
 		c, err := d.Client.ContainerInspect(ctx, name)
 		if err != nil {
+			close(started)
 			ch <- err
 			return
 		}
@@ -30,6 +33,7 @@ func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan err
 		ready := d.afterAction(ctx, name, action)
 		ticker := time.NewTicker(5 * time.Second)
 
+		close(started)
 		for {
 			select {
 			case <-ctx.Done():
@@ -51,23 +55,27 @@ func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan err
 			}
 		}
 	}()
+	<-started
 
 	return ch
 }
 
 func (d *DockerProvider) afterAction(ctx context.Context, name string, action events.Action) <-chan error {
 	ch := make(chan error, 1)
-
-	msgs, errs := d.Client.Events(ctx, events.ListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "local"),
-			filters.Arg("type", string(events.ContainerEventType)),
-			filters.Arg("container", name),
-			filters.Arg("event", string(action)),
-		),
-	})
+	started := make(chan struct{})
 
 	go func() {
+		defer close(ch)
+		msgs, errs := d.Client.Events(ctx, events.ListOptions{
+			Filters: filters.NewArgs(
+				filters.Arg("scope", "local"),
+				filters.Arg("type", string(events.ContainerEventType)),
+				filters.Arg("container", name),
+				filters.Arg("event", string(action)),
+			),
+		})
+
+		close(started)
 		for {
 			select {
 			case <-ctx.Done():
@@ -90,6 +98,7 @@ func (d *DockerProvider) afterAction(ctx context.Context, name string, action ev
 			}
 		}
 	}()
+	<-started
 
 	return ch
 }
