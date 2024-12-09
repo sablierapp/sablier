@@ -7,7 +7,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
-	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"os"
 )
@@ -59,11 +58,6 @@ func (d *DockerProvider) Stop(ctx context.Context, name string) error {
 	}
 
 	return d.Client.ContainerStop(ctx, name, container.StopOptions{})
-}
-
-func (d *DockerProvider) List(ctx context.Context, opts provider.ListOptions) ([]sablier.InstanceConfig, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-chan error) {

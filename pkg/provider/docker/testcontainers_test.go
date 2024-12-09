@@ -22,6 +22,7 @@ type MimicOptions struct {
 	WithHealth   bool
 	HealthyAfter time.Duration
 	RunningAfter time.Duration
+	Registered   bool
 	SablierGroup string
 }
 
@@ -35,14 +36,19 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (con
 		return container.CreateResponse{}, err
 	}
 
+	labels := make(map[string]string)
+	if opts.Registered == true {
+		labels["sablier.enable"] = "true"
+		if opts.SablierGroup != "" {
+			labels["sablier.group"] = opts.SablierGroup
+		}
+	}
+
 	if opts.WithHealth == false {
 		return d.client.ContainerCreate(ctx, &container.Config{
-			Cmd:   []string{"/mimic", "-running", "-running-after", opts.RunningAfter.String(), "-healthy=false"},
-			Image: "docker.io/sablierapp/mimic:v0.3.1",
-			Labels: map[string]string{
-				"sablier.enable": "true",
-				"sablier.group":  opts.SablierGroup,
-			},
+			Cmd:    []string{"/mimic", "-running", "-running-after", opts.RunningAfter.String(), "-healthy=false"},
+			Image:  "docker.io/sablierapp/mimic:v0.3.1",
+			Labels: labels,
 		}, nil, nil, nil, opts.Name)
 	}
 	return d.client.ContainerCreate(ctx, &container.Config{
@@ -55,11 +61,8 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (con
 			StartInterval: time.Second,
 			Retries:       50,
 		},
-		Image: "docker.io/sablierapp/mimic:v0.3.1",
-		Labels: map[string]string{
-			"sablier.enable": "true",
-			"sablier.group":  opts.SablierGroup,
-		},
+		Image:  "docker.io/sablierapp/mimic:v0.3.1",
+		Labels: labels,
 	}, nil, nil, nil, opts.Name)
 }
 

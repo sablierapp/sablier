@@ -30,10 +30,7 @@ func TestDockerProvider_Info(t *testing.T) {
 					_, err := dind.CreateMimic(ctx, MimicOptions{
 						Name: "test-info-created",
 					})
-					if err != nil {
-						return err
-					}
-					return nil
+					return err
 				},
 				name: "test-info-created",
 			},
