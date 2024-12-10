@@ -317,7 +317,8 @@ func TestConfig_UnmarshalCaddyfile(t *testing.T) {
 				Group:           "mygroup",
 				SessionDuration: &oneMinute,
 				Blocking: &caddy.BlockingConfiguration{
-					Timeout: &oneMinute,
+					Timeout:          &oneMinute,
+					RefreshFrequency: &oneMinute,
 				},
 			},
 			wantErr: false,
