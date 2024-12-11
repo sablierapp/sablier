@@ -74,17 +74,17 @@ kind: Deployment
 metadata:
   name: whoami
   labels:
-    app: whoami
-    sablier.enable: "true"
-    sablier.group: mygroup
+    app.kubernetes.io/name: whoami
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: mygroup
 spec:
   selector:
     matchLabels:
-      app: whoami
+      app.kubernetes.io/name: whoami
   template:
     metadata:
       labels:
-        app: whoami
+        app.kubernetes.io/name: whoami
     spec:
       containers:
       - name: whoami
