@@ -2,13 +2,14 @@ package sablier
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 )
 
 type Sablier struct {
@@ -62,7 +63,7 @@ func (s *Sablier) stop(ctx context.Context) {
 func (s *Sablier) RegisteredInstances() []string {
 	s.pmu.RLock()
 	defer s.pmu.RUnlock()
-	return maps.Keys(s.promises)
+	return slices.Collect(maps.Keys(s.promises))
 }
 
 func (s *Sablier) SetGroups(groups map[string][]InstanceConfig) {
@@ -78,8 +79,8 @@ func (s *Sablier) GetGroup(group string) ([]InstanceConfig, bool) {
 	return instances, ok
 }
 
-func (s *Sablier) Groups() any {
+func (s *Sablier) Groups() []string {
 	s.gmu.Lock()
 	defer s.gmu.Unlock()
-	return maps.Keys(s.groups)
+	return slices.Collect(maps.Keys(s.groups))
 }

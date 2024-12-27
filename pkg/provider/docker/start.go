@@ -16,6 +16,7 @@ func (d *DockerProvider) Start(ctx context.Context, name string, opts provider.S
 
 	if instance.Status == sablier.InstanceReady {
 		// <-time.After()
+		// TODO: What to do with that ?
 		return nil
 	}
 
@@ -42,7 +43,7 @@ func (d *DockerProvider) Start(ctx context.Context, name string, opts provider.S
 
 func (d *DockerProvider) start(ctx context.Context, name string, opts provider.StartOptions) error {
 	readyCh := d.AfterReady(ctx, name)
-	
+
 	d.log.Trace().Str("name", name).Msg("start request received")
 	err := d.Client.ContainerStart(ctx, name, container.StartOptions{})
 	if err != nil {

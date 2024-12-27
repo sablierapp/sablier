@@ -3,8 +3,6 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types/checkpoint"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -43,21 +41,6 @@ func NewDockerProvider(cli *client.Client) (*DockerProvider, error) {
 		UsePause:      false,
 		log:           logger,
 	}, nil
-}
-
-func (d *DockerProvider) Stop(ctx context.Context, name string) error {
-	if d.UsePause {
-		return d.Client.ContainerPause(ctx, name)
-	}
-
-	if d.UseCheckpoint {
-		return d.Client.CheckpointCreate(ctx, name, checkpoint.CreateOptions{
-			CheckpointID: name,
-			Exit:         true,
-		})
-	}
-
-	return d.Client.ContainerStop(ctx, name, container.StopOptions{})
 }
 
 func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-chan error) {
