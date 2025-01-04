@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/internal/server"
+	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"os/signal"
 	"syscall"
@@ -15,7 +17,17 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
-	s := sablier.NewSablier(ctx, nil)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+
+	p, err := docker.NewDockerProvider(cli)
+	if err != nil {
+		panic(err)
+	}
+
+	s := sablier.NewSablier(ctx, p)
 
 	server.Start(ctx, s)
 }

@@ -16,11 +16,12 @@ const (
 type InstanceInfo struct {
 	// The Name of the targeted container, service, deployment
 	// of which the state is being represented
-	Name            string
-	CurrentReplicas uint32
-	DesiredReplicas uint32
-	Status          InstanceStatus
-	StartedAt       time.Time
+	Name            string         `json:"name"`
+	CurrentReplicas uint32         `json:"currentReplicas"`
+	DesiredReplicas uint32         `json:"desiredReplicas"`
+	Status          InstanceStatus `json:"status"`
+	StartedAt       time.Time      `json:"startedAt"`
+	ExpiresAt       time.Time      `json:"expiresAt"`
 }
 
 type InstanceConfig struct {

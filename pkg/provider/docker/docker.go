@@ -42,8 +42,3 @@ func NewDockerProvider(cli *client.Client) (*DockerProvider, error) {
 		log:           logger,
 	}, nil
 }
-
-func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-chan error) {
-	//TODO implement me
-	panic("implement me")
-}

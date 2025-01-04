@@ -16,4 +16,7 @@ func registerRoutes(router *gin.Engine, s *sablier.Sablier) {
 
 	api.StartBlocking(APIv1, s)
 	api.StartDynamic(APIv1, s)
+	api.GetGroups(APIv1, s)
+	api.GetThemes(APIv1, s)
+	api.PreviewTheme(APIv1, s)
 }

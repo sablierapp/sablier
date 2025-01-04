@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -12,7 +11,6 @@ import (
 func (d *DockerProvider) List(ctx context.Context, opts provider.ListOptions) ([]sablier.InstanceConfig, error) {
 	args := filters.NewArgs()
 	args.Add("label", "sablier.enable")
-	args.Add("label", "sablier.enable=true")
 
 	found, err := d.Client.ContainerList(ctx, container.ListOptions{
 		Filters: args,
@@ -22,10 +20,18 @@ func (d *DockerProvider) List(ctx context.Context, opts provider.ListOptions) ([
 		return nil, err
 	}
 
-	fmt.Printf("found %d containers\n", len(found))
+	// d.log.Trace().Msgf("found [%d] containers", len(found))
 	infos := make([]sablier.InstanceConfig, 0, len(found))
 	for _, c := range found {
-		fmt.Printf("container: %v", c)
+		// d.log.Trace().Any("container", c).Msg("container details")
+		registered, ok := c.Labels["sablier.enable"]
+		if !ok {
+			continue
+		}
+		if !(registered == "" || registered == "true" || registered == "yes") {
+			continue
+		}
+
 		group, ok := c.Labels["sablier.group"]
 		if !ok || group == "" {
 			group = FormatName(c.Names[0]) // Group defaults to the container name

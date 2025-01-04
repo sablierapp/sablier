@@ -2,18 +2,21 @@ package sablier
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"maps"
+	"os"
 	"slices"
 	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
 	"github.com/sablierapp/sablier/pkg/tinykv"
-	log "github.com/sirupsen/logrus"
 )
 
 type Sablier struct {
 	Provider Provider
+	Theme    *theme.Themes
 	promises map[string]*promise.Promise[InstanceInfo]
 	pmu      *sync.RWMutex
 
@@ -21,9 +24,15 @@ type Sablier struct {
 	gmu    *sync.RWMutex
 
 	expirations tinykv.KV[string]
+
+	log zerolog.Logger
 }
 
 func NewSablier(ctx context.Context, provider Provider) *Sablier {
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().Timestamp().
+		Logger()
+
 	pmu := &sync.RWMutex{}
 	promises := make(map[string]*promise.Promise[InstanceInfo])
 
@@ -33,23 +42,33 @@ func NewSablier(ctx context.Context, provider Provider) *Sablier {
 	expirations := tinykv.New(time.Second, func(k string, _ string) {
 		pmu.Lock()
 		defer pmu.Unlock()
-		log.Printf("instance [%s] expired - removing from promises", k)
+		logger.Trace().Str("instance", k).Msg("instance expired")
 		err := provider.Stop(ctx, k)
 		if err != nil {
-			log.Printf("error stopping instance [%s]: %v", k, err)
+			logger.Error().Str("instance", k).Err(err).Msg("error stopping instance")
 		}
 		delete(promises, k)
 	})
 
+	// TODO: This should be through the constructor
+	t, err := theme.New()
+	if err != nil {
+		panic(err)
+	}
+
 	s := &Sablier{
 		Provider:    provider,
+		Theme:       t,
 		promises:    promises,
 		pmu:         pmu,
 		groups:      groups,
 		gmu:         gmu,
 		expirations: expirations,
+		log:         logger,
 	}
 
+	go s.updateGroups(ctx)
+	go s.WatchGroups(ctx, time.Second*5)
 	go s.stop(ctx)
 
 	return s
@@ -67,20 +86,26 @@ func (s *Sablier) RegisteredInstances() []string {
 }
 
 func (s *Sablier) SetGroups(groups map[string][]InstanceConfig) {
+	if groups == nil {
+		return
+	}
 	s.gmu.Lock()
 	defer s.gmu.Unlock()
 	s.groups = groups
 }
 
 func (s *Sablier) GetGroup(group string) ([]InstanceConfig, bool) {
-	s.gmu.Lock()
-	defer s.gmu.Unlock()
+	s.gmu.RLock()
+	defer s.gmu.RUnlock()
 	instances, ok := s.groups[group]
 	return instances, ok
 }
 
 func (s *Sablier) Groups() []string {
-	s.gmu.Lock()
-	defer s.gmu.Unlock()
-	return slices.Collect(maps.Keys(s.groups))
+	s.gmu.RLock()
+	defer s.gmu.RUnlock()
+	m := s.groups
+	k := maps.Keys(m)
+	sl := slices.Collect(k)
+	return sl
 }

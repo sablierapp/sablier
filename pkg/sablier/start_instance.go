@@ -2,7 +2,6 @@ package sablier
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/promise"
@@ -20,28 +19,28 @@ type StartOptions struct {
 func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise[InstanceInfo] {
 	s.pmu.Lock()
 	defer s.pmu.Unlock()
-	log.Printf("request to start instance [%v] received", name)
+	s.log.Trace().Str("instance", name).Msg("request to start instance received")
 
 	// If there is an ongoing request, return it
 	// If the last request was rejected, recreate one
 	pr, ok := s.promises[name]
 	if ok && pr.Pending() {
-		log.Printf("request to start instance [%v] is already in progress", name)
+		s.log.Trace().Str("instance", name).Msg("request to start instance is already in progress")
 		return pr
 	}
 
 	if ok && pr.Fulfilled() {
-		log.Printf("instance [%s] will expire after [%v]", name, opts.ExpiresAfter)
+		s.log.Trace().Str("instance", name).Dur("expiration", opts.ExpiresAfter).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
 		err := s.expirations.Put(name, name, opts.ExpiresAfter)
 		if err != nil {
-			log.Printf("failed to refresh instance [%v]: %v", name, err)
+			s.log.Warn().Err(err).Str("instance", name).Msg("failed to refresh instance")
 		}
 		return pr
 	}
 
 	// Otherwise, create a new request
 	pr = s.startInstancePromise(name, opts)
-	log.Printf("request to start instance [%v] created", name)
+	s.log.Trace().Str("instance", name).Msg("request to start instance created")
 	s.promises[name] = pr
 
 	return pr
@@ -60,6 +59,8 @@ func (s *Sablier) startInstancePromise(name string, opts StartOptions) *promise.
 			CurrentReplicas: opts.DesiredReplicas, // Current replicas are assumed
 			DesiredReplicas: opts.DesiredReplicas,
 			Status:          InstanceReady,
+			StartedAt:       time.Now(),
+			ExpiresAt:       time.Now().Add(opts.ExpiresAfter),
 		}
 		resolve(started)
 	})
@@ -69,16 +70,16 @@ func (s *Sablier) startInstance(name string, opts StartOptions) error {
 	ctx, cancel := context.WithTimeout(context.Background(), opts.Timeout)
 	defer cancel()
 
-	log.Printf("starting instance [%s]", name)
+	s.log.Trace().Str("instance", name).Msg("starting instance")
 	err := s.Provider.Start(ctx, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	})
 	if err != nil {
-		log.Printf("instance [%s] could not be started: %v", name, err)
+		s.log.Trace().Str("instance", name).Err(err).Msg("instance could not be started")
 		return err
 	}
 
-	log.Printf("instance [%s] will expire after [%v]", name, opts.ExpiresAfter)
+	s.log.Trace().Str("instance", name).Dur("expiration", opts.ExpiresAfter).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
 	return s.expirations.Put(name, name, opts.ExpiresAfter)
 }

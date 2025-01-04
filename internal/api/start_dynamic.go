@@ -7,17 +7,22 @@ import (
 	"time"
 )
 
+// TODO: Add missing theme customization
 type DynamicRequest struct {
 	Names           []string      `form:"names"`
 	Group           string        `form:"group"`
 	SessionDuration time.Duration `form:"session_duration"`
 	Timeout         time.Duration `form:"timeout"`
+	Theme           string        `form:"theme"`
 }
 
 func StartDynamic(router *gin.RouterGroup, s *sablier.Sablier) {
 	router.GET("/dynamic", func(c *gin.Context) {
-		request := BlockingRequest{
+		request := DynamicRequest{
 			// Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
+			Group:           "",
+			SessionDuration: 10 * time.Second,
+			Timeout:         30 * time.Second,
 		}
 
 		if err := c.ShouldBind(&request); err != nil {
@@ -35,7 +40,7 @@ func StartDynamic(router *gin.RouterGroup, s *sablier.Sablier) {
 			},
 		}
 
-		session, err := s.StartSessionByGroup(c, request.Group, opts)
+		session, err := s.StartSessionByNames(c, request.Names, opts)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusBadRequest, err)
 			return
