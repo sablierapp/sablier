@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/array"
@@ -22,17 +21,17 @@ func (s *Sablier) WatchGroups(ctx context.Context, frequency time.Duration) {
 			return
 		case err, ok := <-errs:
 			if !ok {
-				log.Printf("provider event stream is closed")
+				s.log.Warn().Msg("WatchGroups: stopping because provider event stream is closed")
 				return
 			}
 			if errors.Is(err, io.EOF) {
-				log.Printf("provider event stream closed")
+				s.log.Warn().Msg("WatchGroups: stopping because provider event stream is closed")
 				return
 			}
-			log.Printf("provider event stream error: %v", err)
+			s.log.Warn().Err(err).Msg("WatchGroups: error received from provider event stream")
 		case msg, ok := <-msgs:
 			if !ok {
-				log.Printf("provider event stream is closed")
+				s.log.Warn().Msg("WatchGroups: stopping because provider event stream is closed")
 				return
 			}
 			if msg.Action == EventActionCreate || msg.Action == EventActionRemove {
@@ -47,7 +46,8 @@ func (s *Sablier) WatchGroups(ctx context.Context, frequency time.Duration) {
 func (s *Sablier) updateGroups(ctx context.Context) {
 	instances, err := s.Provider.List(ctx, provider.ListOptions{All: true})
 	if err != nil {
-		log.Printf("error listing instances: %v", err)
+		s.log.Error().Err(err).Msg("cannot update group: error listing instances")
+		return
 	}
 	groups := array.GroupByProperty(instances, func(t InstanceConfig) string {
 		return t.Name

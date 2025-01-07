@@ -44,13 +44,11 @@ func (d *DockerProvider) Start(ctx context.Context, name string, opts provider.S
 func (d *DockerProvider) start(ctx context.Context, name string, opts provider.StartOptions) error {
 	readyCh := d.AfterReady(ctx, name)
 
-	d.log.Trace().Str("name", name).Msg("start request received")
 	err := d.Client.ContainerStart(ctx, name, container.StartOptions{})
 	if err != nil {
 		return err
 	}
 
-	d.log.Trace().Str("name", name).Msg("start request sent")
 	err = <-readyCh
 	if err != nil {
 		return err

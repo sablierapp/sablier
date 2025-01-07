@@ -27,7 +27,7 @@ type InstanceInfo struct {
 type InstanceConfig struct {
 	// The Name of the targeted container, service, deployment
 	// of which the state is being represented
-	Name            string
-	Group           string
-	DesiredReplicas uint32
+	Name            string `json:"name"`
+	Group           string `json:"group"`
+	DesiredReplicas uint32 `json:"desiredReplicas"`
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"maps"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -28,11 +27,7 @@ type Sablier struct {
 	log zerolog.Logger
 }
 
-func NewSablier(ctx context.Context, provider Provider) *Sablier {
-	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-		With().Timestamp().
-		Logger()
-
+func NewSablier(ctx context.Context, provider Provider, logger zerolog.Logger) *Sablier {
 	pmu := &sync.RWMutex{}
 	promises := make(map[string]*promise.Promise[InstanceInfo])
 
@@ -67,9 +62,22 @@ func NewSablier(ctx context.Context, provider Provider) *Sablier {
 		log:         logger,
 	}
 
-	go s.updateGroups(ctx)
 	go s.WatchGroups(ctx, time.Second*5)
 	go s.stop(ctx)
+
+	start := time.Now()
+	s.updateGroups(ctx)
+	total := time.Now().Sub(start)
+	s.log.Info().Str("duration", total.String()).Any("groups", s.groups).Msg("initial group scan completed")
+
+	start = time.Now()
+	err = s.StopAllUnregistered(ctx)
+	total = time.Now().Sub(start)
+	if err != nil {
+		s.log.Warn().Str("duration", total.String()).Err(err).Msg("an error happened stopping orphans")
+	} else {
+		s.log.Info().Str("duration", total.String()).Msg("orphans successfully stopped")
+	}
 
 	return s
 }

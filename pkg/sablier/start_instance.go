@@ -25,12 +25,12 @@ func (s *Sablier) StartInstance(name string, opts StartOptions) *promise.Promise
 	// If the last request was rejected, recreate one
 	pr, ok := s.promises[name]
 	if ok && pr.Pending() {
-		s.log.Trace().Str("instance", name).Msg("request to start instance is already in progress")
+		s.log.Trace().Str("instance", name).Msg("request to start instance is already in progress, attaching to the same request")
 		return pr
 	}
 
 	if ok && pr.Fulfilled() {
-		s.log.Trace().Str("instance", name).Dur("expiration", opts.ExpiresAfter).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
+		s.log.Trace().Str("instance", name).Str("expiration", opts.ExpiresAfter.String()).Msgf("instance was already up and running, will expire after [%v] from now", opts.ExpiresAfter)
 		err := s.expirations.Put(name, name, opts.ExpiresAfter)
 		if err != nil {
 			s.log.Warn().Err(err).Str("instance", name).Msg("failed to refresh instance")
@@ -80,6 +80,6 @@ func (s *Sablier) startInstance(name string, opts StartOptions) error {
 		return err
 	}
 
-	s.log.Trace().Str("instance", name).Dur("expiration", opts.ExpiresAfter).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
+	s.log.Trace().Str("instance", name).Str("expiration", opts.ExpiresAfter.String()).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
 	return s.expirations.Put(name, name, opts.ExpiresAfter)
 }

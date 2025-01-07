@@ -6,7 +6,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"os"
 )
 
 var _ sablier.Provider = (*DockerProvider)(nil)
@@ -20,10 +19,8 @@ type DockerProvider struct {
 	log zerolog.Logger
 }
 
-func NewDockerProvider(cli *client.Client) (*DockerProvider, error) {
-	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-		With().Timestamp().
-		Str("provider", "docker").
+func NewDockerProvider(cli *client.Client, logger zerolog.Logger) (*DockerProvider, error) {
+	logger = logger.With().Str("provider", "docker").
 		Logger()
 	serverVersion, err := cli.ServerVersion(context.Background())
 	if err != nil {

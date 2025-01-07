@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"net/http"
 	"time"
 )
 
-func Start(ctx context.Context, s *sablier.Sablier) {
+func Start(ctx context.Context, s *sablier.Sablier, log zerolog.Logger) {
 	start := time.Now()
 
 	// Set web server mode.
@@ -22,24 +22,25 @@ func Start(ctx context.Context, s *sablier.Sablier) {
 		}
 	*/
 
-	// Create new router engine without standard middleware.
-	router := gin.New()
+	// Create new r engine without standard middleware.
+	r := gin.New()
 
-	router.Use(Recovery())
+	r.Use(StructuredLogger(log))
+	r.Use(Recovery())
 
-	registerRoutes(router, s)
+	registerRoutes(r, s)
 
 	var server *http.Server
 	server = &http.Server{
 		Addr:    "0.0.0.0:10000",
-		Handler: router,
+		Handler: r,
 	}
 
 	log.Info().
 		Str("listen", server.Addr).
 		Dur("startup", time.Since(start))
 
-	go StartHttp(server)
+	go StartHttp(server, log)
 
 	// Graceful web server shutdown.
 	<-ctx.Done()
@@ -51,7 +52,7 @@ func Start(ctx context.Context, s *sablier.Sablier) {
 }
 
 // StartHttp starts the Web server in http mode.
-func StartHttp(s *http.Server) {
+func StartHttp(s *http.Server, log zerolog.Logger) {
 	if err := s.ListenAndServe(); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			log.Info().Msg("server: shutdown complete")

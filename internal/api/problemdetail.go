@@ -8,22 +8,25 @@ import (
 type ProblemDetail struct {
 	// Type is a unique error code
 	Type string `json:"type,omitempty"`
-	// Title is a human-readable error message
-	Title string `json:"title,omitempty"`
 	// Status is the HTTP Status code
 	Status int `json:"status,omitempty"`
+	// Title is a human-readable error message
+	Title string `json:"title,omitempty"`
 	// Detail is a human-readable error description
 	Detail string `json:"detail,omitempty"`
-	error  error
+	//
+	Instance string
+	error    error
 }
 
 func ValidationError(err error) ProblemDetail {
 	return ProblemDetail{
-		Type:   "validation-error",
-		Title:  "Bad Request",
-		Status: http.StatusBadRequest,
-		Detail: err.Error(),
-		error:  err,
+		Type:     "validation-error",
+		Status:   http.StatusBadRequest,
+		Title:    "Bad Request",
+		Detail:   err.Error(),
+		Instance: "https://sablierapp.dev/#/errors?id=validation-error",
+		error:    err,
 	}
 }
 
