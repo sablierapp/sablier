@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestStartInstance(t *testing.T) {
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	p := s.StartInstance(name, opts)
 	instance, err := p.Await(ctx)
@@ -58,7 +59,7 @@ func TestStartSamePromise(t *testing.T) {
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	p1 := s.StartInstance(name, opts)
 	p2 := s.StartInstance(name, opts)
@@ -87,7 +88,7 @@ func TestStartExpires(t *testing.T) {
 	}).Return(nil).Twice()
 	m.EXPECT().Stop(mock.Anything, name).Return(nil).Once()
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	p1 := s.StartInstance(name, opts)
 	_, err := p1.Await(context.Background())
@@ -122,7 +123,7 @@ func TestStartRefreshes(t *testing.T) {
 		return nil
 	}).Once()
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	// First call creates a new promise
 	p1 := s.StartInstance(name, opts)
@@ -164,7 +165,7 @@ func TestStartAgainOnError(t *testing.T) {
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(nil).Once()
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	p1 := s.StartInstance(name, opts)
 	_, err := p1.Await(context.Background())
@@ -193,7 +194,7 @@ func TestStartInstanceError(t *testing.T) {
 		DesiredReplicas:    opts.DesiredReplicas,
 		ConsiderReadyAfter: opts.ConsiderReadyAfter,
 	}).Return(errors.New("myinstance container not found")).Once()
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	p := s.StartInstance(name, opts)
 	_, err := p.Await(ctx)

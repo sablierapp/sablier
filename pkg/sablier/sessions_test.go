@@ -2,6 +2,7 @@ package sablier_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/provider"
 	pmock "github.com/sablierapp/sablier/pkg/provider/mock"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -33,7 +34,7 @@ func TestStartSessionByNamesWait(t *testing.T) {
 		}).Return(nil).Once()
 	}
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	session, err := s.StartSessionByNames(ctx, names, opts)
 
@@ -72,7 +73,7 @@ func TestStartSessionByNames(t *testing.T) {
 		}, nil).Once()
 	}
 
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	session, err := s.StartSessionByNames(ctx, names, opts)
 	<-time.After(100 * time.Millisecond)

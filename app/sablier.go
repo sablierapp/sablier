@@ -35,7 +35,6 @@ type PubSub interface {
 }
 
 type Sablier struct {
-	provider    Provider
 	promises    map[string]*promise.Promise[Instance]
 	expirations tinykv.KV[string]
 

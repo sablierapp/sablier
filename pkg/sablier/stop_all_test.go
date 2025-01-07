@@ -2,6 +2,7 @@ package sablier_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ func TestStopAllUnregistered(t *testing.T) {
 	t.Cleanup(cancel)
 
 	m := pmock.NewMockProvider(t)
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	m.EXPECT().
 		List(ctx, provider.ListOptions{All: false}).
@@ -51,7 +52,7 @@ func TestStopAllUnregisteredWithAlreadyRegistered(t *testing.T) {
 		ExpiresAfter:       1 * time.Minute,
 	}
 	m := pmock.NewMockProvider(t)
-	s := sablier.NewSablier(ctx, m)
+	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
 
 	m.EXPECT().Start(mock.Anything, name, provider.StartOptions{
 		DesiredReplicas:    opts.DesiredReplicas,

@@ -1,6 +1,7 @@
 package sablier
 
 import (
+	"context"
 	"time"
 )
 
@@ -30,4 +31,10 @@ type InstanceConfig struct {
 	Name            string `json:"name"`
 	Group           string `json:"group"`
 	DesiredReplicas uint32 `json:"desiredReplicas"`
+}
+
+func (s *Sablier) InstancesInfo(ctx context.Context) []InstanceInfoWithError {
+	s.pmu.RLock()
+	defer s.pmu.RUnlock()
+	return s.NewSessionInfo(ctx, s.promises).Instances
 }
