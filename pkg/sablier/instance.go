@@ -26,6 +26,7 @@ type InstanceInfo struct {
 }
 
 type InstanceConfig struct {
+	Enabled bool `json:"enabled"`
 	// The Name of the targeted container, service, deployment
 	// of which the state is being represented
 	Name            string `json:"name"`

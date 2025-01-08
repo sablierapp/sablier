@@ -80,6 +80,6 @@ func (s *Sablier) startInstance(name string, opts StartOptions) error {
 		return err
 	}
 
-	s.log.Trace().Str("instance", name).Str("expiration", opts.ExpiresAfter.String()).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
+	s.log.Trace().Str("instance", name).Str("expiresIn", opts.ExpiresAfter.String()).Time("expiresAt", time.Now().Add(opts.ExpiresAfter)).Msgf("instance will expire after [%v]", opts.ExpiresAfter)
 	return s.expirations.Put(name, name, opts.ExpiresAfter)
 }

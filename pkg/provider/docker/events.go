@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"strconv"
 	"time"
 )
 
@@ -35,9 +36,11 @@ func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-
 					return
 				}
 				d.log.Trace().Any("event", msg).Msg("event received")
-				e, ignore := d.parseEvent(msg)
+				e, ignore := d.parseEvent(ctx, msg)
 				if !ignore {
 					ch <- e
+				} else {
+					d.log.Trace().Any("event", msg).Msg("event ignored")
 				}
 			case err, ok := <-errs:
 				if !ok {
@@ -54,23 +57,80 @@ func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-
 	return ch, errCh
 }
 
-func (d *DockerProvider) parseEvent(message events.Message) (sablier.Message, bool) {
+func (d *DockerProvider) parseEvent(ctx context.Context, message events.Message) (sablier.Message, bool) {
+	instance := d.extractInstanceConfigFromEvent(message)
+
+	var action sablier.EventAction
 	switch message.Action {
 	case events.ActionStart:
-		return sablier.Message{
-			Instance: sablier.InstanceConfig{},
-			Action:   "",
-		}, false
+		spec, err := d.Client.ContainerInspect(ctx, instance.Name)
+		action = sablier.EventActionStart
+		if err == nil && spec.Config.Healthcheck != nil {
+			action = sablier.EventActionCreate
+		}
 	case events.ActionHealthStatusHealthy:
+		action = sablier.EventActionStart
 	case events.ActionCreate:
+		action = sablier.EventActionCreate
 	case events.ActionDestroy:
+		action = sablier.EventActionRemove
 	case events.ActionDie:
+		action = sablier.EventActionStop
 	case events.ActionDelete:
+		action = sablier.EventActionRemove
 	case events.ActionKill:
-
+		action = sablier.EventActionStop
 	}
 
-	return sablier.Message{}, true
+	return sablier.Message{
+		Instance: instance,
+		Action:   action,
+	}, false
+}
+
+func (d *DockerProvider) extractInstanceConfigFromEvent(message events.Message) sablier.InstanceConfig {
+	name := message.Actor.Attributes["name"]
+	enabledLabel, ok := message.Actor.Attributes["sablier.enable"]
+	if !ok {
+		enabledLabel = "false"
+	}
+
+	if enabledLabel == "" {
+		enabledLabel = "true"
+	}
+
+	enabled, err := strconv.ParseBool(enabledLabel)
+	if err != nil {
+		d.log.Warn().Err(err).Msg("unable to parse sablier.enable as a boolean")
+		enabled = false
+	}
+
+	group, ok := message.Actor.Attributes["sablier.group"]
+	if !ok {
+		if enabled {
+			group = name // Group defaults to the container name
+		} else {
+			group = "" // No group because not registered
+		}
+	}
+
+	replicas, ok := message.Actor.Attributes["sablier.desired-replicas"]
+	if !ok {
+		replicas = "1"
+	}
+
+	desired, err := strconv.ParseUint(replicas, 10, 32)
+	if err != nil {
+		d.log.Warn().Err(err).Msg("unable to parse sablier.desired-replicas as a uint32")
+		desired = 1
+	}
+
+	return sablier.InstanceConfig{
+		Enabled:         enabled,
+		Name:            name,
+		Group:           group,
+		DesiredReplicas: uint32(desired),
+	}
 }
 
 func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan error {

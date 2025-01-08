@@ -63,6 +63,7 @@ func NewSablier(ctx context.Context, provider Provider, logger zerolog.Logger) *
 	}
 
 	go s.WatchGroups(ctx, time.Second*5)
+	go s.WatchOrphans(ctx, time.Second*5)
 	go s.stop(ctx)
 
 	start := time.Now()
@@ -99,6 +100,15 @@ func (s *Sablier) SetGroups(groups map[string][]InstanceConfig) {
 	}
 	s.gmu.Lock()
 	defer s.gmu.Unlock()
+
+	diff := MapDiff(s.groups, groups)
+	if diff.Changed {
+		s.log.Info().
+			Any("added", diff.Added).
+			Any("removed", diff.Removed).
+			Any("groups", s.groups).Msg("groups updated")
+	}
+
 	s.groups = groups
 }
 
@@ -116,4 +126,30 @@ func (s *Sablier) Groups() []string {
 	k := maps.Keys(m)
 	sl := slices.Collect(k)
 	return sl
+}
+
+type MapDiffResult[K comparable] struct {
+	Added   []K
+	Removed []K
+	Changed bool
+}
+
+func MapDiff[K comparable, V any](oldMap, newMap map[K]V) MapDiffResult[K] {
+	var result MapDiffResult[K]
+
+	for key := range newMap {
+		if _, found := oldMap[key]; !found {
+			result.Changed = true
+			result.Added = append(result.Added, key)
+		}
+	}
+
+	for key := range oldMap {
+		if _, found := newMap[key]; !found {
+			result.Changed = true
+			result.Removed = append(result.Removed, key)
+		}
+	}
+
+	return result
 }
