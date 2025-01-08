@@ -16,7 +16,8 @@ type DynamicConfiguration struct {
 }
 
 type BlockingConfiguration struct {
-	Timeout string `yaml:"timeout"`
+	Timeout          string `yaml:"timeout"`
+	RefreshFrequency string `yaml:"refreshFrequency"`
 }
 
 type Config struct {
@@ -152,6 +153,16 @@ func (c *Config) buildBlockingRequest() (*http.Request, error) {
 		}
 
 		q.Add("session_duration", c.SessionDuration)
+	}
+
+	if c.Blocking.RefreshFrequency != "" {
+		_, err := time.ParseDuration(c.Dynamic.RefreshFrequency)
+
+		if err != nil {
+			return nil, fmt.Errorf("error parsing dynamic.refreshFrequency: %v", err)
+		}
+
+		q.Add("refresh_frequency", c.Dynamic.RefreshFrequency)
 	}
 
 	for _, name := range c.splittedNames {

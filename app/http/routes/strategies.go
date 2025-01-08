@@ -99,6 +99,7 @@ func (s *ServeStrategy) ServeDynamic(c *gin.Context) {
 func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	request := models.BlockingRequest{
 		Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
+		RefreshFrequency: s.StrategyConfig.Blocking.DefaultRefreshFrequency,
 	}
 
 	if err := c.ShouldBind(&request); err != nil {
@@ -109,9 +110,9 @@ func (s *ServeStrategy) ServeBlocking(c *gin.Context) {
 	var sessionState *sessions.SessionState
 	var err error
 	if len(request.Names) > 0 {
-		sessionState, err = s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
+		sessionState, err = s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout, request.RefreshFrequency)
 	} else {
-		sessionState, err = s.SessionsManager.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
+		sessionState, err = s.SessionsManager.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout, request.RefreshFrequency)
 	}
 
 	if err != nil {
