@@ -51,7 +51,7 @@ func (s *Sablier) stopIfOrphan(ctx context.Context, instance InstanceConfig) {
 	s.pmu.RLock()
 	defer s.pmu.RUnlock()
 	if s.promises[instance.Name] == nil {
-		s.log.Warn().Str("instance", instance.Name).Msg("stopping orphan instance")
+		s.log.Warn().Str("instance", instance.Name).Str("reason", "instance was started by an other source than Sablier").Msg("stopping orphan instance")
 		err := s.Provider.Stop(ctx, instance.Name)
 		if err != nil {
 			s.log.Error().Str("instance", instance.Name).Err(err).Msg("error stopping orphan instance")

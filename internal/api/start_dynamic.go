@@ -17,7 +17,7 @@ type DynamicRequest struct {
 }
 
 func StartDynamic(router *gin.RouterGroup, s *sablier.Sablier) {
-	router.GET("/dynamic", func(c *gin.Context) {
+	handler := func(c *gin.Context) {
 		request := DynamicRequest{
 			// Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
 			Group:           "",
@@ -49,5 +49,7 @@ func StartDynamic(router *gin.RouterGroup, s *sablier.Sablier) {
 		AddSablierHeader(c, session)
 
 		c.JSON(http.StatusOK, map[string]interface{}{"session": session})
-	})
+	}
+	router.GET("/dynamic", handler)
+	router.GET("/strategies/dynamic", handler)
 }

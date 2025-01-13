@@ -3,6 +3,7 @@ package docker_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ func TestDockerProvider_Stop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := docker.NewDockerProvider(dind.client)
+	p, err := docker.NewDockerProvider(dind.client, zerolog.New(zerolog.NewTestWriter(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +42,7 @@ func TestDockerProvider_Stop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = <-p.AfterReady(ctx, mimic.ID)
+	err = <-p.AfterReady(ctx, mimic.ID, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

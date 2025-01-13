@@ -28,7 +28,7 @@ type BlockingRequest struct {
 }
 
 func StartBlocking(router *gin.RouterGroup, s *sablier.Sablier) {
-	router.GET("/blocking", func(c *gin.Context) {
+	handler := func(c *gin.Context) {
 		request := BlockingRequest{
 			SessionDuration:    10 * time.Second,
 			Timeout:            30 * time.Second,
@@ -90,5 +90,7 @@ func StartBlocking(router *gin.RouterGroup, s *sablier.Sablier) {
 		AddSablierHeader(c, session)
 
 		c.IndentedJSON(http.StatusOK, map[string]interface{}{"session": session})
-	})
+	}
+	router.GET("/blocking", handler)
+	router.GET("/strategies/blocking", handler) // Legacy support
 }

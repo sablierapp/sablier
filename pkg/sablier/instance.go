@@ -26,6 +26,9 @@ type InstanceInfo struct {
 }
 
 type InstanceConfig struct {
+	// Whether the instance is enabled or not
+	// To "enable" an instance is to register it through labels or annotations
+	// depending on the provider.
 	Enabled bool `json:"enabled"`
 	// The Name of the targeted container, service, deployment
 	// of which the state is being represented

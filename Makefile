@@ -22,7 +22,7 @@ run:
 
 build:
 	mockery
-	go build -v .
+	go build -v cmd/sablier/main.go
 
 test:
 	go test -v ./...

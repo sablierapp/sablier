@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestDockerProvider_StartWithHealthcheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := docker.NewDockerProvider(dind.client)
+	p, err := docker.NewDockerProvider(dind.client, zerolog.New(zerolog.NewTestWriter(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func TestDockerProvider_StartWithoutHealthcheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := docker.NewDockerProvider(dind.client)
+	p, err := docker.NewDockerProvider(dind.client, zerolog.New(zerolog.NewTestWriter(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,6 +102,67 @@ func TestDockerProvider_StartWithoutHealthcheck(t *testing.T) {
 	assert.Equal(t, inspect.State.Status, "running")
 }
 
+func TestDockerProvider_StartPaused(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	dind, err := setupDinD(t, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := docker.NewDockerProvider(dind.client, zerolog.New(zerolog.NewTestWriter(t)))
+	p.UsePause = true
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mimic, err := dind.CreateMimic(ctx, MimicOptions{
+		WithHealth:   false,
+		RunningAfter: 1 * time.Second,
+		SablierGroup: "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Starting a non paused container should start normally
+	err = p.Start(ctx, mimic.ID, provider.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pause the container manually
+	err = dind.client.ContainerPause(ctx, mimic.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Starting a paused container should unpause
+	err = p.Start(ctx, mimic.ID, provider.StartOptions{
+		DesiredReplicas:    1,
+		ConsiderReadyAfter: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inspect, err := dind.client.ContainerInspect(ctx, mimic.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := json.Marshal(inspect)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("inspect: %+v\n", string(resp))
+	assert.Equal(t, inspect.State.Status, "running")
+}
+
 func TestDockerProvider_StartNonExistingContainer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -109,7 +171,7 @@ func TestDockerProvider_StartNonExistingContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := docker.NewDockerProvider(dind.client)
+	p, err := docker.NewDockerProvider(dind.client, zerolog.New(zerolog.NewTestWriter(t)))
 	if err != nil {
 		t.Fatal(err)
 	}

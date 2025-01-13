@@ -3,6 +3,7 @@ package docker_test
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -76,11 +77,12 @@ func TestDockerProvider_List(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			dinD, err := setupDinD(t, ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
-			d, err := docker.NewDockerProvider(dinD.client)
+			d, err := docker.NewDockerProvider(dinD.client, zerolog.New(zerolog.NewTestWriter(t)))
 			if err != nil {
 				t.Fatal(err)
 			}

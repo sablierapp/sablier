@@ -34,7 +34,7 @@ func TestStartSessionByNamesWait(t *testing.T) {
 		}).Return(nil).Once()
 	}
 
-	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
+	s := sablier.NewSablier(ctx, m, zerolog.New(zerolog.NewTestWriter(t)))
 
 	session, err := s.StartSessionByNames(ctx, names, opts)
 
@@ -73,7 +73,7 @@ func TestStartSessionByNames(t *testing.T) {
 		}, nil).Once()
 	}
 
-	s := sablier.NewSablier(ctx, m, *zerolog.DefaultContextLogger)
+	s := sablier.NewSablier(ctx, m, zerolog.New(zerolog.NewTestWriter(t)))
 
 	session, err := s.StartSessionByNames(ctx, names, opts)
 	<-time.After(100 * time.Millisecond)

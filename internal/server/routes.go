@@ -12,7 +12,7 @@ func registerRoutes(router *gin.Engine, s *sablier.Sablier) {
 	router.RedirectTrailingSlash = true
 
 	// Create REST API router group.
-	APIv1 := router.Group("/api/v1")
+	APIv1 := router.Group("/api")
 
 	api.StartBlocking(APIv1, s)
 	api.StartDynamic(APIv1, s)

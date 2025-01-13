@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -11,7 +12,7 @@ import (
 )
 
 func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-chan error) {
-	ch := make(chan sablier.Message)
+	ch := make(chan sablier.Message, 10)
 	errCh := make(chan error)
 	started := make(chan struct{})
 
@@ -58,28 +59,29 @@ func (d *DockerProvider) Events(ctx context.Context) (<-chan sablier.Message, <-
 }
 
 func (d *DockerProvider) parseEvent(ctx context.Context, message events.Message) (sablier.Message, bool) {
-	instance := d.extractInstanceConfigFromEvent(message)
+	instance, spec, err := d.extractInstanceConfigFromEvent(ctx, message)
+	if err != nil {
+		d.log.Warn().Err(err).Any("event", message).Msg("unable to inspect container")
+		return sablier.Message{}, true
+	}
 
 	var action sablier.EventAction
 	switch message.Action {
-	case events.ActionStart:
-		spec, err := d.Client.ContainerInspect(ctx, instance.Name)
-		action = sablier.EventActionStart
-		if err == nil && spec.Config.Healthcheck != nil {
-			action = sablier.EventActionCreate
+	case events.ActionStart, events.ActionUnPause:
+		if spec.Config.Healthcheck != nil {
+			return sablier.Message{}, true
 		}
+		action = sablier.EventActionStart
 	case events.ActionHealthStatusHealthy:
 		action = sablier.EventActionStart
 	case events.ActionCreate:
 		action = sablier.EventActionCreate
+	case events.ActionStop, events.ActionPause:
+		action = sablier.EventActionStop
 	case events.ActionDestroy:
 		action = sablier.EventActionRemove
-	case events.ActionDie:
-		action = sablier.EventActionStop
-	case events.ActionDelete:
-		action = sablier.EventActionRemove
-	case events.ActionKill:
-		action = sablier.EventActionStop
+	default:
+		return sablier.Message{}, true
 	}
 
 	return sablier.Message{
@@ -88,8 +90,12 @@ func (d *DockerProvider) parseEvent(ctx context.Context, message events.Message)
 	}, false
 }
 
-func (d *DockerProvider) extractInstanceConfigFromEvent(message events.Message) sablier.InstanceConfig {
-	name := message.Actor.Attributes["name"]
+func (d *DockerProvider) extractInstanceConfigFromEvent(ctx context.Context, message events.Message) (sablier.InstanceConfig, types.ContainerJSON, error) {
+	spec, err := d.Client.ContainerInspect(ctx, message.Actor.Attributes["name"])
+	if err != nil {
+		return sablier.InstanceConfig{}, types.ContainerJSON{}, err
+	}
+	name := FormatName(spec.Name)
 	enabledLabel, ok := message.Actor.Attributes["sablier.enable"]
 	if !ok {
 		enabledLabel = "false"
@@ -130,10 +136,10 @@ func (d *DockerProvider) extractInstanceConfigFromEvent(message events.Message) 
 		Name:            name,
 		Group:           group,
 		DesiredReplicas: uint32(desired),
-	}
+	}, spec, nil
 }
 
-func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan error {
+func (d *DockerProvider) AfterReady(ctx context.Context, name string, considerReadyAfter time.Duration) <-chan error {
 	ch := make(chan error, 1)
 	started := make(chan struct{})
 
@@ -145,16 +151,19 @@ func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan err
 			ch <- err
 			return
 		}
+		log := d.log.With().Str("name", FormatName(c.Name)).Logger()
 
 		action := events.ActionStart
-		if c.Config.Healthcheck != nil {
-			d.log.Trace().Str("name", c.Name).Msg("container has healthcheck, will be waiting for \"health_status: healthy\"")
+		if d.UsePause && c.State.Paused {
+			action = events.ActionUnPause
+		} else if c.Config.Healthcheck != nil {
+			log.Trace().Msg("container has healthcheck, will be waiting for \"health_status: healthy\"")
 			action = events.ActionHealthStatusHealthy
 		} else {
-			d.log.Trace().Str("name", c.Name).Msg("container has no healthcheck, will be waiting for \"start\"")
+			log.Trace().Msg("container has no healthcheck, will be waiting for \"start\"")
 		}
 
-		ready := d.afterAction(ctx, name, action)
+		ready := d.AfterAction(ctx, name, action)
 		ticker := time.NewTicker(5 * time.Second)
 
 		close(started)
@@ -164,16 +173,22 @@ func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan err
 				ch <- ctx.Err()
 				return
 			case <-ticker.C:
-				info, err := d.Info(ctx, name)
+				info, spec, err := d.InfoWithSpec(ctx, name)
 				if err != nil {
 					ch <- ctx.Err()
 					return
 				}
 				if info.Status == sablier.InstanceReady {
+					if considerReadyAfter > 0 {
+						<-d.considerReadyAfter(spec, considerReadyAfter)
+					}
 					ch <- nil
 					return
 				}
 			case err = <-ready:
+				if err == nil {
+					<-time.After(considerReadyAfter)
+				}
 				ch <- err
 				return
 			}
@@ -184,7 +199,7 @@ func (d *DockerProvider) AfterReady(ctx context.Context, name string) <-chan err
 	return ch
 }
 
-func (d *DockerProvider) afterAction(ctx context.Context, name string, action events.Action) <-chan error {
+func (d *DockerProvider) AfterAction(ctx context.Context, name string, action events.Action) <-chan error {
 	ch := make(chan error, 1)
 	started := make(chan struct{})
 
@@ -210,7 +225,7 @@ func (d *DockerProvider) afterAction(ctx context.Context, name string, action ev
 					ch <- fmt.Errorf("events channel closed")
 					return
 				}
-				d.log.Trace().Str("name", name).Any("event", msg).Msg("event received")
+				d.log.Trace().Any("event", msg).Msg("event received")
 				ch <- nil
 				return
 			case err, ok := <-errs:
