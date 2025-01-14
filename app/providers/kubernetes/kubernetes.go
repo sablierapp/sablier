@@ -37,14 +37,15 @@ type KubernetesProvider struct {
 func NewKubernetesProvider(providerConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
 	kubeclientConfig, err := rest.InClusterConfig()
 
+	if err != nil {
+		return nil, err
+	}
+
 	kubeclientConfig.QPS = providerConfig.QPS
 	kubeclientConfig.Burst = providerConfig.Burst
 
 	log.Debug(fmt.Sprintf("Provider configuration:  QPS=%v, Burst=%v", kubeclientConfig.QPS, kubeclientConfig.Burst))
 
-	if err != nil {
-		return nil, err
-	}
 	client, err := kubernetes.NewForConfig(kubeclientConfig)
 	if err != nil {
 		return nil, err
