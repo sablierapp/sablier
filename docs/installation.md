@@ -18,7 +18,7 @@ Choose one of the Docker images and run it with one sample configuration file:
 
 ```bash
 docker run -d -p 10000:10000 \
-    -v $PWD/sablier.yml:/etc/sablier/sablier.yml sablierapp/sablier:1.8.1
+    -v $PWD/sablier.yml:/etc/sablier/sablier.yml sablierapp/sablier:1.8.2
 ```
 
 ## Use the binary distribution
