@@ -7,18 +7,14 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
-func (provider *DockerSwarmProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (provider *DockerSwarmProvider) List(ctx context.Context) ([]types.Instance, error) {
 	args := filters.NewArgs()
-	for _, label := range options.Labels {
-		args.Add("label", label)
-		args.Add("label", fmt.Sprintf("%s=true", label))
-	}
+	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
 	services, err := provider.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
 		Filters: args,

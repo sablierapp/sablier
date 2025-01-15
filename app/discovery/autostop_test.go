@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/providers/mock"
 	"github.com/sablierapp/sablier/app/types"
 	"testing"
@@ -22,11 +21,8 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	}
 	registered := []string{"instance1"}
 
-	// Set up expectations for InstanceList
-	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
-		All:    false,
-		Labels: []string{discovery.LabelEnable},
-	}).Return(instances, nil)
+	// Set up expectations for List
+	mockProvider.On("List", ctx).Return(instances, nil)
 
 	// Set up expectations for Stop
 	mockProvider.On("Stop", ctx, "instance2").Return(nil)
@@ -54,11 +50,8 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	}
 	registered := []string{"instance1"}
 
-	// Set up expectations for InstanceList
-	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
-		All:    false,
-		Labels: []string{discovery.LabelEnable},
-	}).Return(instances, nil)
+	// Set up expectations for List
+	mockProvider.On("List", ctx).Return(instances, nil)
 
 	// Set up expectations for Stop with error
 	mockProvider.On("Stop", ctx, "instance2").Return(errors.New("stop error"))

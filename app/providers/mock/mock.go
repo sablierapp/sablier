@@ -32,8 +32,8 @@ func (m *ProviderMock) GetGroups(ctx context.Context) (map[string][]string, erro
 	args := m.Called(ctx)
 	return args.Get(0).(map[string][]string), args.Error(1)
 }
-func (m *ProviderMock) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
-	args := m.Called(ctx, options)
+func (m *ProviderMock) List(ctx context.Context) ([]types.Instance, error) {
+	args := m.Called(ctx)
 	return args.Get(0).([]types.Instance), args.Error(1)
 }
 
