@@ -18,3 +18,4 @@ strategy:
     default-refresh-frequency: 5s
   blocking:
     default-timeout: 1m
+    default-refresh-frequency: 5s
