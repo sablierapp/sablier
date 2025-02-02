@@ -32,6 +32,14 @@ func TestStartDynamic(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
+	t.Run("StartDynamicThemeNotFound", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartDynamic(router, strategy)
+		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(&sessions.SessionState{}, nil)
+		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test&theme=invalid")
+		assert.Equal(t, http.StatusNotFound, r.Code)
+		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
+	})
 	t.Run("StartDynamicByNames", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
