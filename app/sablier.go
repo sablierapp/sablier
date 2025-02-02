@@ -4,24 +4,26 @@ import (
 	"context"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/providers/docker"
 	"github.com/sablierapp/sablier/app/providers/dockerswarm"
 	"github.com/sablierapp/sablier/app/providers/kubernetes"
+	"log/slog"
 	"os"
 
-	"github.com/sablierapp/sablier/app/http"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
 	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	"github.com/sablierapp/sablier/version"
 	log "github.com/sirupsen/logrus"
 )
 
-func Start(conf config.Config) error {
+func Start(ctx context.Context, conf config.Config) error {
 
 	logLevel, err := log.ParseLevel(conf.Logging.Level)
 
@@ -29,6 +31,8 @@ func Start(conf config.Config) error {
 		log.Warnf("unrecognized log level \"%s\" must be one of [panic, fatal, error, warn, info, debug, trace]", conf.Logging.Level)
 		logLevel = log.InfoLevel
 	}
+
+	logger := slog.Default()
 
 	log.SetLevel(logLevel)
 
@@ -80,7 +84,14 @@ func Start(conf config.Config) error {
 		}
 	}
 
-	http.Start(conf.Server, conf.Strategy, conf.Sessions, sessionsManager, t)
+	strategy := &routes.ServeStrategy{
+		Theme:           t,
+		SessionsManager: sessionsManager,
+		StrategyConfig:  conf.Strategy,
+		SessionsConfig:  conf.Sessions,
+	}
+
+	server.Start(ctx, logger, conf.Server, strategy)
 
 	return nil
 }

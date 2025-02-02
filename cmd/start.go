@@ -13,7 +13,7 @@ var newStartCommand = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			viper.Unmarshal(&conf)
 
-			err := app.Start(conf)
+			err := app.Start(cmd.Context(), conf)
 			if err != nil {
 				panic(err)
 			}
