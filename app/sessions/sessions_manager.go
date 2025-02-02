@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sablierapp/sablier/pkg/store"
 	"io"
+	"log/slog"
 	"maps"
 	"slices"
 	"sync"
@@ -13,11 +15,8 @@ import (
 
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
-	"github.com/sablierapp/sablier/pkg/tinykv"
 	log "github.com/sirupsen/logrus"
 )
-
-const defaultRefreshFrequency = 2 * time.Second
 
 //go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
 
@@ -30,6 +29,9 @@ type Manager interface {
 	LoadSessions(io.ReadCloser) error
 	SaveSessions(io.WriteCloser) error
 
+	RemoveInstance(name string) error
+	SetGroups(groups map[string][]string)
+
 	Stop()
 }
 
@@ -37,71 +39,57 @@ type SessionsManager struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	store    tinykv.KV[instance.State]
+	store    store.Store
 	provider providers.Provider
 	groups   map[string][]string
 }
 
-func NewSessionsManager(store tinykv.KV[instance.State], provider providers.Provider) Manager {
+func NewSessionsManager(store store.Store, provider providers.Provider) Manager {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	groups, err := provider.GetGroups(ctx)
-	if err != nil {
-		groups = make(map[string][]string)
-		log.Warn("could not get groups", err)
-	}
 
 	sm := &SessionsManager{
 		ctx:      ctx,
 		cancel:   cancel,
 		store:    store,
 		provider: provider,
-		groups:   groups,
+		groups:   map[string][]string{},
 	}
-
-	sm.initWatchers()
 
 	return sm
 }
 
-func (sm *SessionsManager) initWatchers() {
-	updateGroups := make(chan map[string][]string)
-	go watchGroups(sm.ctx, sm.provider, defaultRefreshFrequency, updateGroups)
-	go sm.consumeGroups(updateGroups)
-
-	instanceStopped := make(chan string)
-	go sm.provider.NotifyInstanceStopped(sm.ctx, instanceStopped)
-	go sm.consumeInstanceStopped(instanceStopped)
+func (sm *SessionsManager) SetGroups(groups map[string][]string) {
+	if groups == nil {
+		groups = map[string][]string{}
+	}
+	slog.Info("set groups", slog.Any("old", sm.groups), slog.Any("new", groups))
+	sm.groups = groups
 }
 
-func (sm *SessionsManager) consumeGroups(receive chan map[string][]string) {
-	for groups := range receive {
-		sm.groups = groups
-	}
-}
-
-func (sm *SessionsManager) consumeInstanceStopped(instanceStopped chan string) {
-	for instance := range instanceStopped {
-		// Will delete from the store containers that have been stop either by external sources
-		// or by the internal expiration loop, if the deleted entry does not exist, it doesn't matter
-		log.Debugf("received event instance %s is stopped, removing from store", instance)
-		sm.store.Delete(instance)
-	}
+func (sm *SessionsManager) RemoveInstance(name string) error {
+	return sm.store.Delete(context.Background(), name)
 }
 
 func (sm *SessionsManager) LoadSessions(reader io.ReadCloser) error {
+	unmarshaler, ok := sm.store.(json.Unmarshaler)
 	defer reader.Close()
-	return json.NewDecoder(reader).Decode(sm.store)
+	if ok {
+		return json.NewDecoder(reader).Decode(unmarshaler)
+	}
+	return nil
 }
 
 func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
+	marshaler, ok := sm.store.(json.Marshaler)
 	defer writer.Close()
+	if ok {
+		encoder := json.NewEncoder(writer)
+		encoder.SetEscapeHTML(false)
+		encoder.SetIndent("", "  ")
 
-	encoder := json.NewEncoder(writer)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-
-	return encoder.Encode(sm.store)
+		return encoder.Encode(marshaler)
+	}
+	return nil
 }
 
 type InstanceState struct {
@@ -110,26 +98,21 @@ type InstanceState struct {
 }
 
 type SessionState struct {
-	Instances *sync.Map
+	Instances map[string]InstanceState `json:"instances"`
 }
 
 func (s *SessionState) IsReady() bool {
-	ready := true
-
 	if s.Instances == nil {
-		s.Instances = &sync.Map{}
+		s.Instances = map[string]InstanceState{}
 	}
 
-	s.Instances.Range(func(key, value interface{}) bool {
-		state := value.(InstanceState)
-		if state.Error != nil || state.Instance.Status != instance.Ready {
-			ready = false
+	for _, v := range s.Instances {
+		if v.Error != nil || v.Instance.Status != instance.Ready {
 			return false
 		}
-		return true
-	})
+	}
 
-	return ready
+	return true
 }
 
 func (s *SessionState) Status() string {
@@ -148,7 +131,7 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 	var wg sync.WaitGroup
 
 	sessionState = &SessionState{
-		Instances: &sync.Map{},
+		Instances: map[string]InstanceState{},
 	}
 
 	wg.Add(len(names))
@@ -158,10 +141,10 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 			defer wg.Done()
 			state, err := s.requestSessionInstance(name, duration)
 
-			sessionState.Instances.Store(name, InstanceState{
+			sessionState.Instances[name] = InstanceState{
 				Instance: state,
 				Error:    err,
-			})
+			}
 		}(names[i])
 	}
 
@@ -195,9 +178,8 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 		return nil, errors.New("instance name cannot be empty")
 	}
 
-	requestState, exists := s.store.Get(name)
-
-	if !exists {
+	requestState, err := s.store.Get(context.TODO(), name)
+	if errors.Is(err, store.ErrKeyNotFound) {
 		log.Debugf("starting [%s]...", name)
 
 		err := s.provider.Start(s.ctx, name)
@@ -217,6 +199,8 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 		requestState.Message = state.Message
 
 		log.Debugf("status for [%s]=[%s]", name, requestState.Status)
+	} else if err != nil {
+		return nil, fmt.Errorf("cannot retrieve instance from store: %w", err)
 	} else if requestState.Status != instance.Ready {
 		log.Debugf("checking [%s]...", name)
 		state, err := s.provider.GetState(s.ctx, name)
@@ -250,6 +234,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 
 	ticker := time.NewTicker(5 * time.Second)
 	readiness := make(chan *SessionState)
+	errch := make(chan error)
 	quit := make(chan struct{})
 
 	go func() {
@@ -258,6 +243,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 			case <-ticker.C:
 				session, err := s.RequestSession(names, duration)
 				if err != nil {
+					errch <- err
 					return
 				}
 				if session.IsReady() {
@@ -274,10 +260,16 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 	case <-ctx.Done():
 		log.Debug("request cancelled by user, stopping timeout")
 		close(quit)
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("request cancelled by user: %w", ctx.Err())
+		}
 		return nil, fmt.Errorf("request cancelled by user")
 	case status := <-readiness:
 		close(quit)
 		return status, nil
+	case err := <-errch:
+		close(quit)
+		return nil, err
 	case <-time.After(timeout):
 		close(quit)
 		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
@@ -306,25 +298,19 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 }
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
-	s.store.Put(instance.Name, *instance, duration)
+	err := s.store.Put(context.TODO(), *instance, duration)
+	if err != nil {
+		slog.Default().Warn("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
+	}
 }
 
 func (s *SessionsManager) Stop() {
 	// Stop event listeners
 	s.cancel()
-
-	// Stop the store
-	s.store.Stop()
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {
-	instances := []InstanceState{}
-
-	s.Instances.Range(func(key, value interface{}) bool {
-		state := value.(InstanceState)
-		instances = append(instances, state)
-		return true
-	})
+	instances := maps.Values(s.Instances)
 
 	return json.Marshal(map[string]any{
 		"instances": instances,

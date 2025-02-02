@@ -20,6 +20,9 @@ $(PLATFORMS):
 run:
 	go run main.go start
 
+generate:
+	go generate ./..
+
 build:
 	go build -v .
 

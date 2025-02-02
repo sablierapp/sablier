@@ -2,7 +2,8 @@ package sessions
 
 import (
 	"context"
-	"sync"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
+	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 
 func TestSessionState_IsReady(t *testing.T) {
 	type fields struct {
-		Instances *sync.Map
+		Instances map[string]InstanceState
 		Error     error
 	}
 	tests := []struct {
@@ -72,102 +73,73 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 }
 
-func createMap(instances []*instance.State) (store *sync.Map) {
-	store = &sync.Map{}
+func createMap(instances []*instance.State) map[string]InstanceState {
+	states := make(map[string]InstanceState)
 
 	for _, v := range instances {
-		store.Store(v.Name, InstanceState{
+		states[v.Name] = InstanceState{
 			Instance: v,
 			Error:    nil,
-		})
+		}
 	}
 
-	return
+	return states
 }
 
-func TestNewSessionsManagerEvents(t *testing.T) {
-	tests := []struct {
-		name             string
-		stoppedInstances []string
-	}{
-		{
-			name:             "when nginx is stopped it is removed from the store",
-			stoppedInstances: []string{"nginx"},
-		},
-		{
-			name:             "when nginx, apache and whoami is stopped it is removed from the store",
-			stoppedInstances: []string{"nginx", "apache", "whoami"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			provider := mocks.NewProviderMockWithStoppedInstancesEvents(tt.stoppedInstances)
-			provider.Add(1)
+func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.ProviderMock) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
 
-			kv := mocks.NewKVMock()
-			kv.Add(len(tt.stoppedInstances))
-			kv.Mock.On("Delete", mock.AnythingOfType("string")).Return()
+	p := mocks.NewProviderMock()
+	s := storetest.NewMockStore(ctrl)
 
-			NewSessionsManager(kv, provider)
+	m := NewSessionsManager(s, p)
+	return m, s, p
+}
 
-			// The provider watches notifications from a Goroutine, must wait
-			provider.Wait()
-			// The key is deleted inside a Goroutine by the session manager, must wait
-			kv.Wait()
-
-			for _, instance := range tt.stoppedInstances {
-				kv.AssertCalled(t, "Delete", instance)
-			}
-		})
-	}
+func TestSessionsManager(t *testing.T) {
+	t.Run("RemoveInstance", func(t *testing.T) {
+		manager, store, _ := setupSessionManager(t)
+		store.EXPECT().Delete(gomock.Any(), "test")
+		err := manager.RemoveInstance("test")
+		assert.NilError(t, err)
+	})
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
-
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
-
-		providermock := mocks.NewProviderMock()
-		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
-
 		ctx, cancel := context.WithCancel(context.Background())
+		manager, store, provider := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(ctx, []string{"nginx", "whoami"}, time.Minute, time.Minute)
+			_, err := manager.RequestReadySession(ctx, []string{"apache"}, time.Minute, time.Minute)
 			errchan <- err
 		}()
 
 		// Cancel the call
 		cancel()
 
-		assert.Error(t, <-errchan, "request cancelled by user")
+		assert.Error(t, <-errchan, "request cancelled by user: context canceled")
 	})
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
+		manager, store, provider := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		providermock := mocks.NewProviderMock()
-		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := manager.RequestReadySession(context.Background(), []string{"apache"}, time.Minute, time.Second)
 			errchan <- err
 		}()
 
@@ -178,19 +150,13 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 	t.Run("request ready session is ready", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.Ready}, true)
-
-		providermock := mocks.NewProviderMock()
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
+		manager, store, _ := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := manager.RequestReadySession(context.Background(), []string{"apache"}, time.Minute, time.Second)
 			errchan <- err
 		}()
 

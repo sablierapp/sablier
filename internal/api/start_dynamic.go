@@ -96,15 +96,10 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 		log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState is nil")
 		return
 	}
-	sessionState.Instances.Range(func(key, value any) bool {
-		if value != nil {
-			instances = append(instances, instanceStateToRenderOptionsRequestState(value.(sessions.InstanceState).Instance))
-		} else {
-			log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState instance is nil, key: %v", key)
-		}
 
-		return true
-	})
+	for _, v := range sessionState.Instances {
+		instances = append(instances, instanceStateToRenderOptionsRequestState(v.Instance))
+	}
 
 	sort.SliceStable(instances, func(i, j int) bool {
 		return strings.Compare(instances[i].Name, instances[j].Name) == -1

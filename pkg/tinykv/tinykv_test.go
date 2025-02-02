@@ -41,7 +41,7 @@ var _ KV[int] = &store[int]{}
 
 func TestGetPut(t *testing.T) {
 	assert := assert.New(t)
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	rg.Put("1", 1, time.Minute*50)
@@ -62,7 +62,7 @@ func TestGetPut(t *testing.T) {
 
 func TestKeys(t *testing.T) {
 	assert := assert.New(t)
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	rg.Put("1", 1, time.Minute*50)
@@ -76,7 +76,7 @@ func TestKeys(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	assert := assert.New(t)
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	rg.Put("1", 1, time.Minute*50)
@@ -90,7 +90,7 @@ func TestValues(t *testing.T) {
 
 func TestEntries(t *testing.T) {
 	assert := assert.New(t)
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	rg.Put("1", 1, time.Minute*50)
@@ -107,7 +107,7 @@ func TestEntries(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	os.Setenv("TZ", "")
 	assert := assert.New(t)
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	rg.Put("3", 3, time.Minute*50)
@@ -125,7 +125,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	assert.Nil(err)
 	jsons := `{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":` + string(in5MinutesJson) + `}}`
 
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	err = json.Unmarshal([]byte(jsons), &rg)
@@ -141,7 +141,7 @@ func TestUnmarshalJSONExpired(t *testing.T) {
 	assert.Nil(err)
 	jsons := `{"1":{"value":1},"2":{"value":2},"3":{"value":3,"expiresAt":` + string(since5MinutesJson) + `}}`
 
-	rg := New[int](0)
+	rg := New[int](0, nil)
 	defer rg.Stop()
 
 	err = json.Unmarshal([]byte(jsons), &rg)
@@ -371,14 +371,14 @@ func TestOrdering(t *testing.T) {
 }
 
 func BenchmarkGetNoValue(b *testing.B) {
-	rg := New[interface{}](-1)
+	rg := New[interface{}](-1, nil)
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
 }
 
 func BenchmarkGetValue(b *testing.B) {
-	rg := New[interface{}](-1)
+	rg := New[interface{}](-1, nil)
 	rg.Put("1", 1, time.Minute*50)
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
@@ -386,7 +386,7 @@ func BenchmarkGetValue(b *testing.B) {
 }
 
 func BenchmarkGetSlidingTimeout(b *testing.B) {
-	rg := New[interface{}](-1)
+	rg := New[interface{}](-1, nil)
 	rg.Put("1", 1, time.Second*10)
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
@@ -394,7 +394,7 @@ func BenchmarkGetSlidingTimeout(b *testing.B) {
 }
 
 func BenchmarkPutExpire(b *testing.B) {
-	rg := New[interface{}](-1)
+	rg := New[interface{}](-1, nil)
 	for n := 0; n < b.N; n++ {
 		rg.Put("1", 1, time.Second*10)
 	}

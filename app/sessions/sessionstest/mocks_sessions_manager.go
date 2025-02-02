@@ -57,6 +57,20 @@ func (mr *MockManagerMockRecorder) LoadSessions(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadSessions", reflect.TypeOf((*MockManager)(nil).LoadSessions), arg0)
 }
 
+// RemoveInstance mocks base method.
+func (m *MockManager) RemoveInstance(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveInstance", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveInstance indicates an expected call of RemoveInstance.
+func (mr *MockManagerMockRecorder) RemoveInstance(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveInstance", reflect.TypeOf((*MockManager)(nil).RemoveInstance), name)
+}
+
 // RequestReadySession mocks base method.
 func (m *MockManager) RequestReadySession(ctx context.Context, names []string, duration, timeout time.Duration) (*sessions.SessionState, error) {
 	m.ctrl.T.Helper()
@@ -129,6 +143,18 @@ func (m *MockManager) SaveSessions(arg0 io.WriteCloser) error {
 func (mr *MockManagerMockRecorder) SaveSessions(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveSessions", reflect.TypeOf((*MockManager)(nil).SaveSessions), arg0)
+}
+
+// SetGroups mocks base method.
+func (m *MockManager) SetGroups(groups map[string][]string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetGroups", groups)
+}
+
+// SetGroups indicates an expected call of SetGroups.
+func (mr *MockManagerMockRecorder) SetGroups(groups any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGroups", reflect.TypeOf((*MockManager)(nil).SetGroups), groups)
 }
 
 // Stop mocks base method.
