@@ -47,18 +47,12 @@ type SessionsManager struct {
 func NewSessionsManager(store store.Store, provider providers.Provider) Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	groups, err := provider.GetGroups(ctx)
-	if err != nil {
-		groups = make(map[string][]string)
-		log.Warn("could not get groups", err)
-	}
-
 	sm := &SessionsManager{
 		ctx:      ctx,
 		cancel:   cancel,
 		store:    store,
 		provider: provider,
-		groups:   groups,
+		groups:   map[string][]string{},
 	}
 
 	return sm
@@ -262,6 +256,9 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 	case <-ctx.Done():
 		log.Debug("request cancelled by user, stopping timeout")
 		close(quit)
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("request cancelled by user: %w", ctx.Err())
+		}
 		return nil, fmt.Errorf("request cancelled by user")
 	case status := <-readiness:
 		close(quit)

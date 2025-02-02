@@ -59,6 +59,13 @@ func Start(ctx context.Context, conf config.Config) error {
 	sessionsManager := sessions.NewSessionsManager(store, provider)
 	defer sessionsManager.Stop()
 
+	groups, err := provider.GetGroups(ctx)
+	if err != nil {
+		log.Warn("could not get groups", err)
+	} else {
+		sessionsManager.SetGroups(groups)
+	}
+
 	updateGroups := make(chan map[string][]string)
 	go WatchGroups(ctx, provider, 2*time.Second, updateGroups)
 	go func() {

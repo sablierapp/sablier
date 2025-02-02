@@ -109,49 +109,37 @@ func TestSessionsManager(t *testing.T) {
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		ctrl := gomock.NewController(t)
-		kvmock := storetest.NewMockStore(ctrl)
-		kvmock.EXPECT().Get(ctx, gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
+		manager, store, provider := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		providermock := mocks.NewProviderMock()
-		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(ctx, []string{"nginx", "whoami"}, time.Minute, time.Minute)
+			_, err := manager.RequestReadySession(ctx, []string{"apache"}, time.Minute, time.Minute)
 			errchan <- err
 		}()
 
 		// Cancel the call
 		cancel()
 
-		assert.Error(t, <-errchan, "request cancelled by user")
+		assert.Error(t, <-errchan, "request cancelled by user: context canceled")
 	})
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		kvmock := storetest.NewMockStore(ctrl)
-		kvmock.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
+		manager, store, provider := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		providermock := mocks.NewProviderMock()
-		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := manager.RequestReadySession(context.Background(), []string{"apache"}, time.Minute, time.Second)
 			errchan <- err
 		}()
 
@@ -162,20 +150,13 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 	t.Run("request ready session is ready", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		kvmock := storetest.NewMockStore(ctrl)
-		kvmock.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, true)
-
-		providermock := mocks.NewProviderMock()
-
-		s := &SessionsManager{
-			store:    kvmock,
-			provider: providermock,
-		}
+		manager, store, _ := setupSessionManager(t)
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, nil).AnyTimes()
+		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		errchan := make(chan error)
 		go func() {
-			_, err := s.RequestReadySession(context.Background(), []string{"nginx", "whoami"}, time.Minute, time.Second)
+			_, err := manager.RequestReadySession(context.Background(), []string{"apache"}, time.Minute, time.Second)
 			errchan <- err
 		}()
 
