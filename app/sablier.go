@@ -11,6 +11,8 @@ import (
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/sablierapp/sablier/app/providers"
@@ -24,7 +26,9 @@ import (
 )
 
 func Start(ctx context.Context, conf config.Config) error {
-
+	// Create context that listens for the interrupt signal from the OS.
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	logLevel, err := log.ParseLevel(conf.Logging.Level)
 
 	if err != nil {
@@ -79,7 +83,9 @@ func Start(ctx context.Context, conf config.Config) error {
 	go func() {
 		for stopped := range instanceStopped {
 			err := sessionsManager.RemoveInstance(stopped)
-			logger.Warn("could not remove instance", slog.Any("error", err))
+			if err != nil {
+				logger.Warn("could not remove instance", slog.Any("error", err))
+			}
 		}
 	}()
 
@@ -119,7 +125,21 @@ func Start(ctx context.Context, conf config.Config) error {
 		SessionsConfig:  conf.Sessions,
 	}
 
-	server.Start(ctx, logger, conf.Server, strategy)
+	go server.Start(ctx, logger, conf.Server, strategy)
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+
+	// Restore default behavior on the interrupt signal and notify user of shutdown.
+	stop()
+	log.Println("shutting down gracefully, press Ctrl+C again to force")
+
+	// The context is used to inform the server it has 5 seconds to finish
+	// the request it is currently handling
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	log.Println("Server exiting")
 
 	return nil
 }
@@ -140,6 +160,7 @@ func onSessionExpires(provider providers.Provider) func(key string) {
 }
 
 func loadSessions(storage storage.Storage, sessions sessions.Manager) {
+	slog.Info("loading sessions from storage")
 	reader, err := storage.Reader()
 	if err != nil {
 		log.Error("error loading sessions", err)
@@ -151,6 +172,7 @@ func loadSessions(storage storage.Storage, sessions sessions.Manager) {
 }
 
 func saveSessions(storage storage.Storage, sessions sessions.Manager) {
+	slog.Info("writing sessions to storage")
 	writer, err := storage.Writer()
 	if err != nil {
 		log.Error("error saving sessions", err)
@@ -188,7 +210,7 @@ func WatchGroups(ctx context.Context, provider providers.Provider, frequency tim
 			groups, err := provider.GetGroups(ctx)
 			if err != nil {
 				log.Warn("could not get groups", err)
-			} else {
+			} else if groups != nil {
 				send <- groups
 			}
 		}

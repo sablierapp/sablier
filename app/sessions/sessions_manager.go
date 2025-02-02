@@ -59,6 +59,10 @@ func NewSessionsManager(store store.Store, provider providers.Provider) Manager 
 }
 
 func (sm *SessionsManager) SetGroups(groups map[string][]string) {
+	if groups == nil {
+		groups = map[string][]string{}
+	}
+	slog.Info("set groups", slog.Any("old", sm.groups), slog.Any("new", groups))
 	sm.groups = groups
 }
 
@@ -295,7 +299,9 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 
 func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
 	err := s.store.Put(context.TODO(), *instance, duration)
-	slog.Default().Warn("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
+	if err != nil {
+		slog.Default().Warn("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
+	}
 }
 
 func (s *SessionsManager) Stop() {
