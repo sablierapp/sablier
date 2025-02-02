@@ -15,16 +15,13 @@ import (
 func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provider, registered []string) error {
 	log.Info("Stopping all unregistered running instances")
 
-	log.Tracef("Retrieving all instances with label [%v=true]", LabelEnable)
-	instances, err := provider.InstanceList(ctx, providers.InstanceListOptions{
-		All:    false, // Only running containers
-		Labels: []string{LabelEnable},
-	})
+	log.Trace("Retrieving all registered instances")
+	instances, err := provider.List(ctx)
 	if err != nil {
 		return err
 	}
 
-	log.Tracef("Found %v instances with label [%v=true]", len(instances), LabelEnable)
+	log.Tracef("Found %v instances", len(instances))
 	names := make([]string, 0, len(instances))
 	for _, instance := range instances {
 		names = append(names, instance.Name)
