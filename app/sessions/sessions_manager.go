@@ -110,26 +110,21 @@ type InstanceState struct {
 }
 
 type SessionState struct {
-	Instances *sync.Map
+	Instances map[string]InstanceState `json:"instances"`
 }
 
 func (s *SessionState) IsReady() bool {
-	ready := true
-
 	if s.Instances == nil {
-		s.Instances = &sync.Map{}
+		s.Instances = map[string]InstanceState{}
 	}
 
-	s.Instances.Range(func(key, value interface{}) bool {
-		state := value.(InstanceState)
-		if state.Error != nil || state.Instance.Status != instance.Ready {
-			ready = false
+	for _, v := range s.Instances {
+		if v.Error != nil || v.Instance.Status != instance.Ready {
 			return false
 		}
-		return true
-	})
+	}
 
-	return ready
+	return true
 }
 
 func (s *SessionState) Status() string {
@@ -148,7 +143,7 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 	var wg sync.WaitGroup
 
 	sessionState = &SessionState{
-		Instances: &sync.Map{},
+		Instances: map[string]InstanceState{},
 	}
 
 	wg.Add(len(names))
@@ -158,10 +153,10 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 			defer wg.Done()
 			state, err := s.requestSessionInstance(name, duration)
 
-			sessionState.Instances.Store(name, InstanceState{
+			sessionState.Instances[name] = InstanceState{
 				Instance: state,
 				Error:    err,
-			})
+			}
 		}(names[i])
 	}
 
@@ -250,6 +245,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 
 	ticker := time.NewTicker(5 * time.Second)
 	readiness := make(chan *SessionState)
+	errch := make(chan error)
 	quit := make(chan struct{})
 
 	go func() {
@@ -258,6 +254,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 			case <-ticker.C:
 				session, err := s.RequestSession(names, duration)
 				if err != nil {
+					errch <- err
 					return
 				}
 				if session.IsReady() {
@@ -278,6 +275,9 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 	case status := <-readiness:
 		close(quit)
 		return status, nil
+	case err := <-errch:
+		close(quit)
+		return nil, err
 	case <-time.After(timeout):
 		close(quit)
 		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
@@ -318,13 +318,7 @@ func (s *SessionsManager) Stop() {
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {
-	instances := []InstanceState{}
-
-	s.Instances.Range(func(key, value interface{}) bool {
-		state := value.(InstanceState)
-		instances = append(instances, state)
-		return true
-	})
+	instances := maps.Values(s.Instances)
 
 	return json.Marshal(map[string]any{
 		"instances": instances,

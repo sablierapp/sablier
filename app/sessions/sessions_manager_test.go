@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 
 func TestSessionState_IsReady(t *testing.T) {
 	type fields struct {
-		Instances *sync.Map
+		Instances map[string]InstanceState
 		Error     error
 	}
 	tests := []struct {
@@ -72,17 +71,17 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 }
 
-func createMap(instances []*instance.State) (store *sync.Map) {
-	store = &sync.Map{}
+func createMap(instances []*instance.State) map[string]InstanceState {
+	states := make(map[string]InstanceState)
 
 	for _, v := range instances {
-		store.Store(v.Name, InstanceState{
+		states[v.Name] = InstanceState{
 			Instance: v,
 			Error:    nil,
-		})
+		}
 	}
 
-	return
+	return states
 }
 
 func TestNewSessionsManagerEvents(t *testing.T) {
