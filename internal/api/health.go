@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"context"
@@ -30,4 +30,11 @@ func (h *Health) ServeHTTP(c *gin.Context) {
 	}
 
 	c.String(statusCode, http.StatusText(statusCode))
+}
+
+func Healthcheck(router *gin.RouterGroup, ctx context.Context) {
+	health := Health{}
+	health.SetDefaults()
+	health.WithContext(ctx)
+	router.GET("/health", health.ServeHTTP)
 }

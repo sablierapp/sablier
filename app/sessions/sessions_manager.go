@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -17,9 +19,11 @@ import (
 
 const defaultRefreshFrequency = 2 * time.Second
 
+//go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
+
 type Manager interface {
-	RequestSession(names []string, duration time.Duration) *SessionState
-	RequestSessionGroup(group string, duration time.Duration) *SessionState
+	RequestSession(names []string, duration time.Duration) (*SessionState, error)
+	RequestSessionGroup(group string, duration time.Duration) (*SessionState, error)
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 
@@ -112,6 +116,10 @@ type SessionState struct {
 func (s *SessionState) IsReady() bool {
 	ready := true
 
+	if s.Instances == nil {
+		s.Instances = &sync.Map{}
+	}
+
 	s.Instances.Range(func(key, value interface{}) bool {
 		state := value.(InstanceState)
 		if state.Error != nil || state.Instance.Status != instance.Ready {
@@ -132,10 +140,9 @@ func (s *SessionState) Status() string {
 	return "not-ready"
 }
 
-func (s *SessionsManager) RequestSession(names []string, duration time.Duration) (sessionState *SessionState) {
-
+func (s *SessionsManager) RequestSession(names []string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(names) == 0 {
-		return nil
+		return nil, fmt.Errorf("names cannot be empty")
 	}
 
 	var wg sync.WaitGroup
@@ -160,19 +167,24 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 
 	wg.Wait()
 
-	return sessionState
+	return sessionState, nil
 }
 
-func (s *SessionsManager) RequestSessionGroup(group string, duration time.Duration) (sessionState *SessionState) {
-
+func (s *SessionsManager) RequestSessionGroup(group string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(group) == 0 {
-		return nil
+		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names := s.groups[group]
+	names, ok := s.groups[group]
+	if !ok {
+		return nil, ErrGroupNotFound{
+			Group:           group,
+			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+		}
+	}
 
 	if len(names) == 0 {
-		return nil
+		return nil, fmt.Errorf("group has no member")
 	}
 
 	return s.RequestSession(names, duration)
@@ -227,8 +239,11 @@ func (s *SessionsManager) requestSessionInstance(name string, duration time.Dura
 }
 
 func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+	session, err := s.RequestSession(names, duration)
+	if err != nil {
+		return nil, err
+	}
 
-	session := s.RequestSession(names, duration)
 	if session.IsReady() {
 		return session, nil
 	}
@@ -241,7 +256,10 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 		for {
 			select {
 			case <-ticker.C:
-				session := s.RequestSession(names, duration)
+				session, err := s.RequestSession(names, duration)
+				if err != nil {
+					return
+				}
 				if session.IsReady() {
 					readiness <- session
 				}
@@ -272,7 +290,13 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names := s.groups[group]
+	names, ok := s.groups[group]
+	if !ok {
+		return nil, ErrGroupNotFound{
+			Group:           group,
+			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+		}
+	}
 
 	if len(names) == 0 {
 		return nil, fmt.Errorf("group has no member")

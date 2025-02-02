@@ -27,7 +27,10 @@ func (t *Themes) Render(name string, opts Options, writer io.Writer) error {
 
 	tpl := t.themes.Lookup(fmt.Sprintf("%s.html", name))
 	if tpl == nil {
-		return fmt.Errorf("theme %s does not exist", name)
+		return ErrThemeNotFound{
+			Theme:           name,
+			AvailableThemes: t.List(),
+		}
 	}
 
 	return tpl.Execute(writer, options)

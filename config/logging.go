@@ -1,6 +1,8 @@
 package config
 
-import log "github.com/sirupsen/logrus"
+import (
+	"log/slog"
+)
 
 type Logging struct {
 	Level string `mapstructure:"LEVEL" yaml:"level" default:"info"`
@@ -8,6 +10,6 @@ type Logging struct {
 
 func NewLoggingConfig() Logging {
 	return Logging{
-		Level: log.InfoLevel.String(),
+		Level: slog.LevelInfo.String(),
 	}
 }
