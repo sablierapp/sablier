@@ -1,19 +1,10 @@
-# Sablier
+# 
 
-[![GitHub license](https://img.shields.io/github/license/sablierapp/sablier.svg)](https://github.com/sablierapp/sablier/blob/master/LICENSE)
-[![GitHub contributors](https://img.shields.io/github/contributors/sablierapp/sablier.svg)](https://GitHub.com/sablierapp/sablier/graphs/contributors/)
-[![GitHub issues](https://img.shields.io/github/issues/sablierapp/sablier.svg)](https://GitHub.com/sablierapp/sablier/issues/)
-[![GitHub pull-requests](https://img.shields.io/github/issues-pr/sablierapp/sablier.svg)](https://GitHub.com/sablierapp/sablier/pulls/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+![Sablier Banner](https://raw.githubusercontent.com/sablierapp/artwork/refs/heads/main/horizontal/sablier-horizontal-color.png)
 
-[![GoDoc](https://godoc.org/github.com/sablierapp/sablier?status.svg)](http://godoc.org/github.com/sablierapp/sablier)
-![Latest Build](https://img.shields.io/github/actions/workflow/status/sablierapp/sablier/build.yml?style=flat-square&branch=main)
-![Go Report](https://goreportcard.com/badge/github.com/sablierapp/sablier?style=flat-square)
-![Go Version](https://img.shields.io/github/go-mod/go-version/sablierapp/sablier?style=flat-square)
-![Latest Release](https://img.shields.io/github/v/release/sablierapp/sablier?style=flat-square&sort=semver)
-![Latest PreRelease](https://img.shields.io/github/v/release/sablierapp/sablier?style=flat-square&include_prereleases&sort=semver)
+A free and open-source software to start workloads on demand and stop them after a period of inactivity.
 
-An free and open-source software to start workloads on demand and stop them after a period of inactivity.
+Think of it a bit like a serverless platform, but for your own servers.
 
 ![Demo](./docs/assets/img/demo.gif)
 
