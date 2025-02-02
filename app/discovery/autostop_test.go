@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/providers/mock"
 	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"gotest.tools/v3/assert"
 	"testing"
+	"time"
 )
 
 func TestStopAllUnregisteredInstances(t *testing.T) {
@@ -20,7 +24,9 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 		{Name: "instance2"},
 		{Name: "instance3"},
 	}
-	registered := []string{"instance1"}
+	store := inmemory.NewInMemory()
+	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
 	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
@@ -33,10 +39,8 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
-	err := discovery.StopAllUnregisteredInstances(ctx, mockProvider, registered)
-	if err != nil {
-		t.Fatalf("Expected no error, but got %v", err)
-	}
+	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store)
+	assert.NilError(t, err)
 
 	// Check expectations
 	mockProvider.AssertExpectations(t)
@@ -52,7 +56,9 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 		{Name: "instance2"},
 		{Name: "instance3"},
 	}
-	registered := []string{"instance1"}
+	store := inmemory.NewInMemory()
+	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
 	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
@@ -65,10 +71,8 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
-	err := discovery.StopAllUnregisteredInstances(ctx, mockProvider, registered)
-	if err == nil {
-		t.Fatalf("Expected error, but got nil")
-	}
+	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store)
+	assert.Error(t, err, "stop error")
 
 	// Check expectations
 	mockProvider.AssertExpectations(t)

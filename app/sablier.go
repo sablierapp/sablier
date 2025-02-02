@@ -8,17 +8,17 @@ import (
 	"github.com/sablierapp/sablier/app/providers/docker"
 	"github.com/sablierapp/sablier/app/providers/dockerswarm"
 	"github.com/sablierapp/sablier/app/providers/kubernetes"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"log/slog"
 	"os"
+	"time"
 
-	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
 	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/internal/server"
-	"github.com/sablierapp/sablier/pkg/tinykv"
 	"github.com/sablierapp/sablier/version"
 	log "github.com/sirupsen/logrus"
 )
@@ -45,7 +45,11 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	log.Infof("using provider \"%s\"", conf.Provider.Name)
 
-	store := tinykv.New(conf.Sessions.ExpirationInterval, onSessionExpires(provider))
+	store := inmemory.NewInMemory()
+	err = store.OnExpire(ctx, onSessionExpires(provider))
+	if err != nil {
+		return err
+	}
 
 	storage, err := storage.NewFileStorage(conf.Storage)
 	if err != nil {
@@ -55,13 +59,30 @@ func Start(ctx context.Context, conf config.Config) error {
 	sessionsManager := sessions.NewSessionsManager(store, provider)
 	defer sessionsManager.Stop()
 
+	updateGroups := make(chan map[string][]string)
+	go WatchGroups(ctx, provider, 2*time.Second, updateGroups)
+	go func() {
+		for groups := range updateGroups {
+			sessionsManager.SetGroups(groups)
+		}
+	}()
+
+	instanceStopped := make(chan string)
+	go provider.NotifyInstanceStopped(ctx, instanceStopped)
+	go func() {
+		for stopped := range instanceStopped {
+			err := sessionsManager.RemoveInstance(stopped)
+			logger.Warn("could not remove instance", slog.Any("error", err))
+		}
+	}()
+
 	if storage.Enabled() {
 		defer saveSessions(storage, sessionsManager)
 		loadSessions(storage, sessionsManager)
 	}
 
 	if conf.Provider.AutoStopOnStartup {
-		err := discovery.StopAllUnregisteredInstances(context.Background(), provider, store.Keys())
+		err := discovery.StopAllUnregisteredInstances(context.Background(), provider, store)
 		if err != nil {
 			log.Warnf("Stopping unregistered instances had an error: %v", err)
 		}
@@ -96,9 +117,9 @@ func Start(ctx context.Context, conf config.Config) error {
 	return nil
 }
 
-func onSessionExpires(provider providers.Provider) func(key string, instance instance.State) {
-	return func(_key string, _instance instance.State) {
-		go func(key string, instance instance.State) {
+func onSessionExpires(provider providers.Provider) func(key string) {
+	return func(_key string) {
+		go func(key string) {
 			log.Debugf("stopping %s...", key)
 			err := provider.Stop(context.Background(), key)
 
@@ -107,7 +128,7 @@ func onSessionExpires(provider providers.Provider) func(key string, instance ins
 			} else {
 				log.Debugf("stopped %s", key)
 			}
-		}(_key, _instance)
+		}(_key)
 	}
 }
 
@@ -148,4 +169,21 @@ func NewProvider(config config.Provider) (providers.Provider, error) {
 		return kubernetes.NewKubernetesProvider(config.Kubernetes)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
+}
+
+func WatchGroups(ctx context.Context, provider providers.Provider, frequency time.Duration, send chan<- map[string][]string) {
+	ticker := time.NewTicker(frequency)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			groups, err := provider.GetGroups(ctx)
+			if err != nil {
+				log.Warn("could not get groups", err)
+			} else {
+				send <- groups
+			}
+		}
+	}
 }

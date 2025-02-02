@@ -2,8 +2,9 @@ package discovery
 
 import (
 	"context"
+	"errors"
 	"github.com/sablierapp/sablier/app/providers"
-	"github.com/sablierapp/sablier/pkg/arrays"
+	"github.com/sablierapp/sablier/pkg/store"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -12,7 +13,7 @@ import (
 // as running instances by Sablier.
 // By default, Sablier does not stop all already running instances. Meaning that you need to make an
 // initial request in order to trigger the scaling to zero.
-func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provider, registered []string) error {
+func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provider, s store.Store) error {
 	log.Info("Stopping all unregistered running instances")
 
 	log.Tracef("Retrieving all instances with label [%v=true]", LabelEnable)
@@ -25,12 +26,14 @@ func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provid
 	}
 
 	log.Tracef("Found %v instances with label [%v=true]", len(instances), LabelEnable)
-	names := make([]string, 0, len(instances))
+	unregistered := make([]string, 0)
 	for _, instance := range instances {
-		names = append(names, instance.Name)
+		_, err = s.Get(ctx, instance.Name)
+		if errors.Is(err, store.ErrKeyNotFound) {
+			unregistered = append(unregistered, instance.Name)
+		}
 	}
 
-	unregistered := arrays.RemoveElements(names, registered)
 	log.Tracef("Found %v unregistered instances ", len(instances))
 
 	waitGroup := errgroup.Group{}

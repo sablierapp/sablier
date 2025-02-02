@@ -2,6 +2,8 @@ package sessions
 
 import (
 	"context"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
+	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
@@ -84,48 +86,32 @@ func createMap(instances []*instance.State) map[string]InstanceState {
 	return states
 }
 
-func TestNewSessionsManagerEvents(t *testing.T) {
-	tests := []struct {
-		name             string
-		stoppedInstances []string
-	}{
-		{
-			name:             "when nginx is stopped it is removed from the store",
-			stoppedInstances: []string{"nginx"},
-		},
-		{
-			name:             "when nginx, apache and whoami is stopped it is removed from the store",
-			stoppedInstances: []string{"nginx", "apache", "whoami"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			provider := mocks.NewProviderMockWithStoppedInstancesEvents(tt.stoppedInstances)
-			provider.Add(1)
+func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.ProviderMock) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
 
-			kv := mocks.NewKVMock()
-			kv.Add(len(tt.stoppedInstances))
-			kv.Mock.On("Delete", mock.AnythingOfType("string")).Return()
+	p := mocks.NewProviderMock()
+	s := storetest.NewMockStore(ctrl)
 
-			NewSessionsManager(kv, provider)
+	m := NewSessionsManager(s, p)
+	return m, s, p
+}
 
-			// The provider watches notifications from a Goroutine, must wait
-			provider.Wait()
-			// The key is deleted inside a Goroutine by the session manager, must wait
-			kv.Wait()
-
-			for _, instance := range tt.stoppedInstances {
-				kv.AssertCalled(t, "Delete", instance)
-			}
-		})
-	}
+func TestSessionsManager(t *testing.T) {
+	t.Run("RemoveInstance", func(t *testing.T) {
+		manager, store, _ := setupSessionManager(t)
+		store.EXPECT().Delete(gomock.Any(), "test")
+		err := manager.RemoveInstance("test")
+		assert.NilError(t, err)
+	})
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
-
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
+		ctx, cancel := context.WithCancel(context.Background())
+		ctrl := gomock.NewController(t)
+		kvmock := storetest.NewMockStore(ctrl)
+		kvmock.EXPECT().Get(ctx, gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
 
 		providermock := mocks.NewProviderMock()
 		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
@@ -134,8 +120,6 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 			store:    kvmock,
 			provider: providermock,
 		}
-
-		ctx, cancel := context.WithCancel(context.Background())
 
 		errchan := make(chan error)
 		go func() {
@@ -153,8 +137,9 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
+		ctrl := gomock.NewController(t)
+		kvmock := storetest.NewMockStore(ctrl)
+		kvmock.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, true)
 
 		providermock := mocks.NewProviderMock()
 		providermock.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
@@ -177,8 +162,9 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 	t.Run("request ready session is ready", func(t *testing.T) {
-		kvmock := mocks.NewKVMock()
-		kvmock.On("Get", mock.Anything).Return(instance.State{Name: "apache", Status: instance.Ready}, true)
+		ctrl := gomock.NewController(t)
+		kvmock := storetest.NewMockStore(ctrl)
+		kvmock.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, true)
 
 		providermock := mocks.NewProviderMock()
 

@@ -64,6 +64,7 @@ type KV[T any] interface {
 	Entries() (entries map[string]entry[T])
 	Put(k string, v T, expiresAfter time.Duration) error
 	Stop()
+	SetOnExpire(onExpire func(k string, v T))
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
 }
@@ -83,21 +84,24 @@ type store[T any] struct {
 }
 
 // New creates a new *store, onExpire is for notification (must be fast).
-func New[T any](expirationInterval time.Duration, onExpire ...func(k string, v T)) KV[T] {
+func New[T any](expirationInterval time.Duration, onExpire func(k string, v T)) KV[T] {
 	if expirationInterval <= 0 {
 		expirationInterval = time.Second * 20
 	}
 	res := &store[T]{
+		onExpire:           onExpire,
 		stop:               make(chan struct{}),
 		kv:                 make(map[string]*entry[T]),
 		expirationInterval: expirationInterval,
 		heap:               th{},
 	}
-	if len(onExpire) > 0 && onExpire[0] != nil {
-		res.onExpire = onExpire[0]
-	}
+
 	go res.expireLoop()
 	return res
+}
+
+func (kv *store[T]) SetOnExpire(onExpire func(k string, v T)) {
+	kv.onExpire = onExpire
 }
 
 // Stop stops the goroutine
