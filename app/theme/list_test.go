@@ -1,6 +1,7 @@
 package theme_test
 
 import (
+	"github.com/neilotoole/slogt"
 	"testing"
 	"testing/fstest"
 
@@ -13,7 +14,7 @@ func TestList(t *testing.T) {
 		fstest.MapFS{
 			"theme1.html":       &fstest.MapFile{},
 			"inner/theme2.html": &fstest.MapFile{},
-		})
+		}, slogt.New(t))
 	if err != nil {
 		t.Error(err)
 		return

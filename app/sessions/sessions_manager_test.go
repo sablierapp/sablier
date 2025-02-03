@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"context"
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"testing"
@@ -88,13 +89,12 @@ func createMap(instances []*instance.State) map[string]InstanceState {
 
 func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.ProviderMock) {
 	t.Helper()
-	slog.Lo
 	ctrl := gomock.NewController(t)
 
 	p := mocks.NewProviderMock()
 	s := storetest.NewMockStore(ctrl)
 
-	m := NewSessionsManager(s, p)
+	m := NewSessionsManager(slogt.New(t), s, p)
 	return m, s, p
 }
 

@@ -3,6 +3,7 @@ package discovery_test
 import (
 	"context"
 	"errors"
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
@@ -39,7 +40,7 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
-	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store)
+	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store, slogt.New(t))
 	assert.NilError(t, err)
 
 	// Check expectations
@@ -71,7 +72,7 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	mockProvider.On("Stop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
-	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store)
+	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store, slogt.New(t))
 	assert.Error(t, err, "stop error")
 
 	// Check expectations

@@ -3,6 +3,8 @@ package theme_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/neilotoole/slogt"
+	"log/slog"
 	"os"
 	"testing"
 	"testing/fstest"
@@ -65,7 +67,7 @@ func TestThemes_Render(t *testing.T) {
 	version.Version = "1.0.0"
 	themes, err := theme.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
-	})
+	}, slogt.New(t))
 	if err != nil {
 		t.Error(err)
 		return
@@ -179,7 +181,7 @@ func ExampleThemes_Render() {
 	version.Version = "1.0.0"
 	themes, err := theme.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
-	})
+	}, slog.Default())
 	if err != nil {
 		panic(err)
 	}
