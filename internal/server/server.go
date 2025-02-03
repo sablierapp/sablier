@@ -42,7 +42,9 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 
 	logger.Info("starting ",
 		slog.String("listen", server.Addr),
-		slog.Duration("startup", time.Since(start)))
+		slog.Duration("startup", time.Since(start)),
+		slog.String("mode", gin.Mode()),
+	)
 
 	go StartHttp(server, logger)
 

@@ -88,6 +88,7 @@ func createMap(instances []*instance.State) map[string]InstanceState {
 
 func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.ProviderMock) {
 	t.Helper()
+	slog.Lo
 	ctrl := gomock.NewController(t)
 
 	p := mocks.NewProviderMock()

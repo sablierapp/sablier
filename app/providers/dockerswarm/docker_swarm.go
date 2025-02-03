@@ -7,6 +7,7 @@ import (
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -14,7 +15,6 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/app/instance"
-	log "github.com/sirupsen/logrus"
 )
 
 // Interface guard
@@ -23,50 +23,57 @@ var _ providers.Provider = (*DockerSwarmProvider)(nil)
 type DockerSwarmProvider struct {
 	Client          client.APIClient
 	desiredReplicas int32
+
+	l *slog.Logger
 }
 
-func NewDockerSwarmProvider() (*DockerSwarmProvider, error) {
+func NewDockerSwarmProvider(ctx context.Context, logger *slog.Logger) (*DockerSwarmProvider, error) {
+	logger = logger.With(slog.String("provider", "swarm"))
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("cannot create docker client: %v", err)
+		return nil, fmt.Errorf("cannot create docker client: %w", err)
 	}
 
-	serverVersion, err := cli.ServerVersion(context.Background())
+	serverVersion, err := cli.ServerVersion(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
+		return nil, fmt.Errorf("cannot connect to docker host: %w", err)
 	}
 
-	log.Trace(fmt.Sprintf("connection established with docker %s (API %s)", serverVersion.Version, serverVersion.APIVersion))
+	logger.InfoContext(ctx, "connection established with docker swarm",
+		slog.String("version", serverVersion.Version),
+		slog.String("api_version", serverVersion.APIVersion),
+	)
 
 	return &DockerSwarmProvider{
 		Client:          cli,
 		desiredReplicas: 1,
+		l:               logger,
 	}, nil
 
 }
 
-func (provider *DockerSwarmProvider) Start(ctx context.Context, name string) error {
-	return provider.scale(ctx, name, uint64(provider.desiredReplicas))
+func (p *DockerSwarmProvider) Start(ctx context.Context, name string) error {
+	return p.scale(ctx, name, uint64(p.desiredReplicas))
 }
 
-func (provider *DockerSwarmProvider) Stop(ctx context.Context, name string) error {
-	return provider.scale(ctx, name, 0)
+func (p *DockerSwarmProvider) Stop(ctx context.Context, name string) error {
+	return p.scale(ctx, name, 0)
 }
 
-func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) error {
-	service, err := provider.getServiceByName(name, ctx)
+func (p *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) error {
+	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return err
 	}
 
-	foundName := provider.getInstanceName(name, *service)
+	foundName := p.getInstanceName(name, *service)
 	if service.Spec.Mode.Replicated == nil {
 		return errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	service.Spec.Mode.Replicated.Replicas = &replicas
 
-	response, err := provider.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
+	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -78,12 +85,12 @@ func (provider *DockerSwarmProvider) scale(ctx context.Context, name string, rep
 	return nil
 }
 
-func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
-	filters := filters.NewArgs()
-	filters.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+func (p *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+	f := filters.NewArgs()
+	f.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
-	services, err := provider.Client.ServiceList(ctx, types.ServiceListOptions{
-		Filters: filters,
+	services, err := p.Client.ServiceList(ctx, types.ServiceListOptions{
+		Filters: f,
 	})
 
 	if err != nil {
@@ -105,41 +112,41 @@ func (provider *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string]
 	return groups, nil
 }
 
-func (provider *DockerSwarmProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+func (p *DockerSwarmProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 
-	service, err := provider.getServiceByName(name, ctx)
+	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return instance.State{}, err
 	}
 
-	foundName := provider.getInstanceName(name, *service)
+	foundName := p.getInstanceName(name, *service)
 
 	if service.Spec.Mode.Replicated == nil {
 		return instance.State{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return instance.NotReadyInstanceState(foundName, 0, provider.desiredReplicas), nil
+		return instance.NotReadyInstanceState(foundName, 0, p.desiredReplicas), nil
 	}
 
-	return instance.ReadyInstanceState(foundName, provider.desiredReplicas), nil
+	return instance.ReadyInstanceState(foundName, p.desiredReplicas), nil
 }
 
-func (provider *DockerSwarmProvider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
+func (p *DockerSwarmProvider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
 	opts := types.ServiceListOptions{
 		Filters: filters.NewArgs(),
 		Status:  true,
 	}
 	opts.Filters.Add("name", name)
 
-	services, err := provider.Client.ServiceList(ctx, opts)
+	services, err := p.Client.ServiceList(ctx, opts)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if len(services) == 0 {
-		return nil, fmt.Errorf(fmt.Sprintf("service with name %s was not found", name))
+		return nil, fmt.Errorf("service with name %s was not found", name)
 	}
 
 	for _, service := range services {
@@ -149,10 +156,10 @@ func (provider *DockerSwarmProvider) getServiceByName(name string, ctx context.C
 		}
 	}
 
-	return nil, fmt.Errorf(fmt.Sprintf("service %s was not found because it did not match exactly or on suffix", name))
+	return nil, fmt.Errorf("service %s was not found because it did not match exactly or on suffix", name)
 }
 
-func (provider *DockerSwarmProvider) getInstanceName(name string, service swarm.Service) string {
+func (p *DockerSwarmProvider) getInstanceName(name string, service swarm.Service) string {
 	if name == service.Spec.Name {
 		return name
 	}
@@ -160,8 +167,8 @@ func (provider *DockerSwarmProvider) getInstanceName(name string, service swarm.
 	return fmt.Sprintf("%s (%s)", name, service.Spec.Name)
 }
 
-func (provider *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := provider.Client.Events(ctx, types.EventsOptions{
+func (p *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
+	msgs, errs := p.Client.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("scope", "swarm"),
 			filters.Arg("type", "service"),
@@ -173,7 +180,7 @@ func (provider *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, 
 			select {
 			case msg, ok := <-msgs:
 				if !ok {
-					log.Error("provider event stream is closed")
+					p.l.ErrorContext(ctx, "event stream closed")
 					return
 				}
 				if msg.Actor.Attributes["replicas.new"] == "0" {
@@ -183,14 +190,14 @@ func (provider *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, 
 				}
 			case err, ok := <-errs:
 				if !ok {
-					log.Error("provider event stream is closed", err)
+					p.l.ErrorContext(ctx, "event stream closed")
 					return
 				}
 				if errors.Is(err, io.EOF) {
-					log.Debug("provider event stream closed")
+					p.l.ErrorContext(ctx, "event stream closed")
 					return
 				}
-				log.Error("provider event stream error", err)
+				p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
 			case <-ctx.Done():
 				return
 			}

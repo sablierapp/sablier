@@ -9,18 +9,18 @@ import (
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"strconv"
 )
 
-func (provider *DockerSwarmProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
 	for _, label := range options.Labels {
 		args.Add("label", label)
 		args.Add("label", fmt.Sprintf("%s=true", label))
 	}
 
-	services, err := provider.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
+	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
 		Filters: args,
 	})
 
@@ -30,14 +30,14 @@ func (provider *DockerSwarmProvider) InstanceList(ctx context.Context, options p
 
 	instances := make([]types.Instance, 0, len(services))
 	for _, s := range services {
-		instance := serviceToInstance(s)
+		instance := p.serviceToInstance(s)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
 }
 
-func serviceToInstance(s swarm.Service) (i types.Instance) {
+func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instance) {
 	var group string
 	var replicas uint64
 
@@ -51,7 +51,7 @@ func serviceToInstance(s swarm.Service) (i types.Instance) {
 		if r, ok := s.Spec.Labels[discovery.LabelReplicas]; ok {
 			atoi, err := strconv.Atoi(r)
 			if err != nil {
-				log.Warnf("Defaulting to default replicas value, could not convert value \"%v\" to int: %v", r, err)
+				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", s.Spec.Name), slog.String("value", r))
 				replicas = discovery.LabelReplicasDefaultValue
 			} else {
 				replicas = uint64(atoi)

@@ -1,7 +1,5 @@
 package instance
 
-import log "github.com/sirupsen/logrus"
-
 var Ready = "ready"
 var NotReady = "not-ready"
 var Unrecoverable = "unrecoverable"
@@ -19,7 +17,6 @@ func (instance State) IsReady() bool {
 }
 
 func ErrorInstanceState(name string, err error, desiredReplicas int32) (State, error) {
-	log.Error(err.Error())
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,
@@ -30,7 +27,6 @@ func ErrorInstanceState(name string, err error, desiredReplicas int32) (State, e
 }
 
 func UnrecoverableInstanceState(name string, message string, desiredReplicas int32) State {
-	log.Warn(message)
 	return State{
 		Name:            name,
 		CurrentReplicas: 0,

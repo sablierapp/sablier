@@ -4,8 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
-
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 // List of built-it themes
@@ -15,38 +14,41 @@ var embeddedThemesFS embed.FS
 
 type Themes struct {
 	themes *template.Template
+	l      *slog.Logger
 }
 
-func New() (*Themes, error) {
+func New(logger *slog.Logger) (*Themes, error) {
 	themes := &Themes{
 		themes: template.New("root"),
+		l:      logger,
 	}
 
-	err := ParseTemplatesFS(embeddedThemesFS, themes.themes)
+	err := themes.ParseTemplatesFS(embeddedThemesFS)
 	if err != nil {
 		// Should never happen
-		log.Errorf("could not parse embedded templates: %v", err)
+		logger.Error("could not parse embedded templates", slog.Any("reason", err))
 		return nil, err
 	}
 
 	return themes, nil
 }
 
-func NewWithCustomThemes(custom fs.FS) (*Themes, error) {
+func NewWithCustomThemes(custom fs.FS, logger *slog.Logger) (*Themes, error) {
 	themes := &Themes{
 		themes: template.New("root"),
+		l:      logger,
 	}
 
-	err := ParseTemplatesFS(embeddedThemesFS, themes.themes)
+	err := themes.ParseTemplatesFS(embeddedThemesFS)
 	if err != nil {
 		// Should never happen
-		log.Errorf("could not parse embedded templates: %v", err)
+		logger.Error("could not parse embedded templates", slog.Any("reason", err))
 		return nil, err
 	}
 
-	err = ParseTemplatesFS(custom, themes.themes)
+	err = themes.ParseTemplatesFS(custom)
 	if err != nil {
-		log.Errorf("could not parse custom templates: %v", err)
+		logger.Error("could not parse custom templates", slog.Any("reason", err))
 		return nil, err
 	}
 

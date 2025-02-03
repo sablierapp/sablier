@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers"
+	"log/slog"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/sablierapp/sablier/app/instance"
 	providerConfig "github.com/sablierapp/sablier/config"
-	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -32,53 +32,64 @@ type Workload interface {
 type KubernetesProvider struct {
 	Client    kubernetes.Interface
 	delimiter string
+	l         *slog.Logger
 }
 
-func NewKubernetesProvider(providerConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
-	kubeclientConfig, err := rest.InClusterConfig()
+func NewKubernetesProvider(ctx context.Context, logger *slog.Logger, providerConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
+	logger = logger.With(slog.String("provider", "kubernetes"))
 
+	kubeclientConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-
 	kubeclientConfig.QPS = providerConfig.QPS
 	kubeclientConfig.Burst = providerConfig.Burst
-
-	log.Debug(fmt.Sprintf("Provider configuration:  QPS=%v, Burst=%v", kubeclientConfig.QPS, kubeclientConfig.Burst))
 
 	client, err := kubernetes.NewForConfig(kubeclientConfig)
 	if err != nil {
 		return nil, err
 	}
 
+	info, err := client.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	logger.InfoContext(ctx, "connection established with kubernetes",
+		slog.String("version", info.String()),
+		slog.Float64("config.qps", float64(kubeclientConfig.QPS)),
+		slog.Int("config.burst", kubeclientConfig.Burst),
+	)
+
 	return &KubernetesProvider{
 		Client:    client,
 		delimiter: providerConfig.Delimiter,
+		l:         logger,
 	}, nil
 
 }
 
-func (provider *KubernetesProvider) Start(ctx context.Context, name string) error {
-	parsed, err := ParseName(name, ParseOptions{Delimiter: provider.delimiter})
+func (p *KubernetesProvider) Start(ctx context.Context, name string) error {
+	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return err
 	}
 
-	return provider.scale(ctx, parsed, parsed.Replicas)
+	return p.scale(ctx, parsed, parsed.Replicas)
 }
 
-func (provider *KubernetesProvider) Stop(ctx context.Context, name string) error {
-	parsed, err := ParseName(name, ParseOptions{Delimiter: provider.delimiter})
+func (p *KubernetesProvider) Stop(ctx context.Context, name string) error {
+	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return err
 	}
 
-	return provider.scale(ctx, parsed, 0)
+	return p.scale(ctx, parsed, 0)
 
 }
 
-func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
-	deployments, err := provider.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+func (p *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: discovery.LabelEnable,
 	})
 
@@ -94,12 +105,12 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 		}
 
 		group := groups[groupName]
-		parsed := DeploymentName(deployment, ParseOptions{Delimiter: provider.delimiter})
+		parsed := DeploymentName(deployment, ParseOptions{Delimiter: p.delimiter})
 		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
 
-	statefulSets, err := provider.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: discovery.LabelEnable,
 	})
 
@@ -114,7 +125,7 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 		}
 
 		group := groups[groupName]
-		parsed := StatefulSetName(statefulSet, ParseOptions{Delimiter: provider.delimiter})
+		parsed := StatefulSetName(statefulSet, ParseOptions{Delimiter: p.delimiter})
 		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
@@ -122,14 +133,14 @@ func (provider *KubernetesProvider) GetGroups(ctx context.Context) (map[string][
 	return groups, nil
 }
 
-func (provider *KubernetesProvider) scale(ctx context.Context, config ParsedName, replicas int32) error {
+func (p *KubernetesProvider) scale(ctx context.Context, config ParsedName, replicas int32) error {
 	var workload Workload
 
 	switch config.Kind {
 	case "deployment":
-		workload = provider.Client.AppsV1().Deployments(config.Namespace)
+		workload = p.Client.AppsV1().Deployments(config.Namespace)
 	case "statefulset":
-		workload = provider.Client.AppsV1().StatefulSets(config.Namespace)
+		workload = p.Client.AppsV1().StatefulSets(config.Namespace)
 	default:
 		return fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", config.Kind)
 	}
@@ -145,24 +156,24 @@ func (provider *KubernetesProvider) scale(ctx context.Context, config ParsedName
 	return err
 }
 
-func (provider *KubernetesProvider) GetState(ctx context.Context, name string) (instance.State, error) {
-	parsed, err := ParseName(name, ParseOptions{Delimiter: provider.delimiter})
+func (p *KubernetesProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return instance.State{}, err
 	}
 
 	switch parsed.Kind {
 	case "deployment":
-		return provider.getDeploymentState(ctx, parsed)
+		return p.getDeploymentState(ctx, parsed)
 	case "statefulset":
-		return provider.getStatefulsetState(ctx, parsed)
+		return p.getStatefulsetState(ctx, parsed)
 	default:
 		return instance.State{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
 	}
 }
 
-func (provider *KubernetesProvider) getDeploymentState(ctx context.Context, config ParsedName) (instance.State, error) {
-	d, err := provider.Client.AppsV1().Deployments(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
+func (p *KubernetesProvider) getDeploymentState(ctx context.Context, config ParsedName) (instance.State, error) {
+	d, err := p.Client.AppsV1().Deployments(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
 		return instance.State{}, err
 	}
@@ -174,8 +185,8 @@ func (provider *KubernetesProvider) getDeploymentState(ctx context.Context, conf
 	return instance.NotReadyInstanceState(config.Original, d.Status.ReadyReplicas, config.Replicas), nil
 }
 
-func (provider *KubernetesProvider) getStatefulsetState(ctx context.Context, config ParsedName) (instance.State, error) {
-	ss, err := provider.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
+func (p *KubernetesProvider) getStatefulsetState(ctx context.Context, config ParsedName) (instance.State, error) {
+	ss, err := p.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
 		return instance.State{}, err
 	}
@@ -187,15 +198,15 @@ func (provider *KubernetesProvider) getStatefulsetState(ctx context.Context, con
 	return instance.NotReadyInstanceState(config.Original, ss.Status.ReadyReplicas, *ss.Spec.Replicas), nil
 }
 
-func (provider *KubernetesProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
+func (p *KubernetesProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
 
-	informer := provider.watchDeployents(instance)
+	informer := p.watchDeployents(instance)
 	go informer.Run(ctx.Done())
-	informer = provider.watchStatefulSets(instance)
+	informer = p.watchStatefulSets(instance)
 	go informer.Run(ctx.Done())
 }
 
-func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cache.SharedIndexInformer {
+func (p *KubernetesProvider) watchDeployents(instance chan<- string) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)
@@ -206,24 +217,24 @@ func (provider *KubernetesProvider) watchDeployents(instance chan<- string) cach
 			}
 
 			if *newDeployment.Spec.Replicas == 0 {
-				parsed := DeploymentName(*newDeployment, ParseOptions{Delimiter: provider.delimiter})
+				parsed := DeploymentName(*newDeployment, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
-			parsed := DeploymentName(*deletedDeployment, ParseOptions{Delimiter: provider.delimiter})
+			parsed := DeploymentName(*deletedDeployment, ParseOptions{Delimiter: p.delimiter})
 			instance <- parsed.Original
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	informer.AddEventHandler(handler)
 	return informer
 }
 
-func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
+func (p *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newStatefulSet := new.(*appsv1.StatefulSet)
@@ -234,17 +245,17 @@ func (provider *KubernetesProvider) watchStatefulSets(instance chan<- string) ca
 			}
 
 			if *newStatefulSet.Spec.Replicas == 0 {
-				parsed := StatefulSetName(*newStatefulSet, ParseOptions{Delimiter: provider.delimiter})
+				parsed := StatefulSetName(*newStatefulSet, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedStatefulSet := obj.(*appsv1.StatefulSet)
-			parsed := StatefulSetName(*deletedStatefulSet, ParseOptions{Delimiter: provider.delimiter})
+			parsed := StatefulSetName(*deletedStatefulSet, ParseOptions{Delimiter: p.delimiter})
 			instance <- parsed.Original
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(provider.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
 	informer := factory.Apps().V1().StatefulSets().Informer()
 
 	informer.AddEventHandler(handler)
