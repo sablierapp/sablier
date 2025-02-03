@@ -27,7 +27,7 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "all instances are ready",
 			fields: fields{
-				Instances: createMap([]*instance.State{
+				Instances: createMap([]instance.State{
 					{Name: "nginx", Status: instance.Ready},
 					{Name: "apache", Status: instance.Ready},
 				}),
@@ -37,7 +37,7 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "one instance is not ready",
 			fields: fields{
-				Instances: createMap([]*instance.State{
+				Instances: createMap([]instance.State{
 					{Name: "nginx", Status: instance.Ready},
 					{Name: "apache", Status: instance.NotReady},
 				}),
@@ -47,14 +47,14 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "no instances specified",
 			fields: fields{
-				Instances: createMap([]*instance.State{}),
+				Instances: createMap([]instance.State{}),
 			},
 			want: true,
 		},
 		{
 			name: "one instance has an error",
 			fields: fields{
-				Instances: createMap([]*instance.State{
+				Instances: createMap([]instance.State{
 					{Name: "nginx-error", Status: instance.Unrecoverable, Message: "connection timeout"},
 					{Name: "apache", Status: instance.Ready},
 				}),
@@ -74,7 +74,7 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 }
 
-func createMap(instances []*instance.State) map[string]InstanceState {
+func createMap(instances []instance.State) map[string]InstanceState {
 	states := make(map[string]InstanceState)
 
 	for _, v := range instances {

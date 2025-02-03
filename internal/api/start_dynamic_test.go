@@ -17,11 +17,11 @@ func session() *sessions.SessionState {
 	return &sessions.SessionState{
 		Instances: map[string]sessions.InstanceState{
 			"test": {
-				Instance: &state,
+				Instance: state,
 				Error:    nil,
 			},
 			"test2": {
-				Instance: &state2,
+				Instance: state2,
 				Error:    nil,
 			},
 		},

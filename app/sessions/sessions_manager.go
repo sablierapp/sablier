@@ -90,8 +90,8 @@ func (s *SessionsManager) SaveSessions(writer io.WriteCloser) error {
 }
 
 type InstanceState struct {
-	Instance *instance.State `json:"instance"`
-	Error    error           `json:"error"`
+	Instance instance.State `json:"instance"`
+	Error    error          `json:"error"`
 }
 
 type SessionState struct {
@@ -127,6 +127,7 @@ func (s *SessionsManager) RequestSession(ctx context.Context, names []string, du
 
 	var wg sync.WaitGroup
 
+	mx := sync.Mutex{}
 	sessionState = &SessionState{
 		Instances: map[string]InstanceState{},
 	}
@@ -137,7 +138,8 @@ func (s *SessionsManager) RequestSession(ctx context.Context, names []string, du
 		go func(name string) {
 			defer wg.Done()
 			state, err := s.requestInstance(ctx, name, duration)
-
+			mx.Lock()
+			defer mx.Unlock()
 			sessionState.Instances[name] = InstanceState{
 				Instance: state,
 				Error:    err,
@@ -170,54 +172,41 @@ func (s *SessionsManager) RequestSessionGroup(ctx context.Context, group string,
 	return s.RequestSession(ctx, names, duration)
 }
 
-func (s *SessionsManager) requestInstance(ctx context.Context, name string, duration time.Duration) (*instance.State, error) {
+func (s *SessionsManager) requestInstance(ctx context.Context, name string, duration time.Duration) (instance.State, error) {
 	if name == "" {
-		return nil, errors.New("instance name cannot be empty")
+		return instance.State{}, errors.New("instance name cannot be empty")
 	}
 
-	requestState, err := s.store.Get(ctx, name)
+	state, err := s.store.Get(ctx, name)
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
 		err := s.provider.Start(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
 
-		state, err := s.provider.GetState(ctx, name)
+		state, err = s.provider.GetState(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
-
-		requestState.Name = name
-		requestState.CurrentReplicas = state.CurrentReplicas
-		requestState.DesiredReplicas = state.DesiredReplicas
-		requestState.Status = state.Status
-		requestState.Message = state.Message
-
-		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", requestState.Status))
+		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", state.Status))
 	} else if err != nil {
 		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
-		return nil, fmt.Errorf("cannot retrieve instance from store: %w", err)
-	} else if requestState.Status != instance.Ready {
-		s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", requestState.Status))
-		state, err := s.provider.GetState(ctx, name)
+		return instance.State{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
+	} else if state.Status != instance.Ready {
+		s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", state.Status))
+		state, err = s.provider.GetState(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
-
-		requestState.Name = state.Name
-		requestState.CurrentReplicas = state.CurrentReplicas
-		requestState.DesiredReplicas = state.DesiredReplicas
-		requestState.Status = state.Status
-		requestState.Message = state.Message
-		s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", requestState.Status))
+		s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", state.Status))
 	}
 
 	s.l.DebugContext(ctx, "set expiration for instance", slog.String("instance", name), slog.Duration("expiration", duration))
 	// Refresh the duration
-	s.expiresAfter(ctx, &requestState, duration)
-	return &requestState, nil
+	s.expiresAfter(ctx, state, duration)
+	return state, nil
 }
 
 func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
@@ -295,8 +284,8 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 	return s.RequestReadySession(ctx, names, duration, timeout)
 }
 
-func (s *SessionsManager) expiresAfter(ctx context.Context, instance *instance.State, duration time.Duration) {
-	err := s.store.Put(ctx, *instance, duration)
+func (s *SessionsManager) expiresAfter(ctx context.Context, instance instance.State, duration time.Duration) {
+	err := s.store.Put(ctx, instance, duration)
 	if err != nil {
 		s.l.Error("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
 	}

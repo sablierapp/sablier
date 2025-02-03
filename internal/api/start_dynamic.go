@@ -106,7 +106,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState *instance.State) theme.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState instance.State) theme.Instance {
 
 	var err error
 	if instanceState.Message == "" {
