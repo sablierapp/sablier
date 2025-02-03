@@ -11,7 +11,9 @@ import (
 )
 
 func TestStartBlocking(t *testing.T) {
+	t.Parallel()
 	t.Run("StartBlockingInvalidBind", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, _ := NewApiTest(t)
 		StartBlocking(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking?timeout=invalid")
@@ -19,6 +21,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 	t.Run("StartBlockingWithoutNamesOrGroup", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, _ := NewApiTest(t)
 		StartBlocking(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking")
@@ -26,6 +29,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 	t.Run("StartBlockingWithNamesAndGroup", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, _ := NewApiTest(t)
 		StartBlocking(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking?names=test&group=test")
@@ -33,6 +37,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 	t.Run("StartBlockingByNames", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
 		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(&sessions.SessionState{}, nil)
@@ -41,6 +46,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
 	})
 	t.Run("StartBlockingByGroup", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
 		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(&sessions.SessionState{}, nil)
@@ -49,9 +55,10 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
 	})
 	t.Run("StartBlockingErrGroupNotFound", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
-		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, sessions.ErrGroupNotFound{
+		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, sessions.GroupNotFoundError{
 			Group:           "test",
 			AvailableGroups: []string{"test1", "test2"},
 		})
@@ -60,6 +67,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 	t.Run("StartBlockingError", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
 		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, errors.New("unknown error"))
@@ -68,6 +76,7 @@ func TestStartBlocking(t *testing.T) {
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 	t.Run("StartBlockingSessionNil", func(t *testing.T) {
+		t.Parallel()
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
 		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, nil)

@@ -32,12 +32,12 @@ func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger) (*Docker
 	logger = logger.With(slog.String("provider", "docker"))
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("cannot create docker client: %v", err)
+		return nil, fmt.Errorf("cannot create docker client: %w", err)
 	}
 
 	serverVersion, err := cli.ServerVersion(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
+		return nil, fmt.Errorf("cannot connect to docker host: %w", err)
 	}
 
 	logger.InfoContext(ctx, "connection established with docker",
@@ -61,7 +61,7 @@ func (p *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]str
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list containers: %w", err)
 	}
 
 	groups := make(map[string][]string)
@@ -89,7 +89,7 @@ func (p *DockerClassicProvider) Stop(ctx context.Context, name string) error {
 func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := p.Client.ContainerInspect(ctx, name)
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
@@ -99,16 +99,16 @@ func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (inst
 	case "running":
 		if spec.State.Health != nil {
 			// // "starting", "healthy" or "unhealthy"
-			if spec.State.Health.Status == "healthy" {
+			switch spec.State.Health.Status {
+			case "healthy":
 				return instance.ReadyInstanceState(name, p.desiredReplicas), nil
-			} else if spec.State.Health.Status == "unhealthy" {
+			case "unhealthy":
 				if len(spec.State.Health.Log) >= 1 {
 					lastLog := spec.State.Health.Log[len(spec.State.Health.Log)-1]
 					return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode), p.desiredReplicas), nil
-				} else {
-					return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available", p.desiredReplicas), nil
 				}
-			} else {
+				return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available", p.desiredReplicas), nil
+			default:
 				return instance.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
 			}
 		}

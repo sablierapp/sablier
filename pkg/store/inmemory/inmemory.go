@@ -3,6 +3,7 @@ package inmemory
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/store"
 	"github.com/sablierapp/sablier/pkg/tinykv"
@@ -34,7 +35,7 @@ func (i InMemory) MarshalJSON() ([]byte, error) {
 func (i InMemory) Get(_ context.Context, s string) (instance.State, error) {
 	val, ok := i.kv.Get(s)
 	if !ok {
-		return instance.State{}, store.ErrKeyNotFound
+		return instance.State{}, fmt.Errorf("key not found: %w", store.ErrKeyNotFound)
 	}
 	return val, nil
 }

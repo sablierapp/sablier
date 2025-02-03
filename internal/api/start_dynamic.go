@@ -46,7 +46,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 			sessionState, err = s.SessionsManager.RequestSession(c, request.Names, request.SessionDuration)
 		} else {
 			sessionState, err = s.SessionsManager.RequestSessionGroup(c, request.Group, request.SessionDuration)
-			var groupNotFoundError sessions.ErrGroupNotFound
+			var groupNotFoundError sessions.GroupNotFoundError
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
@@ -59,7 +59,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		}
 
 		if sessionState == nil {
-			AbortWithProblemDetail(c, ProblemError(errors.New("session could not be created, please check logs for more details")))
+			AbortWithProblemDetail(c, ProblemError(fmt.Errorf("session could not be created, please check logs for more details")))
 			return
 		}
 
