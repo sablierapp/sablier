@@ -5,17 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/sablierapp/sablier/pkg/store"
 	"io"
 	"log/slog"
-	"maps"
-	"slices"
 	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/pkg/store"
 )
 
 //go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
@@ -26,14 +23,14 @@ type Manager interface {
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 
-	LoadSessions(io.ReadCloser) error
-	SaveSessions(io.WriteCloser) error
+	LoadSessions(reader io.ReadCloser) error
+	SaveSessions(writer io.WriteCloser) error
 
 	RemoveInstance(name string) error
 	SetGroups(groups map[string][]string)
 }
 
-type SessionsManager struct {
+type Manager struct {
 	store    store.Store
 	provider providers.Provider
 	groups   map[string][]string
@@ -41,18 +38,18 @@ type SessionsManager struct {
 	l *slog.Logger
 }
 
-func NewSessionsManager(logger *slog.Logger, store store.Store, provider providers.Provider) Manager {
-	sm := &SessionsManager{
+func NewManager(logger *slog.Logger, store store.Store, provider providers.Provider) Manager {
+	m := &Manager{
 		store:    store,
 		provider: provider,
 		groups:   map[string][]string{},
 		l:        logger,
 	}
 
-	return sm
+	return m
 }
 
-func (s *SessionsManager) SetGroups(groups map[string][]string) {
+func (s *Manager) SetGroups(groups map[string][]string) {
 	if groups == nil {
 		groups = map[string][]string{}
 	}
@@ -63,11 +60,11 @@ func (s *SessionsManager) SetGroups(groups map[string][]string) {
 	}
 }
 
-func (s *SessionsManager) RemoveInstance(name string) error {
+func (s *Manager) RemoveInstance(name string) error {
 	return s.store.Delete(context.Background(), name)
 }
 
-func (s *SessionsManager) LoadSessions(reader io.ReadCloser) error {
+func (s *Manager) LoadSessions(reader io.ReadCloser) error {
 	unmarshaler, ok := s.store.(json.Unmarshaler)
 	defer reader.Close()
 	if ok {
@@ -76,7 +73,7 @@ func (s *SessionsManager) LoadSessions(reader io.ReadCloser) error {
 	return nil
 }
 
-func (s *SessionsManager) SaveSessions(writer io.WriteCloser) error {
+func (s *Manager) SaveSessions(writer io.WriteCloser) error {
 	marshaler, ok := s.store.(json.Marshaler)
 	defer writer.Close()
 	if ok {
@@ -120,7 +117,7 @@ func (s *SessionState) Status() string {
 	return "not-ready"
 }
 
-func (s *SessionsManager) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *Manager) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names cannot be empty")
 	}
@@ -152,7 +149,7 @@ func (s *SessionsManager) RequestSession(ctx context.Context, names []string, du
 	return sessionState, nil
 }
 
-func (s *SessionsManager) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *Manager) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
@@ -172,7 +169,7 @@ func (s *SessionsManager) RequestSessionGroup(ctx context.Context, group string,
 	return s.RequestSession(ctx, names, duration)
 }
 
-func (s *SessionsManager) requestInstance(ctx context.Context, name string, duration time.Duration) (instance.State, error) {
+func (s *Manager) requestInstance(ctx context.Context, name string, duration time.Duration) (instance.State, error) {
 	if name == "" {
 		return instance.State{}, errors.New("instance name cannot be empty")
 	}
@@ -209,10 +206,10 @@ func (s *SessionsManager) requestInstance(ctx context.Context, name string, dura
 	return state, nil
 }
 
-func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+func (s *Manager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
 	session, err := s.RequestSession(ctx, names, duration)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot request session: %w", err)
 	}
 
 	if session.IsReady() {
@@ -230,7 +227,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 			case <-ticker.C:
 				session, err := s.RequestSession(ctx, names, duration)
 				if err != nil {
-					errch <- err
+					errch <- fmt.Errorf("cannot request session: %w", err)
 					return
 				}
 				if session.IsReady() {
@@ -263,7 +260,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 	}
 }
 
-func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
+func (s *Manager) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
 
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
@@ -284,7 +281,7 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 	return s.RequestReadySession(ctx, names, duration, timeout)
 }
 
-func (s *SessionsManager) expiresAfter(ctx context.Context, instance instance.State, duration time.Duration) {
+func (s *Manager) expiresAfter(ctx context.Context, instance instance.State, duration time.Duration) {
 	err := s.store.Put(ctx, instance, duration)
 	if err != nil {
 		s.l.Error("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))

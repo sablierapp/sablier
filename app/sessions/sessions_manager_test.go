@@ -2,15 +2,15 @@ package sessions
 
 import (
 	"context"
-	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/pkg/store/storetest"
-	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
+	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions/mocks"
 	"github.com/stretchr/testify/mock"
+	"github.com/neilotoole/slogt"
+	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
 
@@ -28,8 +28,8 @@ func TestSessionState_IsReady(t *testing.T) {
 			name: "all instances are ready",
 			fields: fields{
 				Instances: createMap([]instance.State{
-					{Name: "nginx", Status: instance.Ready},
-					{Name: "apache", Status: instance.Ready},
+					{Name: "nginx", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""},
+					{Name: "apache", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""},
 				}),
 			},
 			want: true,
@@ -38,8 +38,8 @@ func TestSessionState_IsReady(t *testing.T) {
 			name: "one instance is not ready",
 			fields: fields{
 				Instances: createMap([]instance.State{
-					{Name: "nginx", Status: instance.Ready},
-					{Name: "apache", Status: instance.NotReady},
+					{Name: "nginx", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""},
+					{Name: "apache", Status: instance.NotReady, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""},
 				}),
 			},
 			want: false,
@@ -55,8 +55,8 @@ func TestSessionState_IsReady(t *testing.T) {
 			name: "one instance has an error",
 			fields: fields{
 				Instances: createMap([]instance.State{
-					{Name: "nginx-error", Status: instance.Unrecoverable, Message: "connection timeout"},
-					{Name: "apache", Status: instance.Ready},
+					{Name: "nginx-error", Status: instance.Unrecoverable, CurrentReplicas: 1, DesiredReplicas: 1, Message: "connection timeout"},
+					{Name: "apache", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""},
 				}),
 			},
 			want: false,
@@ -94,7 +94,7 @@ func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.Pr
 	p := mocks.NewProviderMock()
 	s := storetest.NewMockStore(ctrl)
 
-	m := NewSessionsManager(slogt.New(t), s, p)
+	m := NewManager(slogt.New(t), s, p)
 	return m, s, p
 }
 
@@ -111,10 +111,10 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		manager, store, provider := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -130,13 +130,12 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
-
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
 		manager, store, provider := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -149,10 +148,9 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 }
 
 func TestSessionsManager_RequestReadySession(t *testing.T) {
-
 	t.Run("request ready session is ready", func(t *testing.T) {
 		manager, store, _ := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready, CurrentReplicas: 1, DesiredReplicas: 1, Message: ""}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		errchan := make(chan error)

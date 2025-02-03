@@ -13,27 +13,27 @@ import (
 	"strings"
 )
 
-func (p *KubernetesProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *Provider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
 	deployments, err := p.deploymentList(ctx, options)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list deployments: %w", err)
 	}
 
 	statefulSets, err := p.statefulSetList(ctx, options)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list statefulsets: %w", err)
 	}
 
 	return append(deployments, statefulSets...), nil
 }
 
-func (p *KubernetesProvider) deploymentList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *Provider) deploymentList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
 	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: strings.Join(options.Labels, ","),
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list deployments: %w", err)
 	}
 
 	instances := make([]types.Instance, 0, len(deployments.Items))
@@ -45,7 +45,7 @@ func (p *KubernetesProvider) deploymentList(ctx context.Context, options provide
 	return instances, nil
 }
 
-func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instance {
+func (p *Provider) deploymentToInstance(d v1.Deployment) types.Instance {
 	var group string
 	var replicas uint64
 
@@ -82,13 +82,13 @@ func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instanc
 	}
 }
 
-func (p *KubernetesProvider) statefulSetList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *Provider) statefulSetList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
 	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: strings.Join(options.Labels, ","),
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list statefulsets: %w", err)
 	}
 
 	instances := make([]types.Instance, 0, len(statefulSets.Items))
@@ -100,7 +100,7 @@ func (p *KubernetesProvider) statefulSetList(ctx context.Context, options provid
 	return instances, nil
 }
 
-func (p *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
+func (p *Provider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
 	var group string
 	var replicas uint64
 

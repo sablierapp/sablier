@@ -5,27 +5,27 @@ import (
 	"time"
 )
 
-type ErrGroupNotFound struct {
+type GroupNotFoundError struct {
 	Group           string
 	AvailableGroups []string
 }
 
-func (g ErrGroupNotFound) Error() string {
+func (g GroupNotFoundError) Error() string {
 	return fmt.Sprintf("group %s not found", g.Group)
 }
 
-type ErrRequestBinding struct {
+type RequestBindingError struct {
 	Err error
 }
 
-func (e ErrRequestBinding) Error() string {
+func (e RequestBindingError) Error() string {
 	return e.Err.Error()
 }
 
-type ErrTimeout struct {
+type TimeoutError struct {
 	Duration time.Duration
 }
 
-func (e ErrTimeout) Error() string {
+func (e TimeoutError) Error() string {
 	return fmt.Sprintf("timeout after %s", e.Duration)
 }

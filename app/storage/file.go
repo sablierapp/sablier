@@ -23,6 +23,7 @@ func NewFileStorage(config config.Storage, logger *slog.Logger) (Storage, error)
 	logger = logger.With(slog.String("file", config.File))
 	storage := &FileStorage{
 		file: config.File,
+		l:    logger,
 	}
 
 	file, err := os.OpenFile(config.File, os.O_RDWR|os.O_CREATE, 0755)
