@@ -15,16 +15,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func setupProvider(t *testing.T, client kubernetes.Interface) *KubernetesProvider {
+func setupProvider(t *testing.T, client kubernetes.Interface) *Provider {
 	t.Helper()
-	return &KubernetesProvider{
+	return &Provider{
 		Client:    client,
 		delimiter: "_",
 		l:         slogt.New(t),
 	}
 }
 
-func TestKubernetesProvider_Start(t *testing.T) {
+func TestProvider_Start(t *testing.T) {
 	type data struct {
 		name   string
 		get    *autoscalingv1.Scale
@@ -91,14 +91,14 @@ func TestKubernetesProvider_Start(t *testing.T) {
 
 			err := provider.Start(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.Start() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
 	}
 }
 
-func TestKubernetesProvider_Stop(t *testing.T) {
+func TestProvider_Stop(t *testing.T) {
 	type data struct {
 		name   string
 		get    *autoscalingv1.Scale
@@ -165,14 +165,14 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 
 			err := provider.Stop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
 	}
 }
 
-func TestKubernetesProvider_GetState(t *testing.T) {
+func TestProvider_GetState(t *testing.T) {
 	type data struct {
 		name           string
 		getDeployment  *v1.Deployment
@@ -279,11 +279,11 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 
 			got, err := provider.GetState(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("KubernetesProvider.GetState() = %v, want %v", got, tt.want)
+				t.Errorf("Provider.GetState() = %v, want %v", got, tt.want)
 			}
 		})
 	}

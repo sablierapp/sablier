@@ -1,7 +1,10 @@
-package valkey
+package valkey_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/store"
 	"github.com/testcontainers/testcontainers-go"
@@ -9,8 +12,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/valkey-io/valkey-go"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func setupValKeyContainer(t *testing.T) valkey.Client {

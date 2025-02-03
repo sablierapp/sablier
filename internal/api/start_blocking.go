@@ -36,7 +36,7 @@ func StartBlocking(router *gin.RouterGroup, s *routes.ServeStrategy) {
 			sessionState, err = s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
 		} else {
 			sessionState, err = s.SessionsManager.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
-			var groupNotFoundError sessions.ErrGroupNotFound
+			var groupNotFoundError sessions.GroupNotFoundError
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return

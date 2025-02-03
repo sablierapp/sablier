@@ -3,6 +3,7 @@ package valkey
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/store"
 	"github.com/valkey-io/valkey-go"
@@ -20,14 +21,14 @@ type ValKey struct {
 func New(ctx context.Context, client valkey.Client) (store.Store, error) {
 	err := client.Do(ctx, client.B().Ping().Build()).Error()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ping error: %w", err)
 	}
 
 	err = client.Do(ctx, client.B().ConfigSet().ParameterValue().
 		ParameterValue("notify-keyspace-events", "KEx").
 		Build()).Error()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config set error: %w", err)
 	}
 
 	return &ValKey{Client: client}, nil
@@ -39,13 +40,13 @@ func (v *ValKey) Get(ctx context.Context, s string) (instance.State, error) {
 		return instance.State{}, store.ErrKeyNotFound
 	}
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("get error: %w", err)
 	}
 
 	var i instance.State
 	err = json.Unmarshal(b, &i)
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("unmarshal error: %w", err)
 	}
 
 	return i, nil
@@ -54,7 +55,7 @@ func (v *ValKey) Get(ctx context.Context, s string) (instance.State, error) {
 func (v *ValKey) Put(ctx context.Context, state instance.State, duration time.Duration) error {
 	value, err := json.Marshal(state)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal error: %w", err)
 	}
 
 	return v.Client.Do(ctx, v.Client.B().Set().Key(state.Name).Value(string(value)).Ex(duration).Build()).Error()

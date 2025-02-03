@@ -68,14 +68,14 @@ func (p *DockerSwarmProvider) scale(ctx context.Context, name string, replicas u
 
 	foundName := p.getInstanceName(name, *service)
 	if service.Spec.Mode.Replicated == nil {
-		return errors.New("swarm service is not in \"replicated\" mode")
+		return fmt.Errorf("swarm service is not in \"replicated\" mode")
 	}
 
 	service.Spec.Mode.Replicated.Replicas = &replicas
 
 	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot update service: %w", err)
 	}
 
 	if len(response.Warnings) > 0 {
@@ -94,7 +94,7 @@ func (p *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]strin
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
 
 	groups := make(map[string][]string)
@@ -116,13 +116,13 @@ func (p *DockerSwarmProvider) GetState(ctx context.Context, name string) (instan
 
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("cannot get service: %w", err)
 	}
 
 	foundName := p.getInstanceName(name, *service)
 
 	if service.Spec.Mode.Replicated == nil {
-		return instance.State{}, errors.New("swarm service is not in \"replicated\" mode")
+		return instance.State{}, fmt.Errorf("swarm service is not in \"replicated\" mode")
 	}
 
 	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
@@ -142,7 +142,7 @@ func (p *DockerSwarmProvider) getServiceByName(name string, ctx context.Context)
 	services, err := p.Client.ServiceList(ctx, opts)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
 
 	if len(services) == 0 {

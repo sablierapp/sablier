@@ -3,7 +3,6 @@ package discovery_test
 import (
 	"context"
 	"errors"
-	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
@@ -16,17 +15,18 @@ import (
 )
 
 func TestStopAllUnregisteredInstances(t *testing.T) {
+	t.Parallel()
 	mockProvider := new(mock.ProviderMock)
 	ctx := context.TODO()
 
 	// Define instances and registered instances
 	instances := []types.Instance{
-		{Name: "instance1"},
-		{Name: "instance2"},
-		{Name: "instance3"},
+		{Name: "instance1", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
+		{Name: "instance2", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
+		{Name: "instance3", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
 	}
 	store := inmemory.NewInMemory()
-	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	err := store.Put(ctx, instance.State{Name: "instance1", CurrentReplicas: 0, DesiredReplicas: 0, Status: "", Message: ""}, time.Minute)
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
@@ -48,17 +48,18 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 }
 
 func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
+	t.Parallel()
 	mockProvider := new(mock.ProviderMock)
 	ctx := context.TODO()
 
 	// Define instances and registered instances
 	instances := []types.Instance{
-		{Name: "instance1"},
-		{Name: "instance2"},
-		{Name: "instance3"},
+		{Name: "instance1", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
+		{Name: "instance2", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
+		{Name: "instance3", Kind: "", Status: "", Replicas: 0, DesiredReplicas: 0, ScalingReplicas: 0, Group: ""},
 	}
 	store := inmemory.NewInMemory()
-	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	err := store.Put(ctx, instance.State{Name: "instance1", CurrentReplicas: 0, DesiredReplicas: 0, Status: "", Message: ""}, time.Minute)
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList

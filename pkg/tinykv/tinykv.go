@@ -221,7 +221,7 @@ func (kv *store[T]) UnmarshalJSON(b []byte) error {
 
 	var entries map[string]minimalEntry[T]
 
-	if err := json.Unmarshal([]byte(b), &entries); err != nil {
+	if err := json.Unmarshal(b, &entries); err != nil {
 		return err
 	}
 
@@ -241,7 +241,7 @@ func (e *minimalEntry[T]) UnmarshalJSON(b []byte) error {
 		ExpiresAt time.Time `json:"expiresAt"`
 	}{}
 
-	if err := json.Unmarshal([]byte(b), &entry); err != nil {
+	if err := json.Unmarshal(b, &entry); err != nil {
 		return err
 	}
 

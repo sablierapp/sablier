@@ -34,8 +34,7 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 
 	r := setupRouter(ctx, logger, serverConf, s)
 
-	var server *http.Server
-	server = &http.Server{
+	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", serverConf.Port),
 		Handler: r,
 	}
@@ -46,7 +45,7 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		slog.String("mode", gin.Mode()),
 	)
 
-	go StartHttp(server, logger)
+	go StartHTTP(server, logger)
 
 	// Graceful web server shutdown.
 	<-ctx.Done()
@@ -57,8 +56,8 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 	}
 }
 
-// StartHttp starts the Web server in http mode.
-func StartHttp(s *http.Server, logger *slog.Logger) {
+// StartHTTP starts the Web server in http mode.
+func StartHTTP(s *http.Server, logger *slog.Logger) {
 	if err := s.ListenAndServe(); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			logger.Info("server: shutdown complete")
