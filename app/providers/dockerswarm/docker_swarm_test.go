@@ -1,14 +1,14 @@
-package dockerswarm
+package dockerswarm_test
 
 import (
 	"context"
-	"github.com/docker/docker/client"
-	"github.com/neilotoole/slogt"
 	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/client"
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
@@ -24,6 +24,7 @@ func setupProvider(t *testing.T, client client.APIClient) *DockerSwarmProvider {
 }
 
 func TestDockerSwarmProvider_Start(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		name string
 	}
@@ -82,6 +83,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			clientMock := mocks.NewDockerAPIClientMock()
 			provider := setupProvider(t, clientMock)
 
@@ -98,6 +100,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 }
 
 func TestDockerSwarmProvider_Stop(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		name string
 	}
@@ -156,6 +159,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			clientMock := mocks.NewDockerAPIClientMock()
 			provider := setupProvider(t, clientMock)
 
@@ -172,6 +176,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 }
 
 func TestDockerSwarmProvider_GetState(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		name string
 	}
@@ -228,6 +233,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			clientMock := mocks.NewDockerAPIClientMock()
 			provider := setupProvider(t, clientMock)
 
@@ -246,6 +252,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 }
 
 func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		want   []string
@@ -270,6 +277,7 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			provider := setupProvider(t, mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors))
 
 			instanceC := make(chan string)

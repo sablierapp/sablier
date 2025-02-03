@@ -3,13 +3,12 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/client"
-	"github.com/neilotoole/slogt"
 	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"

@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -46,6 +47,7 @@ func TestParseName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result, err := ParseName(tt.input, tt.opts)
 			if tt.hasError {
 				if err == nil {
@@ -64,6 +66,7 @@ func TestParseName(t *testing.T) {
 }
 
 func TestDeploymentName(t *testing.T) {
+	t.Parallel()
 	deployment := v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test-namespace",
@@ -86,6 +89,7 @@ func TestDeploymentName(t *testing.T) {
 }
 
 func TestStatefulSetName(t *testing.T) {
+	t.Parallel()
 	statefulSet := v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test-namespace",
