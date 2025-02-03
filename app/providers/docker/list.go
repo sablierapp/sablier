@@ -12,14 +12,14 @@ import (
 	"strings"
 )
 
-func (provider *DockerClassicProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerClassicProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
 	for _, label := range options.Labels {
 		args.Add("label", label)
 		args.Add("label", fmt.Sprintf("%s=true", label))
 	}
 
-	containers, err := provider.Client.ContainerList(ctx, container.ListOptions{
+	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
 		All:     options.All,
 		Filters: args,
 	})

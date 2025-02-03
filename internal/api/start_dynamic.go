@@ -11,7 +11,6 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/theme"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,9 +43,9 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		var sessionState *sessions.SessionState
 		var err error
 		if len(request.Names) > 0 {
-			sessionState, err = s.SessionsManager.RequestSession(request.Names, request.SessionDuration)
+			sessionState, err = s.SessionsManager.RequestSession(c, request.Names, request.SessionDuration)
 		} else {
-			sessionState, err = s.SessionsManager.RequestSessionGroup(request.Group, request.SessionDuration)
+			sessionState, err = s.SessionsManager.RequestSessionGroup(c, request.Group, request.SessionDuration)
 			var groupNotFoundError sessions.ErrGroupNotFound
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
@@ -93,7 +92,6 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 
 func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme.Instance) {
 	if sessionState == nil {
-		log.Warnf("sessionStateToRenderOptionsInstanceState: sessionState is nil")
 		return
 	}
 
@@ -108,7 +106,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState *instance.State) theme.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState instance.State) theme.Instance {
 
 	var err error
 	if instanceState.Message == "" {

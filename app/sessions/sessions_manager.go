@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sablierapp/sablier/pkg/store"
 	"io"
 	"log/slog"
@@ -15,14 +16,13 @@ import (
 
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/providers"
-	log "github.com/sirupsen/logrus"
 )
 
 //go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
 
 type Manager interface {
-	RequestSession(names []string, duration time.Duration) (*SessionState, error)
-	RequestSessionGroup(group string, duration time.Duration) (*SessionState, error)
+	RequestSession(ctx context.Context, names []string, duration time.Duration) (*SessionState, error)
+	RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (*SessionState, error)
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
 
@@ -31,47 +31,44 @@ type Manager interface {
 
 	RemoveInstance(name string) error
 	SetGroups(groups map[string][]string)
-
-	Stop()
 }
 
 type SessionsManager struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-
 	store    store.Store
 	provider providers.Provider
 	groups   map[string][]string
+
+	l *slog.Logger
 }
 
-func NewSessionsManager(store store.Store, provider providers.Provider) Manager {
-	ctx, cancel := context.WithCancel(context.Background())
-
+func NewSessionsManager(logger *slog.Logger, store store.Store, provider providers.Provider) Manager {
 	sm := &SessionsManager{
-		ctx:      ctx,
-		cancel:   cancel,
 		store:    store,
 		provider: provider,
 		groups:   map[string][]string{},
+		l:        logger,
 	}
 
 	return sm
 }
 
-func (sm *SessionsManager) SetGroups(groups map[string][]string) {
+func (s *SessionsManager) SetGroups(groups map[string][]string) {
 	if groups == nil {
 		groups = map[string][]string{}
 	}
-	slog.Info("set groups", slog.Any("old", sm.groups), slog.Any("new", groups))
-	sm.groups = groups
+	if diff := cmp.Diff(s.groups, groups); diff != "" {
+		// TODO: Change this log for a friendly logging, groups rarely change, so we can put some effort on displaying what changed
+		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
+		s.groups = groups
+	}
 }
 
-func (sm *SessionsManager) RemoveInstance(name string) error {
-	return sm.store.Delete(context.Background(), name)
+func (s *SessionsManager) RemoveInstance(name string) error {
+	return s.store.Delete(context.Background(), name)
 }
 
-func (sm *SessionsManager) LoadSessions(reader io.ReadCloser) error {
-	unmarshaler, ok := sm.store.(json.Unmarshaler)
+func (s *SessionsManager) LoadSessions(reader io.ReadCloser) error {
+	unmarshaler, ok := s.store.(json.Unmarshaler)
 	defer reader.Close()
 	if ok {
 		return json.NewDecoder(reader).Decode(unmarshaler)
@@ -79,8 +76,8 @@ func (sm *SessionsManager) LoadSessions(reader io.ReadCloser) error {
 	return nil
 }
 
-func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
-	marshaler, ok := sm.store.(json.Marshaler)
+func (s *SessionsManager) SaveSessions(writer io.WriteCloser) error {
+	marshaler, ok := s.store.(json.Marshaler)
 	defer writer.Close()
 	if ok {
 		encoder := json.NewEncoder(writer)
@@ -93,8 +90,8 @@ func (sm *SessionsManager) SaveSessions(writer io.WriteCloser) error {
 }
 
 type InstanceState struct {
-	Instance *instance.State `json:"instance"`
-	Error    error           `json:"error"`
+	Instance instance.State `json:"instance"`
+	Error    error          `json:"error"`
 }
 
 type SessionState struct {
@@ -123,13 +120,14 @@ func (s *SessionState) Status() string {
 	return "not-ready"
 }
 
-func (s *SessionsManager) RequestSession(names []string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *SessionsManager) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names cannot be empty")
 	}
 
 	var wg sync.WaitGroup
 
+	mx := sync.Mutex{}
 	sessionState = &SessionState{
 		Instances: map[string]InstanceState{},
 	}
@@ -139,8 +137,9 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 	for i := 0; i < len(names); i++ {
 		go func(name string) {
 			defer wg.Done()
-			state, err := s.requestSessionInstance(name, duration)
-
+			state, err := s.requestInstance(ctx, name, duration)
+			mx.Lock()
+			defer mx.Unlock()
 			sessionState.Instances[name] = InstanceState{
 				Instance: state,
 				Error:    err,
@@ -153,7 +152,7 @@ func (s *SessionsManager) RequestSession(names []string, duration time.Duration)
 	return sessionState, nil
 }
 
-func (s *SessionsManager) RequestSessionGroup(group string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *SessionsManager) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
@@ -170,60 +169,48 @@ func (s *SessionsManager) RequestSessionGroup(group string, duration time.Durati
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.RequestSession(names, duration)
+	return s.RequestSession(ctx, names, duration)
 }
 
-func (s *SessionsManager) requestSessionInstance(name string, duration time.Duration) (*instance.State, error) {
+func (s *SessionsManager) requestInstance(ctx context.Context, name string, duration time.Duration) (instance.State, error) {
 	if name == "" {
-		return nil, errors.New("instance name cannot be empty")
+		return instance.State{}, errors.New("instance name cannot be empty")
 	}
 
-	requestState, err := s.store.Get(context.TODO(), name)
+	state, err := s.store.Get(ctx, name)
 	if errors.Is(err, store.ErrKeyNotFound) {
-		log.Debugf("starting [%s]...", name)
+		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
-		err := s.provider.Start(s.ctx, name)
+		err := s.provider.Start(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
 
-		state, err := s.provider.GetState(s.ctx, name)
+		state, err = s.provider.GetState(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
-
-		requestState.Name = name
-		requestState.CurrentReplicas = state.CurrentReplicas
-		requestState.DesiredReplicas = state.DesiredReplicas
-		requestState.Status = state.Status
-		requestState.Message = state.Message
-
-		log.Debugf("status for [%s]=[%s]", name, requestState.Status)
+		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", state.Status))
 	} else if err != nil {
-		return nil, fmt.Errorf("cannot retrieve instance from store: %w", err)
-	} else if requestState.Status != instance.Ready {
-		log.Debugf("checking [%s]...", name)
-		state, err := s.provider.GetState(s.ctx, name)
+		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
+		return instance.State{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
+	} else if state.Status != instance.Ready {
+		s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", state.Status))
+		state, err = s.provider.GetState(ctx, name)
 		if err != nil {
-			return nil, err
+			return instance.State{}, err
 		}
-
-		requestState.Name = state.Name
-		requestState.CurrentReplicas = state.CurrentReplicas
-		requestState.DesiredReplicas = state.DesiredReplicas
-		requestState.Status = state.Status
-		requestState.Message = state.Message
-		log.Debugf("status for %s=%s", name, requestState.Status)
+		s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", state.Status))
 	}
 
-	log.Debugf("expiring %+v in %v", requestState, duration)
+	s.l.DebugContext(ctx, "set expiration for instance", slog.String("instance", name), slog.Duration("expiration", duration))
 	// Refresh the duration
-	s.ExpiresAfter(&requestState, duration)
-	return &requestState, nil
+	s.expiresAfter(ctx, state, duration)
+	return state, nil
 }
 
 func (s *SessionsManager) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
-	session, err := s.RequestSession(names, duration)
+	session, err := s.RequestSession(ctx, names, duration)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +228,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 		for {
 			select {
 			case <-ticker.C:
-				session, err := s.RequestSession(names, duration)
+				session, err := s.RequestSession(ctx, names, duration)
 				if err != nil {
 					errch <- err
 					return
@@ -258,7 +245,7 @@ func (s *SessionsManager) RequestReadySession(ctx context.Context, names []strin
 
 	select {
 	case <-ctx.Done():
-		log.Debug("request cancelled by user, stopping timeout")
+		s.l.DebugContext(ctx, "request cancelled", slog.Any("reason", ctx.Err()))
 		close(quit)
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("request cancelled by user: %w", ctx.Err())
@@ -297,16 +284,11 @@ func (s *SessionsManager) RequestReadySessionGroup(ctx context.Context, group st
 	return s.RequestReadySession(ctx, names, duration, timeout)
 }
 
-func (s *SessionsManager) ExpiresAfter(instance *instance.State, duration time.Duration) {
-	err := s.store.Put(context.TODO(), *instance, duration)
+func (s *SessionsManager) expiresAfter(ctx context.Context, instance instance.State, duration time.Duration) {
+	err := s.store.Put(ctx, instance, duration)
 	if err != nil {
-		slog.Default().Warn("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
+		s.l.Error("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", instance.Name))
 	}
-}
-
-func (s *SessionsManager) Stop() {
-	// Stop event listeners
-	s.cancel()
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {

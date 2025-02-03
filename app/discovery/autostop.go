@@ -5,18 +5,15 @@ import (
 	"errors"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/pkg/store"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"log/slog"
 )
 
 // StopAllUnregisteredInstances stops all auto-discovered running instances that are not yet registered
 // as running instances by Sablier.
 // By default, Sablier does not stop all already running instances. Meaning that you need to make an
 // initial request in order to trigger the scaling to zero.
-func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provider, s store.Store) error {
-	log.Info("Stopping all unregistered running instances")
-
-	log.Tracef("Retrieving all instances with label [%v=true]", LabelEnable)
+func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provider, s store.Store, logger *slog.Logger) error {
 	instances, err := provider.InstanceList(ctx, providers.InstanceListOptions{
 		All:    false, // Only running containers
 		Labels: []string{LabelEnable},
@@ -25,7 +22,6 @@ func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provid
 		return err
 	}
 
-	log.Tracef("Found %v instances with label [%v=true]", len(instances), LabelEnable)
 	unregistered := make([]string, 0)
 	for _, instance := range instances {
 		_, err = s.Get(ctx, instance.Name)
@@ -34,29 +30,25 @@ func StopAllUnregisteredInstances(ctx context.Context, provider providers.Provid
 		}
 	}
 
-	log.Tracef("Found %v unregistered instances ", len(instances))
+	logger.DebugContext(ctx, "found instances to stop", slog.Any("instances", unregistered))
 
 	waitGroup := errgroup.Group{}
 
-	// Previously, the variables declared by a “for” loop were created once and updated by each iteration.
-	// In Go 1.22, each iteration of the loop creates new variables, to avoid accidental sharing bugs.
-	// The transition support tooling described in the proposal continues to work in the same way it did in Go 1.21.
 	for _, name := range unregistered {
-		waitGroup.Go(stopFunc(ctx, name, provider))
+		waitGroup.Go(stopFunc(ctx, name, provider, logger))
 	}
 
 	return waitGroup.Wait()
 }
 
-func stopFunc(ctx context.Context, name string, provider providers.Provider) func() error {
+func stopFunc(ctx context.Context, name string, provider providers.Provider, logger *slog.Logger) func() error {
 	return func() error {
-		log.Tracef("Stopping %v...", name)
 		err := provider.Stop(ctx, name)
 		if err != nil {
-			log.Errorf("Could not stop %v: %v", name, err)
+			logger.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
 			return err
 		}
-		log.Tracef("Successfully stopped %v", name)
+		logger.InfoContext(ctx, "stopped unregistered instance", slog.String("instance", name), slog.String("reason", "instance is enabled but not started by Sablier"))
 		return nil
 	}
 }

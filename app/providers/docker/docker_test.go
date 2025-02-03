@@ -3,6 +3,8 @@ package docker
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/client"
+	"github.com/neilotoole/slogt"
 	"reflect"
 	"testing"
 
@@ -12,6 +14,15 @@ import (
 	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 )
+
+func setupProvider(t *testing.T, client client.APIClient) *DockerClassicProvider {
+	t.Helper()
+	return &DockerClassicProvider{
+		Client:          client,
+		desiredReplicas: 1,
+		l:               slogt.New(t),
+	}
+}
 
 func TestDockerClassicProvider_GetState(t *testing.T) {
 	type fields struct {
@@ -235,10 +246,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := &DockerClassicProvider{
-				Client:          tt.fields.Client,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, tt.fields.Client)
 
 			tt.fields.Client.On("ContainerInspect", mock.Anything, mock.Anything).Return(tt.containerSpec, tt.err)
 
@@ -293,10 +301,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := &DockerClassicProvider{
-				Client:          tt.fields.Client,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, tt.fields.Client)
 
 			tt.fields.Client.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
@@ -348,10 +353,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := &DockerClassicProvider{
-				Client:          tt.fields.Client,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, tt.fields.Client)
 
 			tt.fields.Client.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(tt.err)
 
@@ -382,11 +384,8 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := &DockerClassicProvider{
-				Client:          mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors),
-				desiredReplicas: 1,
-			}
-
+			provider := setupProvider(t, mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors))
+			
 			instanceC := make(chan string, 1)
 
 			ctx, cancel := context.WithCancel(context.Background())

@@ -102,33 +102,33 @@ func (mr *MockManagerMockRecorder) RequestReadySessionGroup(ctx, group, duration
 }
 
 // RequestSession mocks base method.
-func (m *MockManager) RequestSession(names []string, duration time.Duration) (*sessions.SessionState, error) {
+func (m *MockManager) RequestSession(ctx context.Context, names []string, duration time.Duration) (*sessions.SessionState, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestSession", names, duration)
+	ret := m.ctrl.Call(m, "RequestSession", ctx, names, duration)
 	ret0, _ := ret[0].(*sessions.SessionState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RequestSession indicates an expected call of RequestSession.
-func (mr *MockManagerMockRecorder) RequestSession(names, duration any) *gomock.Call {
+func (mr *MockManagerMockRecorder) RequestSession(ctx, names, duration any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSession", reflect.TypeOf((*MockManager)(nil).RequestSession), names, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSession", reflect.TypeOf((*MockManager)(nil).RequestSession), ctx, names, duration)
 }
 
 // RequestSessionGroup mocks base method.
-func (m *MockManager) RequestSessionGroup(group string, duration time.Duration) (*sessions.SessionState, error) {
+func (m *MockManager) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (*sessions.SessionState, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestSessionGroup", group, duration)
+	ret := m.ctrl.Call(m, "RequestSessionGroup", ctx, group, duration)
 	ret0, _ := ret[0].(*sessions.SessionState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RequestSessionGroup indicates an expected call of RequestSessionGroup.
-func (mr *MockManagerMockRecorder) RequestSessionGroup(group, duration any) *gomock.Call {
+func (mr *MockManagerMockRecorder) RequestSessionGroup(ctx, group, duration any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSessionGroup", reflect.TypeOf((*MockManager)(nil).RequestSessionGroup), group, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSessionGroup", reflect.TypeOf((*MockManager)(nil).RequestSessionGroup), ctx, group, duration)
 }
 
 // SaveSessions mocks base method.
@@ -155,16 +155,4 @@ func (m *MockManager) SetGroups(groups map[string][]string) {
 func (mr *MockManagerMockRecorder) SetGroups(groups any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGroups", reflect.TypeOf((*MockManager)(nil).SetGroups), groups)
-}
-
-// Stop mocks base method.
-func (m *MockManager) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockManagerMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockManager)(nil).Stop))
 }

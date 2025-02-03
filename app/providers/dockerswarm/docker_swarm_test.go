@@ -2,6 +2,8 @@ package dockerswarm
 
 import (
 	"context"
+	"github.com/docker/docker/client"
+	"github.com/neilotoole/slogt"
 	"reflect"
 	"testing"
 
@@ -11,6 +13,15 @@ import (
 	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 )
+
+func setupProvider(t *testing.T, client client.APIClient) *DockerSwarmProvider {
+	t.Helper()
+	return &DockerSwarmProvider{
+		Client:          client,
+		desiredReplicas: 1,
+		l:               slogt.New(t),
+	}
+}
 
 func TestDockerSwarmProvider_Start(t *testing.T) {
 	type args struct {
@@ -72,10 +83,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientMock := mocks.NewDockerAPIClientMock()
-			provider := &DockerSwarmProvider{
-				Client:          clientMock,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, clientMock)
 
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
@@ -149,10 +157,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientMock := mocks.NewDockerAPIClientMock()
-			provider := &DockerSwarmProvider{
-				Client:          clientMock,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, clientMock)
 
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 			clientMock.On("ServiceUpdate", mock.Anything, tt.wantService.ID, tt.wantService.Meta.Version, tt.wantService.Spec, mock.Anything).Return(tt.response, nil)
@@ -224,10 +229,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientMock := mocks.NewDockerAPIClientMock()
-			provider := &DockerSwarmProvider{
-				Client:          clientMock,
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, clientMock)
 
 			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
 
@@ -268,10 +270,7 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := &DockerSwarmProvider{
-				Client:          mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors),
-				desiredReplicas: 1,
-			}
+			provider := setupProvider(t, mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors))
 
 			instanceC := make(chan string)
 

@@ -5,21 +5,21 @@ import (
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
-	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log/slog"
 	"strconv"
 	"strings"
 )
 
-func (provider *KubernetesProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
-	deployments, err := provider.deploymentList(ctx, options)
+func (p *KubernetesProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+	deployments, err := p.deploymentList(ctx, options)
 	if err != nil {
 		return nil, err
 	}
 
-	statefulSets, err := provider.statefulSetList(ctx, options)
+	statefulSets, err := p.statefulSetList(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,8 @@ func (provider *KubernetesProvider) InstanceList(ctx context.Context, options pr
 	return append(deployments, statefulSets...), nil
 }
 
-func (provider *KubernetesProvider) deploymentList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
-	deployments, err := provider.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+func (p *KubernetesProvider) deploymentList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: strings.Join(options.Labels, ","),
 	})
 
@@ -38,14 +38,14 @@ func (provider *KubernetesProvider) deploymentList(ctx context.Context, options 
 
 	instances := make([]types.Instance, 0, len(deployments.Items))
 	for _, d := range deployments.Items {
-		instance := provider.deploymentToInstance(d)
+		instance := p.deploymentToInstance(d)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
 }
 
-func (provider *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instance {
+func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instance {
 	var group string
 	var replicas uint64
 
@@ -59,7 +59,7 @@ func (provider *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.
 		if r, ok := d.Labels[discovery.LabelReplicas]; ok {
 			atoi, err := strconv.Atoi(r)
 			if err != nil {
-				log.Warnf("Defaulting to default replicas value, could not convert value \"%v\" to int: %v", r, err)
+				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", d.Name), slog.String("value", r))
 				replicas = discovery.LabelReplicasDefaultValue
 			} else {
 				replicas = uint64(atoi)
@@ -69,7 +69,7 @@ func (provider *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.
 		}
 	}
 
-	parsed := DeploymentName(d, ParseOptions{Delimiter: provider.delimiter})
+	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return types.Instance{
 		Name:            parsed.Original,
@@ -82,8 +82,8 @@ func (provider *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.
 	}
 }
 
-func (provider *KubernetesProvider) statefulSetList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
-	statefulSets, err := provider.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+func (p *KubernetesProvider) statefulSetList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: strings.Join(options.Labels, ","),
 	})
 
@@ -93,14 +93,14 @@ func (provider *KubernetesProvider) statefulSetList(ctx context.Context, options
 
 	instances := make([]types.Instance, 0, len(statefulSets.Items))
 	for _, ss := range statefulSets.Items {
-		instance := provider.statefulSetToInstance(ss)
+		instance := p.statefulSetToInstance(ss)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
 }
 
-func (provider *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
+func (p *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
 	var group string
 	var replicas uint64
 
@@ -114,7 +114,7 @@ func (provider *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) typ
 		if r, ok := ss.Labels[discovery.LabelReplicas]; ok {
 			atoi, err := strconv.Atoi(r)
 			if err != nil {
-				log.Warnf("Defaulting to default replicas value, could not convert value \"%v\" to int: %v", r, err)
+				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", ss.Name), slog.String("value", r))
 				replicas = discovery.LabelReplicasDefaultValue
 			} else {
 				replicas = uint64(atoi)
@@ -124,7 +124,7 @@ func (provider *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) typ
 		}
 	}
 
-	parsed := StatefulSetName(ss, ParseOptions{Delimiter: provider.delimiter})
+	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 
 	return types.Instance{
 		Name:            parsed.Original,
