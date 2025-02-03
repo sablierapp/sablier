@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"github.com/neilotoole/slogt"
+	"k8s.io/client-go/kubernetes"
 	"reflect"
 	"testing"
 
@@ -12,6 +14,15 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func setupProvider(t *testing.T, client kubernetes.Interface) *KubernetesProvider {
+	t.Helper()
+	return &KubernetesProvider{
+		Client:    client,
+		delimiter: "_",
+		l:         slogt.New(t),
+	}
+}
 
 func TestKubernetesProvider_Start(t *testing.T) {
 	type data struct {
@@ -70,10 +81,7 @@ func TestKubernetesProvider_Start(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
-			provider := KubernetesProvider{
-				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
-				delimiter: "_",
-			}
+			provider := setupProvider(t, mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI))
 
 			deploymentAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			deploymentAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
@@ -147,10 +155,7 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
-			provider := KubernetesProvider{
-				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
-				delimiter: "_",
-			}
+			provider := setupProvider(t, mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI))
 
 			deploymentAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			deploymentAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
@@ -267,10 +272,7 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			deploymentAPI := mocks.DeploymentMock{}
 			statefulsetAPI := mocks.StatefulSetsMock{}
-			provider := KubernetesProvider{
-				Client:    mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI),
-				delimiter: "_",
-			}
+			provider := setupProvider(t, mocks.NewKubernetesAPIClientMock(&deploymentAPI, &statefulsetAPI))
 
 			deploymentAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getDeployment, nil)
 			statefulsetAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getStatefulSet, nil)

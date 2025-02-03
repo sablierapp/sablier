@@ -13,7 +13,7 @@ import (
 )
 
 func TestGetVersion(t *testing.T) {
-
+	gin.SetMode(gin.TestMode)
 	version.Branch = "testing"
 	version.Revision = "8ffebca"
 

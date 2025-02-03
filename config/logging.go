@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"strings"
 )
 
 type Logging struct {
@@ -10,6 +11,6 @@ type Logging struct {
 
 func NewLoggingConfig() Logging {
 	return Logging{
-		Level: slog.LevelInfo.String(),
+		Level: strings.ToLower(slog.LevelInfo.String()),
 	}
 }

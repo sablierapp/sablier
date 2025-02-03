@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/sessions/sessionstest"
 	"github.com/sablierapp/sablier/app/theme"
@@ -17,7 +18,7 @@ func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strateg
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
-	th, err := theme.New()
+	th, err := theme.New(slogt.New(t))
 	assert.NilError(t, err)
 
 	app = gin.New()

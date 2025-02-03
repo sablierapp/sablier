@@ -53,7 +53,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicThemeNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(session(), nil)
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(session(), nil)
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test&theme=invalid")
 		assert.Equal(t, http.StatusNotFound, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
@@ -61,7 +61,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicByNames", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSession([]string{"test"}, gomock.Any()).Return(session(), nil)
+		m.EXPECT().RequestSession(gomock.Any(), []string{"test"}, gomock.Any()).Return(session(), nil)
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?names=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
@@ -69,7 +69,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicByGroup", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(session(), nil)
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(session(), nil)
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
@@ -77,7 +77,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicErrGroupNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(nil, sessions.ErrGroupNotFound{
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, sessions.ErrGroupNotFound{
 			Group:           "test",
 			AvailableGroups: []string{"test1", "test2"},
 		})
@@ -88,7 +88,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicError", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(nil, errors.New("unknown error"))
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, errors.New("unknown error"))
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
@@ -96,7 +96,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicSessionNil", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup("test", gomock.Any()).Return(nil, nil)
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
