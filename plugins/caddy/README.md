@@ -24,7 +24,7 @@ docker build https://github.com/sablierapp/sablier.git#v1.8.3:plugins/caddy -t c
 ### By updating your Caddy Dockerfile
 
 ```Dockerfile
-ARG CADDY_VERSION=2.8.4
+ARG CADDY_VERSION=2.9.1
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
 RUN xcaddy build \

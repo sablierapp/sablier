@@ -281,7 +281,6 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 
 			got = append(got, <-instanceC)
 			cancel()
-			close(instanceC)
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NotifyInstanceStopped() = %v, want %v", got, tt.want)
