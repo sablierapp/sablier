@@ -112,6 +112,7 @@ func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (inst
 				return instance.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
 			}
 		}
+		p.l.WarnContext(ctx, "container running without healthcheck, you should define a healthcheck on your container so that Sablier properly detects when the container is ready to handle requests.", slog.String("container", name))
 		return instance.ReadyInstanceState(name, p.desiredReplicas), nil
 	case "exited":
 		if spec.State.ExitCode != 0 {
