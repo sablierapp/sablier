@@ -7,6 +7,9 @@ on:
       - beta
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   build:
     name: Build Sablier docker image once and share it to E2E jobs

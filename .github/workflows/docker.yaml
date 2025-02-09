@@ -9,6 +9,9 @@ on:
     tags:
       - "v**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
   packages: write # For GHCR
 
