@@ -87,7 +87,7 @@ sablier --help
 # or
 
 docker run sablierapp/sablier[:version] --help
-# ex: docker run sablierapp/sablier:1.8.3 --help
+# ex: docker run sablierapp/sablier:1.8.4 --help
 ```
 
 All arguments can be used in the form of the config file such as 
