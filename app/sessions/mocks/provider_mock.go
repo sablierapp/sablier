@@ -2,11 +2,11 @@ package mocks
 
 import (
 	"context"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	"github.com/stretchr/testify/mock"
 )
@@ -16,7 +16,7 @@ type ProviderMock struct {
 
 	wg sync.WaitGroup
 
-	providers.Provider
+	provider.Provider
 	mock.Mock
 }
 

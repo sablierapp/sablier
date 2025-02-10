@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"github.com/docker/docker/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/mocks"
 	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -385,7 +385,7 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := setupProvider(t, mocks.NewDockerAPIClientMockWithEvents(tt.events, tt.errors))
-			
+
 			instanceC := make(chan string, 1)
 
 			ctx, cancel := context.WithCancel(context.Background())

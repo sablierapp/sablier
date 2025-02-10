@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"log/slog"
 	"time"
 
@@ -22,7 +22,7 @@ import (
 )
 
 // Interface guard
-var _ providers.Provider = (*KubernetesProvider)(nil)
+var _ provider.Provider = (*KubernetesProvider)(nil)
 
 type Workload interface {
 	GetScale(ctx context.Context, workloadName string, options metav1.GetOptions) (*autoscalingv1.Scale, error)

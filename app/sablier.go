@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/app/providers/docker"
-	"github.com/sablierapp/sablier/app/providers/dockerswarm"
-	"github.com/sablierapp/sablier/app/providers/kubernetes"
+	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/docker"
+	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"log/slog"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
 	"github.com/sablierapp/sablier/app/theme"
@@ -128,7 +128,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	return nil
 }
 
-func onSessionExpires(ctx context.Context, provider providers.Provider, logger *slog.Logger) func(key string) {
+func onSessionExpires(ctx context.Context, provider provider.Provider, logger *slog.Logger) func(key string) {
 	return func(_key string) {
 		go func(key string) {
 			logger.InfoContext(ctx, "instance expired", slog.String("instance", key))
@@ -165,7 +165,7 @@ func saveSessions(storage storage.Storage, sessions sessions.Manager, logger *sl
 	}
 }
 
-func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (providers.Provider, error) {
+func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (provider.Provider, error) {
 	if err := config.IsValid(); err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
 
-func WatchGroups(ctx context.Context, provider providers.Provider, frequency time.Duration, send chan<- map[string][]string, logger *slog.Logger) {
+func WatchGroups(ctx context.Context, provider provider.Provider, frequency time.Duration, send chan<- map[string][]string, logger *slog.Logger) {
 	ticker := time.NewTicker(frequency)
 	for {
 		select {
