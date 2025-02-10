@@ -10,7 +10,7 @@ import (
 	"github.com/sablierapp/sablier/app/http/routes/models"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions"
-	"github.com/sablierapp/sablier/app/theme"
+	theme2 "github.com/sablierapp/sablier/pkg/theme"
 	"sort"
 	"strconv"
 	"strings"
@@ -65,7 +65,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		renderOptions := theme.Options{
+		renderOptions := theme2.Options{
 			DisplayName:      request.DisplayName,
 			ShowDetails:      request.ShowDetails,
 			SessionDuration:  request.SessionDuration,
@@ -76,7 +76,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		buf := new(bytes.Buffer)
 		writer := bufio.NewWriter(buf)
 		err = s.Theme.Render(request.Theme, renderOptions, writer)
-		var themeNotFound theme.ErrThemeNotFound
+		var themeNotFound theme2.ErrThemeNotFound
 		if errors.As(err, &themeNotFound) {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
@@ -90,7 +90,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 	})
 }
 
-func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme.Instance) {
+func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme2.Instance) {
 	if sessionState == nil {
 		return
 	}
@@ -106,7 +106,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState instance.State) theme.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState instance.State) theme2.Instance {
 
 	var err error
 	if instanceState.Message == "" {
@@ -115,7 +115,7 @@ func instanceStateToRenderOptionsRequestState(instanceState instance.State) them
 		err = fmt.Errorf(instanceState.Message)
 	}
 
-	return theme.Instance{
+	return theme2.Instance{
 		Name:            instanceState.Name,
 		Status:          instanceState.Status,
 		CurrentReplicas: instanceState.CurrentReplicas,

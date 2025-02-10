@@ -10,6 +10,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/version"
