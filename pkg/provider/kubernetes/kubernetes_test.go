@@ -3,12 +3,12 @@ package kubernetes
 import (
 	"context"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/mocks"
 	"k8s.io/client-go/kubernetes"
 	"reflect"
 	"testing"
 
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"

@@ -6,9 +6,9 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers"
-	"github.com/sablierapp/sablier/app/providers/mock"
 	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/mock"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"gotest.tools/v3/assert"
 	"testing"
@@ -30,7 +30,7 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
-	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
+	mockProvider.On("InstanceList", ctx, provider.InstanceListOptions{
 		All:    false,
 		Labels: []string{discovery.LabelEnable},
 	}).Return(instances, nil)
@@ -62,7 +62,7 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
-	mockProvider.On("InstanceList", ctx, providers.InstanceListOptions{
+	mockProvider.On("InstanceList", ctx, provider.InstanceListOptions{
 		All:    false,
 		Labels: []string{discovery.LabelEnable},
 	}).Return(instances, nil)

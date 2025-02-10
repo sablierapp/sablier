@@ -7,12 +7,12 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"strings"
 )
 
-func (p *DockerClassicProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
 	for _, label := range options.Labels {
 		args.Add("label", label)

@@ -7,13 +7,13 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"log/slog"
 	"strconv"
 )
 
-func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
 	for _, label := range options.Labels {
 		args.Add("label", label)

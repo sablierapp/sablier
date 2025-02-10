@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/providers"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"io"
 	"log/slog"
 	"strings"
@@ -20,7 +20,7 @@ import (
 )
 
 // Interface guard
-var _ providers.Provider = (*DockerClassicProvider)(nil)
+var _ provider.Provider = (*DockerClassicProvider)(nil)
 
 type DockerClassicProvider struct {
 	Client          client.APIClient

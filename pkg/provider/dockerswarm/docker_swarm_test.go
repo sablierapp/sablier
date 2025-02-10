@@ -4,13 +4,13 @@ import (
 	"context"
 	"github.com/docker/docker/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/mocks"
 	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers/mocks"
 	"github.com/stretchr/testify/mock"
 )
 

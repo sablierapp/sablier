@@ -8,7 +8,7 @@ reverse-proxy:
 
 provider:
 - changed-files:
-  - any-glob-to-any-file: 'app/providers/**'
+  - any-glob-to-any-file: 'pkg/provider/**'
 
 ci:
 - changed-files:

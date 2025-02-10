@@ -3,13 +3,13 @@ package mock
 import (
 	"context"
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers"
 	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/stretchr/testify/mock"
 )
 
 // Interface guard
-var _ providers.Provider = (*ProviderMock)(nil)
+var _ provider.Provider = (*ProviderMock)(nil)
 
 // ProviderMock is a structure that allows to define the behavior of a Provider
 type ProviderMock struct {
@@ -32,7 +32,7 @@ func (m *ProviderMock) GetGroups(ctx context.Context) (map[string][]string, erro
 	args := m.Called(ctx)
 	return args.Get(0).(map[string][]string), args.Error(1)
 }
-func (m *ProviderMock) InstanceList(ctx context.Context, options providers.InstanceListOptions) ([]types.Instance, error) {
+func (m *ProviderMock) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
 	args := m.Called(ctx, options)
 	return args.Get(0).([]types.Instance), args.Error(1)
 }

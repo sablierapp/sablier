@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/store"
 	"io"
 	"log/slog"
@@ -15,7 +16,6 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/providers"
 )
 
 //go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
@@ -35,13 +35,13 @@ type Manager interface {
 
 type SessionsManager struct {
 	store    store.Store
-	provider providers.Provider
+	provider provider.Provider
 	groups   map[string][]string
 
 	l *slog.Logger
 }
 
-func NewSessionsManager(logger *slog.Logger, store store.Store, provider providers.Provider) Manager {
+func NewSessionsManager(logger *slog.Logger, store store.Store, provider provider.Provider) Manager {
 	sm := &SessionsManager{
 		store:    store,
 		provider: provider,
