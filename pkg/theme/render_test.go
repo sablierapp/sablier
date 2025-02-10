@@ -4,32 +4,32 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/neilotoole/slogt"
+	theme2 "github.com/sablierapp/sablier/pkg/theme"
 	"log/slog"
 	"os"
 	"testing"
 	"testing/fstest"
 	"time"
 
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/version"
 )
 
 var (
-	StartingInstanceInfo = theme.Instance{
+	StartingInstanceInfo = theme2.Instance{
 		Name:            "starting-instance",
 		Status:          "instance is starting...",
 		Error:           nil,
 		CurrentReplicas: 0,
 		DesiredReplicas: 1,
 	}
-	StartedInstanceInfo = theme.Instance{
+	StartedInstanceInfo = theme2.Instance{
 		Name:            "started-instance",
 		Status:          "instance is started.",
 		Error:           nil,
 		CurrentReplicas: 1,
 		DesiredReplicas: 1,
 	}
-	ErrorInstanceInfo = theme.Instance{
+	ErrorInstanceInfo = theme2.Instance{
 		Name:            "error-instance",
 		Error:           fmt.Errorf("instance does not exist"),
 		CurrentReplicas: 0,
@@ -65,7 +65,7 @@ func TestThemes_Render(t *testing.T) {
 </html>
 `
 	version.Version = "1.0.0"
-	themes, err := theme.NewWithCustomThemes(fstest.MapFS{
+	themes, err := theme2.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
 	}, slogt.New(t))
 	if err != nil {
@@ -73,12 +73,12 @@ func TestThemes_Render(t *testing.T) {
 		return
 	}
 
-	instances := []theme.Instance{
+	instances := []theme2.Instance{
 		StartingInstanceInfo,
 		StartedInstanceInfo,
 		ErrorInstanceInfo,
 	}
-	options := theme.Options{
+	options := theme2.Options{
 		DisplayName:      "Test",
 		InstanceStates:   instances,
 		SessionDuration:  10 * time.Minute,
@@ -86,7 +86,7 @@ func TestThemes_Render(t *testing.T) {
 	}
 	type args struct {
 		name string
-		opts theme.Options
+		opts theme2.Options
 	}
 	tests := []struct {
 		name    string
@@ -179,19 +179,19 @@ func ExampleThemes_Render() {
 </html>
 `
 	version.Version = "1.0.0"
-	themes, err := theme.NewWithCustomThemes(fstest.MapFS{
+	themes, err := theme2.NewWithCustomThemes(fstest.MapFS{
 		"inner/custom-theme.html": &fstest.MapFile{Data: []byte(customTheme)},
 	}, slog.Default())
 	if err != nil {
 		panic(err)
 	}
-	instances := []theme.Instance{
+	instances := []theme2.Instance{
 		StartingInstanceInfo,
 		StartedInstanceInfo,
 		ErrorInstanceInfo,
 	}
 
-	err = themes.Render("custom-theme", theme.Options{
+	err = themes.Render("custom-theme", theme2.Options{
 		DisplayName:      "Test",
 		InstanceStates:   instances,
 		ShowDetails:      true,
