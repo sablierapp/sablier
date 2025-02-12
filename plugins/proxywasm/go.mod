@@ -1,6 +1,6 @@
 module github.com/sablierapp/sablier/plugins/proxy-wasm
 
-go 1.23.6
+go 1.24.0
 
 require (
 	github.com/json-iterator/tinygo v0.0.0-20211221071957-84b5b690c8a0

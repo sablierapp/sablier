@@ -1,4 +1,4 @@
-FROM golang:1.23 AS build
+FROM golang:1.24 AS build
 
 RUN mkdir -p /etc/sablier/themes
 WORKDIR /src
