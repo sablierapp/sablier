@@ -1,6 +1,6 @@
 module github.com/sablierapp/sablier
 
-go 1.23.6
+go 1.24.0
 
 replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
 
