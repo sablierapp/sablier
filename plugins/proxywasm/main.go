@@ -8,8 +8,8 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/tinygo"
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm"
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm/types"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 	"golang.org/x/exp/slices"
 )
 
