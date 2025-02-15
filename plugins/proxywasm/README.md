@@ -2,8 +2,4 @@
 
 See more at
 - https://github.com/proxy-wasm/spec
-- https://github.com/tetratelabs/proxy-wasm-go-sdk
-
-## Prerequisite
-
-- Install TinyGo: https://tinygo.org/getting-started/install/
+- https://github.com/proxy-wasm/proxy-wasm-go-sdk
