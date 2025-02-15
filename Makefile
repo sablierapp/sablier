@@ -54,7 +54,7 @@ release: $(PLATFORMS)
 
 proxywasm:
 	go generate ./plugins/proxywasm
-	GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ./plugins/proxywasm/sablierproxywasm.wasm ./plugins/proxywasm
+	env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ./plugins/proxywasm/sablierproxywasm.wasm ./plugins/proxywasm
 	cp ./plugins/proxywasm/sablierproxywasm.wasm ./sablierproxywasm_$(VERSION).wasm
 
 .PHONY: release $(PLATFORMS)
