@@ -1,6 +1,6 @@
 build:
 	go generate
-	tinygo build -o sablierproxywasm.wasm -scheduler=none -target=wasi ./
+	GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o sablierproxywasm.wasm .
 
 docker:
 	docker build -t sablierapp/sablier-proxy-wasm:latest .
