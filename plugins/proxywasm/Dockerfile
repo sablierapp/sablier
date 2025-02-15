@@ -1,8 +1,5 @@
 FROM golang:1.24 AS build
 
-ADD https://github.com/tinygo-org/tinygo/releases/download/v0.33.0/tinygo_0.33.0_amd64.deb tinygo_amd64.deb
-RUN dpkg -i tinygo_amd64.deb
-
 WORKDIR /go/src/sablier/plugins/proxywasm
 
 COPY go.mod ./
@@ -11,7 +8,7 @@ RUN go mod download
 
 COPY . /go/src/sablier/plugins/proxywasm
 
-RUN make
+RUN make build
 
 FROM scratch
 

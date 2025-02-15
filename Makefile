@@ -54,7 +54,7 @@ release: $(PLATFORMS)
 
 proxywasm:
 	go generate ./plugins/proxywasm
-	tinygo build -ldflags "-X 'main.Version=$(VERSION)'" -o ./plugins/proxywasm/sablierproxywasm.wasm -scheduler=none -target=wasi ./plugins/proxywasm
+	GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ./plugins/proxywasm/sablierproxywasm.wasm ./plugins/proxywasm
 	cp ./plugins/proxywasm/sablierproxywasm.wasm ./sablierproxywasm_$(VERSION).wasm
 
 .PHONY: release $(PLATFORMS)
