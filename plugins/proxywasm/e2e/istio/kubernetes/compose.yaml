@@ -1,7 +1,7 @@
 version: '3'
 services:
   server:
-    image: "rancher/k3s:v1.31.1-k3s1"
+    image: "rancher/k3s:v1.31.5-k3s1"
     command: server --no-deploy traefik
     tmpfs:
       - /run
