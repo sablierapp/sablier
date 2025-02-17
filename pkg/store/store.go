@@ -9,7 +9,7 @@ import (
 
 var ErrKeyNotFound = errors.New("key not found")
 
-//go:generate mockgen -package storetest -source=store.go -destination=storetest/mocks_store.go *
+//go:generate go tool mockgen -package storetest -source=store.go -destination=storetest/mocks_store.go *
 
 type Store interface {
 	Get(context.Context, string) (instance.State, error)
