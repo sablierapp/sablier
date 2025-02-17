@@ -28,12 +28,8 @@ type DockerClassicProvider struct {
 	l               *slog.Logger
 }
 
-func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger) (*DockerClassicProvider, error) {
+func NewDockerClassicProvider(ctx context.Context, cli *client.Client, logger *slog.Logger) (*DockerClassicProvider, error) {
 	logger = logger.With(slog.String("provider", "docker"))
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, fmt.Errorf("cannot create docker client: %v", err)
-	}
 
 	serverVersion, err := cli.ServerVersion(ctx)
 	if err != nil {
