@@ -12,7 +12,8 @@ import (
 func StartBlocking(router *gin.RouterGroup, s *routes.ServeStrategy) {
 	router.GET("/strategies/blocking", func(c *gin.Context) {
 		request := models.BlockingRequest{
-			Timeout: s.StrategyConfig.Blocking.DefaultTimeout,
+			SessionDuration: s.SessionsConfig.DefaultDuration,
+			Timeout:         s.StrategyConfig.Blocking.DefaultTimeout,
 		}
 
 		if err := c.ShouldBind(&request); err != nil {
