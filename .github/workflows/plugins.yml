@@ -1,10 +1,6 @@
 name: Build Sablier plugins
 
 on:
-  push:
-    branches:
-      - main
-      - beta
   pull_request:
 
 concurrency:
