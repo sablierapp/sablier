@@ -59,6 +59,7 @@ func (client *DockerAPIClientMock) Events(ctx context.Context, options types.Eve
 	errors := make(chan error)
 	go func() {
 		defer close(evnts)
+		defer close(errors)
 		for i := 0; i < len(client.messages); i++ {
 			evnts <- client.messages[i]
 		}
