@@ -85,8 +85,10 @@ func (p *DockerClassicProvider) Stop(ctx context.Context, name string) error {
 func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := p.Client.ContainerInspect(ctx, name)
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
+
+	p.l.DebugContext(ctx, "container state", slog.Any("state", spec.State), slog.Any("health", spec.State.Health), slog.Any("config", spec.Config.Healthcheck))
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {
