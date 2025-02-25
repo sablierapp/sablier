@@ -214,14 +214,15 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 				}
 			} else {
 				// If ping succeeds, reset reconnect delay
-				if reconnectDelay > p.reconnectInitialDelay {
-					// Only log successful reconnection when we previously had a failure
+				if attempts > 0 {
+					// Log successful reconnection when we previously had failures (attempts > 0)
 					p.l.InfoContext(ctx, "successfully reconnected to Docker",
 						slog.String("status", "healthy"),
 						slog.Int("attempts", attempts))
 					// Reset attempt counter after successful reconnection
 					attempts = 0
 				}
+				// Always reset reconnect delay on successful ping
 				reconnectDelay = p.reconnectInitialDelay
 			}
 		}
