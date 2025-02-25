@@ -48,6 +48,16 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
 	startCmd.Flags().BoolVar(&conf.Provider.AutoStopOnStartup, "provider.auto-stop-on-startup", true, "")
 	viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
+
+	// Docker provider flags
+	startCmd.Flags().DurationVar(&conf.Provider.Docker.ReconnectInitialDelay, "provider.docker.reconnect-initial-delay", time.Second, "Initial delay between reconnection attempts to Docker")
+	viper.BindPFlag("provider.docker.reconnect-initial-delay", startCmd.Flags().Lookup("provider.docker.reconnect-initial-delay"))
+	startCmd.Flags().DurationVar(&conf.Provider.Docker.ReconnectMaxDelay, "provider.docker.reconnect-max-delay", 30*time.Second, "Maximum delay between reconnection attempts to Docker")
+	viper.BindPFlag("provider.docker.reconnect-max-delay", startCmd.Flags().Lookup("provider.docker.reconnect-max-delay"))
+	startCmd.Flags().IntVar(&conf.Provider.Docker.ReconnectMaxAttempts, "provider.docker.reconnect-max-attempts", 0, "Maximum number of reconnection attempts (0 = unlimited)")
+	viper.BindPFlag("provider.docker.reconnect-max-attempts", startCmd.Flags().Lookup("provider.docker.reconnect-max-attempts"))
+
+	// Kubernetes provider flags
 	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
 	viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
 	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API acees client-side throttling")

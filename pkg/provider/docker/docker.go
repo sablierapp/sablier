@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
+	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 
@@ -23,12 +25,15 @@ import (
 var _ provider.Provider = (*DockerClassicProvider)(nil)
 
 type DockerClassicProvider struct {
-	Client          client.APIClient
-	desiredReplicas int32
-	l               *slog.Logger
+	Client                client.APIClient
+	desiredReplicas       int32
+	reconnectInitialDelay time.Duration
+	reconnectMaxDelay     time.Duration
+	reconnectMaxAttempts  int
+	l                     *slog.Logger
 }
 
-func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger) (*DockerClassicProvider, error) {
+func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger, dockerConfig config.Docker) (*DockerClassicProvider, error) {
 	logger = logger.With(slog.String("provider", "docker"))
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -43,11 +48,17 @@ func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger) (*Docker
 	logger.InfoContext(ctx, "connection established with docker",
 		slog.String("version", serverVersion.Version),
 		slog.String("api_version", serverVersion.APIVersion),
+		slog.Duration("reconnect_initial_delay", dockerConfig.ReconnectInitialDelay),
+		slog.Duration("reconnect_max_delay", dockerConfig.ReconnectMaxDelay),
+		slog.Int("reconnect_max_attempts", dockerConfig.ReconnectMaxAttempts),
 	)
 	return &DockerClassicProvider{
-		Client:          cli,
-		desiredReplicas: 1,
-		l:               logger,
+		Client:                cli,
+		desiredReplicas:       1,
+		reconnectInitialDelay: dockerConfig.ReconnectInitialDelay,
+		reconnectMaxDelay:     dockerConfig.ReconnectMaxDelay,
+		reconnectMaxAttempts:  dockerConfig.ReconnectMaxAttempts,
+		l:                     logger,
 	}, nil
 }
 
@@ -127,34 +138,92 @@ func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (inst
 }
 
 func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := p.Client.Events(ctx, types.EventsOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "local"),
-			filters.Arg("type", string(events.ContainerEventType)),
-			filters.Arg("event", "die"),
-		),
-	})
-	for {
+	reconnectDelay := p.reconnectInitialDelay
+	maxReconnectDelay := p.reconnectMaxDelay
+	reconnect := true
+	attempts := 0
+
+	for reconnect {
+		// Check if we've exceeded maximum reconnection attempts
+		if p.reconnectMaxAttempts > 0 && attempts >= p.reconnectMaxAttempts {
+			p.l.ErrorContext(ctx, "exceeded maximum reconnection attempts, giving up",
+				slog.Int("max_attempts", p.reconnectMaxAttempts))
+			return
+		}
+
 		select {
-		case msg, ok := <-msgs:
-			if !ok {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			// Send the container that has died to the channel
-			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
-		case err, ok := <-errs:
-			if !ok {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			if errors.Is(err, io.EOF) {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
 		case <-ctx.Done():
 			return
+		default:
+			msgs, errs := p.Client.Events(ctx, types.EventsOptions{
+				Filters: filters.NewArgs(
+					filters.Arg("scope", "local"),
+					filters.Arg("type", string(events.ContainerEventType)),
+					filters.Arg("event", "die"),
+				),
+			})
+
+			streamClosed := false
+			for !streamClosed {
+				select {
+				case msg, ok := <-msgs:
+					if !ok {
+						p.l.WarnContext(ctx, "event stream closed, attempting to reconnect")
+						streamClosed = true
+						continue
+					}
+					// Send the container that has died to the channel
+					instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
+				case err, ok := <-errs:
+					if !ok {
+						p.l.WarnContext(ctx, "event stream closed, attempting to reconnect")
+						streamClosed = true
+						continue
+					}
+					if errors.Is(err, io.EOF) {
+						p.l.WarnContext(ctx, "event stream closed (EOF), attempting to reconnect")
+						streamClosed = true
+						continue
+					}
+					p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
+					// For other errors, we'll continue listening but log the error
+				case <-ctx.Done():
+					return
+				}
+			}
+
+			// Verify Docker connectivity before reconnecting
+			if _, err := p.Client.Ping(ctx); err != nil {
+				attempts++
+				p.l.ErrorContext(ctx, "connection to Docker lost, will retry",
+					slog.Any("error", err),
+					slog.Duration("next_attempt", reconnectDelay),
+					slog.Int("attempt", attempts),
+					slog.Int("max_attempts", p.reconnectMaxAttempts))
+
+				// Implement exponential backoff
+				select {
+				case <-time.After(reconnectDelay):
+					// Double the delay for next attempt, up to the maximum
+					reconnectDelay *= 2
+					if reconnectDelay > maxReconnectDelay {
+						reconnectDelay = maxReconnectDelay
+					}
+				case <-ctx.Done():
+					return
+				}
+			} else {
+				// If ping succeeds, reset reconnect delay
+				if reconnectDelay > p.reconnectInitialDelay {
+					// Only log successful reconnection when we previously had a failure
+					p.l.InfoContext(ctx, "successfully reconnected to Docker",
+						slog.String("status", "healthy"),
+						slog.Int("attempts", attempts))
+					// Reset attempt counter after successful reconnection
+					attempts = 0
+				}
+				reconnectDelay = p.reconnectInitialDelay
+			}
 		}
 	}
 }

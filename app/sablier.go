@@ -37,6 +37,16 @@ func Start(ctx context.Context, conf config.Config) error {
 		return err
 	}
 
+	// Extract Docker ping function for health checks if we're using Docker
+	var dockerPingFunc func(context.Context) error
+	if dp, ok := provider.(*docker.DockerClassicProvider); ok {
+		// Create a wrapper function that only returns the error from Ping
+		dockerPingFunc = func(ctx context.Context) error {
+			_, err := dp.Client.Ping(ctx)
+			return err
+		}
+	}
+
 	store := inmemory.NewInMemory()
 	err = store.OnExpire(ctx, onSessionExpires(ctx, provider, logger))
 	if err != nil {
@@ -112,7 +122,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		SessionsConfig:  conf.Sessions,
 	}
 
-	go server.Start(ctx, logger, conf.Server, strategy)
+	go server.Start(ctx, logger, conf.Server, strategy, dockerPingFunc)
 
 	// Listen for the interrupt signal.
 	<-ctx.Done()
@@ -165,20 +175,20 @@ func saveSessions(storage storage.Storage, sessions sessions.Manager, logger *sl
 	}
 }
 
-func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (provider.Provider, error) {
-	if err := config.IsValid(); err != nil {
+func NewProvider(ctx context.Context, logger *slog.Logger, conf config.Provider) (provider.Provider, error) {
+	if err := conf.IsValid(); err != nil {
 		return nil, err
 	}
 
-	switch config.Name {
+	switch conf.Name {
 	case "swarm", "docker_swarm":
 		return dockerswarm.NewDockerSwarmProvider(ctx, logger)
 	case "docker":
-		return docker.NewDockerClassicProvider(ctx, logger)
+		return docker.NewDockerClassicProvider(ctx, logger, conf.Docker)
 	case "kubernetes":
-		return kubernetes.NewKubernetesProvider(ctx, logger, config.Kubernetes)
+		return kubernetes.NewKubernetesProvider(ctx, logger, conf.Kubernetes)
 	}
-	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
+	return nil, fmt.Errorf("unimplemented provider %s", conf.Name)
 }
 
 func WatchGroups(ctx context.Context, provider provider.Provider, frequency time.Duration, send chan<- map[string][]string, logger *slog.Logger) {
