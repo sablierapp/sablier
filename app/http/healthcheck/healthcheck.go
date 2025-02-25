@@ -13,6 +13,7 @@ const (
 )
 
 // Health performs a basic HTTP health check
+// #nosec G107 -- This is intended to be used with variable URLs for health checks
 func Health(url string) (string, bool) {
 	resp, err := http.Get(url)
 
@@ -21,6 +22,7 @@ func Health(url string) (string, bool) {
 	}
 
 	body, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 
 	if err != nil {
 		return err.Error(), unhealthy

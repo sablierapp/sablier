@@ -4,21 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/config"
-	"github.com/sablierapp/sablier/pkg/provider"
 	"io"
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 // Interface guard
@@ -142,6 +141,8 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 	maxReconnectDelay := p.reconnectMaxDelay
 	reconnect := true
 	attempts := 0
+	// Track if we are in reconnection mode to log successes
+	reconnectionMode := false
 
 	for reconnect {
 		// Check if we've exceeded maximum reconnection attempts
@@ -170,6 +171,7 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 					if !ok {
 						p.l.WarnContext(ctx, "event stream closed, attempting to reconnect")
 						streamClosed = true
+						reconnectionMode = true
 						continue
 					}
 					// Send the container that has died to the channel
@@ -178,14 +180,17 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 					if !ok {
 						p.l.WarnContext(ctx, "event stream closed, attempting to reconnect")
 						streamClosed = true
+						reconnectionMode = true
 						continue
 					}
 					if errors.Is(err, io.EOF) {
 						p.l.WarnContext(ctx, "event stream closed (EOF), attempting to reconnect")
 						streamClosed = true
+						reconnectionMode = true
 						continue
 					}
 					p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
+					reconnectionMode = true
 					// For other errors, we'll continue listening but log the error
 				case <-ctx.Done():
 					return
@@ -193,7 +198,8 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 			}
 
 			// Verify Docker connectivity before reconnecting
-			if _, err := p.Client.Ping(ctx); err != nil {
+			pingResult, err := p.Client.Ping(ctx)
+			if err != nil {
 				attempts++
 				p.l.ErrorContext(ctx, "connection to Docker lost, will retry",
 					slog.Any("error", err),
@@ -213,14 +219,16 @@ func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, insta
 					return
 				}
 			} else {
-				// If ping succeeds, reset reconnect delay
-				if attempts > 0 {
-					// Log successful reconnection when we previously had failures (attempts > 0)
+				// If ping succeeds and we were in reconnection mode
+				if reconnectionMode {
 					p.l.InfoContext(ctx, "successfully reconnected to Docker",
 						slog.String("status", "healthy"),
+						slog.String("api_version", pingResult.APIVersion),
 						slog.Int("attempts", attempts))
-					// Reset attempt counter after successful reconnection
+
+					// Reset counters and flags after successful reconnection
 					attempts = 0
+					reconnectionMode = false
 				}
 				// Always reset reconnect delay on successful ping
 				reconnectDelay = p.reconnectInitialDelay
