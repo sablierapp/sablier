@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 )
 
 // Provider holds the provider configurations
@@ -11,6 +12,7 @@ type Provider struct {
 	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
+	Docker            Docker
 }
 
 type Kubernetes struct {
@@ -20,6 +22,15 @@ type Kubernetes struct {
 	Burst int `mapstructure:"BURST" yaml:"Burst" default:"10"`
 	//Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
 	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
+}
+
+type Docker struct {
+	// Initial delay between reconnection attempts to Docker
+	ReconnectInitialDelay time.Duration `mapstructure:"RECONNECT_INITIAL_DELAY" yaml:"reconnectInitialDelay" default:"1s"`
+	// Maximum delay between reconnection attempts to Docker
+	ReconnectMaxDelay time.Duration `mapstructure:"RECONNECT_MAX_DELAY" yaml:"reconnectMaxDelay" default:"30s"`
+	// Maximum number of reconnection attempts (0 = unlimited)
+	ReconnectMaxAttempts int `mapstructure:"RECONNECT_MAX_ATTEMPTS" yaml:"reconnectMaxAttempts" default:"0"`
 }
 
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes"}
@@ -32,6 +43,11 @@ func NewProviderConfig() Provider {
 			QPS:       5,
 			Burst:     10,
 			Delimiter: "_", //Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
+		},
+		Docker: Docker{
+			ReconnectInitialDelay: 1 * time.Second,
+			ReconnectMaxDelay:     30 * time.Second,
+			ReconnectMaxAttempts:  0, // 0 means unlimited
 		},
 	}
 }

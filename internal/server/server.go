@@ -12,18 +12,18 @@ import (
 	"time"
 )
 
-func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy) *gin.Engine {
+func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy, dockerPingFunc func(context.Context) error) *gin.Engine {
 	r := gin.New()
 
 	r.Use(StructuredLogger(logger))
 	r.Use(gin.Recovery())
 
-	registerRoutes(ctx, r, serverConf, s)
+	registerRoutes(ctx, r, serverConf, s, dockerPingFunc)
 
 	return r
 }
 
-func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy) {
+func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy, dockerPingFunc func(context.Context) error) {
 	start := time.Now()
 
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -32,12 +32,12 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := setupRouter(ctx, logger, serverConf, s)
+	r := setupRouter(ctx, logger, serverConf, s, dockerPingFunc)
 
-	var server *http.Server
-	server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", serverConf.Port),
-		Handler: r,
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%d", serverConf.Port),
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second, // Prevent Slowloris attacks
 	}
 
 	logger.Info("starting ",
@@ -46,7 +46,7 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		slog.String("mode", gin.Mode()),
 	)
 
-	go StartHttp(server, logger)
+	go StartHTTP(server, logger)
 
 	// Graceful web server shutdown.
 	<-ctx.Done()
@@ -57,8 +57,8 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 	}
 }
 
-// StartHttp starts the Web server in http mode.
-func StartHttp(s *http.Server, logger *slog.Logger) {
+// StartHTTP starts the Web server in HTTP mode.
+func StartHTTP(s *http.Server, logger *slog.Logger) {
 	if err := s.ListenAndServe(); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			logger.Info("server: shutdown complete")

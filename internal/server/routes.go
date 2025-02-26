@@ -8,14 +8,14 @@ import (
 	"github.com/sablierapp/sablier/internal/api"
 )
 
-func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.Server, s *routes.ServeStrategy) {
+func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.Server, s *routes.ServeStrategy, dockerPingFunc func(context.Context) error) {
 	// Enables automatic redirection if the current route cannot be matched but a
 	// handler for the path with (without) the trailing slash exists.
 	router.RedirectTrailingSlash = true
 
 	base := router.Group(serverConf.BasePath)
 
-	api.Healthcheck(base, ctx)
+	api.Healthcheck(base, ctx, dockerPingFunc)
 
 	// Create REST API router group.
 	APIv1 := base.Group("/api")
