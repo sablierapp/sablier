@@ -28,12 +28,8 @@ type DockerClassicProvider struct {
 	l               *slog.Logger
 }
 
-func NewDockerClassicProvider(ctx context.Context, logger *slog.Logger) (*DockerClassicProvider, error) {
+func NewDockerClassicProvider(ctx context.Context, cli *client.Client, logger *slog.Logger) (*DockerClassicProvider, error) {
 	logger = logger.With(slog.String("provider", "docker"))
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, fmt.Errorf("cannot create docker client: %v", err)
-	}
 
 	serverVersion, err := cli.ServerVersion(ctx)
 	if err != nil {
@@ -89,8 +85,10 @@ func (p *DockerClassicProvider) Stop(ctx context.Context, name string) error {
 func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
 	spec, err := p.Client.ContainerInspect(ctx, name)
 	if err != nil {
-		return instance.State{}, err
+		return instance.State{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
+
+	p.l.DebugContext(ctx, "container state", slog.Any("state", spec.State), slog.Any("health", spec.State.Health), slog.Any("config", spec.Config.Healthcheck))
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {

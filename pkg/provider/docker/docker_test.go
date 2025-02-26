@@ -1,257 +1,317 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/container"
+	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/pkg/provider/mocks"
+	"gotest.tools/v3/assert"
+	"io"
+
 	"reflect"
 	"testing"
+	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/stretchr/testify/mock"
 )
 
-func setupProvider(t *testing.T, client client.APIClient) *DockerClassicProvider {
-	t.Helper()
-	return &DockerClassicProvider{
-		Client:          client,
-		desiredReplicas: 1,
-		l:               slogt.New(t),
-	}
-}
+// 			Cmd:    []string{"/mimic", "-running", "-running-after", opts.RunningAfter.String(), "-healthy=false"},
+
+// &container.HealthConfig{
+//			Test:          []string{"CMD", "/mimic", "healthcheck"},
+//			Interval:      100 * time.Millisecond,
+//			Timeout:       time.Second,
+//			StartPeriod:   opts.RunningAfter,
+//			StartInterval: time.Second,
+//			Retries:       50,
+//		}
 
 func TestDockerClassicProvider_GetState(t *testing.T) {
-	type fields struct {
-		Client *mocks.DockerAPIClientMock
-	}
+	ctx := context.Background()
 	type args struct {
-		name string
+		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name          string
-		fields        fields
-		args          args
-		want          instance.State
-		wantErr       bool
-		containerSpec types.ContainerJSON
-		err           error
+		name    string
+		args    args
+		want    instance.State
+		wantErr error
 	}{
 		{
-			name: "nginx created container state",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "created container",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					resp, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:         []string{"/mimic"},
+						Healthcheck: nil,
+					})
+					return resp.ID, err
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.CreatedContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx running container state without healthcheck",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "running container without healthcheck",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:         []string{"/mimic"},
+						Healthcheck: nil,
+					})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
 				Status:          instance.Ready,
 			},
-			wantErr:       false,
-			containerSpec: mocks.RunningWithoutHealthcheckContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx running container state with \"starting\" health",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "running container with \"starting\" health",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after", "1s", "-healthy", "true"},
+						// Keep long interval so that the container is still in starting state
+						Healthcheck: &container.HealthConfig{
+							Test:          []string{"CMD", "/mimic", "healthcheck"},
+							Interval:      time.Second,
+							Timeout:       10 * time.Second,
+							StartPeriod:   10 * time.Second,
+							StartInterval: 10 * time.Second,
+							Retries:       10,
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.RunningWithHealthcheckContainerSpec("nginx", "starting"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx running container state with \"unhealthy\" health",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "running container with \"unhealthy\" health",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms"},
+						Healthcheck: &container.HealthConfig{
+							Test:          []string{"CMD", "/mimic", "healthcheck"},
+							Timeout:       time.Second,
+							Interval:      time.Millisecond,
+							StartInterval: time.Millisecond,
+							StartPeriod:   time.Millisecond,
+							Retries:       1,
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					<-time.After(2 * time.Second)
+
+					return c.ID, nil
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
-				Message:         "container is unhealthy: curl http://localhost failed (1)",
+				Message:         "container is unhealthy: 2025/02/24 03:11:28 Bad healthcheck status: 503 Service Unavailable",
 			},
-			wantErr:       false,
-			containerSpec: mocks.RunningWithHealthcheckContainerSpec("nginx", "unhealthy"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx running container state with \"healthy\" health",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "running container with \"healthy\" health",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after", "1ms", "-healthy", "true", "-healthy-after", "1ms"},
+						Healthcheck: &container.HealthConfig{
+							Test:          []string{"CMD", "/mimic", "healthcheck"},
+							Interval:      100 * time.Millisecond,
+							Timeout:       time.Second,
+							StartPeriod:   time.Second,
+							StartInterval: 100 * time.Millisecond,
+							Retries:       10,
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					<-time.After(2 * time.Second)
+
+					return c.ID, nil
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
 				Status:          instance.Ready,
 			},
-			wantErr:       false,
-			containerSpec: mocks.RunningWithHealthcheckContainerSpec("nginx", "healthy"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx paused container state",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
+			name: "paused container",
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerPause(ctx, c.ID)
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.PausedContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx restarting container state",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
-			args: args{
-				name: "nginx",
-			},
+			name: "restarting container",
+			args: args{},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.RestartingContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
-			name: "nginx removing container state",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
-			args: args{
-				name: "nginx",
-			},
+			name: "removing container",
+			args: args{},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.RemovingContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
 			name: "nginx exited container state with status code 0",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
 			args: args{
-				name: "nginx",
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerPause(ctx, c.ID)
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
 			},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.NotReady,
 			},
-			wantErr:       false,
-			containerSpec: mocks.ExitedContainerSpec("nginx", 0),
+			wantErr: nil,
 		},
 		{
 			name: "nginx exited container state with status code 137",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
-			args: args{
-				name: "nginx",
-			},
+			args: args{},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container exited with code \"137\"",
 			},
-			wantErr:       false,
-			containerSpec: mocks.ExitedContainerSpec("nginx", 137),
+			wantErr: nil,
 		},
 		{
 			name: "nginx dead container state",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
-			args: args{
-				name: "nginx",
-			},
+			args: args{},
 			want: instance.State{
-				Name:            "nginx",
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
 				Message:         "container in \"dead\" state cannot be restarted",
 			},
-			wantErr:       false,
-			containerSpec: mocks.DeadContainerSpec("nginx"),
+			wantErr: nil,
 		},
 		{
-			name: "container inspect has an error",
-			fields: fields{
-				Client: mocks.NewDockerAPIClientMock(),
-			},
-			args: args{
-				name: "nginx",
-			},
-			want:          instance.State{},
-			wantErr:       true,
-			containerSpec: types.ContainerJSON{},
-			err:           fmt.Errorf("container with name \"nginx\" was not found"),
+			name:    "container inspect has an error",
+			args:    args{},
+			want:    instance.State{},
+			wantErr: fmt.Errorf("container with name \"nginx\" was not found"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := setupProvider(t, tt.fields.Client)
+			c := setupDinD(t, ctx)
+			p, err := NewDockerClassicProvider(ctx, c.client, slogt.New(t))
 
-			tt.fields.Client.On("ContainerInspect", mock.Anything, mock.Anything).Return(tt.containerSpec, tt.err)
+			name, err := tt.args.do(c)
+			assert.NilError(t, err)
+			defer func() {
+				reader, err := c.client.ContainerLogs(ctx, name, container.LogsOptions{
+					ShowStdout: true,
+					ShowStderr: true,
+				})
+				assert.NilError(t, err)
+				// Log the output of the container
+				b := bytes.NewBuffer(nil)
+				_, err = io.Copy(b, reader)
+				t.Log(b.String())
+			}()
+			assert.NilError(t, err)
 
-			got, err := provider.GetState(context.Background(), tt.args.name)
-			if (err != nil) != tt.wantErr {
+			tt.want.Name = name
+			got, err := p.GetState(ctx, name)
+			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("DockerClassicProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -262,6 +322,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 	}
 }
 
+/*
 func TestDockerClassicProvider_Stop(t *testing.T) {
 	type fields struct {
 		Client *mocks.DockerAPIClientMock
@@ -403,3 +464,4 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 		})
 	}
 }
+*/

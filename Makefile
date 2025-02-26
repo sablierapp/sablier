@@ -20,8 +20,8 @@ $(PLATFORMS):
 run:
 	go run main.go start --storage.file=state.json --logging.level=debug
 
-generate:
-	go generate ./..
+gen:
+	go generate -v ./...
 
 build:
 	go build -v .
