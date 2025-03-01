@@ -16,7 +16,6 @@ import (
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/sablierapp/sablier/app/instance"
 )
 
 // Interface guard
@@ -72,14 +71,6 @@ func (p *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]str
 	}
 
 	return groups, nil
-}
-
-func (p *DockerClassicProvider) Start(ctx context.Context, name string) error {
-	return p.Client.ContainerStart(ctx, name, container.StartOptions{})
-}
-
-func (p *DockerClassicProvider) Stop(ctx context.Context, name string) error {
-	return p.Client.ContainerStop(ctx, name, container.StopOptions{})
 }
 
 func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
