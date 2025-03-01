@@ -8,8 +8,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log/slog"
-	"strconv"
 	"strings"
 )
 
@@ -47,7 +45,6 @@ func (p *KubernetesProvider) deploymentList(ctx context.Context, options provide
 
 func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instance {
 	var group string
-	var replicas uint64
 
 	if _, ok := d.Labels[discovery.LabelEnable]; ok {
 		if g, ok := d.Labels[discovery.LabelGroup]; ok {
@@ -55,30 +52,13 @@ func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instanc
 		} else {
 			group = discovery.LabelGroupDefaultValue
 		}
-
-		if r, ok := d.Labels[discovery.LabelReplicas]; ok {
-			atoi, err := strconv.Atoi(r)
-			if err != nil {
-				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", d.Name), slog.String("value", r))
-				replicas = discovery.LabelReplicasDefaultValue
-			} else {
-				replicas = uint64(atoi)
-			}
-		} else {
-			replicas = discovery.LabelReplicasDefaultValue
-		}
 	}
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return types.Instance{
-		Name:            parsed.Original,
-		Kind:            parsed.Kind,
-		Status:          d.Status.String(),
-		Replicas:        uint64(d.Status.Replicas),
-		DesiredReplicas: uint64(*d.Spec.Replicas),
-		ScalingReplicas: replicas,
-		Group:           group,
+		Name:  parsed.Original,
+		Group: group,
 	}
 }
 
@@ -102,7 +82,6 @@ func (p *KubernetesProvider) statefulSetList(ctx context.Context, options provid
 
 func (p *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
 	var group string
-	var replicas uint64
 
 	if _, ok := ss.Labels[discovery.LabelEnable]; ok {
 		if g, ok := ss.Labels[discovery.LabelGroup]; ok {
@@ -110,29 +89,12 @@ func (p *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Inst
 		} else {
 			group = discovery.LabelGroupDefaultValue
 		}
-
-		if r, ok := ss.Labels[discovery.LabelReplicas]; ok {
-			atoi, err := strconv.Atoi(r)
-			if err != nil {
-				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", ss.Name), slog.String("value", r))
-				replicas = discovery.LabelReplicasDefaultValue
-			} else {
-				replicas = uint64(atoi)
-			}
-		} else {
-			replicas = discovery.LabelReplicasDefaultValue
-		}
 	}
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 
 	return types.Instance{
-		Name:            parsed.Original,
-		Kind:            parsed.Kind,
-		Status:          ss.Status.String(),
-		Replicas:        uint64(ss.Status.Replicas),
-		DesiredReplicas: uint64(*ss.Spec.Replicas),
-		ScalingReplicas: replicas,
-		Group:           group,
+		Name:  parsed.Original,
+		Group: group,
 	}
 }

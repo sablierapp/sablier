@@ -174,7 +174,8 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 	case "swarm", "docker_swarm":
 		return dockerswarm.NewDockerSwarmProvider(ctx, logger)
 	case "docker":
-		return docker.NewDockerClassicProvider(ctx, logger)
+		// TODO: Create the Docker client here
+		return docker.NewDockerClassicProvider(ctx, nil, logger)
 	case "kubernetes":
 		return kubernetes.NewKubernetesProvider(ctx, logger, config.Kubernetes)
 	}

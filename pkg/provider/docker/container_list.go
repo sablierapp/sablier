@@ -14,16 +14,12 @@ import (
 
 func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
-	for _, label := range options.Labels {
-		args.Add("label", label)
-		args.Add("label", fmt.Sprintf("%s=true", label))
-	}
+	args.Add("label", "sablier.enable=true")
 
 	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
 		All:     options.All,
 		Filters: args,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +45,34 @@ func containerToInstance(c dockertypes.Container) types.Instance {
 	}
 
 	return types.Instance{
-		Name:   strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Kind:   "container",
-		Status: c.Status,
-		// Replicas:        c.Status,
-		// DesiredReplicas: 1,
-		ScalingReplicas: 1,
-		Group:           group,
+		Name:  strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
+		Group: group,
 	}
+}
+
+func (p *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+	args := filters.NewArgs()
+	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+
+	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: args,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make(map[string][]string)
+	for _, c := range containers {
+		groupName := c.Labels[discovery.LabelGroup]
+		if len(groupName) == 0 {
+			groupName = discovery.LabelGroupDefaultValue
+		}
+		group := groups[groupName]
+		group = append(group, strings.TrimPrefix(c.Names[0], "/"))
+		groups[groupName] = group
+	}
+
+	return groups, nil
 }

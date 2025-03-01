@@ -9,8 +9,6 @@ import (
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
-	"log/slog"
-	"strconv"
 )
 
 func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
@@ -39,7 +37,6 @@ func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options provider
 
 func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instance) {
 	var group string
-	var replicas uint64
 
 	if _, ok := s.Spec.Labels[discovery.LabelEnable]; ok {
 		if g, ok := s.Spec.Labels[discovery.LabelGroup]; ok {
@@ -47,28 +44,10 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instan
 		} else {
 			group = discovery.LabelGroupDefaultValue
 		}
-
-		if r, ok := s.Spec.Labels[discovery.LabelReplicas]; ok {
-			atoi, err := strconv.Atoi(r)
-			if err != nil {
-				p.l.Warn("invalid replicas label value, using default replicas value", slog.Any("error", err), slog.String("instance", s.Spec.Name), slog.String("value", r))
-				replicas = discovery.LabelReplicasDefaultValue
-			} else {
-				replicas = uint64(atoi)
-			}
-		} else {
-			replicas = discovery.LabelReplicasDefaultValue
-		}
 	}
 
 	return types.Instance{
-		Name: s.Spec.Name,
-		Kind: "service",
-		// TODO
-		// Status:          string(s.UpdateStatus.State),
-		// Replicas:        s.ServiceStatus.RunningTasks,
-		// DesiredReplicas: s.ServiceStatus.DesiredTasks,
-		ScalingReplicas: replicas,
-		Group:           group,
+		Name:  s.Spec.Name,
+		Group: group,
 	}
 }
