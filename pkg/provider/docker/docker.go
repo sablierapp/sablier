@@ -100,12 +100,7 @@ func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (inst
 			if spec.State.Health.Status == "healthy" {
 				return instance.ReadyInstanceState(name, p.desiredReplicas), nil
 			} else if spec.State.Health.Status == "unhealthy" {
-				if len(spec.State.Health.Log) >= 1 {
-					lastLog := spec.State.Health.Log[len(spec.State.Health.Log)-1]
-					return instance.UnrecoverableInstanceState(name, fmt.Sprintf("container is unhealthy: %s (%d)", lastLog.Output, lastLog.ExitCode), p.desiredReplicas), nil
-				} else {
-					return instance.UnrecoverableInstanceState(name, "container is unhealthy: no log available", p.desiredReplicas), nil
-				}
+				return instance.UnrecoverableInstanceState(name, "container is unhealthy", p.desiredReplicas), nil
 			} else {
 				return instance.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
 			}

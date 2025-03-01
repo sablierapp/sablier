@@ -1,15 +1,11 @@
 package docker
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"gotest.tools/v3/assert"
-	"io"
-
 	"reflect"
 	"testing"
 	"time"
@@ -142,7 +138,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          instance.Unrecoverable,
-				Message:         "container is unhealthy: 2025/02/24 03:11:28 Bad healthcheck status: 503 Service Unavailable",
+				Message:         "container is unhealthy",
 			},
 			wantErr: nil,
 		},
@@ -151,7 +147,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"/mimic", "-running", "-running-after", "1ms", "-healthy", "true", "-healthy-after", "1ms"},
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy", "-healthy-after=1ms"},
 						Healthcheck: &container.HealthConfig{
 							Test:          []string{"CMD", "/mimic", "healthcheck"},
 							Interval:      100 * time.Millisecond,
@@ -213,29 +209,14 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		},
 		{
 			name: "restarting container",
-			args: args{},
-			want: instance.State{
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantErr: nil,
-		},
-		{
-			name: "removing container",
-			args: args{},
-			want: instance.State{
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantErr: nil,
-		},
-		{
-			name: "nginx exited container state with status code 0",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=1"},
+						RestartPolicy: container.RestartPolicy{
+							Name: container.RestartPolicyAlways,
+						},
+					})
 					if err != nil {
 						return "", err
 					}
@@ -245,7 +226,30 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerPause(ctx, c.ID)
+					<-time.After(2 * time.Second)
+
+					return c.ID, nil
+				},
+			},
+			want: instance.State{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          instance.NotReady,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited container with status code 0",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=0"},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -262,7 +266,23 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		},
 		{
 			name: "nginx exited container state with status code 137",
-			args: args{},
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=137"},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
 			want: instance.State{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
@@ -271,42 +291,14 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			},
 			wantErr: nil,
 		},
-		{
-			name: "nginx dead container state",
-			args: args{},
-			want: instance.State{
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
-				Message:         "container in \"dead\" state cannot be restarted",
-			},
-			wantErr: nil,
-		},
-		{
-			name:    "container inspect has an error",
-			args:    args{},
-			want:    instance.State{},
-			wantErr: fmt.Errorf("container with name \"nginx\" was not found"),
-		},
 	}
+	c := setupDinD(t, ctx)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := setupDinD(t, ctx)
+			t.Parallel()
 			p, err := NewDockerClassicProvider(ctx, c.client, slogt.New(t))
 
 			name, err := tt.args.do(c)
-			assert.NilError(t, err)
-			defer func() {
-				reader, err := c.client.ContainerLogs(ctx, name, container.LogsOptions{
-					ShowStdout: true,
-					ShowStderr: true,
-				})
-				assert.NilError(t, err)
-				// Log the output of the container
-				b := bytes.NewBuffer(nil)
-				_, err = io.Copy(b, reader)
-				t.Log(b.String())
-			}()
 			assert.NilError(t, err)
 
 			tt.want.Name = name

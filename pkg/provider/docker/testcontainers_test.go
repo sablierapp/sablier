@@ -27,9 +27,10 @@ type dindContainer struct {
 // Better test against real docker socket.
 
 type MimicOptions struct {
-	Cmd         []string
-	Healthcheck *container.HealthConfig
-	Labels      map[string]string
+	Cmd           []string
+	Healthcheck   *container.HealthConfig
+	RestartPolicy container.RestartPolicy
+	Labels        map[string]string
 }
 
 func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (container.CreateResponse, error) {
@@ -43,11 +44,11 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (con
 		Image:       "sablierapp/mimic:v0.3.1",
 		Labels:      opts.Labels,
 		Healthcheck: opts.Healthcheck,
-	}, nil, nil, nil, "")
+	}, &container.HostConfig{RestartPolicy: opts.RestartPolicy}, nil, nil, "")
 }
 
 func setupDinD(t *testing.T, ctx context.Context) *dindContainer {
-	//t.Helper()
+	t.Helper()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	assert.NilError(t, err)
 
