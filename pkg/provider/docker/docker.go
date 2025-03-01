@@ -2,18 +2,14 @@ package docker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/provider"
-	"io"
 	"log/slog"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
@@ -71,37 +67,4 @@ func (p *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]str
 	}
 
 	return groups, nil
-}
-
-func (p *DockerClassicProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := p.Client.Events(ctx, types.EventsOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "local"),
-			filters.Arg("type", string(events.ContainerEventType)),
-			filters.Arg("event", "die"),
-		),
-	})
-	for {
-		select {
-		case msg, ok := <-msgs:
-			if !ok {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			// Send the container that has died to the channel
-			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
-		case err, ok := <-errs:
-			if !ok {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			if errors.Is(err, io.EOF) {
-				p.l.ErrorContext(ctx, "event stream closed")
-				return
-			}
-			p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
-		case <-ctx.Done():
-			return
-		}
-	}
 }

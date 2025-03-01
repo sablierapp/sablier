@@ -20,12 +20,6 @@ type dindContainer struct {
 	t      *testing.T
 }
 
-// TODO: Every provider should implement tests against a testcontainer for accurate and
-// up to date behaviors.
-// Complete this test.
-// Should I do it for sure ? Will it be flaky ? It's like testing against a mocked database, it is pointless.
-// Better test against real docker socket.
-
 type MimicOptions struct {
 	Cmd           []string
 	Healthcheck   *container.HealthConfig
@@ -35,7 +29,7 @@ type MimicOptions struct {
 
 func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (container.CreateResponse, error) {
 	if len(opts.Cmd) == 0 {
-		opts.Cmd = []string{"/mimic", "-running", "-running-after", "1s", "-healthy=false"}
+		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
 	}
 
 	d.t.Log("Creating mimic container with options", opts)
