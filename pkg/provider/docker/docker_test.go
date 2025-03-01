@@ -1,10 +1,11 @@
-package docker
+package docker_test
 
 import (
 	"context"
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
 	"reflect"
 	"testing"
@@ -13,18 +14,11 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
-// 			Cmd:    []string{"/mimic", "-running", "-running-after", opts.RunningAfter.String(), "-healthy=false"},
-
-// &container.HealthConfig{
-//			Test:          []string{"CMD", "/mimic", "healthcheck"},
-//			Interval:      100 * time.Millisecond,
-//			Timeout:       time.Second,
-//			StartPeriod:   opts.RunningAfter,
-//			StartInterval: time.Second,
-//			Retries:       50,
-//		}
-
 func TestDockerClassicProvider_GetState(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
@@ -296,7 +290,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := NewDockerClassicProvider(ctx, c.client, slogt.New(t))
+			p, err := docker.NewDockerClassicProvider(ctx, c.client, slogt.New(t))
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
