@@ -217,10 +217,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup TinyGo
-        uses: acifani/setup-tinygo@v2
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
         with:
-          tinygo-version: '0.33.0'
+          go-version: 1.24
+          cache-dependency-path: |
+            plugins/proxywasm/go.sum
 
       - name: Build
         run: make proxywasm
@@ -245,10 +247,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.22
+      - name: Set up Go 1.24
         uses: actions/setup-go@v5
         with:
-          go-version: 1.22
+          go-version: 1.24
           cache-dependency-path: |
             go.sum
 

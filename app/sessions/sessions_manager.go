@@ -18,7 +18,7 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
-//go:generate mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
+//go:generate go tool mockgen -package sessionstest -source=sessions_manager.go -destination=sessionstest/mocks_sessions_manager.go *
 
 type Manager interface {
 	RequestSession(ctx context.Context, names []string, duration time.Duration) (*SessionState, error)
