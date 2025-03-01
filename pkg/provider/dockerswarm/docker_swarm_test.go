@@ -5,7 +5,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/mocks"
-	"go.uber.org/mock/gomock"
 	"reflect"
 	"testing"
 
@@ -15,10 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupProvider(t *testing.T, client client.APIClient) (mocks.DockerAPIClientMock, *DockerSwarmProvider) {
+func setupProvider(t *testing.T, client client.APIClient) *DockerSwarmProvider {
 	t.Helper()
-	ctrl := gomock.NewController(t)
-	client := mocks.NewDockerAPIClientMock(ctrl)
 	return &DockerSwarmProvider{
 		Client:          client,
 		desiredReplicas: 1,

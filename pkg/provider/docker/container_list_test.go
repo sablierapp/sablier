@@ -69,3 +69,47 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.DeepEqual(t, got, want)
 }
+
+func TestDockerClassicProvider_GetGroups(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx := t.Context()
+	dind := setupDinD(t, ctx)
+	p, err := docker.NewDockerClassicProvider(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	c1, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+		},
+	})
+	assert.NilError(t, err)
+
+	i1, err := dind.client.ContainerInspect(ctx, c1.ID)
+	assert.NilError(t, err)
+
+	assert.NilError(t, err)
+
+	c2, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+			"sablier.group":  "my-group",
+		},
+	})
+	assert.NilError(t, err)
+
+	i2, err := dind.client.ContainerInspect(ctx, c2.ID)
+	assert.NilError(t, err)
+
+	got, err := p.GetGroups(ctx)
+	assert.NilError(t, err)
+
+	want := map[string][]string{
+		"default":  {strings.TrimPrefix(i1.Name, "/")},
+		"my-group": {strings.TrimPrefix(i2.Name, "/")},
+	}
+
+	assert.DeepEqual(t, got, want)
+}

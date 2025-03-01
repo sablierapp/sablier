@@ -14,7 +14,7 @@ import (
 
 func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
-	args.Add("label", "sablier.enable=true")
+	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
 	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
 		All:     options.All,
