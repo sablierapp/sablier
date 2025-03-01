@@ -65,7 +65,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 		return strings.Compare(got[i].Name, got[j].Name) < 0
 	})
 	sort.Slice(want, func(i, j int) bool {
-		return strings.Compare(got[i].Name, got[j].Name) < 0
+		return strings.Compare(want[i].Name, want[j].Name) < 0
 	})
 	assert.DeepEqual(t, got, want)
 }
