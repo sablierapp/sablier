@@ -1,6 +1,6 @@
 services:
   apisix:
-    image: apache/apisix:3.10.0-debian
+    image: apache/apisix:3.11.0-debian
     restart: always
     volumes:
       - ./config.yaml:/usr/local/apisix/conf/config.yaml:ro

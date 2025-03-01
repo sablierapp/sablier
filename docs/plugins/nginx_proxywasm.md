@@ -12,20 +12,20 @@ The Nginx Plugin is a WASM Plugin written with the Proxy Wasm SDK.
 
 # Install ngx_wasm_module
 
-Install https://github.com/Kong/ngx_wasm_module.
+Install https://github.com/Kong/ngx_wasm_module with version 0.6.0 at least.
 
 Example for a Dockerfile:
 
 ```dockerfile
-FROM ubuntu:22.04
+FROM ubuntu:25.04
 
-RUN apt update && apt install libatomic1
+RUN apt update && apt install -y libatomic1
 
-ADD https://github.com/Kong/ngx_wasm_module/releases/download/prerelease-0.3.0/wasmx-prerelease-0.3.0-v8-x86_64-ubuntu22.04.tar.gz wasmx.tar.gz
+ADD https://github.com/Kong/ngx_wasm_module/releases/download/prerelease-0.6.0/wasmx-prerelease-0.6.0-v8-x86_64-ubuntu22.04.tar.gz wasmx.tar.gz
 
 RUN mkdir /etc/nginx
 RUN tar -xvf wasmx.tar.gz
-RUN mv /wasmx-prerelease-0.3.0-v8-x86_64-ubuntu22.04/* /etc/nginx/
+RUN mv /wasmx-prerelease-0.6.0-v8-x86_64-ubuntu22.04/* /etc/nginx/
 
 WORKDIR /etc/nginx
 

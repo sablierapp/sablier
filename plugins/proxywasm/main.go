@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -8,17 +9,15 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/tinygo"
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm"
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm/types"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 	"golang.org/x/exp/slices"
 )
 
 var Version string
 
-func main() {
-	// SetVMContext is the entrypoint for setting up this entire Wasm VM.
-	// Please make sure that this entrypoint be called during "main()" function, otherwise
-	// this VM would fail.
+func main() {}
+func init() {
 	proxywasm.SetVMContext(&vmContext{})
 }
 
@@ -64,7 +63,7 @@ func newPluginConfiguration() pluginConfiguration {
 func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	proxywasm.LogInfof("sablier proxywasm plugin version %v loaded", Version)
 	data, err := proxywasm.GetPluginConfiguration()
-	if err != nil && err != types.ErrorStatusNotFound {
+	if err != nil && !errors.Is(err, types.ErrorStatusNotFound) {
 		proxywasm.LogCriticalf("error reading plugin configuration: %v", err)
 		return types.OnPluginStartStatusFailed
 	}

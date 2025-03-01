@@ -4,16 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/http/routes/models"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/app/sessions"
 	theme2 "github.com/sablierapp/sablier/pkg/theme"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
@@ -112,7 +112,7 @@ func instanceStateToRenderOptionsRequestState(instanceState instance.State) them
 	if instanceState.Message == "" {
 		err = nil
 	} else {
-		err = fmt.Errorf(instanceState.Message)
+		err = errors.New(instanceState.Message)
 	}
 
 	return theme2.Instance{
