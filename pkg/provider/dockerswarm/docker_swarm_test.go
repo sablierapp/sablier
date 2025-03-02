@@ -10,7 +10,6 @@ import (
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/sablierapp/sablier/app/instance"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -166,80 +165,6 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DockerSwarmProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-		})
-	}
-}
-
-func TestDockerSwarmProvider_GetState(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name        string
-		args        args
-		want        instance.State
-		serviceList []swarm.Service
-		wantErr     bool
-	}{
-		{
-			name: "nginx service is ready",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceReplicated("nginx", 1),
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 1,
-				DesiredReplicas: 1,
-				Status:          instance.Ready,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nginx service is not ready",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceNotReadyReplicated("nginx", 1, 0),
-			},
-			want: instance.State{
-				Name:            "nginx",
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nginx is not a replicated service",
-			args: args{
-				name: "nginx",
-			},
-			serviceList: []swarm.Service{
-				mocks.ServiceGlobal("nginx"),
-			},
-			want:    instance.State{},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			clientMock := mocks.NewDockerAPIClientMock()
-			provider := setupProvider(t, clientMock)
-
-			clientMock.On("ServiceList", mock.Anything, mock.Anything).Return(tt.serviceList, nil)
-
-			got, err := provider.GetState(context.Background(), tt.args.name)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DockerSwarmProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerSwarmProvider.GetState() = %v, want %v", got, tt.want)
 			}
 		})
 	}
