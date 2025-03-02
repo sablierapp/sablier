@@ -1,0 +1,113 @@
+package dockerswarm_test
+
+import (
+	dockertypes "github.com/docker/docker/api/types"
+
+	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"gotest.tools/v3/assert"
+	"sort"
+	"strings"
+	"testing"
+)
+
+func TestDockerClassicProvider_InstanceList(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx := t.Context()
+	dind := setupDinD(t, ctx)
+	p, err := dockerswarm.NewDockerSwarmProvider(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	s1, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+		},
+	})
+	assert.NilError(t, err)
+
+	i1, _, err := dind.client.ServiceInspectWithRaw(ctx, s1.ID, dockertypes.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	s2, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+			"sablier.group":  "my-group",
+		},
+	})
+	assert.NilError(t, err)
+
+	i2, _, err := dind.client.ServiceInspectWithRaw(ctx, s2.ID, dockertypes.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	got, err := p.InstanceList(ctx, provider.InstanceListOptions{
+		All: true,
+	})
+	assert.NilError(t, err)
+
+	want := []types.Instance{
+		{
+			Name:  i1.Spec.Name,
+			Group: "default",
+		},
+		{
+			Name:  i2.Spec.Name,
+			Group: "my-group",
+		},
+	}
+	// Assert go is equal to want
+	// Sort both array to ensure they are equal
+	sort.Slice(got, func(i, j int) bool {
+		return strings.Compare(got[i].Name, got[j].Name) < 0
+	})
+	sort.Slice(want, func(i, j int) bool {
+		return strings.Compare(want[i].Name, want[j].Name) < 0
+	})
+	assert.DeepEqual(t, got, want)
+}
+
+func TestDockerClassicProvider_GetGroups(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx := t.Context()
+	dind := setupDinD(t, ctx)
+	p, err := dockerswarm.NewDockerSwarmProvider(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	s1, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+		},
+	})
+	assert.NilError(t, err)
+
+	i1, _, err := dind.client.ServiceInspectWithRaw(ctx, s1.ID, dockertypes.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	s2, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+			"sablier.group":  "my-group",
+		},
+	})
+	assert.NilError(t, err)
+
+	i2, _, err := dind.client.ServiceInspectWithRaw(ctx, s2.ID, dockertypes.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	got, err := p.GetGroups(ctx)
+	assert.NilError(t, err)
+
+	want := map[string][]string{
+		"default":  {i1.Spec.Name},
+		"my-group": {i2.Spec.Name},
+	}
+
+	assert.DeepEqual(t, got, want)
+}

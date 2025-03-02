@@ -11,12 +11,10 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider"
 )
 
-func (p *DockerSwarmProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]types.Instance, error) {
 	args := filters.NewArgs()
-	for _, label := range options.Labels {
-		args.Add("label", label)
-		args.Add("label", fmt.Sprintf("%s=true", label))
-	}
+	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+	args.Add("mode", "replicated")
 
 	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
 		Filters: args,
@@ -50,4 +48,31 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instan
 		Name:  s.Spec.Name,
 		Group: group,
 	}
+}
+
+func (p *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+	f := filters.NewArgs()
+	f.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+
+	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
+		Filters: f,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make(map[string][]string)
+	for _, service := range services {
+		groupName := service.Spec.Labels[discovery.LabelGroup]
+		if len(groupName) == 0 {
+			groupName = discovery.LabelGroupDefaultValue
+		}
+
+		group := groups[groupName]
+		group = append(group, service.Spec.Name)
+		groups[groupName] = group
+	}
+
+	return groups, nil
 }
