@@ -153,23 +153,10 @@ func (p *KubernetesProvider) GetState(ctx context.Context, name string) (instanc
 	case "deployment":
 		return p.DeploymentInspect(ctx, parsed)
 	case "statefulset":
-		return p.getStatefulsetState(ctx, parsed)
+		return p.StatefulSetInspect(ctx, parsed)
 	default:
 		return instance.State{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
 	}
-}
-
-func (p *KubernetesProvider) getStatefulsetState(ctx context.Context, config ParsedName) (instance.State, error) {
-	ss, err := p.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
-	if err != nil {
-		return instance.State{}, err
-	}
-
-	if *ss.Spec.Replicas == ss.Status.ReadyReplicas {
-		return instance.ReadyInstanceState(config.Original, ss.Status.ReadyReplicas), nil
-	}
-
-	return instance.NotReadyInstanceState(config.Original, ss.Status.ReadyReplicas, *ss.Spec.Replicas), nil
 }
 
 func (p *KubernetesProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {

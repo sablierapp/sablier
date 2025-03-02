@@ -74,6 +74,49 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 	}, metav1.CreateOptions{})
 }
 
+func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOptions) (*v1.StatefulSet, error) {
+	if len(opts.Cmd) == 0 {
+		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
+	}
+
+	name := generateRandomName()
+	// Add the app label to the deployment for matching the selector
+	if opts.Labels == nil {
+		opts.Labels = make(map[string]string)
+	}
+	opts.Labels["app"] = name
+	d.t.Log("Creating mimic deployment with options", opts)
+	replicas := int32(1)
+	return d.client.AppsV1().StatefulSets("default").Create(ctx, &v1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1.StatefulSetSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": name,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    "mimic",
+							Image:   "sablierapp/mimic:v0.3.1",
+							Command: opts.Cmd,
+							// ReadinessProbe: opts.Healthcheck,
+						},
+					},
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: opts.Labels,
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+}
+
 func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
 	t.Helper()
 
@@ -136,6 +179,27 @@ func WaitForDeploymentReady(ctx context.Context, client kubernetes.Interface, na
 	}
 }
 
+func WaitForStatefulSetReady(ctx context.Context, client kubernetes.Interface, namespace, name string) error {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while waiting for statefulSet %s/%s", namespace, name)
+		case <-ticker.C:
+			statefulSet, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("error getting statefulSet: %w", err)
+			}
+
+			if statefulSet.Status.ReadyReplicas == *statefulSet.Spec.Replicas {
+				return nil
+			}
+		}
+	}
+}
+
 func WaitForDeploymentScale(ctx context.Context, client kubernetes.Interface, namespace, name string, replicas int32) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -151,6 +215,27 @@ func WaitForDeploymentScale(ctx context.Context, client kubernetes.Interface, na
 			}
 
 			if *deployment.Spec.Replicas == replicas && deployment.Status.Replicas == replicas {
+				return nil
+			}
+		}
+	}
+}
+
+func WaitForStatefulSetScale(ctx context.Context, client kubernetes.Interface, namespace, name string, replicas int32) error {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while waiting for statefulSet %s/%s scale", namespace, name)
+		case <-ticker.C:
+			statefulSet, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("error getting statefulSet: %w", err)
+			}
+
+			if *statefulSet.Spec.Replicas == replicas && statefulSet.Status.Replicas == replicas {
 				return nil
 			}
 		}
