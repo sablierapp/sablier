@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"log/slog"
 	"os"
 	"testing"
 	"testing/fstest"
 	"time"
 
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/version"
 )
 

@@ -2,15 +2,13 @@ package mocks
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
-	"io"
-	"time"
-
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/mock"
+	"io"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +16,9 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
+// DockerAPIClientMock is a mock for the Docker API client
+//
+// Deprecated: tests should use a testcontainer
 type DockerAPIClientMock struct {
 	// Will be sent through events
 	messages []events.Message
@@ -66,136 +67,6 @@ func (client *DockerAPIClientMock) Events(ctx context.Context, options types.Eve
 		errors <- io.EOF
 	}()
 	return evnts, errors
-}
-
-func CreatedContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Running: false,
-				Status:  "created",
-			},
-		},
-	}
-}
-
-func RunningWithoutHealthcheckContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Running: true,
-				Status:  "running",
-			},
-		},
-	}
-}
-
-// RunningWithHealthcheckContainerSpec Status can be "starting", "healthy" or "unhealthy"
-func RunningWithHealthcheckContainerSpec(name string, status string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Running: true,
-				Status:  "running",
-				Health: &types.Health{
-					Status: status,
-					Log: []*types.HealthcheckResult{
-						{
-							Start:    time.Now().Add(-5 * time.Second),
-							End:      time.Now(),
-							Output:   "curl http://localhost failed",
-							ExitCode: 1,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func PausedContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Paused: true,
-				Status: "paused",
-			},
-		},
-	}
-}
-
-func RestartingContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Restarting: true,
-				Status:     "restarting",
-			},
-		},
-	}
-}
-
-func RemovingContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Status: "removing",
-			},
-		},
-	}
-}
-
-func ExitedContainerSpec(name string, exitCode int) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				ExitCode: exitCode,
-				Status:   "exited",
-			},
-		},
-	}
-}
-
-func DeadContainerSpec(name string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			Name: name,
-			ID:   name,
-			State: &types.ContainerState{
-				Dead:   true,
-				Status: "dead",
-			},
-		},
-	}
-}
-
-func ContainerStoppedEvent(name string) events.Message {
-	return events.Message{
-		From:   name,
-		Scope:  "local",
-		Action: "stop",
-		Type:   "container",
-		Actor: events.Actor{
-			ID: "randomid",
-			Attributes: map[string]string{
-				"name": name,
-			},
-		},
-	}
 }
 
 func (client *DockerAPIClientMock) ServiceUpdate(ctx context.Context, serviceID string, version swarm.Version, service swarm.ServiceSpec, options types.ServiceUpdateOptions) (swarm.ServiceUpdateResponse, error) {
@@ -301,6 +172,9 @@ type KubernetesAPIClientMock struct {
 	kubernetes.Clientset
 }
 
+// AppsV1InterfaceMock is a mock
+//
+// Deprecated: tests should use a testcontainer
 type AppsV1InterfaceMock struct {
 	deployments  *DeploymentMock
 	statefulsets *StatefulSetsMock
@@ -308,6 +182,9 @@ type AppsV1InterfaceMock struct {
 	v1.AppsV1Interface
 }
 
+// DeploymentMock is a mock
+//
+// Deprecated: tests should use a testcontainer
 type DeploymentMock struct {
 	v1.DeploymentInterface
 	mock.Mock

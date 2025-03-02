@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -10,6 +11,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"github.com/sablierapp/sablier/pkg/theme"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/sablierapp/sablier/app/sessions"
 	"github.com/sablierapp/sablier/app/storage"
-	"github.com/sablierapp/sablier/app/theme"
 	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/version"
@@ -174,7 +175,11 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 	case "swarm", "docker_swarm":
 		return dockerswarm.NewDockerSwarmProvider(ctx, logger)
 	case "docker":
-		return docker.NewDockerClassicProvider(ctx, logger)
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return nil, fmt.Errorf("cannot create docker client: %v", err)
+		}
+		return docker.NewDockerClassicProvider(ctx, cli, logger)
 	case "kubernetes":
 		return kubernetes.NewKubernetesProvider(ctx, logger, config.Kubernetes)
 	}

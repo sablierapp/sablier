@@ -1,11 +1,9 @@
 package discovery
 
 const (
-	LabelEnable                      = "sablier.enable"
-	LabelGroup                       = "sablier.group"
-	LabelGroupDefaultValue           = "default"
-	LabelReplicas                    = "sablier.replicas"
-	LabelReplicasDefaultValue uint64 = 1
+	LabelEnable            = "sablier.enable"
+	LabelGroup             = "sablier.group"
+	LabelGroupDefaultValue = "default"
 )
 
 type Group struct {

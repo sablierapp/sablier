@@ -7,6 +7,8 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
+//go:generate mockgen -package providertest -source=provider.go -destination=providertest/mock_provider.go *
+
 type Provider interface {
 	Start(ctx context.Context, name string) error
 	Stop(ctx context.Context, name string) error
