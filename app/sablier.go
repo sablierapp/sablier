@@ -12,6 +12,9 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/theme"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"log/slog"
 	"os"
 	"os/signal"
@@ -185,7 +188,18 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 		}
 		return docker.NewDockerClassicProvider(ctx, cli, logger)
 	case "kubernetes":
-		return kubernetes.NewKubernetesProvider(ctx, logger, config.Kubernetes)
+		kubeclientConfig, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		kubeclientConfig.QPS = config.Kubernetes.QPS
+		kubeclientConfig.Burst = config.Kubernetes.Burst
+
+		cli, err := k8s.NewForConfig(kubeclientConfig)
+		if err != nil {
+			return nil, err
+		}
+		return kubernetes.NewKubernetesProvider(ctx, cli, logger, config.Kubernetes)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }

@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -35,20 +34,8 @@ type KubernetesProvider struct {
 	l         *slog.Logger
 }
 
-func NewKubernetesProvider(ctx context.Context, logger *slog.Logger, providerConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
+func NewKubernetesProvider(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger, kubeclientConfig providerConfig.Kubernetes) (*KubernetesProvider, error) {
 	logger = logger.With(slog.String("provider", "kubernetes"))
-
-	kubeclientConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	kubeclientConfig.QPS = providerConfig.QPS
-	kubeclientConfig.Burst = providerConfig.Burst
-
-	client, err := kubernetes.NewForConfig(kubeclientConfig)
-	if err != nil {
-		return nil, err
-	}
 
 	info, err := client.ServerVersion()
 	if err != nil {
@@ -63,7 +50,7 @@ func NewKubernetesProvider(ctx context.Context, logger *slog.Logger, providerCon
 
 	return &KubernetesProvider{
 		Client:    client,
-		delimiter: providerConfig.Delimiter,
+		delimiter: kubeclientConfig.Delimiter,
 		l:         logger,
 	}, nil
 
@@ -105,7 +92,7 @@ func (p *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string
 		}
 
 		group := groups[groupName]
-		parsed := DeploymentName(deployment, ParseOptions{Delimiter: p.delimiter})
+		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
 		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
@@ -125,7 +112,7 @@ func (p *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string
 		}
 
 		group := groups[groupName]
-		parsed := StatefulSetName(statefulSet, ParseOptions{Delimiter: p.delimiter})
+		parsed := StatefulSetName(&statefulSet, ParseOptions{Delimiter: p.delimiter})
 		group = append(group, parsed.Original)
 		groups[groupName] = group
 	}
@@ -164,25 +151,12 @@ func (p *KubernetesProvider) GetState(ctx context.Context, name string) (instanc
 
 	switch parsed.Kind {
 	case "deployment":
-		return p.getDeploymentState(ctx, parsed)
+		return p.DeploymentInspect(ctx, parsed)
 	case "statefulset":
 		return p.getStatefulsetState(ctx, parsed)
 	default:
 		return instance.State{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
 	}
-}
-
-func (p *KubernetesProvider) getDeploymentState(ctx context.Context, config ParsedName) (instance.State, error) {
-	d, err := p.Client.AppsV1().Deployments(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
-	if err != nil {
-		return instance.State{}, err
-	}
-
-	if *d.Spec.Replicas == d.Status.ReadyReplicas {
-		return instance.ReadyInstanceState(config.Original, config.Replicas), nil
-	}
-
-	return instance.NotReadyInstanceState(config.Original, d.Status.ReadyReplicas, config.Replicas), nil
 }
 
 func (p *KubernetesProvider) getStatefulsetState(ctx context.Context, config ParsedName) (instance.State, error) {
@@ -217,13 +191,13 @@ func (p *KubernetesProvider) watchDeployents(instance chan<- string) cache.Share
 			}
 
 			if *newDeployment.Spec.Replicas == 0 {
-				parsed := DeploymentName(*newDeployment, ParseOptions{Delimiter: p.delimiter})
+				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
-			parsed := DeploymentName(*deletedDeployment, ParseOptions{Delimiter: p.delimiter})
+			parsed := DeploymentName(deletedDeployment, ParseOptions{Delimiter: p.delimiter})
 			instance <- parsed.Original
 		},
 	}
@@ -245,13 +219,13 @@ func (p *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.Sha
 			}
 
 			if *newStatefulSet.Spec.Replicas == 0 {
-				parsed := StatefulSetName(*newStatefulSet, ParseOptions{Delimiter: p.delimiter})
+				parsed := StatefulSetName(newStatefulSet, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedStatefulSet := obj.(*appsv1.StatefulSet)
-			parsed := StatefulSetName(*deletedStatefulSet, ParseOptions{Delimiter: p.delimiter})
+			parsed := StatefulSetName(deletedStatefulSet, ParseOptions{Delimiter: p.delimiter})
 			instance <- parsed.Original
 		},
 	}

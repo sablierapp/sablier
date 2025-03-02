@@ -36,14 +36,14 @@ func (p *KubernetesProvider) deploymentList(ctx context.Context, options provide
 
 	instances := make([]types.Instance, 0, len(deployments.Items))
 	for _, d := range deployments.Items {
-		instance := p.deploymentToInstance(d)
+		instance := p.deploymentToInstance(&d)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
 }
 
-func (p *KubernetesProvider) deploymentToInstance(d v1.Deployment) types.Instance {
+func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) types.Instance {
 	var group string
 
 	if _, ok := d.Labels[discovery.LabelEnable]; ok {
@@ -73,14 +73,14 @@ func (p *KubernetesProvider) statefulSetList(ctx context.Context, options provid
 
 	instances := make([]types.Instance, 0, len(statefulSets.Items))
 	for _, ss := range statefulSets.Items {
-		instance := p.statefulSetToInstance(ss)
+		instance := p.statefulSetToInstance(&ss)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
 }
 
-func (p *KubernetesProvider) statefulSetToInstance(ss v1.StatefulSet) types.Instance {
+func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) types.Instance {
 	var group string
 
 	if _, ok := ss.Labels[discovery.LabelEnable]; ok {
