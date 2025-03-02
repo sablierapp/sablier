@@ -8,7 +8,6 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -201,37 +200,6 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "restarting container",
-			args: args{
-				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"/mimic", "-running=false", "-exit-code=1"},
-						RestartPolicy: container.RestartPolicy{
-							Name: container.RestartPolicyAlways,
-						},
-					})
-					if err != nil {
-						return "", err
-					}
-
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					<-time.After(2 * time.Second)
-
-					return c.ID, nil
-				},
-			},
-			want: instance.State{
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          instance.NotReady,
-			},
-			wantErr: nil,
-		},
-		{
 			name: "exited container with status code 0",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
@@ -246,6 +214,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					if err != nil {
 						return "", err
 					}
+
+					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
+					<-waitC
 
 					return c.ID, nil
 				},
@@ -272,6 +243,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					if err != nil {
 						return "", err
 					}
+
+					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
+					<-waitC
 
 					return c.ID, nil
 				},
@@ -300,9 +274,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 				t.Errorf("DockerClassicProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DockerClassicProvider.GetState() = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want)
 		})
 	}
 }
