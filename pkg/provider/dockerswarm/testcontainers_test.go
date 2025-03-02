@@ -46,8 +46,10 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (swa
 				Image:       "sablierapp/mimic:v0.3.1",
 				Healthcheck: opts.Healthcheck,
 				Command:     opts.Cmd,
-				Labels:      opts.Labels,
 			},
+		},
+		Annotations: swarm.Annotations{
+			Labels: opts.Labels,
 		},
 	}, types.ServiceCreateOptions{})
 }

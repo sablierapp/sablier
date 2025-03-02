@@ -173,7 +173,11 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 
 	switch config.Name {
 	case "swarm", "docker_swarm":
-		return dockerswarm.NewDockerSwarmProvider(ctx, logger)
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return nil, fmt.Errorf("cannot create docker swarm client: %v", err)
+		}
+		return dockerswarm.NewDockerSwarmProvider(ctx, cli, logger)
 	case "docker":
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {

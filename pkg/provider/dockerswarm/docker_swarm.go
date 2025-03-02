@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/provider"
-	"io"
 	"log/slog"
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 )
@@ -47,14 +44,6 @@ func NewDockerSwarmProvider(ctx context.Context, cli *client.Client, logger *slo
 
 }
 
-func (p *DockerSwarmProvider) Start(ctx context.Context, name string) error {
-	return p.scale(ctx, name, uint64(p.desiredReplicas))
-}
-
-func (p *DockerSwarmProvider) Stop(ctx context.Context, name string) error {
-	return p.scale(ctx, name, 0)
-}
-
 func (p *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
@@ -80,75 +69,10 @@ func (p *DockerSwarmProvider) scale(ctx context.Context, name string, replicas u
 	return nil
 }
 
-func (p *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
-	f := filters.NewArgs()
-	f.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
-
-	services, err := p.Client.ServiceList(ctx, types.ServiceListOptions{
-		Filters: f,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	groups := make(map[string][]string)
-	for _, service := range services {
-		groupName := service.Spec.Labels[discovery.LabelGroup]
-		if len(groupName) == 0 {
-			groupName = discovery.LabelGroupDefaultValue
-		}
-
-		group := groups[groupName]
-		group = append(group, service.Spec.Name)
-		groups[groupName] = group
-	}
-
-	return groups, nil
-}
-
 func (p *DockerSwarmProvider) getInstanceName(name string, service swarm.Service) string {
 	if name == service.Spec.Name {
 		return name
 	}
 
 	return fmt.Sprintf("%s (%s)", name, service.Spec.Name)
-}
-
-func (p *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := p.Client.Events(ctx, types.EventsOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "swarm"),
-			filters.Arg("type", "service"),
-		),
-	})
-
-	go func() {
-		for {
-			select {
-			case msg, ok := <-msgs:
-				if !ok {
-					p.l.ErrorContext(ctx, "event stream closed")
-					return
-				}
-				if msg.Actor.Attributes["replicas.new"] == "0" {
-					instance <- msg.Actor.Attributes["name"]
-				} else if msg.Action == "remove" {
-					instance <- msg.Actor.Attributes["name"]
-				}
-			case err, ok := <-errs:
-				if !ok {
-					p.l.ErrorContext(ctx, "event stream closed")
-					return
-				}
-				if errors.Is(err, io.EOF) {
-					p.l.ErrorContext(ctx, "event stream closed")
-					return
-				}
-				p.l.ErrorContext(ctx, "event stream error", slog.Any("error", err))
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
 }
