@@ -7,6 +7,7 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -15,7 +16,7 @@ import (
 	"testing"
 )
 
-func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
+func TestKubernetesProvider_DeploymentList(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -124,9 +125,9 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			assert.NilError(t, err)
 
 			tt.want.Name = name
-			got, err := p.GetState(ctx, name)
+			got, err := p.InstanceList(ctx, provider.InstanceListOptions{})
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("KubernetesProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("KubernetesProvider.InstanceList() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.DeepEqual(t, got, tt.want)

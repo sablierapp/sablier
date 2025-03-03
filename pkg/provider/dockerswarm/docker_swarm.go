@@ -44,7 +44,7 @@ func NewDockerSwarmProvider(ctx context.Context, cli *client.Client, logger *slo
 
 }
 
-func (p *DockerSwarmProvider) scale(ctx context.Context, name string, replicas uint64) error {
+func (p *DockerSwarmProvider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return err
