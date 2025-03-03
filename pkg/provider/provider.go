@@ -7,13 +7,13 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
-//go:generate mockgen -package providertest -source=provider.go -destination=providertest/mock_provider.go *
+//go:generate go tool mockgen -package providertest -source=provider.go -destination=providertest/mock_provider.go *
 
 type Provider interface {
-	Start(ctx context.Context, name string) error
-	Stop(ctx context.Context, name string) error
-	GetState(ctx context.Context, name string) (instance.State, error)
-	GetGroups(ctx context.Context) (map[string][]string, error)
+	InstanceStart(ctx context.Context, name string) error
+	InstanceStop(ctx context.Context, name string) error
+	InstanceInspect(ctx context.Context, name string) (instance.State, error)
+	InstanceGroups(ctx context.Context) (map[string][]string, error)
 	InstanceList(ctx context.Context, options InstanceListOptions) ([]types.Instance, error)
 
 	NotifyInstanceStopped(ctx context.Context, instance chan<- string)

@@ -103,7 +103,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	i2, err := dind.client.ContainerInspect(ctx, c2.ID)
 	assert.NilError(t, err)
 
-	got, err := p.GetGroups(ctx)
+	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)
 
 	want := map[string][]string{

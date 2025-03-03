@@ -7,12 +7,12 @@ import (
 	"log/slog"
 )
 
-func (p *DockerClassicProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+func (p *DockerClassicProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
 	spec, err := p.Client.ContainerInspect(ctx, name)
 	if err != nil {
 		return instance.State{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
-	
+
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {
 	case "created", "paused", "restarting", "removing":

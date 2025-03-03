@@ -50,7 +50,7 @@ func containerToInstance(c dockertypes.Container) types.Instance {
 	}
 }
 
-func (p *DockerClassicProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+func (p *DockerClassicProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 

@@ -9,7 +9,7 @@ import (
 var newStartCommand = func() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
-		Short: "Start the Sablier server",
+		Short: "InstanceStart the Sablier server",
 		Run: func(cmd *cobra.Command, args []string) {
 			viper.Unmarshal(&conf)
 

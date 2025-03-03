@@ -178,7 +178,7 @@ func unsetEnvsFromFile(path string) {
 func mockStartCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "Start the Sablier server",
+		Short: "InstanceStart the Sablier server",
 		Run: func(cmd *cobra.Command, args []string) {
 			viper.Unmarshal(&conf)
 

@@ -43,7 +43,7 @@ func NewKubernetesProvider(ctx context.Context, client *kubernetes.Clientset, lo
 
 }
 
-func (p *KubernetesProvider) Start(ctx context.Context, name string) error {
+func (p *KubernetesProvider) InstanceStart(ctx context.Context, name string) error {
 	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (p *KubernetesProvider) Start(ctx context.Context, name string) error {
 	return p.scale(ctx, parsed, parsed.Replicas)
 }
 
-func (p *KubernetesProvider) Stop(ctx context.Context, name string) error {
+func (p *KubernetesProvider) InstanceStop(ctx context.Context, name string) error {
 	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (p *KubernetesProvider) Stop(ctx context.Context, name string) error {
 	return p.scale(ctx, parsed, 0)
 }
 
-func (p *KubernetesProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+func (p *KubernetesProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: discovery.LabelEnable,
 	})

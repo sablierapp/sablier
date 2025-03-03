@@ -89,9 +89,9 @@ func TestKubernetesProvider_Start(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			err := provider.Start(context.Background(), tt.args.name)
+			err := provider.InstanceStart(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.Start() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("KubernetesProvider.InstanceStart() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
@@ -163,9 +163,9 @@ func TestKubernetesProvider_Stop(t *testing.T) {
 			statefulsetAPI.On("GetScale", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.get, nil)
 			statefulsetAPI.On("UpdateScale", mock.Anything, tt.data.name, tt.data.update, metav1.UpdateOptions{}).Return(nil, nil)
 
-			err := provider.Stop(context.Background(), tt.args.name)
+			err := provider.InstanceStop(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("KubernetesProvider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
@@ -277,13 +277,13 @@ func TestKubernetesProvider_GetState(t *testing.T) {
 			deploymentAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getDeployment, nil)
 			statefulsetAPI.On("Get", mock.Anything, tt.data.name, metav1.GetOptions{}).Return(tt.data.getStatefulSet, nil)
 
-			got, err := provider.GetState(context.Background(), tt.args.name)
+			got, err := provider.InstanceInspect(context.Background(), tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("KubernetesProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("KubernetesProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("KubernetesProvider.GetState() = %v, want %v", got, tt.want)
+				t.Errorf("KubernetesProvider.InstanceInspect() = %v, want %v", got, tt.want)
 			}
 		})
 	}

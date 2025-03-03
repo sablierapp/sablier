@@ -6,7 +6,7 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
-func (p *KubernetesProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+func (p *KubernetesProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
 	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
 		return instance.State{}, err

@@ -269,9 +269,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			assert.NilError(t, err)
 
 			tt.want.Name = name
-			got, err := p.GetState(ctx, name)
+			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("DockerClassicProvider.GetState() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("DockerClassicProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.DeepEqual(t, got, tt.want)

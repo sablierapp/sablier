@@ -35,9 +35,9 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 		Labels: []string{discovery.LabelEnable},
 	}).Return(instances, nil)
 
-	// Set up expectations for Stop
-	mockProvider.On("Stop", ctx, "instance2").Return(nil)
-	mockProvider.On("Stop", ctx, "instance3").Return(nil)
+	// Set up expectations for InstanceStop
+	mockProvider.On("InstanceStop", ctx, "instance2").Return(nil)
+	mockProvider.On("InstanceStop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
 	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store, slogt.New(t))
@@ -67,9 +67,9 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 		Labels: []string{discovery.LabelEnable},
 	}).Return(instances, nil)
 
-	// Set up expectations for Stop with error
-	mockProvider.On("Stop", ctx, "instance2").Return(errors.New("stop error"))
-	mockProvider.On("Stop", ctx, "instance3").Return(nil)
+	// Set up expectations for InstanceStop with error
+	mockProvider.On("InstanceStop", ctx, "instance2").Return(errors.New("stop error"))
+	mockProvider.On("InstanceStop", ctx, "instance3").Return(nil)
 
 	// Call the function under test
 	err = discovery.StopAllUnregisteredInstances(ctx, mockProvider, store, slogt.New(t))
