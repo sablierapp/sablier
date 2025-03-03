@@ -3,7 +3,6 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/k3s"
 	"gotest.tools/v3/assert"
@@ -134,7 +133,7 @@ func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
 	assert.NilError(t, err)
 
 	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	err = kind.LoadImages(ctx, "sablierapp/mimic:v0.3.1")
 	assert.NilError(t, err)
