@@ -132,9 +132,9 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			assert.NilError(t, err)
 
 			tt.want.Name = name
-			err = p.Start(ctx, name)
+			err = p.InstanceStart(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("DockerSwarmProvider.Stop() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("DockerSwarmProvider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 

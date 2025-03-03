@@ -79,7 +79,7 @@ func TestDeploymentName(t *testing.T) {
 		Replicas:  1,
 	}
 
-	result := DeploymentName(deployment, opts)
+	result := DeploymentName(&deployment, opts)
 	if result != expected {
 		t.Errorf("expected %v but got %v", expected, result)
 	}
@@ -101,7 +101,7 @@ func TestStatefulSetName(t *testing.T) {
 		Replicas:  1,
 	}
 
-	result := StatefulSetName(statefulSet, opts)
+	result := StatefulSetName(&statefulSet, opts)
 	if result != expected {
 		t.Errorf("expected %v but got %v", expected, result)
 	}

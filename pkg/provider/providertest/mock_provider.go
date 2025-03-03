@@ -43,34 +43,34 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
-// GetGroups mocks base method.
-func (m *MockProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+// InstanceGroups mocks base method.
+func (m *MockProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGroups", ctx)
+	ret := m.ctrl.Call(m, "InstanceGroups", ctx)
 	ret0, _ := ret[0].(map[string][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetGroups indicates an expected call of GetGroups.
-func (mr *MockProviderMockRecorder) GetGroups(ctx any) *gomock.Call {
+// InstanceGroups indicates an expected call of InstanceGroups.
+func (mr *MockProviderMockRecorder) InstanceGroups(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroups", reflect.TypeOf((*MockProvider)(nil).GetGroups), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceGroups", reflect.TypeOf((*MockProvider)(nil).InstanceGroups), ctx)
 }
 
-// GetState mocks base method.
-func (m *MockProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+// InstanceInspect mocks base method.
+func (m *MockProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetState", ctx, name)
+	ret := m.ctrl.Call(m, "InstanceInspect", ctx, name)
 	ret0, _ := ret[0].(instance.State)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetState indicates an expected call of GetState.
-func (mr *MockProviderMockRecorder) GetState(ctx, name any) *gomock.Call {
+// InstanceInspect indicates an expected call of InstanceInspect.
+func (mr *MockProviderMockRecorder) InstanceInspect(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockProvider)(nil).GetState), ctx, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceInspect", reflect.TypeOf((*MockProvider)(nil).InstanceInspect), ctx, name)
 }
 
 // InstanceList mocks base method.
@@ -88,6 +88,34 @@ func (mr *MockProviderMockRecorder) InstanceList(ctx, options any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceList", reflect.TypeOf((*MockProvider)(nil).InstanceList), ctx, options)
 }
 
+// InstanceStart mocks base method.
+func (m *MockProvider) InstanceStart(ctx context.Context, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceStart", ctx, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstanceStart indicates an expected call of InstanceStart.
+func (mr *MockProviderMockRecorder) InstanceStart(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceStart", reflect.TypeOf((*MockProvider)(nil).InstanceStart), ctx, name)
+}
+
+// InstanceStop mocks base method.
+func (m *MockProvider) InstanceStop(ctx context.Context, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceStop", ctx, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstanceStop indicates an expected call of InstanceStop.
+func (mr *MockProviderMockRecorder) InstanceStop(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceStop", reflect.TypeOf((*MockProvider)(nil).InstanceStop), ctx, name)
+}
+
 // NotifyInstanceStopped mocks base method.
 func (m *MockProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
 	m.ctrl.T.Helper()
@@ -98,32 +126,4 @@ func (m *MockProvider) NotifyInstanceStopped(ctx context.Context, instance chan<
 func (mr *MockProviderMockRecorder) NotifyInstanceStopped(ctx, instance any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyInstanceStopped", reflect.TypeOf((*MockProvider)(nil).NotifyInstanceStopped), ctx, instance)
-}
-
-// Start mocks base method.
-func (m *MockProvider) Start(ctx context.Context, name string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", ctx, name)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockProviderMockRecorder) Start(ctx, name any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockProvider)(nil).Start), ctx, name)
-}
-
-// Stop mocks base method.
-func (m *MockProvider) Stop(ctx context.Context, name string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stop", ctx, name)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockProviderMockRecorder) Stop(ctx, name any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProvider)(nil).Stop), ctx, name)
 }

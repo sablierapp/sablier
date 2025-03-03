@@ -62,7 +62,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
-			err = p.Stop(t.Context(), name)
+			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
 				assert.Error(t, err, tt.err.Error())
 			} else {

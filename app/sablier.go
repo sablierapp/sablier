@@ -12,6 +12,9 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/theme"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"log/slog"
 	"os"
 	"os/signal"
@@ -56,7 +59,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		loadSessions(storage, sessionsManager, logger)
 	}
 
-	groups, err := provider.GetGroups(ctx)
+	groups, err := provider.InstanceGroups(ctx)
 	if err != nil {
 		logger.WarnContext(ctx, "initial group scan failed", slog.Any("reason", err))
 	} else {
@@ -133,7 +136,7 @@ func onSessionExpires(ctx context.Context, provider provider.Provider, logger *s
 	return func(_key string) {
 		go func(key string) {
 			logger.InfoContext(ctx, "instance expired", slog.String("instance", key))
-			err := provider.Stop(ctx, key)
+			err := provider.InstanceStop(ctx, key)
 			if err != nil {
 				logger.ErrorContext(ctx, "instance expired could not be stopped from provider", slog.String("instance", key), slog.Any("error", err))
 			}
@@ -185,7 +188,18 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 		}
 		return docker.NewDockerClassicProvider(ctx, cli, logger)
 	case "kubernetes":
-		return kubernetes.NewKubernetesProvider(ctx, logger, config.Kubernetes)
+		kubeclientConfig, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		kubeclientConfig.QPS = config.Kubernetes.QPS
+		kubeclientConfig.Burst = config.Kubernetes.Burst
+
+		cli, err := k8s.NewForConfig(kubeclientConfig)
+		if err != nil {
+			return nil, err
+		}
+		return kubernetes.NewKubernetesProvider(ctx, cli, logger, config.Kubernetes)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
@@ -197,7 +211,7 @@ func WatchGroups(ctx context.Context, provider provider.Provider, frequency time
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			groups, err := provider.GetGroups(ctx)
+			groups, err := provider.InstanceGroups(ctx)
 			if err != nil {
 				logger.Error("cannot retrieve group from provider", slog.Any("reason", err))
 			} else if groups != nil {

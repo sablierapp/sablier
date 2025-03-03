@@ -114,7 +114,7 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.On("InstanceInspect", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -136,7 +136,7 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("GetState", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.On("InstanceInspect", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {

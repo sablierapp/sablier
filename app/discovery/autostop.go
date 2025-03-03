@@ -43,7 +43,7 @@ func StopAllUnregisteredInstances(ctx context.Context, p provider.Provider, s st
 
 func stopFunc(ctx context.Context, name string, p provider.Provider, logger *slog.Logger) func() error {
 	return func() error {
-		err := p.Stop(ctx, name)
+		err := p.InstanceStop(ctx, name)
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
 			return err

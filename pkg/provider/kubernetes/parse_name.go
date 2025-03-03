@@ -41,7 +41,7 @@ func ParseName(name string, opts ParseOptions) (ParsedName, error) {
 	}, nil
 }
 
-func DeploymentName(deployment v1.Deployment, opts ParseOptions) ParsedName {
+func DeploymentName(deployment *v1.Deployment, opts ParseOptions) ParsedName {
 	kind := "deployment"
 	namespace := deployment.Namespace
 	name := deployment.Name
@@ -57,7 +57,7 @@ func DeploymentName(deployment v1.Deployment, opts ParseOptions) ParsedName {
 	}
 }
 
-func StatefulSetName(statefulSet v1.StatefulSet, opts ParseOptions) ParsedName {
+func StatefulSetName(statefulSet *v1.StatefulSet, opts ParseOptions) ParsedName {
 	kind := "statefulset"
 	namespace := statefulSet.Namespace
 	name := statefulSet.Name

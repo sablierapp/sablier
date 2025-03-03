@@ -181,12 +181,12 @@ func (s *SessionsManager) requestInstance(ctx context.Context, name string, dura
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
-		err := s.provider.Start(ctx, name)
+		err := s.provider.InstanceStart(ctx, name)
 		if err != nil {
 			return instance.State{}, err
 		}
 
-		state, err = s.provider.GetState(ctx, name)
+		state, err = s.provider.InstanceInspect(ctx, name)
 		if err != nil {
 			return instance.State{}, err
 		}
@@ -196,7 +196,7 @@ func (s *SessionsManager) requestInstance(ctx context.Context, name string, dura
 		return instance.State{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
 	} else if state.Status != instance.Ready {
 		s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", state.Status))
-		state, err = s.provider.GetState(ctx, name)
+		state, err = s.provider.InstanceInspect(ctx, name)
 		if err != nil {
 			return instance.State{}, err
 		}

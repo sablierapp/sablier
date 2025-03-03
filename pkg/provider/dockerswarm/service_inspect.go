@@ -10,7 +10,7 @@ import (
 	"github.com/sablierapp/sablier/app/instance"
 )
 
-func (p *DockerSwarmProvider) GetState(ctx context.Context, name string) (instance.State, error) {
+func (p *DockerSwarmProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return instance.State{}, err

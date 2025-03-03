@@ -50,7 +50,7 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instan
 	}
 }
 
-func (p *DockerSwarmProvider) GetGroups(ctx context.Context) (map[string][]string, error) {
+func (p *DockerSwarmProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	f := filters.NewArgs()
 	f.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
