@@ -12,11 +12,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+var mu sync.Mutex // r is not safe for concurrent use
 
 type kindContainer struct {
 	testcontainers.Container
@@ -149,6 +151,8 @@ func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
 }
 
 func generateRandomName() string {
+	mu.Lock()
+	defer mu.Unlock()
 	letters := []rune("abcdefghijklmnopqrstuvwxyz")
 	name := make([]rune, 10)
 	for i := range name {
