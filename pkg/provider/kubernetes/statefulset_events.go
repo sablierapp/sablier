@@ -18,6 +18,10 @@ func (p *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.Sha
 				return
 			}
 
+			if *oldStatefulSet.Spec.Replicas == 0 {
+				return
+			}
+
 			if *newStatefulSet.Spec.Replicas == 0 {
 				parsed := StatefulSetName(newStatefulSet, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original

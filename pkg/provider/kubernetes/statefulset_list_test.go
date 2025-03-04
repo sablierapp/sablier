@@ -1,1 +1,0 @@
-package kubernetes_test

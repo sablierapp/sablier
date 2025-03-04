@@ -18,6 +18,10 @@ func (p *KubernetesProvider) watchDeployents(instance chan<- string) cache.Share
 				return
 			}
 
+			if *oldDeployment.Spec.Replicas == 0 {
+				return
+			}
+
 			if *newDeployment.Spec.Replicas == 0 {
 				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
 				instance <- parsed.Original

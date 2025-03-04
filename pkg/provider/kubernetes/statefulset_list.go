@@ -4,18 +4,20 @@ import (
 	"context"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/types"
-	"github.com/sablierapp/sablier/pkg/provider"
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
-func (p *KubernetesProvider) StatefulSetList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
+func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]types.Instance, error) {
+	labelSelector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			discovery.LabelEnable: "true",
+		},
+	}
 	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: strings.Join(options.Labels, ","),
+		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -46,4 +48,33 @@ func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) types.Ins
 		Name:  parsed.Original,
 		Group: group,
 	}
+}
+
+func (p *KubernetesProvider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
+	labelSelector := metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			discovery.LabelEnable: "true",
+		},
+	}
+	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	groups := make(map[string][]string)
+	for _, ss := range statefulSets.Items {
+		groupName := ss.Labels[discovery.LabelGroup]
+		if len(groupName) == 0 {
+			groupName = discovery.LabelGroupDefaultValue
+		}
+
+		group := groups[groupName]
+		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
+		group = append(group, parsed.Original)
+		groups[groupName] = group
+	}
+
+	return groups, nil
 }
