@@ -42,12 +42,12 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 	if opts.Labels == nil {
 		opts.Labels = make(map[string]string)
 	}
-	opts.Labels["app"] = name
-	d.t.Log("Creating mimic deployment with options", opts)
+	d.t.Log("Creating mimic deployment with options", name, opts)
 	replicas := int32(1)
 	return d.client.AppsV1().Deployments("default").Create(ctx, &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:   name,
+			Labels: opts.Labels,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
@@ -68,7 +68,9 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 					},
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: opts.Labels,
+					Labels: map[string]string{
+						"app": name,
+					},
 				},
 			},
 		},
@@ -85,12 +87,12 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 	if opts.Labels == nil {
 		opts.Labels = make(map[string]string)
 	}
-	opts.Labels["app"] = name
-	d.t.Log("Creating mimic deployment with options", opts)
+	d.t.Log("Creating mimic deployment with options", name, opts)
 	replicas := int32(1)
 	return d.client.AppsV1().StatefulSets("default").Create(ctx, &v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:   name,
+			Labels: opts.Labels,
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas: &replicas,
@@ -111,7 +113,9 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 					},
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: opts.Labels,
+					Labels: map[string]string{
+						"app": name,
+					},
 				},
 			},
 		},
@@ -121,7 +125,7 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
 	t.Helper()
 
-	kind, err := k3s.Run(ctx, "rancher/k3s:v1.27.1-k3s1")
+	kind, err := k3s.Run(ctx, "rancher/k3s:v1.32.2-k3s1")
 	testcontainers.CleanupContainer(t, kind)
 	assert.NilError(t, err)
 
@@ -162,7 +166,7 @@ func generateRandomName() string {
 }
 
 func WaitForDeploymentReady(ctx context.Context, client kubernetes.Interface, namespace, name string) error {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -183,7 +187,7 @@ func WaitForDeploymentReady(ctx context.Context, client kubernetes.Interface, na
 }
 
 func WaitForStatefulSetReady(ctx context.Context, client kubernetes.Interface, namespace, name string) error {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -204,7 +208,7 @@ func WaitForStatefulSetReady(ctx context.Context, client kubernetes.Interface, n
 }
 
 func WaitForDeploymentScale(ctx context.Context, client kubernetes.Interface, namespace, name string, replicas int32) error {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -225,7 +229,7 @@ func WaitForDeploymentScale(ctx context.Context, client kubernetes.Interface, na
 }
 
 func WaitForStatefulSetScale(ctx context.Context, client kubernetes.Interface, namespace, name string, replicas int32) error {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
