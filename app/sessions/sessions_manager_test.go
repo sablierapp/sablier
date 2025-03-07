@@ -3,14 +3,13 @@ package sessions
 import (
 	"context"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
 	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/sessions/mocks"
-	"github.com/stretchr/testify/mock"
 	"gotest.tools/v3/assert"
 )
 
@@ -87,11 +86,11 @@ func createMap(instances []instance.State) map[string]InstanceState {
 	return states
 }
 
-func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *mocks.ProviderMock) {
+func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *providertest.MockProvider) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 
-	p := mocks.NewProviderMock()
+	p := providertest.NewMockProvider(ctrl)
 	s := storetest.NewMockStore(ctrl)
 
 	m := NewSessionsManager(slogt.New(t), s, p)
@@ -114,7 +113,7 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("InstanceInspect", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -136,11 +135,11 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.On("InstanceInspect", mock.Anything).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
-			_, err := manager.RequestReadySession(context.Background(), []string{"apache"}, time.Minute, time.Second)
+			_, err := manager.RequestReadySession(t.Context(), []string{"apache"}, time.Minute, time.Second)
 			errchan <- err
 		}()
 
