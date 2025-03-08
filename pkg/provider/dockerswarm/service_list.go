@@ -7,11 +7,11 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 	args.Add("mode", "replicated")
@@ -24,7 +24,7 @@ func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.Insta
 		return nil, err
 	}
 
-	instances := make([]types.Instance, 0, len(services))
+	instances := make([]sablier.InstanceConfiguration, 0, len(services))
 	for _, s := range services {
 		instance := p.serviceToInstance(s)
 		instances = append(instances, instance)
@@ -33,7 +33,7 @@ func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.Insta
 	return instances, nil
 }
 
-func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instance) {
+func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	var group string
 
 	if _, ok := s.Spec.Labels[discovery.LabelEnable]; ok {
@@ -44,7 +44,7 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i types.Instan
 		}
 	}
 
-	return types.Instance{
+	return sablier.InstanceConfiguration{
 		Name:  s.Spec.Name,
 		Group: group,
 	}

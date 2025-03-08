@@ -2,11 +2,11 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *KubernetesProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
+func (p *KubernetesProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	deployments, err := p.DeploymentList(ctx)
 	if err != nil {
 		return nil, err

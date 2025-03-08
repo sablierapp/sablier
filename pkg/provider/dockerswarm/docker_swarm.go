@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 	"strings"
 
@@ -14,7 +14,7 @@ import (
 )
 
 // Interface guard
-var _ provider.Provider = (*DockerSwarmProvider)(nil)
+var _ sablier.Provider = (*DockerSwarmProvider)(nil)
 
 type DockerSwarmProvider struct {
 	Client          client.APIClient

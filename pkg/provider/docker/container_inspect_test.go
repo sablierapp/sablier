@@ -5,8 +5,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	"testing"
 	"time"
@@ -24,7 +24,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    instance.State
+		want    sablier.InstanceInfo
 		wantErr error
 	}{
 		{
@@ -38,10 +38,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return resp.ID, err
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},
@@ -60,10 +60,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
-				Status:          instance.Ready,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},
@@ -90,10 +90,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},
@@ -126,10 +126,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
+				Status:          sablier.InstanceStatusUnrecoverable,
 				Message:         "container is unhealthy",
 			},
 			wantErr: nil,
@@ -163,10 +163,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
-				Status:          instance.Ready,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},
@@ -192,10 +192,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},
@@ -221,10 +221,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},
@@ -250,10 +250,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.Unrecoverable,
+				Status:          sablier.InstanceStatusUnrecoverable,
 				Message:         "container exited with code \"137\"",
 			},
 			wantErr: nil,

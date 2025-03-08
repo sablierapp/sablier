@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
 	providerConfig "github.com/sablierapp/sablier/config"
@@ -10,7 +10,7 @@ import (
 )
 
 // Interface guard
-var _ provider.Provider = (*KubernetesProvider)(nil)
+var _ sablier.Provider = (*KubernetesProvider)(nil)
 
 type KubernetesProvider struct {
 	Client    kubernetes.Interface

@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/tniswong/go.rfcx/rfc7807"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -35,7 +35,7 @@ func TestStartBlocking(t *testing.T) {
 	t.Run("StartBlockingByNames", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
-		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(&sessions.SessionState{}, nil)
+		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(&sablier.SessionState{}, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking?names=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
@@ -43,7 +43,7 @@ func TestStartBlocking(t *testing.T) {
 	t.Run("StartBlockingByGroup", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
-		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(&sessions.SessionState{}, nil)
+		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(&sablier.SessionState{}, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking?group=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
@@ -51,7 +51,7 @@ func TestStartBlocking(t *testing.T) {
 	t.Run("StartBlockingErrGroupNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartBlocking(router, strategy)
-		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, sessions.ErrGroupNotFound{
+		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, sablier.ErrGroupNotFound{
 			Group:           "test",
 			AvailableGroups: []string{"test1", "test2"},
 		})

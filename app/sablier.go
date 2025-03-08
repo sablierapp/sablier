@@ -6,10 +6,10 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/theme"
 	k8s "k8s.io/client-go/kubernetes"
@@ -21,8 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sablierapp/sablier/app/sessions"
-	"github.com/sablierapp/sablier/app/storage"
 	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/version"
@@ -47,30 +45,20 @@ func Start(ctx context.Context, conf config.Config) error {
 		return err
 	}
 
-	sessionsManager := sessions.NewSessionsManager(logger, store, provider)
-
-	if conf.Storage.File != "" {
-		storage, err := storage.NewFileStorage(conf.Storage, logger)
-		if err != nil {
-			return err
-		}
-
-		defer saveSessions(storage, sessionsManager, logger)
-		loadSessions(storage, sessionsManager, logger)
-	}
+	s := sablier.New(logger, store, provider)
 
 	groups, err := provider.InstanceGroups(ctx)
 	if err != nil {
 		logger.WarnContext(ctx, "initial group scan failed", slog.Any("reason", err))
 	} else {
-		sessionsManager.SetGroups(groups)
+		s.SetGroups(groups)
 	}
 
 	updateGroups := make(chan map[string][]string)
 	go WatchGroups(ctx, provider, 2*time.Second, updateGroups, logger)
 	go func() {
 		for groups := range updateGroups {
-			sessionsManager.SetGroups(groups)
+			s.SetGroups(groups)
 		}
 	}()
 
@@ -78,7 +66,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	go provider.NotifyInstanceStopped(ctx, instanceStopped)
 	go func() {
 		for stopped := range instanceStopped {
-			err := sessionsManager.RemoveInstance(stopped)
+			err := s.RemoveInstance(ctx, stopped)
 			if err != nil {
 				logger.Warn("could not remove instance", slog.Any("error", err))
 			}
@@ -111,7 +99,7 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	strategy := &routes.ServeStrategy{
 		Theme:           t,
-		SessionsManager: sessionsManager,
+		SessionsManager: s,
 		StrategyConfig:  conf.Strategy,
 		SessionsConfig:  conf.Sessions,
 	}
@@ -132,7 +120,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	return nil
 }
 
-func onSessionExpires(ctx context.Context, provider provider.Provider, logger *slog.Logger) func(key string) {
+func onSessionExpires(ctx context.Context, provider sablier.Provider, logger *slog.Logger) func(key string) {
 	return func(_key string) {
 		go func(key string) {
 			logger.InfoContext(ctx, "instance expired", slog.String("instance", key))
@@ -144,32 +132,7 @@ func onSessionExpires(ctx context.Context, provider provider.Provider, logger *s
 	}
 }
 
-func loadSessions(storage storage.Storage, sessions sessions.Manager, logger *slog.Logger) {
-	logger.Info("loading sessions from storage")
-	reader, err := storage.Reader()
-	if err != nil {
-		logger.Error("error loading sessions from storage", slog.Any("reason", err))
-	}
-	err = sessions.LoadSessions(reader)
-	if err != nil {
-		logger.Error("error loading sessions into Sablier", slog.Any("reason", err))
-	}
-}
-
-func saveSessions(storage storage.Storage, sessions sessions.Manager, logger *slog.Logger) {
-	logger.Info("writing sessions to storage")
-	writer, err := storage.Writer()
-	if err != nil {
-		logger.Error("error saving sessions to storage", slog.Any("reason", err))
-		return
-	}
-	err = sessions.SaveSessions(writer)
-	if err != nil {
-		logger.Error("error saving sessions from Sablier", slog.Any("reason", err))
-	}
-}
-
-func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (provider.Provider, error) {
+func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (sablier.Provider, error) {
 	if err := config.IsValid(); err != nil {
 		return nil, err
 	}
@@ -204,7 +167,7 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
 
-func WatchGroups(ctx context.Context, provider provider.Provider, frequency time.Duration, send chan<- map[string][]string, logger *slog.Logger) {
+func WatchGroups(ctx context.Context, provider sablier.Provider, frequency time.Duration, send chan<- map[string][]string, logger *slog.Logger) {
 	ticker := time.NewTicker(frequency)
 	for {
 		select {

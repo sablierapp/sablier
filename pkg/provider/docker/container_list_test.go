@@ -2,9 +2,9 @@ package docker_test
 
 import (
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	"sort"
 	"strings"
@@ -49,7 +49,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	want := []types.Instance{
+	want := []sablier.InstanceConfiguration{
 		{
 			Name:  strings.TrimPrefix(i1.Name, "/"),
 			Group: "default",

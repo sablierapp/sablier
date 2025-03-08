@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"github.com/tniswong/go.rfcx/rfc7807"
 	"net/http"
@@ -25,7 +25,7 @@ func ProblemValidation(e error) rfc7807.Problem {
 	}
 }
 
-func ProblemGroupNotFound(e sessions.ErrGroupNotFound) rfc7807.Problem {
+func ProblemGroupNotFound(e sablier.ErrGroupNotFound) rfc7807.Problem {
 	pb := rfc7807.Problem{
 		Type:   "https://sablierapp.dev/#/errors?id=group-not-found",
 		Title:  "Group not found",

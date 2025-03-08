@@ -3,13 +3,13 @@ package kubernetes
 import (
 	"context"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]types.Instance, error) {
+func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			discovery.LabelEnable: "true",
@@ -22,7 +22,7 @@ func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]types.Insta
 		return nil, err
 	}
 
-	instances := make([]types.Instance, 0, len(statefulSets.Items))
+	instances := make([]sablier.InstanceConfiguration, 0, len(statefulSets.Items))
 	for _, ss := range statefulSets.Items {
 		instance := p.statefulSetToInstance(&ss)
 		instances = append(instances, instance)
@@ -31,7 +31,7 @@ func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]types.Insta
 	return instances, nil
 }
 
-func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) types.Instance {
+func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
 	var group string
 
 	if _, ok := ss.Labels[discovery.LabelEnable]; ok {
@@ -44,7 +44,7 @@ func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) types.Ins
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 
-	return types.Instance{
+	return sablier.InstanceConfiguration{
 		Name:  parsed.Original,
 		Group: group,
 	}

@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/app/sessions/sessionstest"
 	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/sablier/sabliertest"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strategy *routes.ServeStrategy, mock *sessionstest.MockManager) {
+func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strategy *routes.ServeStrategy, mock *sabliertest.MockSablier) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
@@ -23,7 +23,7 @@ func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strateg
 
 	app = gin.New()
 	router = app.Group("/api")
-	mock = sessionstest.NewMockManager(ctrl)
+	mock = sabliertest.NewMockSablier(ctrl)
 	strategy = &routes.ServeStrategy{
 		Theme:           th,
 		SessionsManager: mock,
