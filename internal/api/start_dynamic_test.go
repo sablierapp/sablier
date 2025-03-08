@@ -2,8 +2,7 @@ package api
 
 import (
 	"errors"
-	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/tniswong/go.rfcx/rfc7807"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -11,11 +10,11 @@ import (
 	"testing"
 )
 
-func session() *sessions.SessionState {
-	state := instance.ReadyInstanceState("test", 1)
-	state2 := instance.ReadyInstanceState("test2", 1)
-	return &sessions.SessionState{
-		Instances: map[string]sessions.InstanceState{
+func session() *sablier.SessionState {
+	state := sablier.ReadyInstanceState("test", 1)
+	state2 := sablier.ReadyInstanceState("test2", 1)
+	return &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
 			"test": {
 				Instance: state,
 				Error:    nil,
@@ -77,7 +76,7 @@ func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicErrGroupNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
 		StartDynamic(router, strategy)
-		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, sessions.ErrGroupNotFound{
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, sablier.ErrGroupNotFound{
 			Group:           "test",
 			AvailableGroups: []string{"test1", "test2"},
 		})

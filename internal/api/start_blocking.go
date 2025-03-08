@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/http/routes/models"
-	"github.com/sablierapp/sablier/app/sessions"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"net/http"
 )
 
@@ -31,13 +31,13 @@ func StartBlocking(router *gin.RouterGroup, s *routes.ServeStrategy) {
 			return
 		}
 
-		var sessionState *sessions.SessionState
+		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
 			sessionState, err = s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
 		} else {
 			sessionState, err = s.SessionsManager.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
-			var groupNotFoundError sessions.ErrGroupNotFound
+			var groupNotFoundError sablier.ErrGroupNotFound
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return

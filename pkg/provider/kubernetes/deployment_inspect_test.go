@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +27,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    instance.State
+		want    sablier.InstanceInfo
 		wantErr error
 	}{
 		{
@@ -49,10 +49,10 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
-				Status:          instance.Ready,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},
@@ -71,10 +71,10 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},
@@ -106,10 +106,10 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},

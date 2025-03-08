@@ -3,7 +3,7 @@ package valkey
 import (
 	"context"
 	"encoding/json"
-	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
 	"github.com/valkey-io/valkey-go"
 	"log/slog"
@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-var _ store.Store = (*ValKey)(nil)
+var _ sablier.Store = (*ValKey)(nil)
 
 type ValKey struct {
 	Client valkey.Client
 }
 
-func New(ctx context.Context, client valkey.Client) (store.Store, error) {
+func New(ctx context.Context, client valkey.Client) (sablier.Store, error) {
 	err := client.Do(ctx, client.B().Ping().Build()).Error()
 	if err != nil {
 		return nil, err
@@ -33,25 +33,25 @@ func New(ctx context.Context, client valkey.Client) (store.Store, error) {
 	return &ValKey{Client: client}, nil
 }
 
-func (v *ValKey) Get(ctx context.Context, s string) (instance.State, error) {
+func (v *ValKey) Get(ctx context.Context, s string) (sablier.InstanceInfo, error) {
 	b, err := v.Client.Do(ctx, v.Client.B().Get().Key(s).Build()).AsBytes()
 	if valkey.IsValkeyNil(err) {
-		return instance.State{}, store.ErrKeyNotFound
+		return sablier.InstanceInfo{}, store.ErrKeyNotFound
 	}
 	if err != nil {
-		return instance.State{}, err
+		return sablier.InstanceInfo{}, err
 	}
 
-	var i instance.State
+	var i sablier.InstanceInfo
 	err = json.Unmarshal(b, &i)
 	if err != nil {
-		return instance.State{}, err
+		return sablier.InstanceInfo{}, err
 	}
 
 	return i, nil
 }
 
-func (v *ValKey) Put(ctx context.Context, state instance.State, duration time.Duration) error {
+func (v *ValKey) Put(ctx context.Context, state sablier.InstanceInfo, duration time.Duration) error {
 	value, err := json.Marshal(state)
 	if err != nil {
 		return err

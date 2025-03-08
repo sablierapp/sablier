@@ -7,12 +7,12 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"strings"
 )
 
-func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]types.Instance, error) {
+func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
 
@@ -24,7 +24,7 @@ func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provid
 		return nil, err
 	}
 
-	instances := make([]types.Instance, 0, len(containers))
+	instances := make([]sablier.InstanceConfiguration, 0, len(containers))
 	for _, c := range containers {
 		instance := containerToInstance(c)
 		instances = append(instances, instance)
@@ -33,7 +33,7 @@ func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provid
 	return instances, nil
 }
 
-func containerToInstance(c dockertypes.Container) types.Instance {
+func containerToInstance(c dockertypes.Container) sablier.InstanceConfiguration {
 	var group string
 
 	if _, ok := c.Labels[discovery.LabelEnable]; ok {
@@ -44,7 +44,7 @@ func containerToInstance(c dockertypes.Container) types.Instance {
 		}
 	}
 
-	return types.Instance{
+	return sablier.InstanceConfiguration{
 		Name:  strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
 		Group: group,
 	}

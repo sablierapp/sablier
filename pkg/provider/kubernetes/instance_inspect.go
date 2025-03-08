@@ -3,13 +3,13 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *KubernetesProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
+func (p *KubernetesProvider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	parsed, err := ParseName(name, ParseOptions{Delimiter: p.delimiter})
 	if err != nil {
-		return instance.State{}, err
+		return sablier.InstanceInfo{}, err
 	}
 
 	switch parsed.Kind {
@@ -18,6 +18,6 @@ func (p *KubernetesProvider) InstanceInspect(ctx context.Context, name string) (
 	case "statefulset":
 		return p.StatefulSetInspect(ctx, parsed)
 	default:
-		return instance.State{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
+		return sablier.InstanceInfo{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
 	}
 }

@@ -4,10 +4,9 @@ import (
 	"errors"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/providertest"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	gomock "go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -22,13 +21,13 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 	ctx := t.Context()
 
 	// Define instances and registered instances
-	instances := []types.Instance{
+	instances := []sablier.InstanceConfiguration{
 		{Name: "instance1"},
 		{Name: "instance2"},
 		{Name: "instance3"},
 	}
 	store := inmemory.NewInMemory()
-	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	err := store.Put(ctx, sablier.InstanceInfo{Name: "instance1"}, time.Minute)
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList
@@ -53,13 +52,13 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	ctx := t.Context()
 
 	// Define instances and registered instances
-	instances := []types.Instance{
+	instances := []sablier.InstanceConfiguration{
 		{Name: "instance1"},
 		{Name: "instance2"},
 		{Name: "instance3"},
 	}
 	store := inmemory.NewInMemory()
-	err := store.Put(ctx, instance.State{Name: "instance1"}, time.Minute)
+	err := store.Put(ctx, sablier.InstanceInfo{Name: "instance1"}, time.Minute)
 	assert.NilError(t, err)
 
 	// Set up expectations for InstanceList

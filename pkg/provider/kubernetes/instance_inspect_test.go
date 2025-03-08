@@ -11,6 +11,10 @@ import (
 )
 
 func TestKubernetesProvider_InstanceInspect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	
 	ctx := context.Background()
 	type args struct {
 		name string

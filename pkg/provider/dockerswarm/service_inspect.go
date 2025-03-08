@@ -7,26 +7,26 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *DockerSwarmProvider) InstanceInspect(ctx context.Context, name string) (instance.State, error) {
+func (p *DockerSwarmProvider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
-		return instance.State{}, err
+		return sablier.InstanceInfo{}, err
 	}
 
 	foundName := p.getInstanceName(name, *service)
 
 	if service.Spec.Mode.Replicated == nil {
-		return instance.State{}, errors.New("swarm service is not in \"replicated\" mode")
+		return sablier.InstanceInfo{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return instance.NotReadyInstanceState(foundName, 0, p.desiredReplicas), nil
+		return sablier.NotReadyInstanceState(foundName, 0, p.desiredReplicas), nil
 	}
 
-	return instance.ReadyInstanceState(foundName, p.desiredReplicas), nil
+	return sablier.ReadyInstanceState(foundName, p.desiredReplicas), nil
 }
 
 func (p *DockerSwarmProvider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {

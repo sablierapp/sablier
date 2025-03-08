@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
@@ -13,7 +14,7 @@ import (
 // as running instances by Sablier.
 // By default, Sablier does not stop all already running instances. Meaning that you need to make an
 // initial request in order to trigger the scaling to zero.
-func StopAllUnregisteredInstances(ctx context.Context, p provider.Provider, s store.Store, logger *slog.Logger) error {
+func StopAllUnregisteredInstances(ctx context.Context, p sablier.Provider, s sablier.Store, logger *slog.Logger) error {
 	instances, err := p.InstanceList(ctx, provider.InstanceListOptions{
 		All:    false, // Only running containers
 		Labels: []string{LabelEnable},
@@ -41,7 +42,7 @@ func StopAllUnregisteredInstances(ctx context.Context, p provider.Provider, s st
 	return waitGroup.Wait()
 }
 
-func stopFunc(ctx context.Context, name string, p provider.Provider, logger *slog.Logger) func() error {
+func stopFunc(ctx context.Context, name string, p sablier.Provider, logger *slog.Logger) func() error {
 	return func() error {
 		err := p.InstanceStop(ctx, name)
 		if err != nil {

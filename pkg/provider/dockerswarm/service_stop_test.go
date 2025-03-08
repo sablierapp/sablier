@@ -6,8 +6,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/app/instance"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	"testing"
 	"time"
@@ -25,7 +25,7 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    instance.State
+		want    sablier.InstanceInfo
 		wantErr error
 	}{
 		{
@@ -48,10 +48,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 					return service.Spec.Name, err
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
-				Status:          instance.Ready,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},
@@ -82,10 +82,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 					return service.Spec.Name, nil
 				},
 			},
-			want: instance.State{
+			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          instance.NotReady,
+				Status:          sablier.InstanceStatusNotReady,
 			},
 			wantErr: nil,
 		},

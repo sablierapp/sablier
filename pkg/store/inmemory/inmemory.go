@@ -3,24 +3,24 @@ package inmemory
 import (
 	"context"
 	"encoding/json"
-	"github.com/sablierapp/sablier/app/instance"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
 	"github.com/sablierapp/sablier/pkg/tinykv"
 	"time"
 )
 
-var _ store.Store = (*InMemory)(nil)
+var _ sablier.Store = (*InMemory)(nil)
 var _ json.Marshaler = (*InMemory)(nil)
 var _ json.Unmarshaler = (*InMemory)(nil)
 
-func NewInMemory() store.Store {
+func NewInMemory() sablier.Store {
 	return &InMemory{
-		kv: tinykv.New[instance.State](1*time.Second, nil),
+		kv: tinykv.New[sablier.InstanceInfo](1*time.Second, nil),
 	}
 }
 
 type InMemory struct {
-	kv tinykv.KV[instance.State]
+	kv tinykv.KV[sablier.InstanceInfo]
 }
 
 func (i InMemory) UnmarshalJSON(bytes []byte) error {
@@ -31,15 +31,15 @@ func (i InMemory) MarshalJSON() ([]byte, error) {
 	return i.kv.MarshalJSON()
 }
 
-func (i InMemory) Get(_ context.Context, s string) (instance.State, error) {
+func (i InMemory) Get(_ context.Context, s string) (sablier.InstanceInfo, error) {
 	val, ok := i.kv.Get(s)
 	if !ok {
-		return instance.State{}, store.ErrKeyNotFound
+		return sablier.InstanceInfo{}, store.ErrKeyNotFound
 	}
 	return val, nil
 }
 
-func (i InMemory) Put(_ context.Context, state instance.State, duration time.Duration) error {
+func (i InMemory) Put(_ context.Context, state sablier.InstanceInfo, duration time.Duration) error {
 	return i.kv.Put(state.Name, state, duration)
 }
 
@@ -49,7 +49,7 @@ func (i InMemory) Delete(_ context.Context, s string) error {
 }
 
 func (i InMemory) OnExpire(_ context.Context, f func(string)) error {
-	i.kv.SetOnExpire(func(k string, _ instance.State) {
+	i.kv.SetOnExpire(func(k string, _ sablier.InstanceInfo) {
 		f(k)
 	})
 	return nil

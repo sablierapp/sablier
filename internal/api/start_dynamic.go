@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,8 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/app/http/routes/models"
-	"github.com/sablierapp/sablier/app/instance"
-	"github.com/sablierapp/sablier/app/sessions"
 	theme2 "github.com/sablierapp/sablier/pkg/theme"
 )
 
@@ -40,13 +39,13 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 			return
 		}
 
-		var sessionState *sessions.SessionState
+		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
 			sessionState, err = s.SessionsManager.RequestSession(c, request.Names, request.SessionDuration)
 		} else {
 			sessionState, err = s.SessionsManager.RequestSessionGroup(c, request.Group, request.SessionDuration)
-			var groupNotFoundError sessions.ErrGroupNotFound
+			var groupNotFoundError sablier.ErrGroupNotFound
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
@@ -90,7 +89,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 	})
 }
 
-func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionState) (instances []theme2.Instance) {
+func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState) (instances []theme2.Instance) {
 	if sessionState == nil {
 		return
 	}
@@ -106,7 +105,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sessions.SessionStat
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState instance.State) theme2.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo) theme2.Instance {
 
 	var err error
 	if instanceState.Message == "" {
@@ -117,7 +116,7 @@ func instanceStateToRenderOptionsRequestState(instanceState instance.State) them
 
 	return theme2.Instance{
 		Name:            instanceState.Name,
-		Status:          instanceState.Status,
+		Status:          string(instanceState.Status),
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
 		Error:           err,

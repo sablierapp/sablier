@@ -2,9 +2,9 @@ package dockerswarm_test
 
 import (
 	dockertypes "github.com/docker/docker/api/types"
+	"github.com/sablierapp/sablier/pkg/sablier"
 
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/app/types"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"gotest.tools/v3/assert"
@@ -49,7 +49,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	want := []types.Instance{
+	want := []sablier.InstanceConfiguration{
 		{
 			Name:  i1.Spec.Name,
 			Group: "default",

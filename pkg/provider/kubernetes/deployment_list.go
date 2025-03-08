@@ -3,13 +3,13 @@ package kubernetes
 import (
 	"context"
 	"github.com/sablierapp/sablier/app/discovery"
-	"github.com/sablierapp/sablier/app/types"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]types.Instance, error) {
+func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			discovery.LabelEnable: "true",
@@ -22,7 +22,7 @@ func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]types.Instan
 		return nil, err
 	}
 
-	instances := make([]types.Instance, 0, len(deployments.Items))
+	instances := make([]sablier.InstanceConfiguration, 0, len(deployments.Items))
 	for _, d := range deployments.Items {
 		instance := p.deploymentToInstance(&d)
 		instances = append(instances, instance)
@@ -31,7 +31,7 @@ func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]types.Instan
 	return instances, nil
 }
 
-func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) types.Instance {
+func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	var group string
 
 	if _, ok := d.Labels[discovery.LabelEnable]; ok {
@@ -44,7 +44,7 @@ func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) types.Instan
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
-	return types.Instance{
+	return sablier.InstanceConfiguration{
 		Name:  parsed.Original,
 		Group: group,
 	}

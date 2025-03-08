@@ -1,4 +1,4 @@
-package sessions
+package sablier
 
 import (
 	"fmt"

@@ -1,21 +1,21 @@
-package sessions
+package sablier_test
 
 import (
 	"context"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/providertest"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
-	"github.com/sablierapp/sablier/app/instance"
 	"gotest.tools/v3/assert"
 )
 
 func TestSessionState_IsReady(t *testing.T) {
 	type fields struct {
-		Instances map[string]InstanceState
+		Instances map[string]sablier.InstanceInfoWithError
 		Error     error
 	}
 	tests := []struct {
@@ -26,9 +26,9 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "all instances are ready",
 			fields: fields{
-				Instances: createMap([]instance.State{
-					{Name: "nginx", Status: instance.Ready},
-					{Name: "apache", Status: instance.Ready},
+				Instances: createMap([]sablier.InstanceInfo{
+					{Name: "nginx", Status: sablier.InstanceStatusReady},
+					{Name: "apache", Status: sablier.InstanceStatusReady},
 				}),
 			},
 			want: true,
@@ -36,9 +36,9 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "one instance is not ready",
 			fields: fields{
-				Instances: createMap([]instance.State{
-					{Name: "nginx", Status: instance.Ready},
-					{Name: "apache", Status: instance.NotReady},
+				Instances: createMap([]sablier.InstanceInfo{
+					{Name: "nginx", Status: sablier.InstanceStatusReady},
+					{Name: "apache", Status: sablier.InstanceStatusNotReady},
 				}),
 			},
 			want: false,
@@ -46,16 +46,16 @@ func TestSessionState_IsReady(t *testing.T) {
 		{
 			name: "no instances specified",
 			fields: fields{
-				Instances: createMap([]instance.State{}),
+				Instances: createMap([]sablier.InstanceInfo{}),
 			},
 			want: true,
 		},
 		{
 			name: "one instance has an error",
 			fields: fields{
-				Instances: createMap([]instance.State{
-					{Name: "nginx-error", Status: instance.Unrecoverable, Message: "connection timeout"},
-					{Name: "apache", Status: instance.Ready},
+				Instances: createMap([]sablier.InstanceInfo{
+					{Name: "nginx-error", Status: sablier.InstanceStatusUnrecoverable, Message: "connection timeout"},
+					{Name: "apache", Status: sablier.InstanceStatusReady},
 				}),
 			},
 			want: false,
@@ -63,7 +63,7 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &SessionState{
+			s := &sablier.SessionState{
 				Instances: tt.fields.Instances,
 			}
 			if got := s.IsReady(); got != tt.want {
@@ -73,11 +73,11 @@ func TestSessionState_IsReady(t *testing.T) {
 	}
 }
 
-func createMap(instances []instance.State) map[string]InstanceState {
-	states := make(map[string]InstanceState)
+func createMap(instances []sablier.InstanceInfo) map[string]sablier.InstanceInfoWithError {
+	states := make(map[string]sablier.InstanceInfoWithError)
 
 	for _, v := range instances {
-		states[v.Name] = InstanceState{
+		states[v.Name] = sablier.InstanceInfoWithError{
 			Instance: v,
 			Error:    nil,
 		}
@@ -86,14 +86,14 @@ func createMap(instances []instance.State) map[string]InstanceState {
 	return states
 }
 
-func setupSessionManager(t *testing.T) (Manager, *storetest.MockStore, *providertest.MockProvider) {
+func setupSessionManager(t *testing.T) (sablier.Sablier, *storetest.MockStore, *providertest.MockProvider) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 
 	p := providertest.NewMockProvider(ctrl)
 	s := storetest.NewMockStore(ctrl)
 
-	m := NewSessionsManager(slogt.New(t), s, p)
+	m := sablier.New(slogt.New(t), s, p)
 	return m, s, p
 }
 
@@ -101,7 +101,7 @@ func TestSessionsManager(t *testing.T) {
 	t.Run("RemoveInstance", func(t *testing.T) {
 		manager, store, _ := setupSessionManager(t)
 		store.EXPECT().Delete(gomock.Any(), "test")
-		err := manager.RemoveInstance("test")
+		err := manager.RemoveInstance(t.Context(), "test")
 		assert.NilError(t, err)
 	})
 }
@@ -110,10 +110,10 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		manager, store, provider := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -132,10 +132,10 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
 		manager, store, provider := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.NotReady}, nil)
+		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -151,7 +151,7 @@ func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 	t.Run("request ready session is ready", func(t *testing.T) {
 		manager, store, _ := setupSessionManager(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(instance.State{Name: "apache", Status: instance.Ready}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		errchan := make(chan error)
