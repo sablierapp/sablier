@@ -53,14 +53,11 @@ func TestValKey(t *testing.T) {
 
 	t.Parallel()
 	t.Run("ValKeyErrNotFound", func(t *testing.T) {
-		t.Parallel()
 		_, err := vk.Get(ctx, "ValKeyErrNotFound")
 		assert.ErrorIs(t, err, store.ErrKeyNotFound)
 	})
 	t.Run("ValKeyPut", func(t *testing.T) {
-		t.Parallel()
-
-		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyPut"}, 30*time.Second)
+		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyPut"}, 1*time.Second)
 		assert.NilError(t, err)
 
 		i, err := vk.Get(ctx, "ValKeyPut")
@@ -72,8 +69,6 @@ func TestValKey(t *testing.T) {
 		assert.ErrorIs(t, err, store.ErrKeyNotFound)
 	})
 	t.Run("ValKeyDelete", func(t *testing.T) {
-		t.Parallel()
-
 		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyDelete"}, 30*time.Second)
 		assert.NilError(t, err)
 
@@ -88,7 +83,6 @@ func TestValKey(t *testing.T) {
 		assert.ErrorIs(t, err, store.ErrKeyNotFound)
 	})
 	t.Run("ValKeyOnExpire", func(t *testing.T) {
-		t.Parallel()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
