@@ -17,6 +17,7 @@ type Sablier interface {
 
 	RemoveInstance(ctx context.Context, name string) error
 	SetGroups(groups map[string][]string)
+	StopAllUnregisteredInstances(ctx context.Context) error
 }
 
 type sablier struct {

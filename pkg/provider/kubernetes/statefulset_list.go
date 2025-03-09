@@ -2,20 +2,19 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			discovery.LabelEnable: "true",
+			"sablier.enable": "true",
 		},
 	}
-	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
 	})
 	if err != nil {
@@ -34,11 +33,11 @@ func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]sablier.Ins
 func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := ss.Labels[discovery.LabelEnable]; ok {
-		if g, ok := ss.Labels[discovery.LabelGroup]; ok {
+	if _, ok := ss.Labels["sablier.enable"]; ok {
+		if g, ok := ss.Labels["sablier.group"]; ok {
 			group = g
 		} else {
-			group = discovery.LabelGroupDefaultValue
+			group = "default"
 		}
 	}
 
@@ -53,10 +52,10 @@ func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) sablier.I
 func (p *KubernetesProvider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			discovery.LabelEnable: "true",
+			"sablier.enable": "true",
 		},
 	}
-	statefulSets, err := p.Client.AppsV1().StatefulSets(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
 	})
 	if err != nil {
@@ -65,9 +64,9 @@ func (p *KubernetesProvider) StatefulSetGroups(ctx context.Context) (map[string]
 
 	groups := make(map[string][]string)
 	for _, ss := range statefulSets.Items {
-		groupName := ss.Labels[discovery.LabelGroup]
+		groupName := ss.Labels["sablier.group"]
 		if len(groupName) == 0 {
-			groupName = discovery.LabelGroupDefaultValue
+			groupName = "default"
 		}
 
 		group := groups[groupName]

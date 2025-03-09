@@ -2,20 +2,19 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			discovery.LabelEnable: "true",
+			"sablier.enable": "true",
 		},
 	}
-	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
 	})
 	if err != nil {
@@ -34,11 +33,11 @@ func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]sablier.Inst
 func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := d.Labels[discovery.LabelEnable]; ok {
-		if g, ok := d.Labels[discovery.LabelGroup]; ok {
+	if _, ok := d.Labels["sablier.enable"]; ok {
+		if g, ok := d.Labels["sablier.group"]; ok {
 			group = g
 		} else {
-			group = discovery.LabelGroupDefaultValue
+			group = "default"
 		}
 	}
 
@@ -53,10 +52,10 @@ func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) sablier.Inst
 func (p *KubernetesProvider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			discovery.LabelEnable: "true",
+			"sablier.enable": "true",
 		},
 	}
-	deployments, err := p.Client.AppsV1().Deployments(core_v1.NamespaceAll).List(ctx, metav1.ListOptions{
+	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
 	})
 
@@ -66,9 +65,9 @@ func (p *KubernetesProvider) DeploymentGroups(ctx context.Context) (map[string][
 
 	groups := make(map[string][]string)
 	for _, deployment := range deployments.Items {
-		groupName := deployment.Labels[discovery.LabelGroup]
+		groupName := deployment.Labels["sablier.group"]
 		if len(groupName) == 0 {
-			groupName = discovery.LabelGroupDefaultValue
+			groupName = "default"
 		}
 
 		group := groups[groupName]

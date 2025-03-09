@@ -6,14 +6,13 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 	args.Add("mode", "replicated")
 
 	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
@@ -36,11 +35,11 @@ func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.Insta
 func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	var group string
 
-	if _, ok := s.Spec.Labels[discovery.LabelEnable]; ok {
-		if g, ok := s.Spec.Labels[discovery.LabelGroup]; ok {
+	if _, ok := s.Spec.Labels["sablier.enable"]; ok {
+		if g, ok := s.Spec.Labels["sablier.group"]; ok {
 			group = g
 		} else {
-			group = discovery.LabelGroupDefaultValue
+			group = "default"
 		}
 	}
 
@@ -52,7 +51,7 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i sablier.Inst
 
 func (p *DockerSwarmProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	f := filters.NewArgs()
-	f.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+	f.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
 	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
 		Filters: f,
@@ -64,9 +63,9 @@ func (p *DockerSwarmProvider) InstanceGroups(ctx context.Context) (map[string][]
 
 	groups := make(map[string][]string)
 	for _, service := range services {
-		groupName := service.Spec.Labels[discovery.LabelGroup]
+		groupName := service.Spec.Labels["sablier.group"]
 		if len(groupName) == 0 {
-			groupName = discovery.LabelGroupDefaultValue
+			groupName = "default"
 		}
 
 		group := groups[groupName]
