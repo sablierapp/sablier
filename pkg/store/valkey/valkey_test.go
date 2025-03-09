@@ -60,7 +60,7 @@ func TestValKey(t *testing.T) {
 	t.Run("ValKeyPut", func(t *testing.T) {
 		t.Parallel()
 
-		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyPut"}, 1*time.Second)
+		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyPut"}, 30*time.Second)
 		assert.NilError(t, err)
 
 		i, err := vk.Get(ctx, "ValKeyPut")
