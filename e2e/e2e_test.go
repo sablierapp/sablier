@@ -27,7 +27,7 @@ func Test_Dynamic(t *testing.T) {
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
+		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
@@ -56,7 +56,7 @@ func Test_Multiple(t *testing.T) {
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
+		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
@@ -65,7 +65,7 @@ func Test_Multiple(t *testing.T) {
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(RetryUntilBodyContains("nginx/")).
+		WithRetryPolicyFunc(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
 		Body().Contains(`nginx/`)
@@ -85,7 +85,7 @@ func Test_Healthy(t *testing.T) {
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(RetryUntilBodyContains("nginx/")).
+		WithRetryPolicyFunc(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
 		Body().Contains(`nginx/`)
@@ -105,7 +105,7 @@ func Test_Group(t *testing.T) {
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
 		WithRetryPolicy(httpexpect.RetryCustomHandler).
-		WithCustomHandler(RetryUntilBodyContains("Host: localhost:8080")).
+		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
 		Body().Contains(`Host: localhost:8080`)
