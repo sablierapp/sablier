@@ -26,7 +26,6 @@ func Test_Dynamic(t *testing.T) {
 	e.GET("/whoami").
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
-		WithRetryPolicy(httpexpect.RetryCustomHandler).
 		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
@@ -55,7 +54,6 @@ func Test_Multiple(t *testing.T) {
 	e.GET("/whoami").
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
-		WithRetryPolicy(httpexpect.RetryCustomHandler).
 		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
@@ -64,7 +62,6 @@ func Test_Multiple(t *testing.T) {
 	e.GET("/nginx").
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
-		WithRetryPolicy(httpexpect.RetryCustomHandler).
 		WithRetryPolicyFunc(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
@@ -84,7 +81,6 @@ func Test_Healthy(t *testing.T) {
 	e.GET("/nginx").
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
-		WithRetryPolicy(httpexpect.RetryCustomHandler).
 		WithRetryPolicyFunc(RetryUntilBodyContains("nginx/")).
 		Expect().
 		Status(http.StatusNotFound).
@@ -104,7 +100,6 @@ func Test_Group(t *testing.T) {
 	e.GET("/group").
 		WithMaxRetries(20).
 		WithRetryDelay(50*time.Millisecond, time.Second*2).
-		WithRetryPolicy(httpexpect.RetryCustomHandler).
 		WithRetryPolicyFunc(RetryUntilBodyContains("Host: localhost:8080")).
 		Expect().
 		Status(http.StatusOK).
