@@ -2,11 +2,9 @@ module github.com/sablierapp/sablier
 
 go 1.24.0
 
-replace github.com/gavv/httpexpect/v2 => github.com/acouvreur/httpexpect/v2 v2.16.0
-
 require (
 	github.com/docker/docker v27.5.1+incompatible
-	github.com/gavv/httpexpect/v2 v2.16.0
+	github.com/gavv/httpexpect/v2 v2.17.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/go-cmp v0.7.0
 	github.com/lmittmann/tint v1.0.7
