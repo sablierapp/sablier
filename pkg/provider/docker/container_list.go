@@ -6,7 +6,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"strings"
@@ -14,7 +13,7 @@ import (
 
 func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
 	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
 		All:     options.All,
@@ -36,11 +35,11 @@ func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provid
 func containerToInstance(c dockertypes.Container) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := c.Labels[discovery.LabelEnable]; ok {
-		if g, ok := c.Labels[discovery.LabelGroup]; ok {
+	if _, ok := c.Labels["sablier.enable"]; ok {
+		if g, ok := c.Labels["sablier.group"]; ok {
 			group = g
 		} else {
-			group = discovery.LabelGroupDefaultValue
+			group = "default"
 		}
 	}
 
@@ -52,7 +51,7 @@ func containerToInstance(c dockertypes.Container) sablier.InstanceConfiguration 
 
 func (p *DockerClassicProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", discovery.LabelEnable))
+	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
 	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
 		All:     true,
@@ -65,9 +64,9 @@ func (p *DockerClassicProvider) InstanceGroups(ctx context.Context) (map[string]
 
 	groups := make(map[string][]string)
 	for _, c := range containers {
-		groupName := c.Labels[discovery.LabelGroup]
+		groupName := c.Labels["sablier.group"]
 		if len(groupName) == 0 {
-			groupName = discovery.LabelGroupDefaultValue
+			groupName = "default"
 		}
 		group := groups[groupName]
 		group = append(group, strings.TrimPrefix(c.Names[0], "/"))

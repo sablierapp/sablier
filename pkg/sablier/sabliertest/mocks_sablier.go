@@ -127,3 +127,17 @@ func (mr *MockSablierMockRecorder) SetGroups(groups any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGroups", reflect.TypeOf((*MockSablier)(nil).SetGroups), groups)
 }
+
+// StopAllUnregisteredInstances mocks base method.
+func (m *MockSablier) StopAllUnregisteredInstances(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopAllUnregisteredInstances", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopAllUnregisteredInstances indicates an expected call of StopAllUnregisteredInstances.
+func (mr *MockSablierMockRecorder) StopAllUnregisteredInstances(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAllUnregisteredInstances", reflect.TypeOf((*MockSablier)(nil).StopAllUnregisteredInstances), ctx)
+}

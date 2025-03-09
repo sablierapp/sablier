@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/docker/docker/client"
-	"github.com/sablierapp/sablier/app/discovery"
 	"github.com/sablierapp/sablier/app/http/routes"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
@@ -74,7 +73,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	}()
 
 	if conf.Provider.AutoStopOnStartup {
-		err := discovery.StopAllUnregisteredInstances(ctx, provider, store, logger)
+		err := s.StopAllUnregisteredInstances(ctx)
 		if err != nil {
 			logger.ErrorContext(ctx, "unable to stop unregistered instances", slog.Any("reason", err))
 		}

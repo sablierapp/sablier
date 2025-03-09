@@ -2,10 +2,7 @@ package sablier_test
 
 import (
 	"context"
-	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
@@ -86,20 +83,9 @@ func createMap(instances []sablier.InstanceInfo) map[string]sablier.InstanceInfo
 	return states
 }
 
-func setupSessionManager(t *testing.T) (sablier.Sablier, *storetest.MockStore, *providertest.MockProvider) {
-	t.Helper()
-	ctrl := gomock.NewController(t)
-
-	p := providertest.NewMockProvider(ctrl)
-	s := storetest.NewMockStore(ctrl)
-
-	m := sablier.New(slogt.New(t), s, p)
-	return m, s, p
-}
-
 func TestSessionsManager(t *testing.T) {
 	t.Run("RemoveInstance", func(t *testing.T) {
-		manager, store, _ := setupSessionManager(t)
+		manager, store, _ := setupSablier(t)
 		store.EXPECT().Delete(gomock.Any(), "test")
 		err := manager.RemoveInstance(t.Context(), "test")
 		assert.NilError(t, err)
@@ -109,7 +95,7 @@ func TestSessionsManager(t *testing.T) {
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		manager, store, provider := setupSessionManager(t)
+		manager, store, provider := setupSablier(t)
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
@@ -131,7 +117,7 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
-		manager, store, provider := setupSessionManager(t)
+		manager, store, provider := setupSablier(t)
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
@@ -150,7 +136,7 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 	t.Run("request ready session is ready", func(t *testing.T) {
-		manager, store, _ := setupSessionManager(t)
+		manager, store, _ := setupSablier(t)
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusReady}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
