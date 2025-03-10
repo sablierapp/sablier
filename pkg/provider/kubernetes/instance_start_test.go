@@ -92,7 +92,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.NewKubernetesProvider(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(kind)

@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",
@@ -30,7 +30,7 @@ func (p *KubernetesProvider) StatefulSetList(ctx context.Context) ([]sablier.Ins
 	return instances, nil
 }
 
-func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
+func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
 	var group string
 
 	if _, ok := ss.Labels["sablier.enable"]; ok {
@@ -49,7 +49,7 @@ func (p *KubernetesProvider) statefulSetToInstance(ss *v1.StatefulSet) sablier.I
 	}
 }
 
-func (p *KubernetesProvider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",

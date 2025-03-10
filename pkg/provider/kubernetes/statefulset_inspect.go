@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) StatefulSetInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
+func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
 	ss, err := p.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
 		return sablier.InstanceInfo{}, err

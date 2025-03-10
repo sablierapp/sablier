@@ -127,7 +127,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := dockerswarm.NewDockerSwarmProvider(ctx, c.client, slogt.New(t))
+			p, err := dockerswarm.New(ctx, c.client, slogt.New(t))
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
@@ -135,7 +135,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			tt.want.Name = name
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("DockerSwarmProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.DeepEqual(t, got, tt.want)

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (p *KubernetesProvider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
+func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newStatefulSet := new.(*appsv1.StatefulSet)
