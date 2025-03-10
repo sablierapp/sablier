@@ -6,7 +6,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *KubernetesProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	deployments, err := p.DeploymentList(ctx)
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func (p *KubernetesProvider) InstanceList(ctx context.Context, options provider.
 	return append(deployments, statefulSets...), nil
 }
 
-func (p *KubernetesProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	deployments, err := p.DeploymentGroups(ctx)
 	if err != nil {
 		return nil, err

@@ -10,7 +10,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *DockerSwarmProvider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
+func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return sablier.InstanceInfo{}, err
@@ -29,7 +29,7 @@ func (p *DockerSwarmProvider) InstanceInspect(ctx context.Context, name string) 
 	return sablier.ReadyInstanceState(foundName, p.desiredReplicas), nil
 }
 
-func (p *DockerSwarmProvider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
+func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
 	opts := types.ServiceListOptions{
 		Filters: filters.NewArgs(),
 		Status:  true,

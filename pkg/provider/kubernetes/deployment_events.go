@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (p *KubernetesProvider) watchDeployents(instance chan<- string) cache.SharedIndexInformer {
+func (p *Provider) watchDeployents(instance chan<- string) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)

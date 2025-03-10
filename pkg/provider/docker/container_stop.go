@@ -7,7 +7,7 @@ import (
 	"log/slog"
 )
 
-func (p *DockerClassicProvider) InstanceStop(ctx context.Context, name string) error {
+func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 	p.l.DebugContext(ctx, "stopping container", slog.String("name", name))
 	err := p.Client.ContainerStop(ctx, name, container.StopOptions{})
 	if err != nil {

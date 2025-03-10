@@ -6,7 +6,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 )
 
-func (p *DockerClassicProvider) InstanceStart(ctx context.Context, name string) error {
+func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 	// TODO: InstanceStart should block until the container is ready.
 	err := p.Client.ContainerStart(ctx, name, container.StartOptions{})
 	if err != nil {

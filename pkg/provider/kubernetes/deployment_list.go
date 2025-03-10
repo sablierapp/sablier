@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",
@@ -30,7 +30,7 @@ func (p *KubernetesProvider) DeploymentList(ctx context.Context) ([]sablier.Inst
 	return instances, nil
 }
 
-func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
+func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	var group string
 
 	if _, ok := d.Labels["sablier.enable"]; ok {
@@ -49,7 +49,7 @@ func (p *KubernetesProvider) deploymentToInstance(d *v1.Deployment) sablier.Inst
 	}
 }
 
-func (p *KubernetesProvider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",

@@ -126,7 +126,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := dockerswarm.NewDockerSwarmProvider(ctx, c.client, slogt.New(t))
+			p, err := dockerswarm.New(ctx, c.client, slogt.New(t))
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
@@ -134,7 +134,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			tt.want.Name = name
 			err = p.InstanceStart(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("DockerSwarmProvider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 

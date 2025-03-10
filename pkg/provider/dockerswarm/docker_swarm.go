@@ -14,16 +14,16 @@ import (
 )
 
 // Interface guard
-var _ sablier.Provider = (*DockerSwarmProvider)(nil)
+var _ sablier.Provider = (*Provider)(nil)
 
-type DockerSwarmProvider struct {
+type Provider struct {
 	Client          client.APIClient
 	desiredReplicas int32
 
 	l *slog.Logger
 }
 
-func NewDockerSwarmProvider(ctx context.Context, cli *client.Client, logger *slog.Logger) (*DockerSwarmProvider, error) {
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "swarm"))
 
 	serverVersion, err := cli.ServerVersion(ctx)
@@ -36,7 +36,7 @@ func NewDockerSwarmProvider(ctx context.Context, cli *client.Client, logger *slo
 		slog.String("api_version", serverVersion.APIVersion),
 	)
 
-	return &DockerSwarmProvider{
+	return &Provider{
 		Client:          cli,
 		desiredReplicas: 1,
 		l:               logger,
@@ -44,7 +44,7 @@ func NewDockerSwarmProvider(ctx context.Context, cli *client.Client, logger *slo
 
 }
 
-func (p *DockerSwarmProvider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
+func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (p *DockerSwarmProvider) ServiceUpdateReplicas(ctx context.Context, name st
 	return nil
 }
 
-func (p *DockerSwarmProvider) getInstanceName(name string, service swarm.Service) string {
+func (p *Provider) getInstanceName(name string, service swarm.Service) string {
 	if name == service.Spec.Name {
 		return name
 	}

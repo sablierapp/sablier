@@ -18,7 +18,7 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	dind := setupDinD(t, ctx)
-	p, err := docker.NewDockerClassicProvider(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
 	c, err := dind.CreateMimic(ctx, MimicOptions{})

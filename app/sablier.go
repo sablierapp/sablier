@@ -142,13 +142,13 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker swarm client: %v", err)
 		}
-		return dockerswarm.NewDockerSwarmProvider(ctx, cli, logger)
+		return dockerswarm.New(ctx, cli, logger)
 	case "docker":
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
-		return docker.NewDockerClassicProvider(ctx, cli, logger)
+		return docker.New(ctx, cli, logger)
 	case "kubernetes":
 		kubeclientConfig, err := rest.InClusterConfig()
 		if err != nil {
@@ -161,7 +161,7 @@ func NewProvider(ctx context.Context, logger *slog.Logger, config config.Provide
 		if err != nil {
 			return nil, err
 		}
-		return kubernetes.NewKubernetesProvider(ctx, cli, logger, config.Kubernetes)
+		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }

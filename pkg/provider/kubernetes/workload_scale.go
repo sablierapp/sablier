@@ -12,7 +12,7 @@ type Workload interface {
 	UpdateScale(ctx context.Context, workloadName string, scale *autoscalingv1.Scale, opts metav1.UpdateOptions) (*autoscalingv1.Scale, error)
 }
 
-func (p *KubernetesProvider) scale(ctx context.Context, config ParsedName, replicas int32) error {
+func (p *Provider) scale(ctx context.Context, config ParsedName, replicas int32) error {
 	var workload Workload
 
 	switch config.Kind {

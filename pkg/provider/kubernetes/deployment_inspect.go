@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *KubernetesProvider) DeploymentInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
+func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
 	d, err := p.Client.AppsV1().Deployments(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("error getting deployment: %w", err)

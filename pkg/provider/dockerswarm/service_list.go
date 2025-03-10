@@ -10,7 +10,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 	args.Add("mode", "replicated")
@@ -32,7 +32,7 @@ func (p *DockerSwarmProvider) InstanceList(ctx context.Context, _ provider.Insta
 	return instances, nil
 }
 
-func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
+func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	var group string
 
 	if _, ok := s.Spec.Labels["sablier.enable"]; ok {
@@ -49,7 +49,7 @@ func (p *DockerSwarmProvider) serviceToInstance(s swarm.Service) (i sablier.Inst
 	}
 }
 
-func (p *DockerSwarmProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	f := filters.NewArgs()
 	f.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 

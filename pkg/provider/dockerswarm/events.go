@@ -9,7 +9,7 @@ import (
 	"log/slog"
 )
 
-func (p *DockerSwarmProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
+func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
 	msgs, errs := p.Client.Events(ctx, events.ListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("scope", "swarm"),
