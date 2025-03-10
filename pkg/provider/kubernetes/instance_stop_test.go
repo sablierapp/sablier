@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
 	"testing"

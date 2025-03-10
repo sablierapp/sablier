@@ -3,7 +3,7 @@ package kubernetes_test
 import (
 	"context"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

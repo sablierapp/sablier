@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"

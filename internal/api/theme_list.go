@@ -2,11 +2,10 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/app/http/routes"
 	"net/http"
 )
 
-func ListThemes(router *gin.RouterGroup, s *routes.ServeStrategy) {
+func ListThemes(router *gin.RouterGroup, s *ServeStrategy) {
 	handler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, map[string]interface{}{
 			"themes": s.Theme.List(),

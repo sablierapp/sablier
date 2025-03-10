@@ -2,7 +2,7 @@ package kubernetes_test
 
 import (
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"

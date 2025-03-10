@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
+	providerConfig "github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
-	providerConfig "github.com/sablierapp/sablier/config"
 	"k8s.io/client-go/kubernetes"
 )
 

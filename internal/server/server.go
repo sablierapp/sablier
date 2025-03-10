@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/internal/api"
+	"github.com/sablierapp/sablier/pkg/config"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
-func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy) *gin.Engine {
+func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) *gin.Engine {
 	r := gin.New()
 
 	r.Use(StructuredLogger(logger))
@@ -23,7 +23,7 @@ func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Ser
 	return r
 }
 
-func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *routes.ServeStrategy) {
+func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) {
 	start := time.Now()
 
 	if logger.Enabled(ctx, slog.LevelDebug) {
