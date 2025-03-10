@@ -152,7 +152,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 func NewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
-		Short: "InstanceStart the Sablier server",
+		Short: "Start the Sablier server",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := viper.Unmarshal(&conf)
 			if err != nil {
