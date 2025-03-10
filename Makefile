@@ -24,7 +24,7 @@ gen:
 	go generate -v ./...
 
 build:
-	go build -v .
+	go build -v ./cmd/sablier
 
 test:
 	go test -v ./...
