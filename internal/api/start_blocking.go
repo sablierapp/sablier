@@ -3,15 +3,21 @@ package api
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/app/http/routes/models"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"net/http"
+	"time"
 )
 
-func StartBlocking(router *gin.RouterGroup, s *routes.ServeStrategy) {
+type BlockingRequest struct {
+	Names           []string      `form:"names"`
+	Group           string        `form:"group"`
+	SessionDuration time.Duration `form:"session_duration"`
+	Timeout         time.Duration `form:"timeout"`
+}
+
+func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/blocking", func(c *gin.Context) {
-		request := models.BlockingRequest{
+		request := BlockingRequest{
 			SessionDuration: s.SessionsConfig.DefaultDuration,
 			Timeout:         s.StrategyConfig.Blocking.DefaultTimeout,
 		}
@@ -34,9 +40,9 @@ func StartBlocking(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
-			sessionState, err = s.SessionsManager.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
+			sessionState, err = s.Sablier.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
 		} else {
-			sessionState, err = s.SessionsManager.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
+			sessionState, err = s.Sablier.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
 			var groupNotFoundError sablier.ErrGroupNotFound
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))

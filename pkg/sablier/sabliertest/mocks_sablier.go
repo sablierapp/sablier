@@ -42,6 +42,18 @@ func (m *MockSablier) EXPECT() *MockSablierMockRecorder {
 	return m.recorder
 }
 
+// GroupWatch mocks base method.
+func (m *MockSablier) GroupWatch(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "GroupWatch", ctx)
+}
+
+// GroupWatch indicates an expected call of GroupWatch.
+func (mr *MockSablierMockRecorder) GroupWatch(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupWatch", reflect.TypeOf((*MockSablier)(nil).GroupWatch), ctx)
+}
+
 // RemoveInstance mocks base method.
 func (m *MockSablier) RemoveInstance(ctx context.Context, name string) error {
 	m.ctrl.T.Helper()

@@ -1,16 +1,17 @@
-package cmd
+package main
 
 import (
 	"fmt"
+	"github.com/sablierapp/sablier/cmd/healthcheck"
+	"github.com/sablierapp/sablier/cmd/version"
+	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"log/slog"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/sablierapp/sablier/config"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 var conf = config.NewConfig()
 var cfgFile string
 
-func Execute() {
+func main() {
 	cmd := NewRootCommand()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
@@ -42,7 +43,7 @@ It provides an integrations with multiple reverse proxies and different loading 
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "configFile", "", "Config file path. If not defined, looks for sablier.(yml|yaml|toml) in /etc/sablier/ > $XDG_CONFIG_HOME > $HOME/.config/ and current directory")
 
-	startCmd := newStartCommand()
+	startCmd := NewCmd()
 	// Provider flags
 	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
 	viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
@@ -69,7 +70,7 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
 
 	// logging level
-	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", strings.ToLower(slog.LevelInfo.String()), "The logging level. Can be one of [panic, fatal, error, warn, info, debug, trace]")
+	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", strings.ToLower(slog.LevelInfo.String()), "The logging level. Can be one of [error, warn, info, debug]")
 	viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("logging.level"))
 
 	// strategy
@@ -85,9 +86,9 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
 
 	rootCmd.AddCommand(startCmd)
-	rootCmd.AddCommand(newVersionCommand())
+	rootCmd.AddCommand(version.NewCmd())
 
-	healthCmd := newHealthCommand()
+	healthCmd := healthcheck.NewCmd()
 	healthCmd.Flags().String("url", "http://localhost:10000/health", "Sablier health endpoint")
 	rootCmd.AddCommand(healthCmd)
 
@@ -146,4 +147,22 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}
 	})
+}
+
+func NewCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "start",
+		Short: "Start the Sablier server",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := viper.Unmarshal(&conf)
+			if err != nil {
+				panic(err)
+			}
+
+			err = Start(cmd.Context(), conf)
+			if err != nil {
+				panic(err)
+			}
+		},
+	}
 }

@@ -30,7 +30,7 @@ jobs:
         cache-dependency-path: go.sum
 
     - name: Build
-      run: go build -v .
+      run: go build -v ./cmd/sablier
 
     - name: Test
       run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson > junit.xml

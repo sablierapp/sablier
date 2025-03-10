@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (p *DockerClassicProvider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
@@ -49,7 +49,7 @@ func containerToInstance(c dockertypes.Container) sablier.InstanceConfiguration 
 	}
 }
 
-func (p *DockerClassicProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	args := filters.NewArgs()
 	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 

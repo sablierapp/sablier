@@ -47,7 +47,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := docker.NewDockerClassicProvider(ctx, c.client, slogt.New(t))
+			p, err := docker.New(ctx, c.client, slogt.New(t))
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

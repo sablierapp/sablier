@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
@@ -118,7 +118,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.NewKubernetesProvider(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
@@ -126,7 +126,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			tt.want.Name = name
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("KubernetesProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.DeepEqual(t, got, tt.want)

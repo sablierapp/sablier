@@ -1,8 +1,8 @@
-package app
+package main
 
 import (
 	"github.com/lmittmann/tint"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"log/slog"
 	"os"
 	"strings"

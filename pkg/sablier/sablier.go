@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/go-cmp/cmp"
 	"log/slog"
+	"sync"
 	"time"
 )
 
@@ -18,11 +19,14 @@ type Sablier interface {
 	RemoveInstance(ctx context.Context, name string) error
 	SetGroups(groups map[string][]string)
 	StopAllUnregisteredInstances(ctx context.Context) error
+	GroupWatch(ctx context.Context)
 }
 
 type sablier struct {
 	provider Provider
 	sessions Store
+
+	groupsMu sync.RWMutex
 	groups   map[string][]string
 
 	l *slog.Logger
@@ -32,12 +36,15 @@ func New(logger *slog.Logger, store Store, provider Provider) Sablier {
 	return &sablier{
 		provider: provider,
 		sessions: store,
+		groupsMu: sync.RWMutex{},
 		groups:   map[string][]string{},
 		l:        logger,
 	}
 }
 
 func (s *sablier) SetGroups(groups map[string][]string) {
+	s.groupsMu.Lock()
+	defer s.groupsMu.Unlock()
 	if groups == nil {
 		groups = map[string][]string{}
 	}

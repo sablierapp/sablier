@@ -14,11 +14,11 @@ type Provider struct {
 }
 
 type Kubernetes struct {
-	//QPS limit for  K8S API access client-side throttle
+	// QPS limit for  K8S API access client-side throttle
 	QPS float32 `mapstructure:"QPS" yaml:"QPS" default:"5"`
-	//Maximum burst for client-side throttle
+	// Maximum burst for client-side throttle
 	Burst int `mapstructure:"BURST" yaml:"Burst" default:"10"`
-	//Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
+	// Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
 	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
 }
 
@@ -31,7 +31,7 @@ func NewProviderConfig() Provider {
 		Kubernetes: Kubernetes{
 			QPS:       5,
 			Burst:     10,
-			Delimiter: "_", //Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
+			Delimiter: "_",
 		},
 	}
 }

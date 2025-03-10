@@ -2,7 +2,7 @@ package kubernetes_test
 
 import (
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -19,7 +19,7 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	kind := setupKinD(t, ctx)
-	p, err := kubernetes.NewKubernetesProvider(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
 	d1, err := kind.CreateMimicDeployment(ctx, MimicOptions{
@@ -93,7 +93,7 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 
 	ctx := t.Context()
 	kind := setupKinD(t, ctx)
-	p, err := kubernetes.NewKubernetesProvider(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
 	d1, err := kind.CreateMimicDeployment(ctx, MimicOptions{

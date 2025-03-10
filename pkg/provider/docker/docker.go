@@ -9,15 +9,15 @@ import (
 )
 
 // Interface guard
-var _ sablier.Provider = (*DockerClassicProvider)(nil)
+var _ sablier.Provider = (*Provider)(nil)
 
-type DockerClassicProvider struct {
+type Provider struct {
 	Client          client.APIClient
 	desiredReplicas int32
 	l               *slog.Logger
 }
 
-func NewDockerClassicProvider(ctx context.Context, cli *client.Client, logger *slog.Logger) (*DockerClassicProvider, error) {
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "docker"))
 
 	serverVersion, err := cli.ServerVersion(ctx)
@@ -29,7 +29,7 @@ func NewDockerClassicProvider(ctx context.Context, cli *client.Client, logger *s
 		slog.String("version", serverVersion.Version),
 		slog.String("api_version", serverVersion.APIVersion),
 	)
-	return &DockerClassicProvider{
+	return &Provider{
 		Client:          cli,
 		desiredReplicas: 1,
 		l:               logger,

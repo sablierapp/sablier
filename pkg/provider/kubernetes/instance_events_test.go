@@ -3,7 +3,7 @@ package kubernetes_test
 import (
 	"context"
 	"github.com/neilotoole/slogt"
-	"github.com/sablierapp/sablier/config"
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +19,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	kind := setupKinD(t, ctx)
-	p, err := kubernetes.NewKubernetesProvider(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
 	waitC := make(chan string)

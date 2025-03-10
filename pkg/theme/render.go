@@ -2,10 +2,10 @@ package theme
 
 import (
 	"fmt"
+	"github.com/sablierapp/sablier/pkg/version"
 	"io"
 
 	"github.com/sablierapp/sablier/pkg/durations"
-	"github.com/sablierapp/sablier/version"
 )
 
 func (t *Themes) Render(name string, opts Options, writer io.Writer) error {

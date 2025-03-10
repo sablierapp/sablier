@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/theme"
+	"github.com/sablierapp/sablier/pkg/version"
 	"log/slog"
 	"os"
 	"testing"
 	"testing/fstest"
 	"time"
-
-	"github.com/sablierapp/sablier/version"
 )
 
 var (

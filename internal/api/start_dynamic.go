@@ -8,16 +8,25 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/app/http/routes"
-	"github.com/sablierapp/sablier/app/http/routes/models"
-	theme2 "github.com/sablierapp/sablier/pkg/theme"
+	"github.com/sablierapp/sablier/pkg/theme"
 )
 
-func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
+type DynamicRequest struct {
+	Group            string        `form:"group"`
+	Names            []string      `form:"names"`
+	ShowDetails      bool          `form:"show_details"`
+	DisplayName      string        `form:"display_name"`
+	Theme            string        `form:"theme"`
+	SessionDuration  time.Duration `form:"session_duration"`
+	RefreshFrequency time.Duration `form:"refresh_frequency"`
+}
+
+func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/dynamic", func(c *gin.Context) {
-		request := models.DynamicRequest{
+		request := DynamicRequest{
 			Theme:            s.StrategyConfig.Dynamic.DefaultTheme,
 			ShowDetails:      s.StrategyConfig.Dynamic.ShowDetailsByDefault,
 			RefreshFrequency: s.StrategyConfig.Dynamic.DefaultRefreshFrequency,
@@ -42,9 +51,9 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
-			sessionState, err = s.SessionsManager.RequestSession(c, request.Names, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSession(c, request.Names, request.SessionDuration)
 		} else {
-			sessionState, err = s.SessionsManager.RequestSessionGroup(c, request.Group, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSessionGroup(c, request.Group, request.SessionDuration)
 			var groupNotFoundError sablier.ErrGroupNotFound
 			if errors.As(err, &groupNotFoundError) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
@@ -64,7 +73,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		renderOptions := theme2.Options{
+		renderOptions := theme.Options{
 			DisplayName:      request.DisplayName,
 			ShowDetails:      request.ShowDetails,
 			SessionDuration:  request.SessionDuration,
@@ -75,7 +84,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 		buf := new(bytes.Buffer)
 		writer := bufio.NewWriter(buf)
 		err = s.Theme.Render(request.Theme, renderOptions, writer)
-		var themeNotFound theme2.ErrThemeNotFound
+		var themeNotFound theme.ErrThemeNotFound
 		if errors.As(err, &themeNotFound) {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
@@ -89,7 +98,7 @@ func StartDynamic(router *gin.RouterGroup, s *routes.ServeStrategy) {
 	})
 }
 
-func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState) (instances []theme2.Instance) {
+func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState) (instances []theme.Instance) {
 	if sessionState == nil {
 		return
 	}
@@ -105,7 +114,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 	return
 }
 
-func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo) theme2.Instance {
+func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo) theme.Instance {
 
 	var err error
 	if instanceState.Message == "" {
@@ -114,7 +123,7 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		err = errors.New(instanceState.Message)
 	}
 
-	return theme2.Instance{
+	return theme.Instance{
 		Name:            instanceState.Name,
 		Status:          string(instanceState.Status),
 		CurrentReplicas: instanceState.CurrentReplicas,

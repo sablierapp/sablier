@@ -7,7 +7,7 @@ import (
 	"log/slog"
 )
 
-func (p *DockerClassicProvider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
+func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	spec, err := p.Client.ContainerInspect(ctx, name)
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot inspect container: %w", err)
