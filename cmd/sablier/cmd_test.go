@@ -132,24 +132,19 @@ func TestPrecedence(t *testing.T) {
 
 func setEnvsFromFile(path string) {
 	readFile, err := os.Open(path)
-
 	if err != nil {
 		panic(err)
 	}
 
 	defer readFile.Close()
 
-	if err != nil {
-		panic(err)
-	}
-
 	fileScanner := bufio.NewScanner(readFile)
 
 	fileScanner.Split(bufio.ScanLines)
 
 	for fileScanner.Scan() {
-		splitted := strings.Split(fileScanner.Text(), "=")
-		os.Setenv(splitted[0], splitted[1])
+		split := strings.Split(fileScanner.Text(), "=")
+		os.Setenv(split[0], split[1])
 	}
 }
 
@@ -162,17 +157,13 @@ func unsetEnvsFromFile(path string) {
 
 	defer readFile.Close()
 
-	if err != nil {
-		panic(err)
-	}
-
 	fileScanner := bufio.NewScanner(readFile)
 
 	fileScanner.Split(bufio.ScanLines)
 
 	for fileScanner.Scan() {
-		splitted := strings.Split(fileScanner.Text(), "=")
-		os.Unsetenv(splitted[0])
+		split := strings.Split(fileScanner.Text(), "=")
+		os.Unsetenv(split[0])
 	}
 }
 
