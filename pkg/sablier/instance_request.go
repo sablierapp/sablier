@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (s *sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
+func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
 	if name == "" {
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}

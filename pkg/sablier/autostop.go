@@ -13,7 +13,7 @@ import (
 // as running instances by Sablier.
 // By default, Sablier does not stop all already running instances. Meaning that you need to make an
 // initial request in order to trigger the scaling to zero.
-func (s *sablier) StopAllUnregisteredInstances(ctx context.Context) error {
+func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 	instances, err := s.provider.InstanceList(ctx, provider.InstanceListOptions{
 		All: false, // Only running instances
 	})
@@ -40,7 +40,7 @@ func (s *sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 	return waitGroup.Wait()
 }
 
-func (s *sablier) stopFunc(ctx context.Context, name string) func() error {
+func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
 	return func() error {
 		err := s.provider.InstanceStop(ctx, name)
 		if err != nil {

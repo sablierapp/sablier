@@ -27,7 +27,7 @@ build:
 	go build -v ./cmd/sablier
 
 test:
-	go test -v ./...
+	go test ./...
 
 plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
 

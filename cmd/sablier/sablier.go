@@ -36,6 +36,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	}
 
 	s := sablier.New(logger, store, provider)
+	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 
 	groups, err := provider.InstanceGroups(ctx)
 	if err != nil {

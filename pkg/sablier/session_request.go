@@ -15,7 +15,7 @@ type InstanceInfoWithError struct {
 	Error    error        `json:"error"`
 }
 
-func (s *sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *Sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names cannot be empty")
 	}
@@ -47,7 +47,7 @@ func (s *sablier) RequestSession(ctx context.Context, names []string, duration t
 	return sessionState, nil
 }
 
-func (s *sablier) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
+func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
@@ -67,7 +67,7 @@ func (s *sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 	return s.RequestSession(ctx, names, duration)
 }
 
-func (s *sablier) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+func (s *Sablier) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
 	session, err := s.RequestSession(ctx, names, duration)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (s *sablier) RequestReadySession(ctx context.Context, names []string, durat
 		return session, nil
 	}
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(s.BlockingRefreshFrequency)
 	readiness := make(chan *SessionState)
 	errch := make(chan error)
 	quit := make(chan struct{})
@@ -121,7 +121,7 @@ func (s *sablier) RequestReadySession(ctx context.Context, names []string, durat
 	}
 }
 
-func (s *sablier) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
+func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
 
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")

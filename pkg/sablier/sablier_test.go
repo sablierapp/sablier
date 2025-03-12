@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func setupSablier(t *testing.T) (sablier.Sablier, *storetest.MockStore, *providertest.MockProvider) {
+func setupSablier(t *testing.T) (*sablier.Sablier, *storetest.MockStore, *providertest.MockProvider) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 

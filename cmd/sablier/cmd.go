@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sablierapp/sablier/cmd/healthcheck"
 	"github.com/sablierapp/sablier/cmd/version"
@@ -43,7 +44,7 @@ It provides an integrations with multiple reverse proxies and different loading 
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "configFile", "", "Config file path. If not defined, looks for sablier.(yml|yaml|toml) in /etc/sablier/ > $XDG_CONFIG_HOME > $HOME/.config/ and current directory")
 
-	startCmd := NewCmd()
+	startCmd := newStartCommand()
 	// Provider flags
 	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
 	viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
@@ -84,6 +85,8 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("strategy.dynamic.default-refresh-frequency", startCmd.Flags().Lookup("strategy.dynamic.default-refresh-frequency"))
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")
 	viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Default refresh frequency at which the instances status are checked for blocking strategy")
+	viper.BindPFlag("strategy.blocking.default-refresh-frequency", startCmd.Flags().Lookup("strategy.blocking.default-refresh-frequency"))
 
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(version.NewCmd())
@@ -115,10 +118,8 @@ func initializeConfig(cmd *cobra.Command) error {
 	// if we cannot parse the config file.
 	if err := v.ReadInConfig(); err != nil {
 		// It's okay if there isn't a config file
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return err
-		} else if cfgFile != "" {
-			// But if we explicitely defined the config file it should return the error
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
 			return err
 		}
 	}
@@ -149,7 +150,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 	})
 }
 
-func NewCmd() *cobra.Command {
+var newStartCommand = func() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Start the Sablier server",

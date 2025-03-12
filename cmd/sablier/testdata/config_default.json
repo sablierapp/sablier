@@ -30,7 +30,8 @@
       "DefaultRefreshFrequency": 5000000000
     },
     "Blocking": {
-      "DefaultTimeout": 60000000000
+      "DefaultTimeout": 60000000000,
+      "DefaultRefreshFrequency": 5000000000
     }
   }
 }

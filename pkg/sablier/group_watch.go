@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (s *sablier) GroupWatch(ctx context.Context) {
+func (s *Sablier) GroupWatch(ctx context.Context) {
 	// This should be changed to event based instead of polling.
 	ticker := time.NewTicker(2 * time.Second)
 	for {
