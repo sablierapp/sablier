@@ -8,41 +8,32 @@ import (
 	"time"
 )
 
-//go:generate go tool mockgen -package sabliertest -source=sablier.go -destination=sabliertest/mocks_sablier.go *
-
-type Sablier interface {
-	RequestSession(ctx context.Context, names []string, duration time.Duration) (*SessionState, error)
-	RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (*SessionState, error)
-	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error)
-	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*SessionState, error)
-
-	RemoveInstance(ctx context.Context, name string) error
-	SetGroups(groups map[string][]string)
-	StopAllUnregisteredInstances(ctx context.Context) error
-	GroupWatch(ctx context.Context)
-}
-
-type sablier struct {
+type Sablier struct {
 	provider Provider
 	sessions Store
 
 	groupsMu sync.RWMutex
 	groups   map[string][]string
 
+	// BlockingRefreshFrequency is the frequency at which the instances are checked
+	// against the provider. Defaults to 5 seconds.
+	BlockingRefreshFrequency time.Duration
+
 	l *slog.Logger
 }
 
-func New(logger *slog.Logger, store Store, provider Provider) Sablier {
-	return &sablier{
-		provider: provider,
-		sessions: store,
-		groupsMu: sync.RWMutex{},
-		groups:   map[string][]string{},
-		l:        logger,
+func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
+	return &Sablier{
+		provider:                 provider,
+		sessions:                 store,
+		groupsMu:                 sync.RWMutex{},
+		groups:                   map[string][]string{},
+		l:                        logger,
+		BlockingRefreshFrequency: 5 * time.Second,
 	}
 }
 
-func (s *sablier) SetGroups(groups map[string][]string) {
+func (s *Sablier) SetGroups(groups map[string][]string) {
 	s.groupsMu.Lock()
 	defer s.groupsMu.Unlock()
 	if groups == nil {
@@ -55,6 +46,6 @@ func (s *sablier) SetGroups(groups map[string][]string) {
 	}
 }
 
-func (s *sablier) RemoveInstance(ctx context.Context, name string) error {
+func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
 	return s.sessions.Delete(ctx, name)
 }

@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: read
       id-token: write # OIDC with Codecov
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
 
@@ -33,15 +35,26 @@ jobs:
       run: go build -v ./cmd/sablier
 
     - name: Test
-      run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson > junit.xml
+      run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() }}
+      uses: acouvreur/codecov-action@main
       with:
         use_oidc: true
+        fail_ci_if_error: true
 
     - name: Upload test results to Codecov
       if: ${{ !cancelled() }}
       uses: codecov/test-results-action@v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        use_oidc: true
+        fail_ci_if_error: true
+
+    - name: Run Basic Test Results Action
+      if: ${{ !cancelled() }}
+      uses: codecov/basic-test-results@v1
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: junit.xml
+        disable-search: true

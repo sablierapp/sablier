@@ -10,7 +10,8 @@ type DynamicStrategy struct {
 }
 
 type BlockingStrategy struct {
-	DefaultTimeout time.Duration `mapstructure:"DEFAULT_TIMEOUT" yaml:"defaultTimeout" default:"1m"`
+	DefaultTimeout          time.Duration `mapstructure:"DEFAULT_TIMEOUT" yaml:"defaultTimeout" default:"1m"`
+	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULT_REFRESH_FREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
 }
 
 type Strategy struct {
@@ -35,6 +36,7 @@ func newDynamicStrategy() DynamicStrategy {
 
 func newBlockingStrategy() BlockingStrategy {
 	return BlockingStrategy{
-		DefaultTimeout: 1 * time.Minute,
+		DefaultTimeout:          1 * time.Minute,
+		DefaultRefreshFrequency: 5 * time.Second,
 	}
 }

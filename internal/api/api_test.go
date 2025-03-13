@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/internal/api/apitest"
 	config2 "github.com/sablierapp/sablier/pkg/config"
-	"github.com/sablierapp/sablier/pkg/sablier/sabliertest"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strategy *ServeStrategy, mock *sabliertest.MockSablier) {
+func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strategy *ServeStrategy, mock *apitest.MockSablier) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	ctrl := gomock.NewController(t)
@@ -22,7 +22,7 @@ func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strateg
 
 	app = gin.New()
 	router = app.Group("/api")
-	mock = sabliertest.NewMockSablier(ctrl)
+	mock = apitest.NewMockSablier(ctrl)
 	strategy = &ServeStrategy{
 		Theme:          th,
 		Sablier:        mock,
