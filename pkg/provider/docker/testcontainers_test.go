@@ -47,7 +47,7 @@ func setupDinD(t *testing.T, ctx context.Context) *dindContainer {
 	assert.NilError(t, err)
 
 	req := testcontainers.ContainerRequest{
-		Image:        "docker:dind",
+		Image:        "docker:28.0.1-dind",
 		ExposedPorts: []string{"2375/tcp"},
 		WaitingFor:   wait.ForLog("API listen on [::]:2375"),
 		Cmd: []string{
@@ -106,7 +106,7 @@ func pullMimicImage(ctx context.Context, cli *client.Client) error {
 		return fmt.Errorf("failed to pull image: %w", err)
 	}
 	defer reader.Close()
-	resp, err := cli.ImageLoad(ctx, reader, true)
+	resp, err := cli.ImageLoad(ctx, reader)
 	if err != nil {
 		return fmt.Errorf("failed to load image: %w", err)
 	}
@@ -138,7 +138,7 @@ func addMimicToDind(ctx context.Context, cli *client.Client, dindCli *client.Cli
 	}
 	defer reader.Close()
 
-	resp, err := dindCli.ImageLoad(ctx, reader, true)
+	resp, err := dindCli.ImageLoad(ctx, reader)
 	if err != nil {
 		return fmt.Errorf("failed to load image in docker in docker container: %w", err)
 	}
