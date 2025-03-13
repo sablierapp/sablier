@@ -32,7 +32,7 @@ jobs:
         cache-dependency-path: go.sum
 
     - name: Build
-      run: go build -v ./cmd/sablier
+      run: make
 
     - name: Test
       run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
@@ -58,3 +58,25 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: junit.xml
         disable-search: true
+
+    # TODO: Download release asset action with cache
+    - name: Download latest released Sablier binary
+      if: ${{ !cancelled() }}
+      id: latest-release
+      run: |
+        release_data=$(curl -s https://api.github.com/repos/sablierapp/sablier/releases/latest)
+        artifact_url=$(echo $release_data | jq -r '.assets[] | select(.name | contains("linux-amd64")) | .browser_download_url')
+        version=$(echo $release_data | jq -r '.tag_name')
+        wget -q $artifact_url -O sablier_${version}_linux-amd64
+        echo "::set-output name=artifact_path::sablier_${version}_linux-amd64"
+
+    - name: Compare the downloaded binary with the built binary
+      if: ${{ !cancelled() }}
+      run: go tool gsa -o diff.txt ${{ steps.latest-release.artifact_path }} sablier_draft_linux-amd64
+
+    - name: Comment diff on pull request
+      if: ${{ !cancelled() }}
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        file-path: diff.txt
+        comment-tag: go-binary-diff
