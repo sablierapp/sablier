@@ -77,7 +77,7 @@ jobs:
         go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
         echo "diff<<EOF" >> $GITHUB_OUTPUT
         echo "$(echo diff.txt)" >> $GITHUB_OUTPUT
-        echo "EOF" >> $ GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Comment diff on pull request
       if: ${{ !cancelled() }}
