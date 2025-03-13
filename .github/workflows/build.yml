@@ -72,11 +72,19 @@ jobs:
 
     - name: Compare the downloaded binary with the built binary
       if: ${{ !cancelled() }}
-      run: go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
+      id: diff
+      run: |
+        go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
+        echo "diff<<EOF" >> $GITHUB_OUTPUT
+        echo "$(echo diff.txt)" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Comment diff on pull request
       if: ${{ !cancelled() }}
       uses: thollander/actions-comment-pull-request@v3
       with:
-        file-path: diff.txt
+        message:
+          ```
+            ${{ steps.diff.outputs.diff }}
+            ```
         comment-tag: go-binary-diff
