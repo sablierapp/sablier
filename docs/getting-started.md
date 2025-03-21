@@ -14,7 +14,7 @@ You can check the available providers [here](providers/overview?id=available-pro
 
 ## Identify your reverse proxy
 
-Once you've identified you're [Provider](providers/overview), you'll want to identify your [Reverse Proxy](plugins/overview).
+Once you've identified your [Provider](providers/overview), you'll want to identify your [Reverse Proxy](plugins/overview).
 
 ?> Because Sablier is designed as an API that can be used on its own, reverse proxy integrations acts as a client of that API.
 
