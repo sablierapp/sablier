@@ -17,7 +17,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t, ctx)
+	dind := setupDinD(t)
 	p, err := docker.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -76,7 +76,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t, ctx)
+	dind := setupDinD(t)
 	p, err := docker.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 

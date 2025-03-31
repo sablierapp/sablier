@@ -16,6 +16,8 @@ github.com/ZxillyFork/gosym v0.0.0-20240510024817-deed2b882525 h1:JtN7QBnRxeyMvD
 github.com/ZxillyFork/gosym v0.0.0-20240510024817-deed2b882525/go.mod h1:AC2xDL/KBa60pBB/m0zRCDCGvzLrMkmW/aY0q+uThFE=
 github.com/ZxillyFork/trie v0.0.0-20240512061834-f75150731646 h1:Mkm17zXN+CiAXdV9/7mdCUGuEzlUNu73mB6En++kUkE=
 github.com/ZxillyFork/trie v0.0.0-20240512061834-f75150731646/go.mod h1:wbU6+GbSHDwVSMpzFyOVrX/WdFHXH4j7j8Rg8rbyo+4=
+github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250331232507-d1b1fd4648c0 h1:OGEqiq/ZyhJpaHOPLNRun7gfwb/4gdOGUmFMUzc06s4=
+github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250331232507-d1b1fd4648c0/go.mod h1:1M9z+UcsjklCE0wmuUDgtuq7SCc3QNl6UbElmmg4bMo=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
