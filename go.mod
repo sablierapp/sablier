@@ -2,8 +2,6 @@ module github.com/sablierapp/sablier
 
 go 1.24.0
 
-replace github.com/testcontainers/testcontainers-go/modules/dind v0.36.0 => github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250331232507-d1b1fd4648c0
-
 require (
 	github.com/docker/docker v28.0.4+incompatible
 	github.com/gavv/httpexpect/v2 v2.17.0
@@ -18,7 +16,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/dind v0.36.0
+	github.com/testcontainers/testcontainers-go/modules/dind v0.36.1-0.20250331234932-8235aa513182 // Waiting for fix to be released on v0.36.1
 	github.com/testcontainers/testcontainers-go/modules/k3s v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/valkey v0.36.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f

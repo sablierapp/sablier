@@ -346,7 +346,6 @@ github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrd
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250330170349-81ec5f4c2916 h1:CgV1qXEeVV805GHutEJ8UJEhXvMjPfpDoFy0ogKuzfE=
 github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250330170349-81ec5f4c2916/go.mod h1:1M9z+UcsjklCE0wmuUDgtuq7SCc3QNl6UbElmmg4bMo=
-github.com/acouvreur/testcontainers-go/modules/dind v0.0.0-20250331232507-d1b1fd4648c0/go.mod h1:1M9z+UcsjklCE0wmuUDgtuq7SCc3QNl6UbElmmg4bMo=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 h1:rFw4nCn9iMW+Vajsk51NtYIcwSTkXr+JGrMd36kTDJw=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/alecthomas/chroma/v2 v2.13.0 h1:VP72+99Fb2zEcYM0MeaWJmV+xQvz5v5cxRHd+ooU1lI=
@@ -851,6 +850,8 @@ github.com/streadway/handy v0.0.0-20200128134331-0f66f006fb2e/go.mod h1:qNTQ5P5J
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502 h1:34icjjmqJ2HPjrSuJYEkdZ+0ItmGQAQ75cRHIiftIyE=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 h1:UyzmZLoiDWMRywV4DUYb9Fbt8uiOSooupjTq10vpvnU=
+github.com/testcontainers/testcontainers-go/modules/dind v0.36.0 h1:SKzxTTovtb93XQn7dwILGd6yZsZMbXXxZjGamfHvQz4=
+github.com/testcontainers/testcontainers-go/modules/dind v0.36.0/go.mod h1:1M9z+UcsjklCE0wmuUDgtuq7SCc3QNl6UbElmmg4bMo=
 github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gtvVDbmPg=
 github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
 github.com/valyala/tcplisten v1.0.0 h1:rBHj/Xf+E1tRGZyWIWwJDiRY0zc1Js+CV5DqwacVSA8=
