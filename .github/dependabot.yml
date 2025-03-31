@@ -9,6 +9,10 @@ updates:
     schedule:
       interval: "daily"
     groups:
+      testcontainers-go:
+        patterns:
+          - "github.com/testcontainers/testcontainers-go"
+          - "github.com/testcontainers/testcontainers-go/modules/*"
       k8s.io:
         patterns:
           - "k8s.io/api"
