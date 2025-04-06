@@ -1,4 +1,3 @@
-
 # Install Sablier on its own
 
 You can install Sablier with the following flavors:
@@ -18,7 +17,7 @@ Choose one of the Docker images and run it with one sample configuration file:
 
 ```bash
 docker run -d -p 10000:10000 \
-    -v $PWD/sablier.yml:/etc/sablier/sablier.yml sablierapp/sablier:1.9.0
+    -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.9.0
 ```
 
 ## Use the binary distribution
