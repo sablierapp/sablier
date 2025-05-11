@@ -20,7 +20,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/k3s v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/valkey v0.37.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
-	github.com/valkey-io/valkey-go v1.0.57
+	github.com/valkey-io/valkey-go v1.0.59
 	go.uber.org/mock v0.5.2
 	golang.org/x/sync v0.14.0
 	gotest.tools/v3 v3.5.2
