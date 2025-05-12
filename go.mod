@@ -10,7 +10,7 @@ require (
 	github.com/lmittmann/tint v1.0.7
 	github.com/neilotoole/slogt v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/samber/slog-gin v1.15.0
+	github.com/samber/slog-gin v1.15.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
