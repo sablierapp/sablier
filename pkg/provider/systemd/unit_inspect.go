@@ -37,7 +37,7 @@ func (p *Provider) getUnit(ctx context.Context, name string) (Unit, error) {
 	}
 
 	unitStatus := unitStatuses[0]
-	props, err := p.Con.GetUnitPropertiesContext(ctx, unitStatus.Name)
+	props, err := p.parseSablierProperties(unitStatus)
 	if err != nil {
 		return Unit{}, err
 	}

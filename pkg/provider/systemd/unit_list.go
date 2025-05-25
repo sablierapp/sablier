@@ -25,8 +25,8 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 func unitToInstance(u Unit) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := u.props["X-Sablier-Enable"]; ok {
-		if g, ok := u.props["X-Sablier-Group"].(string); ok {
+	if _, ok := u.props["Enable"]; ok {
+		if g, ok := u.props["Group"]; ok {
 			group = g
 		} else {
 			group = "default"
@@ -50,8 +50,8 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	groups := make(map[string][]string)
 	for _, u := range units {
-		groupName, ok := u.props["X-Sablier-Group"].(string)
-		if !ok || len(groupName) == 0 {
+		groupName := u.props["Group"]
+		if len(groupName) == 0 {
 			groupName = "default"
 		}
 		group := groups[groupName]
@@ -66,24 +66,24 @@ func (p *Provider) listUnits(ctx context.Context, options provider.InstanceListO
 	var unitStatuses []dbus.UnitStatus
 	var err error
 	if options.All {
-		unitStatuses, err = p.Con.ListUnitsFilteredContext(ctx, []string{"active"})
-	} else {
 		unitStatuses, err = p.Con.ListUnitsContext(ctx)
+	} else {
+		unitStatuses, err = p.Con.ListUnitsFilteredContext(ctx, []string{"active"})
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	units := make([]Unit, 0, len(unitStatuses))
+	units := make([]Unit, 0)
 	for _, unitStatus := range unitStatuses {
-		props, err := p.Con.GetUnitPropertiesContext(ctx, unitStatus.Name)
+		sablierProps, err := p.parseSablierProperties(unitStatus)
 		if err != nil {
 			return nil, err
 		}
-		if props["X-Sablier-Enable"] == "true" {
+		if sablierProps["Enable"] == "true" {
 			units = append(units, Unit{
 				status: unitStatus,
-				props:  props,
+				props:  sablierProps,
 			})
 		}
 	}
@@ -93,5 +93,5 @@ func (p *Provider) listUnits(ctx context.Context, options provider.InstanceListO
 
 type Unit struct {
 	status dbus.UnitStatus
-	props  map[string]interface{}
+	props  map[string]string
 }

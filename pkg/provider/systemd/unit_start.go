@@ -22,7 +22,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 		p.l.ErrorContext(ctx, "context cancelled while waiting for systemd unit to start", slog.String("name", name))
 		return ctx.Err()
 	case status := <-ch:
-		if status != "done" {
+		if status == "done" {
 			p.l.DebugContext(ctx, "systemd unit started", slog.String("name", name))
 			return nil
 		}
