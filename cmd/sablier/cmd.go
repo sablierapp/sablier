@@ -3,16 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/sablierapp/sablier/cmd/healthcheck"
 	"github.com/sablierapp/sablier/cmd/version"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"log/slog"
-	"os"
-	"strings"
-	"time"
 )
 
 const (
@@ -56,6 +57,8 @@ It provides an integrations with multiple reverse proxies and different loading 
 	viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
 	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
 	viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
+	startCmd.Flags().BoolVar(&conf.Provider.Systemd.UserInstance, "provider.systemd.userinstance", false, "Whether to use systemd user instance. Defaults to false, which means it will use systemd system instance.")
+	viper.BindPFlag("provider.systemd.userinstance", startCmd.Flags().Lookup("provider.systemd.userinstance"))
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
 	viper.BindPFlag("server.port", startCmd.Flags().Lookup("server.port"))
