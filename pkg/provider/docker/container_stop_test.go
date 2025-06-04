@@ -11,31 +11,32 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func doFactory(ctx context.Context, addLabel bool, labelValue string) func(dind *dindContainer) (string, error) {
+	return func(dind *dindContainer) (string, error) {
+		opts := MimicOptions{}
+		if addLabel {
+			opts = MimicOptions{Labels: map[string]string{"sablier.pauseOnly": labelValue}}
+		}
+		c, err := dind.CreateMimic(ctx, opts)
+		if err != nil {
+			return "", err
+		}
+
+		err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+		if err != nil {
+			return "", err
+		}
+
+		return c.ID, nil
+	}
+}
+
 func TestDockerClassicProvider_Stop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 
 	ctx := context.Background()
-	doFactory := func(addLabel bool, labelValue string) func(dind *dindContainer) (string, error) {
-		return func(dind *dindContainer) (string, error) {
-			opts := MimicOptions{}
-			if addLabel {
-				opts = MimicOptions{Labels: map[string]string{"sablier.pauseOnly": labelValue}}
-			}
-			c, err := dind.CreateMimic(ctx, opts)
-			if err != nil {
-				return "", err
-			}
-
-			err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
-			if err != nil {
-				return "", err
-			}
-
-			return c.ID, nil
-		}
-	}
 	type args struct {
 		do func(dind *dindContainer) (string, error)
 	}
@@ -58,7 +59,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		{
 			name: "container stops as expected without pauseOnly label",
 			args: args{
-				do: doFactory(false, ""),
+				do: doFactory(ctx, false, ""),
 			},
 			err: nil,
 			assertions: func(dind *dindContainer, id string) {
@@ -69,7 +70,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		{
 			name: "container stops as expected with pauseOnly label set to false",
 			args: args{
-				do: doFactory(true, "false"),
+				do: doFactory(ctx, true, "false"),
 			},
 			err: nil,
 			assertions: func(dind *dindContainer, id string) {
@@ -80,7 +81,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		{
 			name: "container pauses as expected",
 			args: args{
-				do: doFactory(true, "true"),
+				do: doFactory(ctx, true, "true"),
 			},
 			err: nil,
 			assertions: func(dind *dindContainer, id string) {
