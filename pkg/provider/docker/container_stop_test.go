@@ -3,11 +3,12 @@ package docker_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestDockerClassicProvider_Stop(t *testing.T) {
@@ -20,9 +21,10 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name string
-		args args
-		err  error
+		name       string
+		args       args
+		err        error
+		assertions func(dind *dindContainer, id string)
 	}{
 		{
 			name: "non existing container stop",
@@ -31,10 +33,11 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
+			err:        fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
+			assertions: func(dind *dindContainer, id string) {},
 		},
 		{
-			name: "container stop as expected",
+			name: "container stops as expected without pauseOnly label",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -51,6 +54,57 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 				},
 			},
 			err: nil,
+			assertions: func(dind *dindContainer, id string) {
+				inspectResponse, _ := dind.client.ContainerInspect(ctx, id)
+				assert.Equal(t, inspectResponse.State.Status, "exited")
+			},
+		},
+		{
+			name: "container stops as expected with pauseOnly label set to false",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.pauseOnly": "false"}})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			err: nil,
+			assertions: func(dind *dindContainer, id string) {
+				inspectResponse, _ := dind.client.ContainerInspect(ctx, id)
+				assert.Equal(t, inspectResponse.State.Status, "exited")
+			},
+		},
+		{
+			name: "container pauses as expected",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.pauseOnly": "true"}})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			err: nil,
+			assertions: func(dind *dindContainer, id string) {
+				inspectResponse, err := dind.client.ContainerInspect(ctx, id)
+				assert.NilError(t, err)
+				assert.Equal(t, inspectResponse.State.Status, "paused")
+			},
 		},
 	}
 	c := setupDinD(t)
@@ -58,6 +112,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := docker.New(ctx, c.client, slogt.New(t))
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
@@ -68,6 +123,8 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			} else {
 				assert.NilError(t, err)
 			}
+
+			tt.assertions(c, name)
 		})
 	}
 }
