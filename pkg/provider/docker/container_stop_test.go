@@ -53,7 +53,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 				},
 			},
 			err:        fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
-			assertions: func(dind *dindContainer, id string) {},
+			assertions: nil,
 		},
 		{
 			name: "container stops as expected without pauseOnly label",
@@ -107,7 +107,9 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 				assert.NilError(t, err)
 			}
 
-			tt.assertions(c, name)
+			if tt.assertions != nil {
+				tt.assertions(c, name)
+			}
 		})
 	}
 }

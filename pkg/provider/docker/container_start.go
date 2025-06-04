@@ -16,18 +16,18 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 	}
 
 	if pauseInsteadOfStop && containers.State.Paused {
-		// TODO: InstanceStart should block until the container is ready.
 		err := p.Client.ContainerUnpause(ctx, name)
 		if err != nil {
 			return fmt.Errorf("cannot unpause container %s: %w", name, err)
 		}
 	} else {
-		// TODO: InstanceStart should block until the container is ready.
 		err := p.Client.ContainerStart(ctx, name, container.StartOptions{})
 		if err != nil {
 			return fmt.Errorf("cannot start container %s: %w", name, err)
 		}
 	}
+
+	// TODO: InstanceStart should block until the container is ready.
 
 	return nil
 }
