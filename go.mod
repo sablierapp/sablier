@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/gavv/httpexpect/v2 v2.17.0
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/google/go-cmp v0.7.0
 	github.com/lmittmann/tint v1.1.0
 	github.com/neilotoole/slogt v1.1.0
