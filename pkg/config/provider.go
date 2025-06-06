@@ -11,6 +11,7 @@ type Provider struct {
 	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
+	Systemd           Systemd
 }
 
 type Kubernetes struct {
@@ -22,7 +23,12 @@ type Kubernetes struct {
 	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes"}
+type Systemd struct {
+	// Use systemd user instance
+	UserInstance bool `mapstructure:"userInstance" yaml:"userInstance" default:"false"`
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "systemd"}
 
 func NewProviderConfig() Provider {
 	return Provider{
