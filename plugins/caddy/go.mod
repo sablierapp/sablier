@@ -1,6 +1,7 @@
 module github.com/sablierapp/sablier/plugins/caddy
 
 go 1.24.0
+
 toolchain go1.24.1
 
 require github.com/caddyserver/caddy/v2 v2.10.0
@@ -23,7 +24,7 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
-	github.com/cloudflare/circl v1.6.0 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
