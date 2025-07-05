@@ -3,14 +3,14 @@ module github.com/sablierapp/sablier
 go 1.24.0
 
 require (
-	github.com/docker/docker v28.1.1+incompatible
+	github.com/docker/docker v28.3.0+incompatible
 	github.com/gavv/httpexpect/v2 v2.17.0
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/google/go-cmp v0.7.0
-	github.com/lmittmann/tint v1.0.7
+	github.com/lmittmann/tint v1.1.2
 	github.com/neilotoole/slogt v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/samber/slog-gin v1.15.0
+	github.com/samber/slog-gin v1.15.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
@@ -20,13 +20,13 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/k3s v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/valkey v0.37.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
-	github.com/valkey-io/valkey-go v1.0.59
+	github.com/valkey-io/valkey-go v1.0.62
 	go.uber.org/mock v0.5.2
-	golang.org/x/sync v0.14.0
+	golang.org/x/sync v0.15.0
 	gotest.tools/v3 v3.5.2
-	k8s.io/api v0.33.0
-	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v0.33.0
+	k8s.io/api v0.33.2
+	k8s.io/apimachinery v0.33.2
+	k8s.io/client-go v0.33.2
 )
 
 require github.com/coreos/go-systemd/v22 v22.5.0
@@ -55,6 +55,8 @@ require (
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
+	github.com/containerd/errdefs v1.0.0 // indirect
+	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
@@ -84,7 +86,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.24.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
