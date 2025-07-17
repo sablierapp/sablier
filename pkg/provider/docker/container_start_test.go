@@ -3,10 +3,12 @@ package docker_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
+	"github.com/docker/docker/api/types/container"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestDockerClassicProvider_Start(t *testing.T) {
@@ -33,10 +35,39 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			err: fmt.Errorf("cannot start container non-existent: Error response from daemon: No such container: non-existent"),
 		},
 		{
-			name: "container start as expected",
+			name: "container start as expected for stopped container without pauseOnly label",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					return c.ID, err
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "container start as expected for stopped container with pauseOnly label",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.pauseOnly": "true"}})
+					return c.ID, err
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "container unpauses as expected for paused container with pauseOnly label",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.pauseOnly": "true"}})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+					err = dind.client.ContainerPause(ctx, c.ID)
 					return c.ID, err
 				},
 			},
@@ -58,6 +89,10 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 				assert.Error(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
+
+				inspectResponse, err := c.client.ContainerInspect(ctx, name)
+				assert.NilError(t, err)
+				assert.Equal(t, inspectResponse.State.Status, "running")
 			}
 		})
 	}

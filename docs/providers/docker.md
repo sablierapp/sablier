@@ -62,3 +62,20 @@ services:
 If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
 
 If the containers do not define a Healthcheck, then as soon as the container has the status `started`
+
+## Pause and unpause containers
+
+Instead of fully stopping the containers and starting them again you can also just pause and unpause them. This will only prevent cpu load, the memory will remain loaded.
+
+For this, just add a `sablier.pauseOnly=true` label:
+
+```yaml
+services:
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - sablier.enable=true
+      - sablier.pauseOnly=true
+```
+
+Note, that stopped containers will still be started, even when `pauseOnly` is set.
