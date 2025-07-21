@@ -3,15 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
+	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/provider/systemd"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"log/slog"
 )
 
 func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (sablier.Provider, error) {
@@ -45,6 +48,19 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, err
 		}
 		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
+	case "systemd":
+		var con *dbus.Conn
+		var err error
+		if config.Systemd.UserInstance {
+			con, err = dbus.NewUserConnectionContext(ctx)
+		} else {
+			con, err = dbus.NewSystemConnectionContext(ctx)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		return systemd.New(ctx, con, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
