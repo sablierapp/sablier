@@ -29,7 +29,7 @@ PROVIDER_NAME=podman
 
 <!-- tabs:end -->
 
-!> **Ensure that Sablier has access to the docker socket!**
+!> **Ensure that Sablier has access to the podman socket!**
 
 ```yaml
 services:
