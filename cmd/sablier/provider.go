@@ -48,7 +48,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		}
 		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
 	case "podman":
-		connText, err := bindings.NewConnection(ctx, "unix:///run/podman/podman.sock")
+		connText, err := bindings.NewConnection(ctx, config.Podman.Uri)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create podman connection: %w", err)
 		}

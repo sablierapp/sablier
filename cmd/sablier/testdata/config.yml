@@ -5,6 +5,8 @@ provider:
     qps: 64
     burst: 128
     delimiter: .
+  podman:
+    uri: unix:///run/podman/podman.sock.yml
 server:
   port: 1111
   base-path: /configfile/

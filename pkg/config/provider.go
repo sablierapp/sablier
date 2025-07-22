@@ -11,6 +11,7 @@ type Provider struct {
 	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
+	Podman            Podman
 }
 
 type Kubernetes struct {
@@ -43,6 +44,9 @@ func NewProviderConfig() Provider {
 			QPS:       5,
 			Burst:     10,
 			Delimiter: "_",
+		},
+		Podman: Podman{
+			Uri: "unix:///run/podman/podman.sock",
 		},
 	}
 }

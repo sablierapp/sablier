@@ -19,7 +19,7 @@ type Container struct {
 	testcontainers.Container
 }
 
-// Run creates an instance of the Docker in Docker container type
+// Run creates an instance of the Podman in Docker container type
 func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustomizer) (*Container, error) {
 	req := testcontainers.ContainerRequest{
 		Image: img,
@@ -65,12 +65,12 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 	return c, nil
 }
 
-// Host returns the endpoint to connect to the Docker daemon running inside the DinD container.
+// Host returns the endpoint to connect to the Podman service running inside the PinD container.
 func (c *Container) Host(ctx context.Context) (string, error) {
 	return c.PortEndpoint(ctx, "34451/tcp", "tcp")
 }
 
-// LoadImage loads an image into the DinD container.
+// LoadImage loads an image into the PinD container.
 func (c *Container) LoadImage(ctx context.Context, image string) (err error) {
 	var provider testcontainers.GenericProvider
 	if provider, err = testcontainers.ProviderDocker.GetProvider(); err != nil {

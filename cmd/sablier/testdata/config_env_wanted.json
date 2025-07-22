@@ -13,6 +13,9 @@
       "QPS": 16,
       "Burst": 32,
       "Delimiter": "/"
+    },
+    "Podman": {
+      "Uri": "unix:///run/podman/podman.sock.env"
     }
   },
   "Sessions": {

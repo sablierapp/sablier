@@ -3,13 +3,14 @@ package podman
 import (
 	"context"
 	"fmt"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
 	"github.com/containers/podman/v5/pkg/bindings/system"
 )
 
 // Interface guard
-// var _ sablier.Provider = (*Provider)(nil)
+var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
 	conn            context.Context
