@@ -22,7 +22,18 @@ type Kubernetes struct {
 	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes"}
+type Podman struct {
+	// Uri is the URI to connect to the Podman service.
+	//
+	// A valid URI connection should be scheme://
+	// For example tcp://localhost:<port>
+	// or unix:///run/podman/podman.sock
+	// or ssh://<user>@<host>[:port]/run/podman/podman.sock
+	// You can set the Uri to empty to use the CONTAINER_HOST environment variable instead.
+	Uri string `mapstructure:"URI" yaml:"uri,omitempty" default:"unix:///run/podman/podman.sock"`
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
 
 func NewProviderConfig() Provider {
 	return Provider{

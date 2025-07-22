@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"os"
 	"path/filepath"
 
@@ -21,8 +22,13 @@ type Container struct {
 // Run creates an instance of the Docker in Docker container type
 func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustomizer) (*Container, error) {
 	req := testcontainers.ContainerRequest{
-		Image:        img,
-		ExposedPorts: []string{},
+		Image: img,
+		ExposedPorts: []string{
+			"34451/tcp",
+		},
+		ConfigModifier: func(config *container.Config) {
+			config.User = "podman"
+		},
 		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.Privileged = true
 			hc.CgroupnsMode = "host"
@@ -30,8 +36,9 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			hc.Mounts = []mount.Mount{}
 		},
 		Cmd: []string{
-			"cat",
+			"podman", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
 		},
+		WaitingFor: wait.ForListeningPort("34451/tcp"),
 	}
 
 	genericContainerReq := testcontainers.GenericContainerRequest{
@@ -60,7 +67,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 
 // Host returns the endpoint to connect to the Docker daemon running inside the DinD container.
 func (c *Container) Host(ctx context.Context) (string, error) {
-	return c.PortEndpoint(ctx, "2375/tcp", "http")
+	return c.PortEndpoint(ctx, "34451/tcp", "tcp")
 }
 
 // LoadImage loads an image into the DinD container.

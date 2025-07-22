@@ -2,8 +2,6 @@ module github.com/sablierapp/sablier
 
 go 1.24.0
 
-toolchain go1.24.0
-
 require (
 	github.com/containers/podman/v5 v5.5.2
 	github.com/docker/docker v28.3.2+incompatible

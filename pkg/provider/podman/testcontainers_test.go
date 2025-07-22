@@ -2,6 +2,7 @@ package podman_test
 
 import (
 	"context"
+	"github.com/containers/podman/v5/libpod/define"
 	"testing"
 
 	"github.com/containers/image/v5/manifest"
@@ -29,17 +30,18 @@ type MimicOptions struct {
 
 func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (entities.ContainerCreateResponse, error) {
 	if len(opts.Cmd) == 0 {
-		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
+		opts.Cmd = []string{"-running", "-running-after=1s", "-healthy=false"}
 	}
 
 	d.t.Log("Creating mimic container with options", opts)
 	// Container create
-	s := specgen.NewSpecGenerator("sablierapp/mimic:v0.3.1", false)
+	s := specgen.NewSpecGenerator("docker.io/sablierapp/mimic:v0.3.1", false)
 	s.Labels = opts.Labels
-	s.Entrypoint = opts.Cmd
+	s.Command = opts.Cmd
 	s.HealthConfig = opts.Healthcheck
+	s.HealthCheckOnFailureAction = define.HealthCheckOnFailureActionNone
 	s.RestartPolicy = opts.RestartPolicy
-	return containers.CreateWithSpec(ctx, s, nil)
+	return containers.CreateWithSpec(d.connText, s, nil)
 }
 
 func setupPinD(t *testing.T) *pindContainer {

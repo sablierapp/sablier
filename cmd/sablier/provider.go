@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -45,6 +47,12 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, err
 		}
 		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
+	case "podman":
+		connText, err := bindings.NewConnection(ctx, "unix:///run/podman/podman.sock")
+		if err != nil {
+			return nil, fmt.Errorf("cannot create podman connection: %w", err)
+		}
+		return podman.New(connText, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
