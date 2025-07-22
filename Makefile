@@ -24,10 +24,10 @@ gen:
 	go generate -v ./...
 
 build:
-	go build -v ./cmd/sablier
+	go build -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v ./cmd/sablier
 
 test:
-	go test ./...
+	go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" ./...
 
 plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
 
