@@ -36,6 +36,16 @@ jobs:
     - name: Test
       run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
 
+    - name: Display JUnit report
+      run: cat junit.xml
+
+    - name: Upload junit report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-report
+        path: junit.xml
+
     - name: Upload coverage to Codecov
       if: ${{ !cancelled() }}
       uses: codecov/codecov-action@v5
