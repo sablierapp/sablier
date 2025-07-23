@@ -26,9 +26,9 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	case define.ContainerStateRunning:
 		if spec.State.Health != nil {
 			// // "starting", "healthy" or "unhealthy"
-			if spec.State.Health.Status == "healthy" {
+			if spec.State.Health.Status == define.HealthCheckHealthy {
 				return sablier.ReadyInstanceState(name, p.desiredReplicas), nil
-			} else if spec.State.Health.Status == "unhealthy" {
+			} else if spec.State.Health.Status == define.HealthCheckUnhealthy {
 				return sablier.UnrecoverableInstanceState(name, "container is unhealthy", p.desiredReplicas), nil
 			} else {
 				return sablier.NotReadyInstanceState(name, 0, p.desiredReplicas), nil

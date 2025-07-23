@@ -33,7 +33,6 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					resp, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd:         []string{"/mimic"},
 						Healthcheck: nil,
 					})
 					return resp.ID, err
@@ -51,6 +50,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
+						Cmd:         []string{"-running", "-running-after", "1s", "-healthy", "true", "-port=81"},
 						Healthcheck: nil,
 					})
 					if err != nil {
@@ -72,10 +72,10 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running", "-running-after", "1s", "-healthy", "true"},
+						Cmd: []string{"-running", "-running-after", "1s", "-healthy", "true", "-port=82"},
 						// Keep long interval so that the container is still in starting state
 						Healthcheck: &manifest.Schema2HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck"},
+							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=82"},
 							Interval:      time.Second,
 							Timeout:       10 * time.Second,
 							StartPeriod:   10 * time.Second,
@@ -102,13 +102,13 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms"},
+						Cmd: []string{"-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms", "-port=83"},
 						Healthcheck: &manifest.Schema2HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck"},
+							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=83"},
 							Timeout:       time.Second,
 							Interval:      time.Millisecond,
 							StartInterval: time.Millisecond,
-							StartPeriod:   time.Millisecond,
+							StartPeriod:   0,
 							Retries:       1,
 						},
 					})
@@ -120,6 +120,10 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					if err != nil {
 						return "", err
 					}
+
+					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
+						Conditions: []string{"running"},
+					})
 
 					// Podman is not running with a healthcheck daemon, so we need to run the healthcheck manually
 					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
@@ -148,7 +152,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 							Test:          []string{"CMD", "/mimic", "healthcheck"},
 							Interval:      100 * time.Millisecond,
 							Timeout:       time.Second,
-							StartPeriod:   time.Second,
+							StartPeriod:   0,
 							StartInterval: 100 * time.Millisecond,
 							Retries:       10,
 						},
@@ -162,7 +166,18 @@ func TestPodmanProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
+					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
+						Conditions: []string{"running"},
+					})
+
 					// Podman is not running with a healthcheck daemon, so we need to run the healthcheck manually
+					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
+					if err != nil {
+						return "", err
+					}
+
+					<-time.After(5 * time.Second)
+
 					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
 					if err != nil {
 						return "", err
@@ -243,13 +258,15 @@ func TestPodmanProvider_GetState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t))
+			con, cancel := context.WithTimeout(c.connText, 30*time.Second)
+			defer cancel() // releases resources if slowOperation completes before timeout elapses
+			p, err := podman.New(con, slogt.New(t))
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
 			tt.want.Name = name
-			got, err := p.InstanceInspect(ctx, name)
+			got, err := p.InstanceInspect(con, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("PodmanProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -36,7 +36,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			hc.Mounts = []mount.Mount{}
 		},
 		Cmd: []string{
-			"podman", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
+			"podman", "--log-level", "debug", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
 		},
 		WaitingFor: wait.ForListeningPort("34451/tcp"),
 	}
