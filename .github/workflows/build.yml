@@ -33,8 +33,25 @@ jobs:
     - name: Build
       run: make
 
+    - name: Disable AppArmor on the GitHub runner
+      uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
+
+    - name: Enable unprivileged user namespaces
+      run: sudo sysctl -w kernel.unprivileged_userns_clone=1
+
     - name: Test
-      run: go test -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
+      run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
+
+    - name: Display JUnit report
+      if: ${{ !cancelled() }}
+      run: cat junit.xml
+
+    - name: Upload junit report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: junit-report
+        path: junit.xml
 
     - name: Upload coverage to Codecov
       if: ${{ !cancelled() }}

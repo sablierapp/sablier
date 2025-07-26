@@ -15,7 +15,7 @@ VPREFIX := github.com/sablierapp/sablier/pkg/version
 GO_LDFLAGS := -s -w -X $(VPREFIX).Branch=$(GIT_BRANCH) -X $(VPREFIX).Version=$(VERSION) -X $(VPREFIX).Revision=$(GIT_REVISION) -X $(VPREFIX).BuildUser=$(BUILDUSER) -X $(VPREFIX).BuildDate=$(BUILDTIME)
 
 $(PLATFORMS):
-	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) go build -trimpath -tags=nomsgpack -v -ldflags="${GO_LDFLAGS}" -o 'sablier_$(VERSION)_$(os)-$(arch)' ./cmd/sablier
+	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) go build -trimpath -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -ldflags="${GO_LDFLAGS}" -o 'sablier_$(VERSION)_$(os)-$(arch)' ./cmd/sablier
 
 run:
 	go run ./cmd/sablier start --storage.file=state.json --logging.level=debug
@@ -24,10 +24,10 @@ gen:
 	go generate -v ./...
 
 build:
-	go build -v ./cmd/sablier
+	go build -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v ./cmd/sablier
 
 test:
-	go test ./...
+	go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" ./...
 
 plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
 
