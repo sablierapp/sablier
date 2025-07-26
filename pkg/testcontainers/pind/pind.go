@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-
 	"github.com/testcontainers/testcontainers-go"
 )
 
@@ -30,10 +28,6 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			config.User = "podman"
 		},
 		HostConfigModifier: func(hc *container.HostConfig) {
-			hc.Privileged = true
-			hc.CgroupnsMode = "host"
-			hc.Tmpfs = map[string]string{}
-			hc.Mounts = []mount.Mount{}
 		},
 		Cmd: []string{
 			"podman", "--log-level", "debug", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
