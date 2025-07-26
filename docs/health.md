@@ -16,7 +16,7 @@ You can use the command `sablier health` to check for healthiness.
 ```yml
 services:
   sablier:
-    image: sablierapp/sablier:1.9.0
+    image: sablierapp/sablier:1.10.0
     healthcheck:
       test: ["sablier", "health"]
       interval: 1m30s

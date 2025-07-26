@@ -59,7 +59,7 @@
 
     additionalArguments:
       - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier"
-      - "--experimental.plugins.sablier.version=v1.9.0"
+      - "--experimental.plugins.sablier.version=v1.10.0"
 
     providers:
       kubernetesIngress:
@@ -142,7 +142,7 @@
           serviceAccountName: sablier
           containers:
           - name: sablier
-            image: sablierapp/sablier:1.9.0
+            image: sablierapp/sablier:1.10.0
             args: 
             - "start"
             - "--provider.name=kubernetes"
