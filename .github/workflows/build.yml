@@ -33,6 +33,11 @@ jobs:
     - name: Build
       run: make
 
+    - name: Show CRUN features
+      run: |
+        crun --version
+        crun features
+
     - name: Test
       run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
 
