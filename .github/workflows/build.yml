@@ -33,10 +33,8 @@ jobs:
     - name: Build
       run: make
 
-    - name: Show CRUN features
-      run: |
-        crun --version
-        crun features
+    - name: Disable AppArmor on the GitHub runner
+      uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
 
     - name: Test
       run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
