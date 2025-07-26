@@ -29,7 +29,14 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 		},
 		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.Privileged = true
-			hc.SecurityOpt = []string{"seccomp=unconfined", "label=disable"}
+			hc.Devices = []container.DeviceMapping{
+				{
+					PathOnHost:        "/dev/fuse",
+					PathInContainer:   "/dev/fuse",
+					CgroupPermissions: "rwm",
+				},
+			}
+			hc.SecurityOpt = []string{"seccomp=unconfined", "apparmor=unconfined", "label=disable"}
 		},
 		Cmd: []string{
 			"podman", "--log-level", "debug", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
