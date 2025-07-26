@@ -28,6 +28,8 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			config.User = "podman"
 		},
 		HostConfigModifier: func(hc *container.HostConfig) {
+			hc.Privileged = true
+			hc.SecurityOpt = []string{"seccomp=unconfined", "label=disable"}
 		},
 		Cmd: []string{
 			"podman", "--log-level", "debug", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",

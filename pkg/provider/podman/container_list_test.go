@@ -71,7 +71,7 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 	assert.DeepEqual(t, got, want)
 }
 
-func TestDockerClassicProvider_GetGroups(t *testing.T) {
+func TestPodmanProvider_GetGroups(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
