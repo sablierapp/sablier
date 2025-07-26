@@ -43,6 +43,7 @@ jobs:
       run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
 
     - name: Display JUnit report
+      if: ${{ !cancelled() }}
       run: cat junit.xml
 
     - name: Upload junit report

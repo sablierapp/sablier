@@ -25,7 +25,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			"34451/tcp",
 		},
 		ConfigModifier: func(config *container.Config) {
-			config.User = "podman"
+			// config.User = "podman"
 		},
 		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.Privileged = true
@@ -34,7 +34,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			hc.SecurityOpt = []string{"label=disable", "seccomp=unconfined", "apparmor=unconfined"}
 		},
 		Cmd: []string{
-			"podman", "--log-level", "trace", "system", "service", "tcp://0.0.0.0:34451", "-t", "0",
+			"bash", "-c", "rm -rf /etc/containers/storage.conf && podman system reset -f && podman --log-level trace system service tcp://0.0.0.0:34451 -t 0",
 		},
 		WaitingFor: wait.ForListeningPort("34451/tcp"),
 	}
@@ -55,7 +55,6 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 	if container != nil {
 		c = &Container{Container: container}
 	}
-
 	if err != nil {
 		return c, fmt.Errorf("generic container: %w", err)
 	}
