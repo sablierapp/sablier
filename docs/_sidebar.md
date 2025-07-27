@@ -10,6 +10,7 @@
   - [<img src="assets/img/docker.svg" height=24px width=24px />Docker](/providers/docker)
   - [<img src="assets/img/docker_swarm.png" height=24px width=24px />Docker Swarm](/providers/docker_swarm)
   - [<img src="assets/img/kubernetes.png" height=24px width=24px />Kubernetes](/providers/kubernetes)
+  - [<img src="assets/img/podman.png" height=24px width=24px />Podman](/providers/podman)
 - **Reverse Proxy Plugins**
   - [Overview](/plugins/overview)
   - [<img src="assets/img/apacheapisix.png" height=24px width=24px />Apache APISIX](/plugins/apacheapisix)
