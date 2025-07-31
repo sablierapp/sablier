@@ -19,7 +19,7 @@ spec:
       containers:
       - name: sablier
         image: sablierapp/sablier:local
-        args: ["start", "--provider.name=kubernetes", "--logging.level=trace"]
+        args: ["start", "--provider.name=kubernetes", "--logging.level=debug"]
         ports:
         - containerPort: 10000
 ---

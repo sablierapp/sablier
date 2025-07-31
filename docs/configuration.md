@@ -45,7 +45,7 @@ sessions:
   # If you only use sessions of 1h, setting this to 5m is a good trade-off.
   expiration-interval: 20s
 logging:
-  level: trace
+  level: debug
 strategy:
   dynamic:
     # Custom themes folder, will load all .html files recursively (default empty)

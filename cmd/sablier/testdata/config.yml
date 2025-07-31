@@ -16,7 +16,7 @@ sessions:
   default-duration: 1h
   expiration-interval: 1h
 logging:
-  level: trace
+  level: debug
 strategy:
   dynamic:
     custom-themes-path: /tmp/configfile/themes
