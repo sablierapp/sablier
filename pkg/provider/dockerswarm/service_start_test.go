@@ -2,15 +2,17 @@ package dockerswarm_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestDockerSwarmProvider_Start(t *testing.T) {
@@ -40,7 +42,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, types.ServiceInspectOptions{})
+					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -74,7 +76,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, types.ServiceInspectOptions{})
+					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -99,7 +101,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, types.ServiceInspectOptions{})
+					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -138,7 +140,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 				return
 			}
 
-			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, types.ServiceInspectOptions{})
+			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
 			assert.NilError(t, err)
 			assert.Equal(t, *service.Spec.Mode.Replicated.Replicas, uint64(1))
 		})

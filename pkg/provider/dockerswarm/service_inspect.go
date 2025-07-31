@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
@@ -28,11 +29,69 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 }
 
 func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
-	services, _, err := p.Client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
+	opts := swarm.ServiceListOptions{
+		Filters: filters.NewArgs(),
+		// If set to true, the list will include the swarm.ServiceStatus field to all returned services.
+		Status: true,
+	}
+	opts.Filters.Add("name", name)
+
+	services, err := p.Client.ServiceList(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("error inspecting service: %w", err)
+		return nil, fmt.Errorf("error listing services: %w", err)
 	}
 
-	p.l.DebugContext(ctx, "service inspected", slog.String("service", name), slog.String("current_replicas", fmt.Sprintf("%d", services.Spec.Mode.Replicated.Replicas)), slog.String("desired_tasks", fmt.Sprintf("%d", services.ServiceStatus.DesiredTasks)), slog.String("running_tasks", fmt.Sprintf("%d", services.ServiceStatus.RunningTasks)))
-	return &services, nil
+	if len(services) == 0 {
+		return nil, fmt.Errorf("service with name %s was not found", name)
+	}
+
+	var svc *swarm.Service = nil
+	for _, service := range services {
+		// Exact match
+		if service.Spec.Name == name {
+			svc = &service
+			break
+		}
+		if service.ID == name {
+			svc = &service
+			break
+		}
+	}
+
+	p.l.DebugContext(ctx, "service inspected", slog.String("service", name),
+		slog.Uint64("current_replicas", currentReplicas(svc)),
+		slog.Uint64("desired_tasks", desiredReplicas(svc)),
+		slog.Uint64("running_tasks", runningReplicas(svc)),
+	)
+	return svc, nil
+}
+
+func currentReplicas(service *swarm.Service) uint64 {
+	if service.Spec.Mode.Replicated == nil {
+		return 0
+	}
+	if service.Spec.Mode.Replicated.Replicas == nil {
+		return 0
+	}
+	return *service.Spec.Mode.Replicated.Replicas
+}
+
+func desiredReplicas(service *swarm.Service) uint64 {
+	if service.ServiceStatus == nil {
+		return 0
+	}
+	if service.ServiceStatus.DesiredTasks == 0 {
+		return 0
+	}
+	return service.ServiceStatus.DesiredTasks
+}
+
+func runningReplicas(service *swarm.Service) uint64 {
+	if service.ServiceStatus == nil {
+		return 0
+	}
+	if service.ServiceStatus.RunningTasks == 0 {
+		return 0
+	}
+	return service.ServiceStatus.RunningTasks
 }
