@@ -16,10 +16,10 @@ Here I'll show you two options with Docker.
 ### By using the provided Dockerfile
 
 ```bash
-docker build https://github.com/sablierapp/sablier.git#v1.10.0:plugins/caddy -t caddy:with-sablier
+docker build https://github.com/sablierapp/sablier.git#v1.10.1:plugins/caddy -t caddy:with-sablier
 ```
 
-**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.10.0`)
+**Note:** You can change `main` for any other branch (such as `beta`, or tags `v1.10.1`)
 
 ### By updating your Caddy Dockerfile
 
