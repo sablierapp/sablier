@@ -27,12 +27,12 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	return sablier.ReadyInstanceState(service.Spec.Name, p.desiredReplicas), nil
 }
 
-func (p *Provider) getServiceByName(name string, ctx context.Context) (swarm.Service, error) {
+func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
 	services, _, err := p.Client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
 	if err != nil {
-		return swarm.Service{}, fmt.Errorf("error inspecting service: %w", err)
+		return nil, fmt.Errorf("error inspecting service: %w", err)
 	}
 
 	p.l.DebugContext(ctx, "service inspected", slog.String("service", name), slog.String("current_replicas", fmt.Sprintf("%d", services.Spec.Mode.Replicated.Replicas)), slog.String("desired_tasks", fmt.Sprintf("%d", services.ServiceStatus.DesiredTasks)), slog.String("running_tasks", fmt.Sprintf("%d", services.ServiceStatus.RunningTasks)))
-	return services, nil
+	return &services, nil
 }
