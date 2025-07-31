@@ -3,8 +3,10 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
+
+	"github.com/docker/docker/api/types/container"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
@@ -12,6 +14,8 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
+
+	p.l.DebugContext(ctx, "container inspected", slog.String("container", name), slog.String("status", spec.State.Status), slog.String("health", healthStatus(spec.State.Health)))
 
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.State.Status {
@@ -40,4 +44,12 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	default:
 		return sablier.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.State.Status), p.desiredReplicas), nil
 	}
+}
+
+func healthStatus(health *container.Health) string {
+	if health == nil {
+		return "no healthcheck defined"
+	}
+
+	return health.Status
 }

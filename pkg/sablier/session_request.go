@@ -16,6 +16,7 @@ type InstanceInfoWithError struct {
 }
 
 func (s *Sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
+	s.l.DebugContext(ctx, "requesting session", slog.Any("names", names), slog.Duration("duration", duration))
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names cannot be empty")
 	}
@@ -48,6 +49,7 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 }
 
 func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
+	s.l.DebugContext(ctx, "requesting session for group", slog.String("group", group), slog.Duration("duration", duration))
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
@@ -68,6 +70,7 @@ func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 }
 
 func (s *Sablier) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
+	s.l.DebugContext(ctx, "requesting ready session", slog.Any("names", names), slog.Duration("duration", duration), slog.Duration("timeout", timeout))
 	session, err := s.RequestSession(ctx, names, duration)
 	if err != nil {
 		return nil, err
@@ -122,7 +125,7 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 }
 
 func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
-
+	s.l.DebugContext(ctx, "requesting ready session for group", slog.String("group", group), slog.Duration("duration", duration), slog.Duration("timeout", timeout))
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}

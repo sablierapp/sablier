@@ -3,10 +3,11 @@ package dockerswarm
 import (
 	"context"
 	"errors"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
 	"io"
 	"log/slog"
+
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
@@ -25,6 +26,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 					p.l.ErrorContext(ctx, "event stream closed")
 					return
 				}
+				p.l.DebugContext(ctx, "event received", "event", msg)
 				if msg.Actor.Attributes["replicas.new"] == "0" {
 					instance <- msg.Actor.Attributes["name"]
 				} else if msg.Action == "remove" {

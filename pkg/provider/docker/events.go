@@ -3,11 +3,12 @@ package docker
 import (
 	"context"
 	"errors"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
 	"io"
 	"log/slog"
 	"strings"
+
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
@@ -27,6 +28,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 				return
 			}
 			// Send the container that has died to the channel
+			p.l.DebugContext(ctx, "event received", "event", msg)
 			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 		case err, ok := <-errs:
 			if !ok {

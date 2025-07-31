@@ -3,7 +3,8 @@ package dockerswarm
 import (
 	"context"
 	"fmt"
-	dockertypes "github.com/docker/docker/api/types"
+	"log/slog"
+
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -15,13 +16,16 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 	args.Add("mode", "replicated")
 
-	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", args)))
+	services, err := p.Client.ServiceList(ctx, swarm.ServiceListOptions{
+		Status:  true,
 		Filters: args,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services)), slog.Any("services", services))
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(services))
 	for _, s := range services {
@@ -53,13 +57,17 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 	f := filters.NewArgs()
 	f.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
-	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", f)))
+	services, err := p.Client.ServiceList(ctx, swarm.ServiceListOptions{
+		Status:  true,
 		Filters: f,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
+
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services)))
 
 	groups := make(map[string][]string)
 	for _, service := range services {

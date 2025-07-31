@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
+	"log/slog"
+
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
@@ -16,44 +16,23 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, err
 	}
 
-	foundName := p.getInstanceName(name, *service)
-
 	if service.Spec.Mode.Replicated == nil {
 		return sablier.InstanceInfo{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
 	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return sablier.NotReadyInstanceState(foundName, 0, p.desiredReplicas), nil
+		return sablier.NotReadyInstanceState(service.Spec.Name, 0, p.desiredReplicas), nil
 	}
 
-	return sablier.ReadyInstanceState(foundName, p.desiredReplicas), nil
+	return sablier.ReadyInstanceState(service.Spec.Name, p.desiredReplicas), nil
 }
 
-func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
-	opts := types.ServiceListOptions{
-		Filters: filters.NewArgs(),
-		Status:  true,
-	}
-	opts.Filters.Add("name", name)
-
-	services, err := p.Client.ServiceList(ctx, opts)
+func (p *Provider) getServiceByName(name string, ctx context.Context) (swarm.Service, error) {
+	services, _, err := p.Client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error listing services: %w", err)
+		return swarm.Service{}, fmt.Errorf("error inspecting service: %w", err)
 	}
 
-	if len(services) == 0 {
-		return nil, fmt.Errorf("service with name %s was not found", name)
-	}
-
-	for _, service := range services {
-		// Exact match
-		if service.Spec.Name == name {
-			return &service, nil
-		}
-		if service.ID == name {
-			return &service, nil
-		}
-	}
-
-	return nil, fmt.Errorf("service %s was not found because it did not match exactly or on suffix", name)
+	p.l.DebugContext(ctx, "service inspected", slog.String("service", name), slog.String("current_replicas", fmt.Sprintf("%d", services.Spec.Mode.Replicated.Replicas)), slog.String("desired_tasks", fmt.Sprintf("%d", services.ServiceStatus.DesiredTasks)), slog.String("running_tasks", fmt.Sprintf("%d", services.ServiceStatus.RunningTasks)))
+	return services, nil
 }
