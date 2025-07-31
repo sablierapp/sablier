@@ -3,10 +3,11 @@ package podman
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"log/slog"
 )
 
 func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
@@ -14,6 +15,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot inspect container: %w", err)
 	}
+	p.l.DebugContext(ctx, "container inspected", slog.String("container", name), slog.String("status", spec.State.Status), slog.Any("health", spec.State.Health))
 
 	status, err := define.StringToContainerStatus(spec.State.Status)
 	if err != nil {

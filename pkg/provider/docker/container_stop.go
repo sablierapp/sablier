@@ -3,8 +3,9 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types/container"
 	"log/slog"
+
+	"github.com/docker/docker/api/types/container"
 )
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
@@ -18,8 +19,8 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 	p.l.DebugContext(ctx, "waiting for container to stop", slog.String("name", name))
 	waitC, errC := p.Client.ContainerWait(ctx, name, container.WaitConditionNotRunning)
 	select {
-	case <-waitC:
-		p.l.DebugContext(ctx, "container stopped", slog.String("name", name))
+	case response := <-waitC:
+		p.l.DebugContext(ctx, "container stopped", slog.String("name", name), slog.Int64("exit_code", response.StatusCode))
 		return nil
 	case err := <-errC:
 		p.l.ErrorContext(ctx, "cannot wait for container to stop", slog.String("name", name), slog.Any("error", err))

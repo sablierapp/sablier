@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/sablierapp/sablier/pkg/sablier"
+
 	"github.com/docker/docker/client"
 )
 
@@ -47,32 +47,24 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provide
 func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot get service: %w", err)
 	}
 
-	foundName := p.getInstanceName(name, *service)
 	if service.Spec.Mode.Replicated == nil {
 		return errors.New("swarm service is not in \"replicated\" mode")
 	}
 
+	p.l.DebugContext(ctx, "scaling service", "name", name, "current_replicas", service.Spec.Mode.Replicated.Replicas, "desired_replicas", p.desiredReplicas)
 	service.Spec.Mode.Replicated.Replicas = &replicas
 
-	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
+	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, swarm.ServiceUpdateOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot update service: %w", err)
 	}
 
 	if len(response.Warnings) > 0 {
-		return fmt.Errorf("warning received updating swarm service [%s]: %s", foundName, strings.Join(response.Warnings, ", "))
+		return fmt.Errorf("warning received updating swarm service [%s]: %s", service.Spec.Name, strings.Join(response.Warnings, ", "))
 	}
 
 	return nil
-}
-
-func (p *Provider) getInstanceName(name string, service swarm.Service) string {
-	if name == service.Spec.Name {
-		return name
-	}
-
-	return fmt.Sprintf("%s (%s)", name, service.Spec.Name)
 }

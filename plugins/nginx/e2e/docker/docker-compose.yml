@@ -18,7 +18,7 @@ services:
     command:
       - start
       - --provider.name=docker
-      - --logging.level=trace
+      - --logging.level=debug
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 

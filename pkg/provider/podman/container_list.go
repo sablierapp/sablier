@@ -3,11 +3,13 @@ package podman
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
+
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities/types"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"strings"
 )
 
 func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
@@ -16,10 +18,13 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 		Filters: map[string][]string{"label": {fmt.Sprintf("%s=true", "sablier.enable")}},
 	}
 
+	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", options.All), slog.Any("filters", args)))
 	found, err := containers.List(p.conn, args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing containers: %v", err)
 	}
+
+	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(found)), slog.Any("containers", found))
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(found))
 	for _, c := range found {
@@ -54,10 +59,12 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 		Filters: map[string][]string{"label": {fmt.Sprintf("%s=true", "sablier.enable")}},
 	}
 
+	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", all), slog.Any("filters", args)))
 	found, err := containers.List(p.conn, args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing containers: %v", err)
 	}
+	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(found)), slog.Any("containers", found))
 
 	groups := make(map[string][]string)
 	for _, c := range found {

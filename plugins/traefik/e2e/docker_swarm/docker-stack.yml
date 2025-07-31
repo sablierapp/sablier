@@ -28,7 +28,7 @@ services:
     command:
       - start
       - --provider.name=swarm
-      - --logging.level=trace
+      - --logging.level=debug
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     deploy:

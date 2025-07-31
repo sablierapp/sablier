@@ -2,6 +2,7 @@ package podman
 
 import (
 	"context"
+
 	"github.com/containers/podman/v5/pkg/bindings/system"
 	"github.com/containers/podman/v5/pkg/domain/entities/types"
 
@@ -35,6 +36,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 				close(instance)
 				return
 			}
+			p.l.DebugContext(ctx, "event stream received", slog.Any("event", msg))
 			// Send the container that has died to the channel
 			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 		case <-ctx.Done():
