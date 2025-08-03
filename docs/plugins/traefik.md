@@ -96,7 +96,7 @@ experimental:
   plugins:
     sablier:
       moduleName: "github.com/sablierapp/sablier"
-      version: "v1.8.0-beta.22"
+      version: "v1.10.1"
 ```
 
 #### **CLI**
