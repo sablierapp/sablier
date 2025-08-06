@@ -74,7 +74,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -111,7 +111,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -190,7 +190,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -199,7 +199,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Download Caddy artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: caddy-image-tar
           path: /tmp
@@ -258,7 +258,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -267,7 +267,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Download Proxywasm artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: proxywasm-plugin-wasm
           path: ./plugins/proxywasm
@@ -300,7 +300,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -309,7 +309,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Download Proxywasm artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: proxywasm-plugin-wasm
           path: ./plugins/proxywasm
@@ -342,7 +342,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp
@@ -351,7 +351,7 @@ jobs:
         run: docker load --input /tmp/sablier.tar
 
       - name: Download Proxywasm artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: proxywasm-plugin-wasm
           path: ./plugins/proxywasm
