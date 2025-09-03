@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/json-iterator/tinygo v0.0.0-20211221071957-84b5b690c8a0
 	github.com/proxy-wasm/proxy-wasm-go-sdk v0.0.0-20250212164326-ab4161dcf924
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/proxy-wasm-go-sdk v0.24.0
 	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3
 )
