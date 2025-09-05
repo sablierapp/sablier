@@ -30,7 +30,7 @@ require (
 	k8s.io/client-go v0.34.0
 )
 
-require github.com/containers/image/v5 v5.36.1
+require github.com/containers/image/v5 v5.36.2
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
