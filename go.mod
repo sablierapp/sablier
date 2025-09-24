@@ -25,9 +25,9 @@ require (
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.17.0
 	gotest.tools/v3 v3.5.2
-	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
-	k8s.io/client-go v0.34.0
+	k8s.io/api v0.34.1
+	k8s.io/apimachinery v0.34.1
+	k8s.io/client-go v0.34.1
 )
 
 require github.com/containers/image/v5 v5.36.2
