@@ -3,7 +3,7 @@ module github.com/sablierapp/sablier
 go 1.24.0
 
 require (
-	github.com/containers/podman/v5 v5.6.1
+	github.com/containers/podman/v5 v5.6.2
 	github.com/docker/docker v28.4.0+incompatible
 	github.com/gavv/httpexpect/v2 v2.17.0
 	github.com/gin-gonic/gin v1.10.1
@@ -69,7 +69,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
-	github.com/containers/buildah v1.41.4 // indirect
+	github.com/containers/buildah v1.41.5 // indirect
 	github.com/containers/common v0.64.2 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
