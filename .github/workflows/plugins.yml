@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: plugins/traefik/go.sum
@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: |
@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: |
@@ -130,7 +130,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: plugins/caddy/go.sum
@@ -180,7 +180,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: |
@@ -218,7 +218,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.24
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.24
           cache-dependency-path: |
@@ -248,7 +248,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.24
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.24
           cache-dependency-path: |
@@ -290,7 +290,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: |
@@ -332,7 +332,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22
           cache-dependency-path: |
