@@ -100,8 +100,8 @@ github.com/containerd/stargz-snapshotter/estargz v0.16.3 h1:7evrXtoh1mSbGj/pfRcc
 github.com/containerd/stargz-snapshotter/estargz v0.16.3/go.mod h1:uyr4BfYfOj3G9WBVE8cOlQmXAbPN9VEQpBBeJIuOipU=
 github.com/containerd/typeurl/v2 v2.2.3 h1:yNA/94zxWdvYACdYO8zofhrTVuQY73fFU1y++dYSw40=
 github.com/containerd/typeurl/v2 v2.2.3/go.mod h1:95ljDnPfD3bAbDJRugOiShd/DlAAsxGtUBhJxIn7SCk=
-github.com/containers/buildah v1.41.4 h1:IHYWex7rwhsOwtRXQ+VMEQr96gUbSbSvxJcX6AoiDeA=
-github.com/containers/buildah v1.41.4/go.mod h1:IFW8MbAgXYiUBCcAFExlHkPfE41DJWVBCbDZWZ9WEng=
+github.com/containers/buildah v1.41.5 h1:tdxtsb+SctAQ0/vdAJg5AMArVypeN2DmIjHV1bkoMO4=
+github.com/containers/buildah v1.41.5/go.mod h1:IFW8MbAgXYiUBCcAFExlHkPfE41DJWVBCbDZWZ9WEng=
 github.com/containers/common v0.64.2 h1:1xepE7QwQggUXxmyQ1Dbh6Cn0yd7ktk14sN3McSWf5I=
 github.com/containers/common v0.64.2/go.mod h1:o29GfYy4tefUuShm8mOn2AiL5Mpzdio+viHI7n24KJ4=
 github.com/containers/image/v5 v5.36.2 h1:GcxYQyAHRF/pLqR4p4RpvKllnNL8mOBn0eZnqJbfTwk=
@@ -110,8 +110,8 @@ github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 h1:Qzk5C6cYgle
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.2.1 h1:0qIOTT9DoYwcKmxSt8QJt+VzMY18onl9jUXsxpVhSmM=
 github.com/containers/ocicrypt v1.2.1/go.mod h1:aD0AAqfMp0MtwqWgHM1bUwe1anx0VazI108CRrSKINQ=
-github.com/containers/podman/v5 v5.6.1 h1:vc72Yos3EdyRdHjpl5oZzukfkwejhGoBIMOxOH74ES8=
-github.com/containers/podman/v5 v5.6.1/go.mod h1:/aVdkmPQ5BHYkZYJNAgSOBc3X1g0kI5uygg2Qf09jEQ=
+github.com/containers/podman/v5 v5.6.2 h1:3s5c9QIeTh71dHhQu4ux564lCxCWsF0+KTpKU+tytfk=
+github.com/containers/podman/v5 v5.6.2/go.mod h1:/feAZsQqRICJx1rIad3vlOEgb8GXiHEduYpB2m57wPM=
 github.com/containers/psgo v1.9.0 h1:eJ74jzSaCHnWt26OlKZROSyUyRcGDf+gYBdXnxrMW4g=
 github.com/containers/psgo v1.9.0/go.mod h1:0YoluUm43Mz2UnBIh1P+6V6NWcbpTL5uRtXyOcH0B5A=
 github.com/containers/storage v1.59.1 h1:11Zu68MXsEQGBBd+GadPrHPpWeqjKS8hJDGiAHgIqDs=
