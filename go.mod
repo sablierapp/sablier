@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/containers/podman/v5 v5.6.2
-	github.com/docker/docker v28.4.0+incompatible
+	github.com/docker/docker v28.5.1+incompatible
 	github.com/gavv/httpexpect/v2 v2.17.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/go-cmp v0.7.0
