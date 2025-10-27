@@ -26,7 +26,7 @@ jobs:
           outputs: type=docker,dest=/tmp/sablier.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sablier-image-tar
           path: /tmp/sablier.tar
@@ -160,7 +160,7 @@ jobs:
           outputs: type=docker,dest=/tmp/caddy.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: caddy-image-tar
           path: /tmp/caddy.tar
@@ -228,7 +228,7 @@ jobs:
         run: make proxywasm
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: proxywasm-plugin-wasm
           path: ./plugins/proxywasm/sablierproxywasm.wasm
