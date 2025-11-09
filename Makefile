@@ -29,33 +29,11 @@ build:
 test:
 	go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" ./...
 
-plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
-
-build-plugin-traefik:
-	cd plugins/traefik && go build -v .
-
-test-plugin-traefik:
-	cd plugins/traefik && go test -v ./...
-
-build-plugin-caddy:
-	cd plugins/caddy && go build -v .
-
-test-plugin-caddy:
-	cd plugins/caddy && go test -v .
-
 .PHONY: docker
 docker:
 	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t sablierapp/sablier:local .
 
-caddy:
-	docker build -t caddy:local plugins/caddy
-
 release: $(PLATFORMS)
-
-proxywasm:
-	go generate ./plugins/proxywasm
-	env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ./plugins/proxywasm/sablierproxywasm.wasm ./plugins/proxywasm
-	cp ./plugins/proxywasm/sablierproxywasm.wasm ./sablierproxywasm_$(VERSION).wasm
 
 .PHONY: release $(PLATFORMS)
 
@@ -73,42 +51,3 @@ update-doc-version-middleware:
 .PHONY: docs
 docs:
 	npx --yes docsify-cli serve docs
-
-# End to end tests
-e2e: e2e-caddy e2e-nginx e2e-traefik
-
-## Caddy
-e2e-caddy-docker:
-	cd plugins/caddy/e2e/docker && bash ./run.sh
-	
-e2e-caddy-swarm:
-	cd plugins/caddy/e2e/docker_swarm && bash ./run.sh
-
-# e2e-caddy-kubernetes:
-#   	cd plugins/caddy/e2e/kubernetes && bash ./run.sh
-
-e2e-caddy: e2e-caddy-docker e2e-caddy-swarm # e2e-caddy-kubernetes
-
-## NGinx
-e2e-nginx-docker:
-	cd plugins/nginx/e2e/docker && bash ./run.sh
-	
-e2e-nginx-swarm:
-	cd plugins/nginx/e2e/docker_swarm && bash ./run.sh
-
-e2e-nginx-kubernetes:
-	cd plugins/nginx/e2e/kubernetes && bash ./run.sh
-
-e2e-nginx: e2e-nginx-docker e2e-nginx-swarm e2e-nginx-kubernetes
-
-## Traefik
-e2e-traefik-docker:
-	cd plugins/traefik/e2e/docker && bash ./run.sh
-	
-e2e-traefik-swarm:
-	cd plugins/traefik/e2e/docker_swarm && bash ./run.sh
-
-e2e-traefik-kubernetes:
-	cd plugins/traefik/e2e/kubernetes && bash ./run.sh
-
-e2e-traefik: e2e-traefik-docker e2e-traefik-swarm e2e-traefik-kubernetes

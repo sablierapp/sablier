@@ -2,10 +2,6 @@ documentation:
 - changed-files:
   - any-glob-to-any-file: 'docs/**'
 
-reverse-proxy:
-- changed-files:
-  - any-glob-to-any-file: 'plugins/**'
-
 provider:
 - changed-files:
   - any-glob-to-any-file: 'pkg/provider/**'
