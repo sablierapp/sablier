@@ -1,12 +1,17 @@
+> [!IMPORTANT]
+> This plugin now has its own reepository: https://github.com/sablierapp/sablier-caddy-plugin
+>
+> This plugin will no longer receive updates.
+
 # Caddy Sablier Plugin
 
 - [Caddy Sablier Plugin](#caddy-sablier-plugin)
-  - [Build the custom Caddy image with Sablier middleware in it](#build-the-custom-caddy-image-with-sablier-middleware-in-it)
-    - [By using the provided Dockerfile](#by-using-the-provided-dockerfile)
-    - [By updating your Caddy Dockerfile](#by-updating-your-caddy-dockerfile)
-  - [Configuration](#configuration)
-    - [Exemple with a minimal configuration](#exemple-with-a-minimal-configuration)
-  - [Running end to end tests](#running-end-to-end-tests)
+	- [Build the custom Caddy image with Sablier middleware in it](#build-the-custom-caddy-image-with-sablier-middleware-in-it)
+		- [By using the provided Dockerfile](#by-using-the-provided-dockerfile)
+		- [By updating your Caddy Dockerfile](#by-updating-your-caddy-dockerfile)
+	- [Configuration](#configuration)
+		- [Exemple with a minimal configuration](#exemple-with-a-minimal-configuration)
+	- [Running end-to-end tests](#running-end-to-end-tests)
 
 ## Build the custom Caddy image with Sablier middleware in it
 

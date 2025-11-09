@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> This plugin now has its own reepository: https://github.com/sablierapp/sablier-traefik-plugin
+>
+> This plugin will no longer receive updates.
+
+
 # Traefik Sablier Plugin
 
 - [Traefik Sablier Plugin](#traefik-sablier-plugin)
