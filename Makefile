@@ -29,6 +29,12 @@ build:
 test:
 	go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" ./...
 
+lint:
+	golangci-lint run ./...
+
+fmt:
+	golangci-lint run fmt ./...
+
 .PHONY: docker
 docker:
 	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t sablierapp/sablier:local .

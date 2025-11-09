@@ -21,13 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v5
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-    - name: Set up Go 1.24
-      uses: actions/setup-go@v5
+    - name: Set up Go
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
       with:
-        go-version: ^1.24
+        go-version-file: 'go.mod'
         cache-dependency-path: go.sum
 
     - name: Build
@@ -48,28 +48,28 @@ jobs:
 
     - name: Upload junit report
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: junit-report
         path: junit.xml
 
     - name: Upload coverage to Codecov
       if: ${{ !cancelled() }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
       with:
         use_oidc: true
         fail_ci_if_error: true
 
     - name: Upload test results to Codecov
       if: ${{ !cancelled() }}
-      uses: codecov/test-results-action@v1
+      uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
       with:
         use_oidc: true
         fail_ci_if_error: true
 
     - name: Run Basic Test Results Action
       if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-      uses: codecov/basic-test-results@v1
+      uses: codecov/basic-test-results@c46ff461955b5cd6eb57cbe9ff22f3b77fc15824 # v1
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: junit.xml
