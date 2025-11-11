@@ -2,13 +2,14 @@ package kubernetes_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-	"time"
 )
 
 func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
@@ -40,6 +41,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 
 		s.Spec.Replicas = 0
 		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
 
 		name := <-waitC
 
@@ -73,6 +75,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 
 		s.Spec.Replicas = 0
 		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
 
 		name := <-waitC
 

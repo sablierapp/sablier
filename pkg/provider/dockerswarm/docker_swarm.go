@@ -57,7 +57,7 @@ func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, repli
 	p.l.DebugContext(ctx, "scaling service", "name", name, "current_replicas", service.Spec.Mode.Replicated.Replicas, "desired_replicas", p.desiredReplicas)
 	service.Spec.Mode.Replicated.Replicas = &replicas
 
-	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, swarm.ServiceUpdateOptions{})
+	response, err := p.Client.ServiceUpdate(ctx, service.ID, service.Version, service.Spec, swarm.ServiceUpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot update service: %w", err)
 	}

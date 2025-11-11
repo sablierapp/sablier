@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/pkg/theme"
@@ -89,12 +90,18 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
 		}
-		writer.Flush()
+		if err := writer.Flush(); err != nil {
+			AbortWithProblemDetail(c, ProblemError(err))
+			return
+		}
 
 		c.Header("Cache-Control", "no-cache")
 		c.Header("Content-Type", "text/html")
 		c.Header("Content-Length", strconv.Itoa(buf.Len()))
-		c.Writer.Write(buf.Bytes())
+		if _, err := c.Writer.Write(buf.Bytes()); err != nil {
+			AbortWithProblemDetail(c, ProblemError(err))
+			return
+		}
 	})
 }
 

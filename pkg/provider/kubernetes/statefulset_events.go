@@ -1,11 +1,12 @@
 package kubernetes
 
 import (
+	"time"
+
 	appsv1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
-	"time"
 )
 
 func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexInformer {
@@ -14,7 +15,7 @@ func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexIn
 			newStatefulSet := new.(*appsv1.StatefulSet)
 			oldStatefulSet := old.(*appsv1.StatefulSet)
 
-			if newStatefulSet.ObjectMeta.ResourceVersion == oldStatefulSet.ObjectMeta.ResourceVersion {
+			if newStatefulSet.ResourceVersion == oldStatefulSet.ResourceVersion {
 				return
 			}
 
@@ -36,6 +37,6 @@ func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexIn
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
 	informer := factory.Apps().V1().StatefulSets().Informer()
 
-	informer.AddEventHandler(handler)
+	_, _ = informer.AddEventHandler(handler)
 	return informer
 }

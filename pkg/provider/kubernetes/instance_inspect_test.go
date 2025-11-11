@@ -3,11 +3,12 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestKubernetesProvider_InstanceInspect(t *testing.T) {
@@ -44,6 +45,7 @@ func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			assert.NilError(t, err)
 
 			_, err = p.InstanceInspect(ctx, tt.args.name)
 			assert.Error(t, err, tt.want.Error())

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
@@ -48,7 +47,7 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (swa
 		Annotations: swarm.Annotations{
 			Labels: opts.Labels,
 		},
-	}, types.ServiceCreateOptions{})
+	}, swarm.ServiceCreateOptions{})
 }
 
 func setupDinD(t *testing.T) *dindContainer {
