@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"github.com/sablierapp/sablier/pkg/config"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sablierapp/sablier/pkg/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -34,7 +35,7 @@ func TestDefault(t *testing.T) {
 		cmd.SetArgs([]string{
 			"start",
 		})
-		cmd.Execute()
+		_ = cmd.Execute()
 
 		gotOutput := output.String()
 
@@ -61,7 +62,7 @@ func TestPrecedence(t *testing.T) {
 			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
 			"start",
 		})
-		cmd.Execute()
+		_ = cmd.Execute()
 
 		gotOutput := output.String()
 
@@ -83,7 +84,7 @@ func TestPrecedence(t *testing.T) {
 			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
 			"start",
 		})
-		cmd.Execute()
+		_ = cmd.Execute()
 
 		gotOutput := output.String()
 
@@ -123,7 +124,7 @@ func TestPrecedence(t *testing.T) {
 			"--strategy.blocking.default-timeout", "3h",
 			"--strategy.blocking.default-refresh-frequency", "3h",
 		})
-		cmd.Execute()
+		_ = cmd.Execute()
 
 		gotOutput := output.String()
 
@@ -137,7 +138,7 @@ func setEnvsFromFile(path string) {
 		panic(err)
 	}
 
-	defer readFile.Close()
+	defer func() { _ = readFile.Close() }()
 
 	fileScanner := bufio.NewScanner(readFile)
 
@@ -145,7 +146,7 @@ func setEnvsFromFile(path string) {
 
 	for fileScanner.Scan() {
 		split := strings.Split(fileScanner.Text(), "=")
-		os.Setenv(split[0], split[1])
+		_ = os.Setenv(split[0], split[1])
 	}
 }
 
@@ -156,7 +157,7 @@ func unsetEnvsFromFile(path string) {
 		panic(err)
 	}
 
-	defer readFile.Close()
+	defer func() { _ = readFile.Close() }()
 
 	fileScanner := bufio.NewScanner(readFile)
 
@@ -164,7 +165,7 @@ func unsetEnvsFromFile(path string) {
 
 	for fileScanner.Scan() {
 		split := strings.Split(fileScanner.Text(), "=")
-		os.Unsetenv(split[0])
+		_ = os.Unsetenv(split[0])
 	}
 }
 
@@ -173,14 +174,14 @@ func mockStartCommand() *cobra.Command {
 		Use:   "start",
 		Short: "InstanceStart the Sablier server",
 		Run: func(cmd *cobra.Command, args []string) {
-			viper.Unmarshal(&conf)
+			_ = viper.Unmarshal(&conf)
 
 			out := cmd.OutOrStdout()
 
 			encoder := json.NewEncoder(out)
 
 			encoder.SetIndent("", "  ")
-			encoder.Encode(conf)
+			_ = encoder.Encode(conf)
 		},
 	}
 	return cmd

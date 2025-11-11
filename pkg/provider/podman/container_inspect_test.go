@@ -2,6 +2,9 @@ package podman_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/containers/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/google/go-cmp/cmp"
@@ -9,8 +12,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestPodmanProvider_GetState(t *testing.T) {
@@ -263,6 +264,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			con, cancel := context.WithTimeout(c.connText, 30*time.Second)
 			defer cancel() // releases resources if slowOperation completes before timeout elapses
 			p, err := podman.New(con, slogt.New(t))
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)

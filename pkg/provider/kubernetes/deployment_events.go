@@ -15,7 +15,7 @@ func (p *Provider) watchDeployments(instance chan<- string) cache.SharedIndexInf
 			newDeployment := new.(*appsv1.Deployment)
 			oldDeployment := old.(*appsv1.Deployment)
 
-			if newDeployment.ObjectMeta.ResourceVersion == oldDeployment.ObjectMeta.ResourceVersion {
+			if newDeployment.ResourceVersion == oldDeployment.ResourceVersion {
 				return
 			}
 
@@ -37,6 +37,6 @@ func (p *Provider) watchDeployments(instance chan<- string) cache.SharedIndexInf
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))
 	informer := factory.Apps().V1().Deployments().Informer()
 
-	informer.AddEventHandler(handler)
+	_, _ = informer.AddEventHandler(handler)
 	return informer
 }

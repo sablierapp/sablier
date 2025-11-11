@@ -3,6 +3,8 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
@@ -12,7 +14,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
@@ -119,6 +120,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
