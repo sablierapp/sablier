@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/google/go-cmp/cmp"
@@ -108,7 +107,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 
 					replicas := uint64(0)
 					service.Spec.Mode.Replicated.Replicas = &replicas
-					_, err = dind.client.ServiceUpdate(ctx, s.ID, service.Version, service.Spec, types.ServiceUpdateOptions{})
+					_, err = dind.client.ServiceUpdate(ctx, s.ID, service.Version, service.Spec, swarm.ServiceUpdateOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -129,6 +128,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := dockerswarm.New(ctx, c.client, slogt.New(t))
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)

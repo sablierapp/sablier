@@ -3,11 +3,12 @@ package docker_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestDockerClassicProvider_Stop(t *testing.T) {
@@ -58,6 +59,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := docker.New(ctx, c.client, slogt.New(t))
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)

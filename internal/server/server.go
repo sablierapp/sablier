@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/internal/api"
-	"github.com/sablierapp/sablier/pkg/config"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/internal/api"
+	"github.com/sablierapp/sablier/pkg/config"
 )
 
 func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) *gin.Engine {
@@ -34,8 +35,7 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 
 	r := setupRouter(ctx, logger, serverConf, s)
 
-	var server *http.Server
-	server = &http.Server{
+	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", serverConf.Port),
 		Handler: r,
 	}

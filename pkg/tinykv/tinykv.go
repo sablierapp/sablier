@@ -227,7 +227,9 @@ func (kv *store[T]) UnmarshalJSON(b []byte) error {
 
 	for k, v := range entries {
 		if !v.expired {
-			kv.Put(k, v.Value, v.ExpiresAfter)
+			if err := kv.Put(k, v.Value, v.ExpiresAfter); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -290,10 +292,7 @@ func (kv *store[T]) expireFunc() time.Duration {
 	}
 	expired := make(map[string]T)
 	c := -1
-	for {
-		if len(kv.heap) == 0 {
-			break
-		}
+	for len(kv.heap) > 0 {
 		c++
 		if c >= len(kv.heap) {
 			break
@@ -346,7 +345,7 @@ func notifyExpirations[T any](
 	}
 	for k, v := range expired {
 		k, v := k, v
-		try(func() error {
+		_ = try(func() error {
 			onExpire(k, v)
 			return nil
 		})

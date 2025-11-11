@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
@@ -36,7 +35,7 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 		replicas := uint64(0)
 		service.Spec.Mode.Replicated.Replicas = &replicas
 
-		_, err = p.Client.ServiceUpdate(ctx, service.ID, service.Meta.Version, service.Spec, types.ServiceUpdateOptions{})
+		_, err = p.Client.ServiceUpdate(ctx, service.ID, service.Version, service.Spec, swarm.ServiceUpdateOptions{})
 		assert.NilError(t, err)
 
 		name := <-waitC

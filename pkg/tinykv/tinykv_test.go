@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTimeoutHeap(t *testing.T) {
@@ -44,12 +45,12 @@ func TestGetPut(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
+	require.NoError(t, rg.Put("1", 1, time.Minute*50))
 	v, ok := rg.Get("1")
 	assert.True(ok)
 	assert.Equal(1, v)
 
-	rg.Put("2", 2, time.Millisecond*50)
+	require.NoError(t, rg.Put("2", 2, time.Millisecond*50))
 	v, ok = rg.Get("2")
 	assert.True(ok)
 	assert.Equal(2, v)
@@ -65,8 +66,8 @@ func TestKeys(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
+	require.NoError(t, rg.Put("1", 1, time.Minute*50))
+	require.NoError(t, rg.Put("2", 2, time.Minute*50))
 
 	keys := rg.Keys()
 	assert.NotEmpty(keys)
@@ -79,8 +80,8 @@ func TestValues(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
+	assert.NoError(rg.Put("1", 1, time.Minute*50))
+	assert.NoError(rg.Put("2", 2, time.Minute*50))
 
 	values := rg.Values()
 	assert.NotEmpty(values)
@@ -93,9 +94,9 @@ func TestEntries(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
-	rg.Put("3", 3, time.Minute*50)
+	assert.NoError(rg.Put("1", 1, time.Minute*50))
+	assert.NoError(rg.Put("2", 2, time.Minute*50))
+	assert.NoError(rg.Put("3", 3, time.Minute*50))
 
 	entries := rg.Entries()
 	assert.NotEmpty(entries)
@@ -105,12 +106,12 @@ func TestEntries(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	os.Setenv("TZ", "")
+	require.NoError(t, os.Setenv("TZ", ""))
 	assert := assert.New(t)
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("3", 3, time.Minute*50)
+	assert.NoError(rg.Put("3", 3, time.Minute*50))
 
 	jsonb, err := json.Marshal(rg)
 	assert.Nil(err)
@@ -159,7 +160,7 @@ func TestTimeout(t *testing.T) {
 	rg := New(time.Millisecond*10, notify)
 	n := 1000
 	for i := n; i < 2*n; i++ {
-		rg.Put(strconv.Itoa(i), i, time.Millisecond*10)
+		assert.NoError(rg.Put(strconv.Itoa(i), i, time.Millisecond*10))
 	}
 	got := make([]string, n)
 OUT01:
@@ -197,7 +198,7 @@ func Test03(t *testing.T) {
 		})
 
 	putAt = time.Now()
-	kv.Put("1", 1, time.Millisecond*10)
+	require.NoError(t, kv.Put("1", 1, time.Millisecond*10))
 
 	<-time.After(time.Millisecond * 100)
 	assert.WithinDuration(putAt, putAt.Add(<-elapsed), time.Millisecond*60)
@@ -236,8 +237,8 @@ func Test05(t *testing.T) {
 	rnd := rand.New(src)
 	for i := 0; i < N; i++ {
 		k := fmt.Sprintf("%d", i)
-		kv.Put(k, fmt.Sprintf("VAL::%v", k),
-			time.Millisecond*time.Duration(rnd.Intn(10)+1))
+		require.NoError(t, kv.Put(k, fmt.Sprintf("VAL::%v", k),
+			time.Millisecond*time.Duration(rnd.Intn(10)+1)))
 	}
 
 	<-time.After(time.Millisecond * 100)
@@ -342,7 +343,7 @@ func TestOrdering(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		k := strconv.Itoa(i)
 		v := i
-		kv.Put(k, v, time.Millisecond*time.Duration(i)*50)
+		assert.NoError(kv.Put(k, v, time.Millisecond*time.Duration(i)*50))
 	}
 
 	var order = make([]int, 10)
@@ -379,7 +380,7 @@ func BenchmarkGetNoValue(b *testing.B) {
 
 func BenchmarkGetValue(b *testing.B) {
 	rg := New[interface{}](-1, nil)
-	rg.Put("1", 1, time.Minute*50)
+	assert.NoError(b, rg.Put("1", 1, time.Minute*50))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
@@ -387,7 +388,7 @@ func BenchmarkGetValue(b *testing.B) {
 
 func BenchmarkGetSlidingTimeout(b *testing.B) {
 	rg := New[interface{}](-1, nil)
-	rg.Put("1", 1, time.Second*10)
+	assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
@@ -396,6 +397,6 @@ func BenchmarkGetSlidingTimeout(b *testing.B) {
 func BenchmarkPutExpire(b *testing.B) {
 	rg := New[interface{}](-1, nil)
 	for n := 0; n < b.N; n++ {
-		rg.Put("1", 1, time.Second*10)
+		assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	}
 }

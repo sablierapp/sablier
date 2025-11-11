@@ -2,14 +2,15 @@ package docker_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestDockerClassicProvider_GetState(t *testing.T) {
@@ -264,6 +265,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			p, err := docker.New(ctx, c.client, slogt.New(t))
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
