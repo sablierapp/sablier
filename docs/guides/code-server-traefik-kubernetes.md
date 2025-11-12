@@ -58,8 +58,8 @@
         enabled: true
 
     additionalArguments:
-      - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier"
-      - "--experimental.plugins.sablier.version=v1.10.1" # x-release-please-version
+      - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier-traefik-plugin"
+      - "--experimental.plugins.sablier.version=v1.0.0 # Check latest version
 
     providers:
       kubernetesIngress:

@@ -93,7 +93,7 @@ Because Caddy does not provide any runtime evaluation for the plugins, we need t
 I'll use the provided Dockerfile to build the custom Caddy image.
 
 ```bash
-docker build https://github.com/sablierapp/sablier.git#v1.8.1:plugins/caddy 
+docker build https://github.com/sablierapp/sablier-caddy-plugin.git 
   --build-arg=CADDY_VERSION=2.8.4
   -t caddy:2.8.4-with-sablier
 ```
@@ -175,4 +175,4 @@ Here we've configured the following things when we're accessing the service on `
 
 <!-- tabs:end -->
 
-?> We've assigned the group `demo` to the service, and we use this to identify the workload i
+?> We've assigned the group `demo` to the service, and we use this to identify the workload.

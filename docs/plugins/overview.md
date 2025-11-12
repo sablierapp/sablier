@@ -12,16 +12,15 @@ It leverages the API calls to plugin integration to catch in-flight requests to 
 
 ## Available Reverse Proxies
 
-| Reverse Proxy                                   | Docker | Docker Swarm mode | Kubernetes |                  
-|-------------------------------------------------|:------:|:-----------------:|:----------:|
-| [Apache APISIX](apacheapisix)          |   ✅    |         ✅         |     ✅      |                                                           
-| [Caddy](caddy)                         |   ✅    |         ✅         |     ❌      |                                                           
-| [Envoy](envoy)                         |   ✅    |         ❓         |     ❓      |                                                           
-| [Istio](istio)                          |   ❌    |         ❌         |     ⚠️     |                                                           
-| [Nginx (NJS Module)](nginx_njs)        |   ✅    |         ✅         |     ✅      |
-| [Nginx (WASM Module)](nginx_proxywasm) |   ✅    |         ❓         |     ❓      |
-| [Traefik](traefik)                     |   ✅    |         ✅         |     ✅      |
-| [ProxyWasm](proxywasm)                 |   ✅    |         ✅         |     ✅      |
+| Reverse Proxy                 | Docker | Docker Swarm mode | Kubernetes |
+| ----------------------------- | :----: | :---------------: | :--------: |
+| [Apache APISIX](apacheapisix) |   ✅    |         ✅         |     ✅      |
+| [Caddy](caddy)                |   ✅    |         ✅         |     ❌      |
+| [Envoy](envoy)                |   ✅    |         ❓         |     ❓      |
+| [Istio](istio)                |   ❌    |         ❌         |     ⚠️      |
+| [Nginx](nginx_proxywasm)      |   ✅    |         ❓         |     ❓      |
+| [Traefik](traefik)            |   ✅    |         ✅         |     ✅      |
+| [ProxyWasm](proxywasm)        |   ✅    |         ✅         |     ✅      |
 
 > ✅ **Fully compatible**
 > 
