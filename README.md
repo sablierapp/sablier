@@ -16,6 +16,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Use the Docker image](#use-the-docker-image)
   - [Use the binary distribution](#use-the-binary-distribution)
   - [Compile your binary from the sources](#compile-your-binary-from-the-sources)
+  - [Use the Helm Chart](#use-the-helm-chart)
 - [Configuration](#configuration)
   - [Configuration File](#configuration-file)
   - [Environment Variables](#environment-variables)
@@ -43,8 +44,12 @@ You can install Sablier using one of the following methods:
 - [Use the Docker image](#use-the-docker-image)
 - [Use the binary distribution](#use-the-binary-distribution)
 - [Compile your binary from the sources](#compile-your-binary-from-the-sources)
+- [Use the Helm Chart](#use-the-helm-chart)
 
 ### Use the Docker image
+
+![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.10.1)
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
 - **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
@@ -74,6 +79,29 @@ make
 # Output will change depending on your distro
 ./sablier_draft_linux-amd64
 ```
+
+### Use the Helm Chart
+
+<img src="./docs/assets/img/helm.png" alt="Helm" width="100" align="right" />
+
+Deploy Sablier to your Kubernetes cluster using the official Helm chart for production-ready deployments.
+
+Add the Sablier Helm repository:
+
+```bash
+helm repo add sablierapp https://sablierapp.github.io/helm-charts
+helm repo update
+```
+
+Install Sablier:
+
+```bash
+helm install sablier sablierapp/sablier
+```
+
+📚 **[Full Documentation](https://github.com/sablierapp/helm-charts/tree/main/charts/sablier)** | 💻 **[Chart Repository](https://github.com/sablierapp/helm-charts)**
+
+---
 
 ## Configuration
 
