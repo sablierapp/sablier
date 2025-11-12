@@ -1,33 +1,33 @@
-# Getting started
+# Getting Started
 
-This Getting Started will get you through what you need to understand how to use Sablier as a scale to zero middleware with a reverse proxy.
+This guide will walk you through setting up Sablier as a scale-to-zero middleware with a reverse proxy.
 
 ![integration](/assets/img/integration.png)
 
-## Identify your provider
+## Identify Your Provider
 
-The first thing you need to do is to identify your [Provider](providers/overview).
+The first thing you need to do is identify your [Provider](providers/overview).
 
-?> A Provider is how Sablier can interact with your instances and scale them up and down to zero.
+?> A Provider is how Sablier interacts with your instances to scale them up and down to zero.
 
 You can check the available providers [here](providers/overview?id=available-providers).
 
-## Identify your reverse proxy
+## Identify Your Reverse Proxy
 
-Once you've identified your [Provider](providers/overview), you'll want to identify your [Reverse Proxy](plugins/overview).
+Once you've identified your [Provider](providers/overview), you'll need to identify your [Reverse Proxy](plugins/overview).
 
-?> Because Sablier is designed as an API that can be used on its own, reverse proxy integrations acts as a client of that API.
+?> Because Sablier is designed as an API that can be used independently, reverse proxy integrations act as clients of that API.
 
 You can check the available reverse proxy plugins [here](plugins/overview?id=available-reverse-proxies)
 
-## Connect it all together
+## Connect It All Together
 
 - Let's say we're using the [Docker Provider](providers/docker).
 - Let's say we're using the [Caddy Reverse Proxy Plugin](plugins/caddy).
 
-### 1. Initial setup with Caddy
+### 1. Initial Setup with Caddy
 
-Suppose this is your initial setup with Caddy. You have your reverse proxy with a Caddyfile that does a simple reverse proxy on `/whoami`.
+Suppose this is your initial setup with Caddy. You have your reverse proxy with a Caddyfile that performs a simple reverse proxy on `/whoami`.
 
 <!-- tabs:start -->
 
@@ -58,12 +58,11 @@ services:
 
 <!-- tabs:end -->
 
-At this point you can run `docker compose up` and go to `http://localhost:8080/whoami` and you will see your service.
-
+Now you can run `docker compose up` and navigate to `http://localhost:8080/whoami` to see your service.
 
 ### 2. Install Sablier with the Docker Provider
 
-Add the Sablier container in the `docker-compose.yaml` file.
+Add the Sablier container to the `docker-compose.yaml` file.
 
 ```yaml
 services:
@@ -88,9 +87,9 @@ services:
 
 ### 3. Add the Sablier Caddy Plugin to Caddy
 
-Because Caddy does not provide any runtime evaluation for the plugins, we need to build Caddy with this specific plugin.
+Because Caddy does not provide runtime plugin evaluation, we need to build Caddy with this specific plugin.
 
-I'll use the provided Dockerfile to build the custom Caddy image.
+We'll use the provided Dockerfile to build the custom Caddy image.
 
 ```bash
 docker build https://github.com/sablierapp/sablier-caddy-plugin.git 
@@ -98,7 +97,7 @@ docker build https://github.com/sablierapp/sablier-caddy-plugin.git
   -t caddy:2.8.4-with-sablier
 ```
 
-Then change the image to from `caddy:2.8.4` to `caddy:2.8.4-with-sablier`
+Then change the image from `caddy:2.8.4` to `caddy:2.8.4-with-sablier`
 
 ```yaml
 services:
@@ -168,11 +167,11 @@ services:
 }
 ```
 
-Here we've configured the following things when we're accessing the service on `http://localhost:8080/whoami`:
-- The containers that have the label `sablier.group=demo` will be started on demand
-- The period of innactivity after which the containers should be shut down is one minute
-- It uses the dynamic configuration and configures the title with `My Whoami Service`
+Here we've configured the following for when accessing the service at `http://localhost:8080/whoami`:
+- Containers with the label `sablier.group=demo` will be started on demand
+- The period of inactivity after which containers should be shut down is one minute
+- It uses the dynamic configuration and sets the display name to `My Whoami Service`
 
 <!-- tabs:end -->
 
-?> We've assigned the group `demo` to the service, and we use this to identify the workload.
+?> We've assigned the group `demo` to the service, which is how we identify the workload.

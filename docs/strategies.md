@@ -2,11 +2,11 @@
 
 ## Dynamic Strategy
 
-The **Dynamic Strategy** provides a waiting page for your session.
+The **Dynamic Strategy** displays a waiting page while your session starts.
 
 ![Demo](assets/img/demo.gif)
 
-?> This strategy is well suited for a user that would access a frontend directly and expects to see a loading page.
+?> This strategy is ideal for users accessing a frontend directly, as they'll see a loading page while their services start.
 
 ```plantuml
 @startuml
@@ -37,9 +37,9 @@ User <-- Proxy: Content
 ```
 ## Blocking Strategy
 
-The **Blocking Strategy** hangs the request until your session is ready.
+The **Blocking Strategy** holds the request until your session is ready.
 
-?> This strategy is well suited for an API communication.
+?> This strategy is ideal for API communication, where clients expect to wait for a response.
 
 ```plantuml
 @startuml

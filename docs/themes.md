@@ -1,10 +1,10 @@
 # Themes
 
-Sablier comes with a set of default theme that you can use.
+Sablier comes with a set of default themes that you can use.
 
-You can also extend the themes by providing your own and they will be templated as Go Templates.
+You can also extend the themes by providing your own, which will be rendered as Go Templates.
 
-## The embedded themes
+## The Embedded Themes
 
 
 |       Name        |                                                  Preview                                                  |
@@ -16,9 +16,9 @@ You can also extend the themes by providing your own and they will be templated 
 
 
 
-## Custom themes locations
+## Custom Themes Locations
 
-You can use the argument `--strategy.dynamic.custom-themes` to define the location to search upon starting.
+You can use the `--strategy.dynamic.custom-themes` argument to define the location where Sablier should search for themes at startup.
 
 By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder.
 
@@ -33,12 +33,12 @@ services:
 ```
 <!-- x-release-please-end -->
 
-It will look recursively for themes with the `.html` extension.
+Sablier will recursively search for themes with the `.html` extension.
 
-- You **cannot** load new themes added in the folder without restarting
-- You **can** modify the existing themes files
+- You **cannot** load new themes added to the folder without restarting
+- You **can** modify existing theme files without restarting
 
-## Create a custom theme
+## Create a Custom Theme
 
 Themes are served using [Go Templates](https://pkg.go.dev/text/template).
 
@@ -59,11 +59,11 @@ Themes are served using [Go Templates](https://pkg.go.dev/text/template).
 
 ### The `<meta http-equiv="refresh" />` tag
 
-The auto refresh is done using the [HTML <meta> http-equiv Attribute](https://www.w3schools.com/tags/att_meta_http_equiv.asp).
+The auto-refresh is accomplished using the [HTML <meta> http-equiv Attribute](https://www.w3schools.com/tags/att_meta_http_equiv.asp).
 
 > Defines a time interval for the document to refresh itself.
 
-So the first step to create your own theme is to include the `HTML <meta> http-equiv Attribute` as follows:
+The first step to creating your own theme is to include the `HTML <meta> http-equiv Attribute` as follows:
 
 ```html
 <head>
@@ -73,13 +73,13 @@ So the first step to create your own theme is to include the `HTML <meta> http-e
 </head>
 ```
 
-## The `showDetails` option
+## The `showDetails` Option
 
-If `showDetails` is set to `false` then the `.InstanceStates` will be an empty array.
+If `showDetails` is set to `false`, the `.InstanceStates` will be an empty array.
 
-## How to load my custom theme
+## How to Load Your Custom Theme
 
-You can load themes by specifying their name and their relative path from the `--strategy.dynamic.custom-themes-path` value.
+You can load themes by specifying their name and relative path from the `--strategy.dynamic.custom-themes-path` value.
 
 ```bash
 /my/custom/themes/
@@ -89,13 +89,13 @@ You can load themes by specifying their name and their relative path from the `-
     └── secret.html   # special/secret
 ```
 
-Such as 
+For example:
 
 ```bash
 curl 'http://localhost:10000/api/strategies/dynamic?session_duration=1m&names=nginx&theme=custom1'
 ```
 
-## See the available themes from the API
+## See the Available Themes from the API
 
 ```bash
 curl 'http://localhost:10000/api/strategies/dynamic/themes'

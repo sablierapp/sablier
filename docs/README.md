@@ -1,24 +1,23 @@
 # Sablier - Scale to Zero
 
-Sablier is a **free** and **open-source** software that can scale your workloads on demand.
+Sablier is a **free** and **open-source** software that scales your workloads on demand.
 
 ![Demo](assets/img/demo.gif)
 
-Your workloads can be a docker container, a kubernetes deployment and more (see [providers](providers/overview) for the full list).
+Your workloads can be a Docker container, a Kubernetes deployment, and more (see [providers](providers/overview) for the full list).
 
+Sablier is an API that starts containers for a given duration.
 
-Sablier is an API that start containers for a given duration.
+It provides integrations with multiple reverse proxies and different loading strategies.
 
-It provides an integrations with multiple reverse proxies and different loading strategies.
-
-Which allows you to start your containers on demand and shut them down automatically as soon as there's no activity.
+This allows you to start your containers on demand and shut them down automatically when there's no activity.
 
 ## Glossary
 
-I'll use these terms in order to be provider-agnostic.
+Throughout this documentation, we use these terms to remain provider-agnostic:
 
-- **Session**: A Session is a set of **instances**
-- **Instance**: An instance is either a docker container, docker swarm service, kubernetes deployment or kubernetes statefulset
+- **Session**: A session is a set of **instances**
+- **Instance**: An instance is either a Docker container, Docker Swarm service, Kubernetes deployment, or Kubernetes StatefulSet
 
 ## Credits
 

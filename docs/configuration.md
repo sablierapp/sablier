@@ -1,25 +1,25 @@
 # Configuration
 
-There are three different ways to define configuration options in Sablier:
+There are three ways to define configuration options in Sablier:
 
 1. In a configuration file
 2. As environment variables
-3. In the command-line arguments
+3. As command-line arguments
 
-These ways are evaluated in the order listed above.
+These methods are evaluated in the order listed above, with later methods overriding earlier ones.
 
-If no value was provided for a given option, a default value applies.
+If no value is provided for a given option, a default value is used.
 
 ## Configuration File
 
-At startup, Sablier searches for configuration in a file named sablier.yml (or sablier.yaml) in:
+At startup, Sablier searches for a configuration file named `sablier.yml` (or `sablier.yaml`) in the following locations:
 
 - `/etc/sablier/`
 - `$XDG_CONFIG_HOME/`
 - `$HOME/.config/`
-- `.` *(the working directory).*
+- `.` *(the working directory)*
 
-You can override this using the configFile argument.
+You can override this by using the `configFile` argument:
 
 ```bash
 sablier --configFile=path/to/myconfigfile.yml
@@ -63,7 +63,9 @@ strategy:
 
 ## Environment Variables
 
-All environment variables can be used in the form of the config file such as 
+All configuration options can be set as environment variables. The variable names follow the structure of the configuration file.
+
+For example, this configuration:
 
 ```yaml
 strategy:
@@ -71,7 +73,7 @@ strategy:
     custom-themes-path: /my/path
 ```
 
-Becomes
+Becomes:
 
 ```bash
 STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
@@ -91,7 +93,9 @@ docker run sablierapp/sablier:1.10.1 --help
 ```
 <!-- x-release-please-end -->
 
-All arguments can be used in the form of the config file such as 
+All configuration options can be used as command-line arguments. The argument names follow the structure of the configuration file.
+
+For example, this configuration:
 
 ```yaml
 strategy:
@@ -99,7 +103,7 @@ strategy:
     custom-themes-path: /my/path
 ```
 
-Becomes
+Becomes:
 
 ```bash
 sablier start --strategy.dynamic.custom-themes-path /my/path

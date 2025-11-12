@@ -1,17 +1,17 @@
-# Install Sablier on its own
+# Install Sablier
 
-You can install Sablier with the following flavors:
+You can install Sablier using one of the following methods:
 
 - Use the Docker image
 - Use the binary distribution
-- Compile your binary from the sources
+- Compile from source
 
-## Use the Docker image
+## Use the Docker Image
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
 - **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
   
-Choose one of the Docker images and run it with one sample configuration file:
+Choose one of the Docker images and run it with a sample configuration file:
 
 - [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
 
@@ -22,22 +22,20 @@ docker run -d -p 10000:10000 \
 ```
 <!-- x-release-please-end -->
 
-## Use the binary distribution
+## Use the Binary Distribution
 
-Grab the latest binary from the [releases](https://github.com/sablierapp/sablier/releases) page.
-
-And run it:
+Download the latest binary from the [releases](https://github.com/sablierapp/sablier/releases) page and run it:
 
 ```bash
 ./sablier --help
 ```
 
-## Compile your binary from the sources
+## Compile from Source
 
 ```bash
 git clone git@github.com:sablierapp/sablier.git
 cd sablier
 make
-# Output will change depending on your distro
+# Output will vary depending on your platform
 ./sablier_draft_linux-amd64
 ```

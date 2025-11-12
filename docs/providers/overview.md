@@ -2,15 +2,15 @@
 
 ## What is a Provider?
 
-A Provider is how Sablier can interact with your instances.
+A Provider is how Sablier interacts with your instances.
 
-A Provider typically have the following capabilities:
+A Provider typically has the following capabilities:
 - Start an instance
 - Stop an instance
 - Get the current status of an instance
 - Listen for instance lifecycle events (started, stopped)
 
-## Available providers
+## Available Providers
 
 | Provider                     | Name                      | Details                                                          |
 |------------------------------|---------------------------|------------------------------------------------------------------|
@@ -21,4 +21,4 @@ A Provider typically have the following capabilities:
 
 *Your Provider is not on the list? [Open an issue to request the missing provider here!](https://github.com/sablierapp/sablier/issues/new?assignees=&labels=enhancement%2C+provider&projects=&template=instance-provider-request.md&title=Add+%60%5BPROVIDER%5D%60+provider)*
 
-[See the active issues about the providers](https://github.com/sablierapp/sablier/issues?q=is%3Aopen+is%3Aissue+label%3Aprovider)
+[See the active issues about providers](https://github.com/sablierapp/sablier/issues?q=is%3Aopen+is%3Aissue+label%3Aprovider)
