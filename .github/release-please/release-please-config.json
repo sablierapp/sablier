@@ -39,7 +39,15 @@
                 }
             ],
             "extra-files": [
-                "README.md"
+                {
+                    "type": "generic",
+                    "path": "README.md"
+                },
+                {
+                    "type": "generic",
+                    "glob": true,
+                    "path": "docs/**/*.md"
+                }
             ]
         }
     }
