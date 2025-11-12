@@ -13,6 +13,7 @@ You can use the command `sablier health` to check for healthiness.
 
 `sablier health` takes on argument `--url` which defaults to `http://localhost:10000/health`.
 
+<!-- x-release-please-start-version -->
 ```yml
 services:
   sablier:
@@ -21,3 +22,4 @@ services:
       test: ["sablier", "health"]
       interval: 1m30s
 ```
+<!-- x-release-please-end -->

@@ -22,6 +22,7 @@ You can use the argument `--strategy.dynamic.custom-themes` to define the locati
 
 By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder.
 
+<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
@@ -30,6 +31,7 @@ services:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '/path/to/my/themes:/etc/sablier/themes'
 ```
+<!-- x-release-please-end -->
 
 It will look recursively for themes with the `.html` extension.
 

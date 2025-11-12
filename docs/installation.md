@@ -15,10 +15,12 @@ Choose one of the Docker images and run it with one sample configuration file:
 
 - [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
 
+<!-- x-release-please-start-version -->
 ```bash
 docker run -d -p 10000:10000 \
     -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.1
 ```
+<!-- x-release-please-end -->
 
 ## Use the binary distribution
 

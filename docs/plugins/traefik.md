@@ -91,6 +91,7 @@ The blocking strategy is supported by issuing redirect which force client to ret
 
 #### **File (YAML)**
 
+<!-- x-release-please-start-version -->
 ```yaml
 experimental:
   plugins:
@@ -98,13 +99,16 @@ experimental:
       moduleName: "github.com/sablierapp/sablier"
       version: "v1.10.1"
 ```
+<!-- x-release-please-end -->
 
 #### **CLI**
 
+<!-- x-release-please-start-version -->
 ```bash
 --experimental.plugins.sablier.modulename=github.com/sablierapp/sablier
 --experimental.plugins.sablier.version=v1.10.1
 ```
+<!-- x-release-please-end -->
 
 <!-- tabs:end -->
 

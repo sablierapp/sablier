@@ -31,6 +31,7 @@ PROVIDER_NAME=docker
 
 !> **Ensure that Sablier has access to the docker socket!**
 
+<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
@@ -41,6 +42,7 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```
+<!-- x-release-please-end -->
 
 ## Register containers
 

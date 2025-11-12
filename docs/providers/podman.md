@@ -31,6 +31,7 @@ PROVIDER_NAME=podman
 
 !> **Ensure that Sablier has access to the podman socket!**
 
+<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
@@ -41,6 +42,7 @@ services:
     volumes:
       - '/run/podman/podman.sock:/run/podman/podman.sock'
 ```
+<!-- x-release-please-end -->
 
 ## Register containers
 

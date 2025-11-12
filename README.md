@@ -48,8 +48,10 @@ You can install Sablier using one of the following methods:
 
 ### Use the Docker image
 
+<!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
 ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.10.1)
+<!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
 - **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
@@ -58,9 +60,11 @@ Choose one of the Docker images and run it with a sample configuration file:
 
 - [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
 
+<!-- x-release-please-start-version -->
 ```bash
 docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.1
 ```
+<!-- x-release-please-end -->
 
 ### Use the binary distribution
 
@@ -186,14 +190,15 @@ STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 
 To list all available arguments:
 
+<!-- x-release-please-version-end -->
 ```bash
 sablier --help
 
 # or
 
-docker run sablierapp/sablier[:version] --help
-# e.g.: docker run sablierapp/sablier:1.10.1 --help
+docker run sablierapp/sablier:1.10.1 --help
 ```
+<!-- x-release-please-end -->
 
 Command-line arguments follow the same structure as the configuration file. For example:
 
