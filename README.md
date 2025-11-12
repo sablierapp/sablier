@@ -48,6 +48,8 @@ You can install Sablier using one of the following methods:
 
 ### Use the Docker image
 
+<img src="./docs/assets/img/docker.svg" alt="Helm" width="100" align="right" />
+
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
 ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.10.1)
@@ -67,6 +69,8 @@ docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierap
 <!-- x-release-please-end -->
 
 ### Use the binary distribution
+
+<img src="./docs/assets/img/github.svg" alt="Helm" width="100" align="right" />
 
 Grab the latest binary from the [releases](https://github.com/sablierapp/sablier/releases) page and run it:
 
