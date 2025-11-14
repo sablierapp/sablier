@@ -1,11 +1,12 @@
-package main
+package sabliercmd
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/pkg/config"
-	"github.com/sablierapp/sablier/pkg/theme"
 	"log/slog"
 	"os"
+
+	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/theme"
 )
 
 func setupTheme(ctx context.Context, conf config.Config, logger *slog.Logger) (*theme.Themes, error) {

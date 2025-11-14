@@ -1,4 +1,4 @@
-package main
+package sabliercmd_test
 
 import (
 	"bufio"
@@ -9,8 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sablierapp/sablier/pkg/config"
-
+	"github.com/sablierapp/sablier/pkg/sabliercmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -25,11 +24,12 @@ func TestDefault(t *testing.T) {
 	require.NoError(t, err, "error reading test config file")
 
 	// CHANGE `startCmd` behavior to only print the config, this is for testing purposes only
-	newStartCommand = mockStartCommand
+	sabliercmd.SetStartCommand(mockStartCommand)
+	defer sabliercmd.ResetStartCommand()
 
 	t.Run("config file", func(t *testing.T) {
-		conf = config.NewConfig()
-		cmd := NewRootCommand()
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
 		output := &bytes.Buffer{}
 		cmd.SetOut(output)
 		cmd.SetArgs([]string{
@@ -48,14 +48,15 @@ func TestPrecedence(t *testing.T) {
 	require.NoError(t, err, "error getting the current working directory")
 
 	// CHANGE `startCmd` behavior to only print the config, this is for testing purposes only
-	newStartCommand = mockStartCommand
+	sabliercmd.SetStartCommand(mockStartCommand)
+	defer sabliercmd.ResetStartCommand()
 
 	t.Run("config file", func(t *testing.T) {
 		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_yaml_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
-		conf = config.NewConfig()
-		cmd := NewRootCommand()
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
 		output := &bytes.Buffer{}
 		cmd.SetOut(output)
 		cmd.SetArgs([]string{
@@ -76,8 +77,8 @@ func TestPrecedence(t *testing.T) {
 		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_env_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
-		conf = config.NewConfig()
-		cmd := NewRootCommand()
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
 		output := &bytes.Buffer{}
 		cmd.SetOut(output)
 		cmd.SetArgs([]string{
@@ -98,9 +99,9 @@ func TestPrecedence(t *testing.T) {
 		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_cli_wanted.json"))
 		require.NoError(t, err, "error reading test config file")
 
-		cmd := NewRootCommand()
+		cmd := sabliercmd.NewRootCommand()
 		output := &bytes.Buffer{}
-		conf = config.NewConfig()
+		sabliercmd.ResetConfig()
 		cmd.SetOut(output)
 		cmd.SetArgs([]string{
 			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
@@ -174,7 +175,8 @@ func mockStartCommand() *cobra.Command {
 		Use:   "start",
 		Short: "InstanceStart the Sablier server",
 		Run: func(cmd *cobra.Command, args []string) {
-			_ = viper.Unmarshal(&conf)
+			conf := sabliercmd.GetConfig()
+			_ = viper.Unmarshal(conf)
 
 			out := cmd.OutOrStdout()
 

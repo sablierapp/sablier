@@ -1,21 +1,42 @@
-package main
+package sabliercmd
 
 import (
 	"context"
 	"fmt"
-	"github.com/sablierapp/sablier/internal/api"
-	"github.com/sablierapp/sablier/pkg/config"
-	"github.com/sablierapp/sablier/pkg/sablier"
-	"github.com/sablierapp/sablier/pkg/store/inmemory"
-	"github.com/sablierapp/sablier/pkg/version"
 	"log/slog"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/sablierapp/sablier/internal/api"
 	"github.com/sablierapp/sablier/internal/server"
+	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"github.com/sablierapp/sablier/pkg/version"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
+var newStartCommand = func() *cobra.Command {
+	return &cobra.Command{
+		Use:   "start",
+		Short: "Start the Sablier server",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := viper.Unmarshal(&conf)
+			if err != nil {
+				panic(err)
+			}
+
+			err = Start(cmd.Context(), conf)
+			if err != nil {
+				panic(err)
+			}
+		},
+	}
+}
+
+// Start starts the Sablier server
 func Start(ctx context.Context, conf config.Config) error {
 	// Create context that listens for the interrupt signal from the OS.
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
