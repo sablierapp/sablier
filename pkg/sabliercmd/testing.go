@@ -5,6 +5,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// defaultStartCommand stores the original start command function
+var defaultStartCommand = newStartCommand
+
 // NewStartCommand is a variable that allows mocking the start command for testing
 var NewStartCommand = newStartCommand
 
@@ -15,7 +18,7 @@ func SetStartCommand(cmd func() *cobra.Command) {
 
 // ResetStartCommand resets the start command to the default
 func ResetStartCommand() {
-	newStartCommand = NewStartCommand
+	newStartCommand = defaultStartCommand
 }
 
 // GetConfig returns the current configuration (for testing)

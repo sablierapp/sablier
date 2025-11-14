@@ -25,7 +25,7 @@ var cfgFile string
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "sablier",
-		Short: "A webserver to start container on demand",
+		Short: "A webserver to start containers on demand",
 		Long: `Sablier is an API that starts containers on demand.
 It provides integrations with multiple reverse proxies and different loading strategies.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -44,7 +44,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
 	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
 	_ = viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
-	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API acees client-side throttling")
+	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API access client-side throttling")
 	_ = viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
 	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
 	_ = viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
