@@ -1,8 +1,10 @@
-package main
+package sabliercmd
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/pkg/config"
@@ -13,7 +15,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"log/slog"
 )
 
 func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (sablier.Provider, error) {

@@ -1,11 +1,12 @@
-package healthcheck
+package sabliercmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -33,7 +34,7 @@ func Health(url string) (string, bool) {
 	return string(body), healthy
 }
 
-func NewCmd() *cobra.Command {
+func NewHealthCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "health",
 		Short: "Calls the health endpoint of a Sablier instance",

@@ -1,12 +1,13 @@
-package main
+package sabliercmd
 
 import (
-	"github.com/lmittmann/tint"
-	"github.com/sablierapp/sablier/pkg/config"
 	"log/slog"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/lmittmann/tint"
+	"github.com/sablierapp/sablier/pkg/config"
 )
 
 func setupLogger(config config.Logging) *slog.Logger {

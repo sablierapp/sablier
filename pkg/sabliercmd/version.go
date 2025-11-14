@@ -1,13 +1,14 @@
-package version
+package sabliercmd
 
 import (
 	"fmt"
+
 	"github.com/sablierapp/sablier/pkg/version"
 
 	"github.com/spf13/cobra"
 )
 
-func NewCmd() *cobra.Command {
+func NewVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the version Sablier",
