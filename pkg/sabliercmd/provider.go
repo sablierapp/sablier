@@ -7,10 +7,12 @@ import (
 
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/docker/docker/client"
+	"github.com/hashicorp/nomad/api"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/provider/nomad"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	k8s "k8s.io/client-go/kubernetes"
@@ -54,6 +56,39 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, fmt.Errorf("cannot create podman connection: %w", err)
 		}
 		return podman.New(connText, logger)
+	case "nomad":
+		// Create Nomad client configuration
+		nomadConfig := api.DefaultConfig()
+
+		// Set address from config or use default
+		if config.Nomad.Address != "" {
+			nomadConfig.Address = config.Nomad.Address
+		}
+
+		// Set token if provided
+		if config.Nomad.Token != "" {
+			nomadConfig.SecretID = config.Nomad.Token
+		}
+
+		// Set namespace
+		namespace := config.Nomad.Namespace
+		if namespace == "" {
+			namespace = "default"
+		}
+		nomadConfig.Namespace = namespace
+
+		// Set region if provided
+		if config.Nomad.Region != "" {
+			nomadConfig.Region = config.Nomad.Region
+		}
+
+		// Create Nomad client
+		nomadClient, err := api.NewClient(nomadConfig)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create nomad client: %v", err)
+		}
+
+		return nomad.New(ctx, nomadClient, namespace, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
