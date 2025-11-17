@@ -37,7 +37,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV 
           
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5.0.1
 
       - name: Docker meta
         id: meta
