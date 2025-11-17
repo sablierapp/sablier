@@ -35,6 +35,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Traefik](#traefik)
 - [📝 Documentation](#-documentation)
 - [Community](#community)
+- [Support](#support)
 
 
 ## Installation
@@ -383,3 +384,26 @@ Sablier provides a powerful middleware plugin for Traefik, the cloud-native appl
 Join our Discord server to discuss and get support!
 
 [![Discord](https://img.shields.io/discord/1298488955947454464?logo=discord&logoColor=5865F2&cacheSeconds=1&link=http%3A%2F%2F)](https://discord.gg/WXYp59KeK9)
+
+## Support
+
+This project is maintained by a single developer in their free time. If you find Sablier useful, here are some ways you can show your support:
+
+⭐ **Star the repository** - It helps others discover the project and motivates continued development
+
+🤝 **Contribute** - Pull requests are always welcome! Whether it's:
+- Bug fixes
+- New features
+- Documentation improvements
+- Test coverage
+
+📚 **Share your usage** - We'd love to see how you're using Sablier! Consider:
+- Opening a discussion to share your setup
+- Contributing examples of your deployment configurations
+- Writing a blog post or tutorial
+
+💬 **Engage with the community** - Ask questions, report issues, or help others in [discussions](https://github.com/sablierapp/sablier/discussions)
+
+Every contribution, no matter how small, makes a difference and is greatly appreciated! 🙏
+
+For detailed support options, see [SUPPORT.md](SUPPORT.md).
