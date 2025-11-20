@@ -33,9 +33,10 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Istio](#istio)
   - [Nginx](#nginx)
   - [Traefik](#traefik)
-- [📝 Documentation](#-documentation)
 - [Community](#community)
 - [Support](#support)
+- [Sponsor](#sponsor)
+  - [DigitalOcean](#digitalocean)
 
 
 ## Installation
@@ -374,11 +375,6 @@ Sablier provides a powerful middleware plugin for Traefik, the cloud-native appl
 
 📚 **[Full Documentation](https://github.com/sablierapp/sablier-traefik-plugin)** | 💻 **[Plugin Repository](https://github.com/sablierapp/sablier-traefik-plugin)**
 
-
-## 📝 Documentation
-
-[See the documentation here](https://sablierapp.dev)
-
 ## Community
 
 Join our Discord server to discuss and get support!
@@ -407,3 +403,26 @@ This project is maintained by a single developer in their free time. If you find
 Every contribution, no matter how small, makes a difference and is greatly appreciated! 🙏
 
 For detailed support options, see [SUPPORT.md](SUPPORT.md).
+
+## Sponsor
+
+If you find Sablier valuable and want to support its development, please consider sponsoring the project:
+
+💖 **[Sponsor on GitHub](https://github.com/sponsors/acouvreur)** - Your sponsorship helps keep this project maintained and actively developed
+
+Your support helps:
+- Keep the project maintained and up-to-date
+- Dedicate more time to bug fixes and new features
+- Improve documentation and examples
+- Support the broader open-source ecosystem
+
+Every contribution, no matter the size, makes a real difference. Thank you for considering! 🙏
+
+### DigitalOcean
+
+<p>This project is supported by:</p>
+<p>
+  <a href="https://www.digitalocean.com/?refcode=67b25d34f559&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
+  </a>
+</p>
