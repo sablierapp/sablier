@@ -6,8 +6,10 @@ import (
 	"log/slog"
 
 	"github.com/containers/podman/v5/pkg/bindings"
+	"github.com/digitalocean/godo"
 	"github.com/docker/docker/client"
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/provider/digitalocean"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
@@ -54,6 +56,12 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, fmt.Errorf("cannot create podman connection: %w", err)
 		}
 		return podman.New(connText, logger)
+	case "digitalocean":
+		if config.DigitalOcean.Token == "" {
+			return nil, fmt.Errorf("Digital Ocean token is required")
+		}
+		cli := godo.NewFromToken(config.DigitalOcean.Token)
+		return digitalocean.New(ctx, cli, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }

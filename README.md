@@ -22,6 +22,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Environment Variables](#environment-variables)
   - [Arguments](#arguments)
 - [Providers](#providers)
+  - [Digital Ocean](#digital-ocean)
   - [Docker](#docker)
   - [Docker Swarm](#docker-swarm)
   - [Podman](#podman)
@@ -225,6 +226,21 @@ TODO: Add link to full auto-generated reference
 -->
 
 ## Providers
+
+### Digital Ocean
+
+<img src="./docs/assets/img/digitalocean.svg" alt="Digital Ocean" width="100" align="right" />
+
+Sablier integrates with Digital Ocean's App Platform to scale apps on demand.
+
+**Features:**
+- Scale App Platform services and workers automatically
+- Stop apps when not in use to save costs
+- API-based integration with Digital Ocean
+
+📚 **[Full Documentation](https://sablierapp.dev/#/providers/digitalocean)**
+
+---
 
 ### Docker
 
