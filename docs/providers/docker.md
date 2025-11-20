@@ -59,8 +59,61 @@ services:
       - sablier.group=mygroup
 ```
 
-## How does Sablier knows when a container is ready?
+## How does Sablier know when a container is ready?
 
-If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
+If the container defines a Healthcheck, then Sablier will check for healthiness before marking the container as `ready`.
 
-If the containers do not define a Healthcheck, then as soon as the container has the status `started`
+If the container does not define a Healthcheck, then as soon as the container has the status `started`, it is considered ready.
+
+## Configuration Options
+
+### Auto-stop on Startup
+
+```yaml
+provider:
+  auto-stop-on-startup: true
+```
+
+When enabled, Sablier will stop all containers with `sablier.enable=true` label that are running but not registered in an active session when Sablier starts.
+
+## Container Labels
+
+| Label | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `sablier.enable` | Yes | Enable Sablier management for this container | `true` |
+| `sablier.group` | Yes | Logical group name for the container | `myapp` |
+
+## Full Example
+
+See the [Docker provider example](../../examples/docker/) for a complete, working setup.
+
+## Limitations
+
+- Requires access to the Docker socket
+- Cannot manage containers in remote Docker hosts (use Docker Swarm for multi-host scenarios)
+- Healthchecks must be defined in the container image or compose file
+
+## Troubleshooting
+
+### Container not starting
+
+1. Check Sablier logs for errors
+2. Verify the container has the correct labels
+3. Ensure Sablier has access to the Docker socket
+
+### Permission denied
+
+Sablier needs read/write access to `/var/run/docker.sock`. Ensure the Sablier container has the socket mounted:
+
+```yaml
+volumes:
+  - '/var/run/docker.sock:/var/run/docker.sock'
+```
+
+### Container starts but Sablier doesn't detect it
+
+If your container has a healthcheck, ensure it's passing. Check with:
+
+```bash
+docker inspect <container-name> | grep Health -A 10
+```

@@ -12,6 +12,7 @@ type Provider struct {
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
 	Podman            Podman
+	DigitalOcean      DigitalOcean
 }
 
 type Kubernetes struct {
@@ -34,7 +35,14 @@ type Podman struct {
 	Uri string `mapstructure:"URI" yaml:"uri,omitempty" default:"unix:///run/podman/podman.sock"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
+type DigitalOcean struct {
+	// Token is the Digital Ocean API token for authentication
+	Token string `mapstructure:"TOKEN" yaml:"token,omitempty"`
+	// Region is the Digital Ocean region. Defaults to "nyc1"
+	Region string `mapstructure:"REGION" yaml:"region,omitempty" default:"nyc1"`
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "digitalocean"}
 
 func NewProviderConfig() Provider {
 	return Provider{
@@ -47,6 +55,9 @@ func NewProviderConfig() Provider {
 		},
 		Podman: Podman{
 			Uri: "unix:///run/podman/podman.sock",
+		},
+		DigitalOcean: DigitalOcean{
+			Region: "nyc1",
 		},
 	}
 }
