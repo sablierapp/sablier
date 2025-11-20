@@ -9,6 +9,9 @@ on:
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+  contents: read
+
 jobs:
 
   build:
@@ -20,6 +23,11 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      with:
+        egress-policy: audit
 
     - name: Checkout code
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
@@ -97,7 +105,7 @@ jobs:
 
     - name: Comment diff on pull request
       if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
-      uses: thollander/actions-comment-pull-request@v3
+      uses: thollander/actions-comment-pull-request@65f9e5c9a1f2cd378bd74b2e057c9736982a8e74 # v3
       with:
         message: |
           ```
