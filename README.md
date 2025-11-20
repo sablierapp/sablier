@@ -5,6 +5,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/sablierapp/sablier)](https://goreportcard.com/report/github.com/sablierapp/sablier)
 [![Discord](https://img.shields.io/discord/1298488955947454464?logo=discord&logoColor=5865F2&cacheSeconds=1&link=http%3A%2F%2F)](https://discord.gg/WXYp59KeK9)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sablierapp/sablier/badge)](https://scorecard.dev/viewer/?uri=github.com/sablierapp/sablier)
 
 Free and open-source software that starts workloads on demand and stops them after a period of inactivity.
 
