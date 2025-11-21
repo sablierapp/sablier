@@ -12,6 +12,7 @@ type Provider struct {
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
 	Podman            Podman
+	Nomad             Nomad
 }
 
 type Kubernetes struct {
@@ -34,7 +35,23 @@ type Podman struct {
 	Uri string `mapstructure:"URI" yaml:"uri,omitempty" default:"unix:///run/podman/podman.sock"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
+type Nomad struct {
+	// Address is the HTTP address of the Nomad server.
+	// Defaults to http://127.0.0.1:4646
+	// Can also be set via the NOMAD_ADDR environment variable.
+	Address string `mapstructure:"ADDRESS" yaml:"address,omitempty" default:"http://127.0.0.1:4646"`
+	// Token is the secret ID of an ACL token for authentication.
+	// Can also be set via the NOMAD_TOKEN environment variable.
+	Token string `mapstructure:"TOKEN" yaml:"token,omitempty"`
+	// Namespace is the target namespace for queries.
+	// Can also be set via the NOMAD_NAMESPACE environment variable.
+	Namespace string `mapstructure:"NAMESPACE" yaml:"namespace,omitempty" default:"default"`
+	// Region is the target region for queries.
+	// Can also be set via the NOMAD_REGION environment variable.
+	Region string `mapstructure:"REGION" yaml:"region,omitempty"`
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "nomad"}
 
 func NewProviderConfig() Provider {
 	return Provider{
@@ -47,6 +64,12 @@ func NewProviderConfig() Provider {
 		},
 		Podman: Podman{
 			Uri: "unix:///run/podman/podman.sock",
+		},
+		Nomad: Nomad{
+			Address:   "http://127.0.0.1:4646",
+			Namespace: "default",
+			Token:     "",
+			Region:    "",
 		},
 	}
 }
