@@ -10,6 +10,10 @@ sessions:
   expiration-interval: 20s
 logging:
   level: info
+# OpenTelemetry tracing and metrics configuration
+tracing:
+  enabled: false
+  endpoint: "localhost:4317" # OpenTelemetry collector endpoint
 strategy:
   dynamic:
     custom-themes-path:
