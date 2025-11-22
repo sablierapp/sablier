@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/internal/api"
 	"github.com/sablierapp/sablier/pkg/config"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) *gin.Engine {
@@ -18,6 +19,7 @@ func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Ser
 
 	r.Use(StructuredLogger(logger))
 	r.Use(gin.Recovery())
+	r.Use(otelgin.Middleware("sablier"))
 
 	registerRoutes(ctx, r, serverConf, s)
 

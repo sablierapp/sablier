@@ -7,6 +7,7 @@ type Config struct {
 	Sessions Sessions
 	Logging  Logging
 	Strategy Strategy
+	Tracing  Tracing
 }
 
 func NewConfig() Config {
@@ -17,5 +18,6 @@ func NewConfig() Config {
 		Sessions: NewSessionsConfig(),
 		Logging:  NewLoggingConfig(),
 		Strategy: NewStrategyConfig(),
+		Tracing:  NewTracingConfig(),
 	}
 }

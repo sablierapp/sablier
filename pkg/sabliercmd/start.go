@@ -13,6 +13,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"github.com/sablierapp/sablier/pkg/tracing"
 	"github.com/sablierapp/sablier/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,6 +45,26 @@ func Start(ctx context.Context, conf config.Config) error {
 	logger := setupLogger(conf.Logging)
 
 	logger.Info("running Sablier version " + version.Info())
+
+	// Initialize tracing
+	tracingConfig := tracing.Config{
+		ServiceName:    "sablier",
+		ServiceVersion: version.Version,
+		Endpoint:       conf.Tracing.Endpoint,
+		Enabled:        conf.Tracing.Enabled,
+	}
+
+	tracer, err := tracing.New(ctx, tracingConfig, logger)
+	if err != nil {
+		return fmt.Errorf("failed to initialize tracing: %w", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := tracer.Shutdown(shutdownCtx); err != nil {
+			logger.Error("failed to shutdown tracing", "error", err)
+		}
+	}()
 
 	provider, err := setupProvider(ctx, logger, conf.Provider)
 	if err != nil {

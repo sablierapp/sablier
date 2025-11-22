@@ -83,6 +83,12 @@ It provides integrations with multiple reverse proxies and different loading str
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Default refresh frequency at which the instances status are checked for blocking strategy")
 	_ = viper.BindPFlag("strategy.blocking.default-refresh-frequency", startCmd.Flags().Lookup("strategy.blocking.default-refresh-frequency"))
 
+	// Tracing flags
+	startCmd.Flags().BoolVar(&conf.Tracing.Enabled, "tracing.enabled", false, "Enable OpenTelemetry tracing and metrics")
+	_ = viper.BindPFlag("tracing.enabled", startCmd.Flags().Lookup("tracing.enabled"))
+	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "localhost:4317", "OpenTelemetry collector endpoint")
+	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
+
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(NewVersionCmd())
 
