@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+project_name: sablier
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: sablier
+    main: ./cmd/sablier
+    binary: sablier
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: darwin
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X github.com/sablierapp/sablier/pkg/version.Version={{.Version}}
+      - -X github.com/sablierapp/sablier/pkg/version.Revision={{.ShortCommit}}
+      - -X github.com/sablierapp/sablier/pkg/version.Branch={{.Branch}}
+      - -X github.com/sablierapp/sablier/pkg/version.BuildDate={{.Date}}
+      - -X github.com/sablierapp/sablier/pkg/version.BuildUser=goreleaser
+    tags:
+      - nomsgpack
+      - remote
+      - exclude_graphdriver_btrfs
+      - containers_image_openpgp
+    flags:
+      - -trimpath
+
+archives:
+  - id: sablier
+    name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    files:
+      - README.md
+      - LICENSE
+      - sablier.sample.yaml
+
+snapshot:
+  version_template: SNAPSHOT-{{ .Commit }}
+
+dockers_v2:
+  - id: sablier
+    images:
+      - 'sablierapp/sablier'
+      - 'ghcr.io/sablierapp/sablier'
+    tags:
+      - '{{ .Version }}'
+    dockerfile: build/Dockerfile
+    platforms:
+      - linux/amd64
+      - linux/arm64
+      - linux/arm/v7
+    extra_files:
+      - build/sablier.yaml
+    labels:
+      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+      'org.opencontainers.image.title': '{{.ProjectName}}'
+      'org.opencontainers.image.description': 'Start your containers on demand, shut them down automatically when there is no activity'
+      'org.opencontainers.image.source': '{{.GitURL}}'
+      'org.opencontainers.image.url': '{{.GitURL}}'
+      'org.opencontainers.image.documentation': 'https://sablier.dev'
+      'org.opencontainers.image.created': '{{.Date}}'
+      'org.opencontainers.image.revision': '{{.FullCommit}}'
+      'org.opencontainers.image.version': '{{.Version}}'
+
+release:
+  github:
+    owner: sablierapp
+    name: sablier
+  
+# Change the checksum filename:
+checksum:
+  name_template: "checksums.txt"
+
+# Change the digests filename:
+docker_digest:
+  name_template: "digests.txt"
