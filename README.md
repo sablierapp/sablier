@@ -69,6 +69,13 @@ Choose one of the Docker images and run it with a sample configuration file:
 ```bash
 docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.3
 ```
+
+> [!TIP]
+> Verify the image signature to ensure authenticity:
+> ```bash
+> gh attestation verify --owner sablierapp oci://ghcr.io/sablierapp/sablier:1.10.3
+> ```
+
 <!-- x-release-please-end -->
 
 ### Use the binary distribution
@@ -80,6 +87,12 @@ Grab the latest binary from the [releases](https://github.com/sablierapp/sablier
 ```bash
 ./sablier --help
 ```
+
+> [!TIP]
+> Verify the binary signature to ensure authenticity:
+> ```bash
+> gh attestation verify sablier-1.10.3-linux-amd64.tar.gz -R sablierapp/sablier
+> ```
 
 ### Compile your binary from the sources
 
