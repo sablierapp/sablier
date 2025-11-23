@@ -84,7 +84,8 @@ jobs:
         artifact_url=$(echo $release_data | jq -r '.assets[] | select(.name | contains("linux-amd64")) | .browser_download_url')
         version=$(echo $release_data | jq -r '.tag_name')
         wget -q $artifact_url -O sablier_${version}_linux-amd64
-        echo "artifact_path=sablier_${version}_linux-amd64" >> $GITHUB_OUTPUT
+        tar -xzf sablier_${version}_linux-amd64
+        echo "artifact_path=sablier" >> $GITHUB_OUTPUT
 
     - name: Compare the downloaded binary with the built binary
       if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
