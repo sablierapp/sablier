@@ -69,13 +69,13 @@ dockers_v2:
       - 'ghcr.io/sablierapp/sablier'
     tags:
       - '{{ .Version }}'
-    dockerfile: Dockerfile.goreleaser
+    dockerfile: build/Dockerfile
     platforms:
       - linux/amd64
       - linux/arm64
       - linux/arm/v7
     extra_files:
-      - docker/sablier.yaml
+      - build/sablier.yaml
     labels:
       # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
       'org.opencontainers.image.title': '{{.ProjectName}}'
