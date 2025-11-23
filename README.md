@@ -269,7 +269,7 @@ Sablier works with Podman, the daemonless container engine, providing the same d
 - Docker-compatible API integration
 - Seamless migration from Docker
 
-📚 **[Full Documentation](https://sablierapp.dev/#/providers/docker)**
+📚 **[Full Documentation](https://sablierapp.dev/#/providers/podman)**
 
 ---
 
