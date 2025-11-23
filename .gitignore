@@ -5,3 +5,5 @@ node_modules
 *.wasm
 kubeconfig.yaml
 .idea
+# Added by goreleaser init:
+dist/
