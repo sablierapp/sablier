@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.5](https://github.com/sablierapp/sablier/compare/v1.10.4...v1.10.5) (2025-11-23)
+
+
+### Bug Fixes
+
+* **dockerfile:** remove running as non-root ([b3d356a](https://github.com/sablierapp/sablier/commit/b3d356ac63d636791a7eed20adac29fde184fe26))
+* warn when the custom theme path does not exist ([112bdaa](https://github.com/sablierapp/sablier/commit/112bdaaf8f1eb6259a4cd8ff6f8b6e179add0700))
+
+
+### Documentation
+
+* set version to 1.10.4 ([d66a143](https://github.com/sablierapp/sablier/commit/d66a143a9c22711724a5217fa58c1233a56e1d21))
+
 ## [1.10.4](https://github.com/sablierapp/sablier/compare/v1.10.3...v1.10.4) (2025-11-23)
 
 
