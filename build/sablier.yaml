@@ -1,0 +1,12 @@
+server:
+  port: 10000
+  base-path: /
+storage:
+  file: /etc/sablier/state.json
+provider:
+  name: docker
+logging:
+  level: info
+strategy:
+  dynamic:
+    custom-themes-path: /etc/sablier/themes
