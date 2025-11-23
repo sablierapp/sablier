@@ -55,7 +55,7 @@ You can install Sablier using one of the following methods:
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.10.1)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.10.2)
 <!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
@@ -67,7 +67,7 @@ Choose one of the Docker images and run it with a sample configuration file:
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.1
+docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.2
 ```
 <!-- x-release-please-end -->
 

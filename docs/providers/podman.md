@@ -35,7 +35,7 @@ PROVIDER_NAME=podman
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.1
+    image: sablierapp/sablier:1.10.2
     command:
       - start
       - --provider.name=podman
