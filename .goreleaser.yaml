@@ -18,21 +18,12 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
-      - darwin
     goarch:
       - amd64
       - arm64
       - arm
     goarm:
       - "7"
-    ignore:
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
-      - goos: darwin
-        goarch: arm
     ldflags:
       - -s -w
       - -X github.com/sablierapp/sablier/pkg/version.Version={{.Version}}
