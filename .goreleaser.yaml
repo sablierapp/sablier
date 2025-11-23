@@ -56,9 +56,6 @@ archives:
       - LICENSE
       - sablier.sample.yaml
 
-checksum:
-  name_template: 'checksums.txt'
-
 snapshot:
   version_template: SNAPSHOT-{{ .Commit }}
 
@@ -92,3 +89,10 @@ release:
     owner: sablierapp
     name: sablier
   
+# Change the checksum filename:
+checksum:
+  name_template: "checksums.txt"
+
+# Change the digests filename:
+docker_digest:
+  name_template: "digests.txt"
