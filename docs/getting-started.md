@@ -77,7 +77,7 @@ services:
     image: acouvreur/whoami:v1.10.2
 
   sablier:
-    image: sablierapp/sablier:1.10.3 # x-release-please-version
+    image: sablierapp/sablier:1.10.4 # x-release-please-version
     command:
         - start
         - --provider.name=docker
@@ -112,7 +112,7 @@ services:
     image: acouvreur/whoami:v1.10.2
 
   sablier:
-    image: sablierapp/sablier:1.10.3 # x-release-please-version
+    image: sablierapp/sablier:1.10.4 # x-release-please-version
     command:
         - start
         - --provider.name=docker
@@ -144,7 +144,7 @@ services:
       - sablier.group=demo
   
   sablier:
-    image: sablierapp/sablier:1.10.3 # x-release-please-version
+    image: sablierapp/sablier:1.10.4 # x-release-please-version
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```

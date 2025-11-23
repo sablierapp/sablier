@@ -142,7 +142,7 @@
           serviceAccountName: sablier
           containers:
           - name: sablier
-            image: sablierapp/sablier:1.10.3 # x-release-please-version
+            image: sablierapp/sablier:1.10.4 # x-release-please-version
             args: 
             - "start"
             - "--provider.name=kubernetes"

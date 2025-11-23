@@ -26,7 +26,7 @@ By default, the docker image looks for themes located inside the `/etc/sablier/t
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.3
+    image: sablierapp/sablier:1.10.4
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '/path/to/my/themes:/etc/sablier/themes'
