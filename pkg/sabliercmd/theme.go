@@ -15,7 +15,11 @@ func setupTheme(ctx context.Context, conf config.Config, logger *slog.Logger) (*
 		custom := os.DirFS(conf.Strategy.Dynamic.CustomThemesPath)
 		t, err := theme.NewWithCustomThemes(custom, logger)
 		if err != nil {
-			return nil, err
+			logger.WarnContext(ctx, "loading themes without custom theme path", slog.String("reason", "failed to load custom themes"), slog.String("error", err.Error()))
+			t, err = theme.New(logger)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return t, nil
 	}
