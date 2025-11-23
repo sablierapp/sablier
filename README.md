@@ -73,7 +73,7 @@ docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierap
 > [!TIP]
 > Verify the image signature to ensure authenticity:
 > ```bash
-> gh attestation verify --owner sablierapp oci://ghcr.io/sablierapp/sablier:1.10.4
+> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.10.4
 > ```
 
 <!-- x-release-please-end -->
@@ -210,13 +210,13 @@ STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 
 To list all available arguments:
 
-<!-- x-release-please-version-end -->
+<!-- x-release-please-version-start -->
 ```bash
 sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.10.1 --help
+docker run sablierapp/sablier:1.10.4 --help
 ```
 <!-- x-release-please-end -->
 
