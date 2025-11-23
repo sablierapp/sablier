@@ -41,6 +41,7 @@ jobs:
 
       - name: Login to Docker Hub
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        if: github.ref_type == 'tag'
         with:
           # Should use OIDC, but not yet supported by Docker Hub.
           # See https://github.com/docker/roadmap/issues/314 for more details.
@@ -49,6 +50,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        if: github.ref_type == 'tag'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
