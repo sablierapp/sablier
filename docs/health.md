@@ -17,7 +17,7 @@ The `sablier health` command takes one argument, `--url`, which defaults to `htt
 ```yml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.3
+    image: sablierapp/sablier:1.10.4
     healthcheck:
       test: ["sablier", "health"]
       interval: 1m30s

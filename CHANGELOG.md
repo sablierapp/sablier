@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.10.4](https://github.com/sablierapp/sablier/compare/v1.10.3...v1.10.4) (2025-11-23)
+
+
+### Bug Fixes
+
+* **dockerfile:** copy file with proper permissions ([#746](https://github.com/sablierapp/sablier/issues/746)) ([12d00e0](https://github.com/sablierapp/sablier/commit/12d00e05bee50f8e3814ce828f4d468457c1ef7b))
+
+
+### Documentation
+
+* add signature verification ([3417baf](https://github.com/sablierapp/sablier/commit/3417baf0898e218b34cc5f2b72a04161bc69d289))
+
 ## [1.10.3](https://github.com/sablierapp/sablier/compare/v1.10.2...v1.10.3) (2025-11-23)
 
 
