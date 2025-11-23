@@ -3,8 +3,6 @@ name: Release with GoReleaser
 on:
   pull_request:
   push:
-    branches:
-      - main
     tags:
       - "v*"
 
@@ -61,7 +59,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "v2.12.7"
-          args: release --clean ${{ github.ref_type == 'tag' && '' || '--snapshot' }}
+          args: release --clean ${{ github.ref_type != 'tag' && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
