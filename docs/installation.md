@@ -18,7 +18,7 @@ Choose one of the Docker images and run it with a sample configuration file:
 <!-- x-release-please-start-version -->
 ```bash
 docker run -d -p 10000:10000 \
-    -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.4
+    -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.5
 ```
 <!-- x-release-please-end -->
 
