@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.10.3](https://github.com/sablierapp/sablier/compare/v1.10.2...v1.10.3) (2025-11-23)
+
+
+### Bug Fixes
+
+* **goreleaser:** reverse --snapshot ternary expression ([d834d17](https://github.com/sablierapp/sablier/commit/d834d178efdda758a6ccf850b617b91e289da101))
+
+
+### Documentation
+
+* fix podman documentation link ([#743](https://github.com/sablierapp/sablier/issues/743)) ([080e4d1](https://github.com/sablierapp/sablier/commit/080e4d1a1f7702b63a146b6607064bf2876a51c6))
+
 ## [1.10.2](https://github.com/sablierapp/sablier/compare/v1.10.1...v1.10.2) (2025-11-23)
 
 
