@@ -29,55 +29,8 @@ jobs:
           permission-pull-requests: write
 
       - name: Release Please
-        id: release
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
         with:
           token: ${{ steps.github-app-token.outputs.token }}
           config-file: .github/release-please/release-please-config.json
           manifest-file: .github/release-please/.release-please-manifest.json
-
-      - name: Comment on released issues
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: ${{ steps.release.outputs.release_created }}
-        with:
-          github-token: ${{ steps.github-app-token.outputs.token }}
-          script: |
-            const tag = '${{ steps.release.outputs.tag_name }}';
-            const releaseBody = `${{ steps.release.outputs.body }}`;
-            
-            // Get all closed issues mentioned in the release body
-            const issueNumbers = [...new Set(
-              releaseBody
-                .match(/#(\d+)/g)
-                ?.map(match => parseInt(match.substring(1))) || []
-            )];
-            
-            console.log(`Found ${issueNumbers.length} issues to notify: ${issueNumbers.join(', ')}`);
-            
-            for (const issueNumber of issueNumbers) {
-              try {
-                // Comment on the issue
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNumber,
-                  body: `:tada: This issue has been resolved in version ${tag} :tada:
-
-            The release is available on:
-            - \`${tag}\`
-            - [GitHub release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${tag})`
-                });
-                
-                // Add "released" label
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNumber,
-                  labels: ['released']
-                });
-                
-                console.log(`Successfully notified issue #${issueNumber}`);
-              } catch (error) {
-                console.error(`Failed to notify issue #${issueNumber}: ${error.message}`);
-              }
-            }
