@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/testcontainers/testcontainers-go"
 )
 
@@ -24,7 +24,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 		ExposedPorts: []string{
 			"34451/tcp",
 		},
-		ConfigModifier: func(config *container.Config) {
+		/*ConfigModifier: func(config *container.Config) {
 			// config.User = "podman"
 		},
 		HostConfigModifier: func(hc *container.HostConfig) {
@@ -32,7 +32,7 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			// Disable cgroup v2 for the container
 			hc.CgroupnsMode = "host"
 			hc.SecurityOpt = []string{"label=disable", "seccomp=unconfined", "apparmor=unconfined"}
-		},
+		},*/
 		Cmd: []string{
 			"bash", "-c", "rm -rf /etc/containers/storage.conf && podman system reset -f && podman --log-level trace system service tcp://0.0.0.0:34451 -t 0",
 		},

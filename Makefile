@@ -23,6 +23,7 @@ run:
 gen:
 	go generate -v ./...
 
+.PHONY: build
 build:
 	go build -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v ./cmd/sablier
 

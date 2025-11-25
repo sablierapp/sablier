@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/swarm"
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -29,24 +29,28 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 }
 
 func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
-	opts := swarm.ServiceListOptions{
-		Filters: filters.NewArgs(),
+	filters := client.Filters{}
+	filters.Add("scope", "swarm")
+	filters.Add("type", "service")
+	filters.Add("name", name)
+
+	opts := client.ServiceListOptions{
+		Filters: filters,
 		// If set to true, the list will include the swarm.ServiceStatus field to all returned services.
 		Status: true,
 	}
-	opts.Filters.Add("name", name)
 
 	services, err := p.Client.ServiceList(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error listing services: %w", err)
 	}
 
-	if len(services) == 0 {
+	if len(services.Items) == 0 {
 		return nil, fmt.Errorf("service with name %s was not found", name)
 	}
 
 	var svc *swarm.Service = nil
-	for _, service := range services {
+	for _, service := range services.Items {
 		// Exact match
 		if service.Spec.Name == name {
 			svc = &service

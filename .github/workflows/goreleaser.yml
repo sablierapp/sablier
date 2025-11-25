@@ -59,7 +59,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "v2.12.7"
-          args: release --clean ${{ github.ref_type != 'tag' && '--snapshot' || '' }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
