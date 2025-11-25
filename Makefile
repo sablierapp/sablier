@@ -23,6 +23,9 @@ run:
 gen:
 	go generate -v ./...
 
+gendocs:
+	go run ./cmd/gendocs
+
 build:
 	go build -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v ./cmd/sablier
 

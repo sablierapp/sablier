@@ -61,8 +61,75 @@ services:
         - sablier.group=mygroup
 ```
 
-## How does Sablier knows when a service is ready?
+## How does Sablier know when a service is ready?
 
-Sablier checks for the service replicas. As soon as the current replicas matches the wanted replicas, then the service is considered `ready`.
+Sablier checks for the service replicas. As soon as the current replicas match the wanted replicas, then the service is considered `ready`.
 
-?> Docker Swarm uses the container's healthcheck to check if the container is up and running. So the provider has a native healthcheck support.
+?> Docker Swarm uses the container's healthcheck to check if the container is up and running. So the provider has native healthcheck support.
+
+## Configuration Options
+
+### Auto-stop on Startup
+
+```yaml
+provider:
+  auto-stop-on-startup: true
+```
+
+When enabled, Sablier will scale down all services with `sablier.enable=true` label that have non-zero replicas but are not registered in an active session when Sablier starts.
+
+## Service Labels
+
+| Label | Required | Description | Example |
+|-------|----------|-------------|---------|
+| `sablier.enable` | Yes | Enable Sablier management for this service | `true` |
+| `sablier.group` | Yes | Logical group name for the service | `myapp` |
+
+**Important:** Labels must be in the `deploy` section for services, not at the service level.
+
+## Full Example
+
+See the [Docker Swarm provider example](../../examples/docker-swarm/) for a complete, working setup.
+
+## Scaling Behavior
+
+- Services start with 0 replicas
+- On first request, Sablier scales to the last known replica count (default: 1)
+- When session expires, Sablier scales back to 0
+- Swarm automatically distributes replicas across nodes
+
+## Limitations
+
+- Requires Docker Swarm mode to be initialized
+- Requires access to the Docker socket on a manager node
+- Cannot scale global services (only replicated services)
+- Services must use `replicated` mode, not `global`
+
+## Troubleshooting
+
+### Service not scaling
+
+1. Check Sablier logs for errors
+2. Verify the service has labels in the `deploy` section
+3. Ensure Sablier is running on a manager node
+4. Check service status: `docker service ps <service-name>`
+
+### Sablier not starting
+
+Ensure Sablier is deployed with a constraint to run on manager nodes:
+
+```yaml
+deploy:
+  placement:
+    constraints:
+      - node.role == manager
+```
+
+### Services stuck in "preparing" state
+
+Check if nodes have capacity and if images are available:
+
+```bash
+docker service ps <service-name>
+docker node ls
+```
