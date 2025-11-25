@@ -2,12 +2,13 @@ package docker_test
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"testing"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/dind"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 type dindContainer struct {

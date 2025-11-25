@@ -3,9 +3,10 @@ package docker
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/client"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
+
+	"github.com/moby/moby/client"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 // Interface guard
@@ -20,7 +21,7 @@ type Provider struct {
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "docker"))
 
-	serverVersion, err := cli.ServerVersion(ctx)
+	serverVersion, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to docker host: %v", err)
 	}

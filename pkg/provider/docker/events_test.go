@@ -2,12 +2,13 @@ package docker_test
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
+	"testing"
+	"time"
+
+	"github.com/moby/moby/api/types/container"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {

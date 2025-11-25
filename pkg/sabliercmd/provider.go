@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
@@ -24,13 +24,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 
 	switch config.Name {
 	case "swarm", "docker_swarm":
-		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker swarm client: %v", err)
 		}
 		return dockerswarm.New(ctx, cli, logger)
 	case "docker":
-		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
