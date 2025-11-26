@@ -39,5 +39,13 @@ func (p *Provider) dockerStop(ctx context.Context, name string) error {
 }
 
 func (p *Provider) dockerPause(ctx context.Context, name string) error {
-	return fmt.Errorf("pause strategy is not implemented yet")
+	p.l.DebugContext(ctx, "pausing container", slog.String("name", name))
+	err := p.Client.ContainerPause(ctx, name)
+	if err != nil {
+		p.l.ErrorContext(ctx, "cannot pause container", slog.String("name", name), slog.Any("error", err))
+		return fmt.Errorf("cannot pause container %s: %w", name, err)
+	}
+
+	p.l.DebugContext(ctx, "container paused", slog.String("name", name))
+	return nil
 }
