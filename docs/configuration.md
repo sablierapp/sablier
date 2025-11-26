@@ -28,7 +28,10 @@ sablier --configFile=path/to/myconfigfile.yml
 ```yaml
 provider:
   # Provider to use to manage containers (docker, swarm, kubernetes)
-  name: docker 
+  name: docker
+  docker:
+    # Strategy to use for stopping Docker containers: stop or pause (default: stop)
+    strategy: stop
 server:
   # The server port to use
   port: 10000 
@@ -113,6 +116,7 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
 
 ```
   -h, --help                                                  help for start
+      --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes] (default "docker")
       --server.base-path string                               The base path for the API (default "/")
       --server.port int                                       The server port to use (default 10000)

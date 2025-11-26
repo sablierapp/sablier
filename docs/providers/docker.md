@@ -59,6 +59,66 @@ services:
       - sablier.group=mygroup
 ```
 
+## Strategies
+
+The Docker provider supports two strategies for managing containers:
+
+### Stop Strategy (default)
+
+The `stop` strategy completely stops containers when they become idle and starts them again when needed.
+
+<!-- tabs:start -->
+
+#### **File (YAML)**
+
+```yaml
+provider:
+  docker:
+    strategy: stop
+```
+
+#### **CLI**
+
+```bash
+sablier start --provider.docker.strategy=stop
+```
+
+#### **Environment Variable**
+
+```bash
+PROVIDER_DOCKER_STRATEGY=stop
+```
+
+<!-- tabs:end -->
+
+### Pause Strategy
+
+The `pause` strategy pauses containers instead of stopping them. This is faster than stop/start as the container state remains in memory, but uses more system resources.
+
+<!-- tabs:start -->
+
+#### **File (YAML)**
+
+```yaml
+provider:
+  docker:
+    strategy: pause
+```
+
+#### **CLI**
+
+```bash
+sablier start --provider.docker.strategy=pause
+```
+
+#### **Environment Variable**
+
+```bash
+PROVIDER_DOCKER_STRATEGY=pause
+```
+
+<!-- tabs:end -->
+
 ## How does Sablier knows when a container is ready?
 
 If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
