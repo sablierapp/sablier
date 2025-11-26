@@ -9,6 +9,13 @@ import (
 )
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
+	if p.strategy == "pause" {
+		return p.dockerPause(ctx, name)
+	}
+	return p.dockerStop(ctx, name)
+}
+
+func (p *Provider) dockerStop(ctx context.Context, name string) error {
 	p.l.DebugContext(ctx, "stopping container", slog.String("name", name))
 	err := p.Client.ContainerStop(ctx, name, container.StopOptions{})
 	if err != nil {
@@ -29,4 +36,8 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 		p.l.ErrorContext(ctx, "context cancelled while waiting for container to stop", slog.String("name", name))
 		return ctx.Err()
 	}
+}
+
+func (p *Provider) dockerPause(ctx context.Context, name string) error {
+	return fmt.Errorf("pause strategy is not implemented yet")
 }

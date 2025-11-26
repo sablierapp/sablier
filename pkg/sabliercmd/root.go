@@ -50,6 +50,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
 	startCmd.Flags().StringVar(&conf.Provider.Podman.Uri, "provider.podman.uri", "unix:///run/podman/podman.sock", "Uri is the URI to connect to the Podman service.")
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
+	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
+	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
