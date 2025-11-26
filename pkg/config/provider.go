@@ -12,6 +12,7 @@ type Provider struct {
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
 	Podman            Podman
+	Docker            Docker
 }
 
 type Kubernetes struct {
@@ -34,6 +35,10 @@ type Podman struct {
 	Uri string `mapstructure:"URI" yaml:"uri,omitempty" default:"unix:///run/podman/podman.sock"`
 }
 
+type Docker struct {
+	Strategy string `mapstructure:"STRATEGY" yaml:"strategy,omitempty" default:"stop"`
+}
+
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
 
 func NewProviderConfig() Provider {
@@ -47,6 +52,9 @@ func NewProviderConfig() Provider {
 		},
 		Podman: Podman{
 			Uri: "unix:///run/podman/podman.sock",
+		},
+		Docker: Docker{
+			Strategy: "stop",
 		},
 	}
 }
