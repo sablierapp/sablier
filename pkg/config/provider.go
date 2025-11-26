@@ -40,6 +40,7 @@ type Docker struct {
 }
 
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
+var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
 	return Provider{
@@ -62,10 +63,25 @@ func NewProviderConfig() Provider {
 func (provider Provider) IsValid() error {
 	for _, p := range providers {
 		if p == provider.Name {
+			// Validate Docker-specific settings when using Docker provider
+			if p == "docker" {
+				if err := provider.Docker.IsValid(); err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 	}
 	return fmt.Errorf("unrecognized provider %s. providers available: %v", provider.Name, providers)
+}
+
+func (docker Docker) IsValid() error {
+	for _, s := range dockerStrategies {
+		if s == docker.Strategy {
+			return nil
+		}
+	}
+	return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
 }
 
 func GetProviders() []string {
