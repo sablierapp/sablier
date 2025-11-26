@@ -1,0 +1,9 @@
+FROM caddy:2.10.2-builder AS builder
+
+RUN xcaddy build \
+    --with github.com/sablierapp/sablier-caddy-plugin@v1.0.1 # x-release-please-version
+
+FROM caddy:2.10.2
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+COPY Caddyfile /etc/caddy/Caddyfile
