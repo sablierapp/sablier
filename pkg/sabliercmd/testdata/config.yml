@@ -7,6 +7,8 @@ provider:
     delimiter: .
   podman:
     uri: unix:///run/podman/podman.sock.yml
+  docker:
+    strategy: pause
 server:
   port: 1111
   base-path: /configfile/
