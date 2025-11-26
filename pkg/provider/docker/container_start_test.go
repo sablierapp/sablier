@@ -86,7 +86,31 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot unpause container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("cannot inspect container non-existent before unpausing: Error response from daemon: No such container: non-existent"),
+		},
+		{
+			name: "container starts because was not paused",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStop(ctx, c.ID, container.StopOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			err: nil,
 		},
 		{
 			name: "container unpause as expected",

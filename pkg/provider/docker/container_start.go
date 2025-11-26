@@ -27,6 +27,17 @@ func (p *Provider) dockerStart(ctx context.Context, name string) error {
 }
 
 func (p *Provider) dockerUnpause(ctx context.Context, name string) error {
+	container, inspectErr := p.Client.ContainerInspect(ctx, name)
+	if inspectErr != nil {
+		p.l.ErrorContext(ctx, "cannot inspect container before unpausing", slog.String("name", name), slog.Any("error", inspectErr))
+		return fmt.Errorf("cannot inspect container %s before unpausing: %w", name, inspectErr)
+	}
+
+	if !container.State.Paused {
+		p.l.DebugContext(ctx, "container is not paused, starting container", slog.String("name", name))
+		return p.dockerStart(ctx, name)
+	}
+
 	p.l.DebugContext(ctx, "unpausing container", slog.String("name", name))
 	err := p.Client.ContainerUnpause(ctx, name)
 	if err != nil {
