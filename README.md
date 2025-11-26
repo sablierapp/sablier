@@ -27,6 +27,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Docker Swarm](#docker-swarm)
   - [Podman](#podman)
   - [Kubernetes](#kubernetes)
+  - [Nomad](#nomad)
 - [Usage with Reverse Proxies](#usage-with-reverse-proxies)
   - [Apache APISIX](#apache-apisix)
   - [Caddy](#caddy)
@@ -298,6 +299,22 @@ Sablier provides native Kubernetes support for managing deployments, scaling wor
 - Label-based workload selection
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/kubernetes)**
+
+---
+
+### Nomad
+
+<img src="./docs/assets/img/nomad.png" alt="Nomad" width="100" align="right" />
+
+Sablier integrates with HashiCorp Nomad for dynamic scaling of task groups across your cluster.
+
+**Features:**
+- Scale Nomad task groups on demand
+- Support for ACL tokens and namespaces
+- Event-driven allocation monitoring
+- Multi-region support
+
+📚 **[Full Documentation](https://sablierapp.dev/#/providers/nomad)**
 
 ## Usage with Reverse Proxies
 
