@@ -1,14 +1,15 @@
 package docker_test
 
 import (
+	"sort"
+	"strings"
+	"testing"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"sort"
-	"strings"
-	"testing"
 )
 
 func TestDockerClassicProvider_InstanceList(t *testing.T) {
@@ -18,7 +19,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := docker.New(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c1, err := dind.CreateMimic(ctx, MimicOptions{
@@ -77,7 +78,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := docker.New(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c1, err := dind.CreateMimic(ctx, MimicOptions{
