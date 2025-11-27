@@ -34,7 +34,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
-		return docker.New(ctx, cli, logger)
+		return docker.New(ctx, cli, logger, config.Docker.Strategy)
 	case "kubernetes":
 		kubeclientConfig, err := rest.InClusterConfig()
 		if err != nil {

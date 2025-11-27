@@ -2,12 +2,13 @@ package docker_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
@@ -18,7 +19,7 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	dind := setupDinD(t)
-	p, err := docker.New(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c, err := dind.CreateMimic(ctx, MimicOptions{})
