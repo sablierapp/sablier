@@ -1,6 +1,3 @@
-<!-- omit in toc -->
-# 
-
 ![Sablier Banner](https://raw.githubusercontent.com/sablierapp/artwork/refs/heads/main/horizontal/sablier-horizontal-color.png)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/sablierapp/sablier)](https://goreportcard.com/report/github.com/sablierapp/sablier)
@@ -8,6 +5,8 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sablierapp/sablier/badge)](https://scorecard.dev/viewer/?uri=github.com/sablierapp/sablier)
 
 Free and open-source software that starts workloads on demand and stops them after a period of inactivity.
+
+It integrates with [reverse proxy plugins](#usage-with-reverse-proxies) (Traefik, Caddy, Nginx, Envoy, etc.) to intercept incoming requests, wake up sleeping workloads, and display a waiting page until they're ready.
 
 ![Demo](./docs/assets/img/demo.gif)
 
@@ -18,6 +17,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Use the binary distribution](#use-the-binary-distribution)
   - [Compile your binary from the sources](#compile-your-binary-from-the-sources)
   - [Use the Helm Chart](#use-the-helm-chart)
+- [Quick Start](#quick-start)
 - [Configuration](#configuration)
   - [Configuration File](#configuration-file)
   - [Environment Variables](#environment-variables)
@@ -67,7 +67,7 @@ Choose one of the Docker images and run it with a sample configuration file:
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -d -p 10000:10000 -v sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.10.5
+docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.10.5
 ```
 
 > [!TIP]
@@ -124,6 +124,97 @@ helm install sablier sablierapp/sablier
 ```
 
 📚 **[Full Documentation](https://github.com/sablierapp/helm-charts/tree/main/charts/sablier)** | 💻 **[Chart Repository](https://github.com/sablierapp/helm-charts)**
+
+---
+
+## Quick Start
+
+> [!NOTE]
+> This quick start demonstrates Sablier with the **Docker provider**.
+> 
+> For other providers, see the [Providers](#providers) section.
+
+<!-- omit in toc -->
+### 1. Start your container to scale to zero
+
+Run your container with Sablier labels:
+
+```bash
+docker run -d -p 8080:80 --name mimic \
+  --label sablier.enable=true \
+  --label sablier.group=demo \
+  sablierapp/mimic:v0.3.2 \
+  -running -running-after=5s \
+  -healthy=true -healthy-after=5s
+```
+
+Here we run [sablierapp/mimic](https://github.com/sablierapp/mimic), a configurable web-server for testing purposes.
+
+> [!CAUTION]
+> You should **always** use a healthcheck with your application that needs to be scaled to zero.
+>
+> Without a healtheck, Sablier cannot distinguish a started container from a container ready to receive incoming requests.
+
+<!-- omit in toc -->
+### 2. Stop the Container
+
+Stop the container to simulate a scaled-down state:
+
+```bash
+docker stop mimic
+```
+
+> [!TIP]
+> Sablier can **automatically** stop containers at startup using the `--provider.auto-stop-on-startup` flag, which will stop all containers with `sablier.enable=true` labels.
+
+<!-- omit in toc -->
+### 3. Start Sablier
+
+Start the Sablier server with the Docker provider:
+
+```bash
+docker run --name sablier \
+  -p 10000:10000 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  sablierapp/sablier:1.10.5 \
+  start --provider.name=docker
+```
+
+<!-- omit in toc -->
+### 4. Request a Session
+
+Call the Sablier API to start a session for the `demo` group:
+
+```bash
+curl -v http://localhost:10000/api/strategies/blocking\?group\=demo\&session_duration\=20s
+* Request completely sent off
+< HTTP/1.1 200 OK
+< X-Sablier-Session-Status: ready
+```
+
+Sablier will start the mimic container automatically for 20 seconds..
+
+> [!TIP]
+> Check out the [Usage with Reverse Proxies](#usage-with-reverse-proxies) section to integrate Sablier with **Traefik**, **Caddy**, **Nginx**, and more.
+
+<!-- omit in toc -->
+### 5. Verify the Container is Running
+
+```bash
+docker ps | grep mimic
+```
+
+<!-- omit in toc -->
+### 6. Wait for Session Expiration
+
+After the session duration (20 seconds in this example), Sablier will automatically stop the container.
+
+```bash
+# Wait 20 seconds, then check
+docker ps -a | grep mimic
+```
+
+The container should be stopped.
 
 ---
 
@@ -300,6 +391,10 @@ Sablier provides native Kubernetes support for managing deployments, scaling wor
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/kubernetes)**
 
 ## Usage with Reverse Proxies
+
+Sablier is an API server that manages workload lifecycle. To automatically wake up workloads when users access your services, you can integrate Sablier with reverse proxy plugins.
+
+These plugins intercept incoming requests, call the Sablier API to start sleeping workloads, and display a waiting page until they're ready.
 
 ### Apache APISIX
 
