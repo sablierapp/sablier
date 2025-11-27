@@ -140,7 +140,7 @@ helm install sablier sablierapp/sablier
 Run your container with Sablier labels:
 
 ```bash
-docker run -d -p 8080:80 --name mimic \
+docker run -d --health-cmd "/mimic healthcheck" -p 8080:80 --name mimic \
   --label sablier.enable=true \
   --label sablier.group=demo \
   sablierapp/mimic:v0.3.2 \
