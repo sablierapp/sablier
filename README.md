@@ -339,9 +339,9 @@ TODO: Add link to full auto-generated reference
 Sablier integrates seamlessly with Docker Engine to manage container lifecycle based on demand.
 
 **Features:**
-- Start and stop containers automatically
-- Scale containers based on HTTP traffic
-- Works with Docker Compose deployments
+- Connects to the Docker socket
+- Starts/Stops containers
+- Compatible with Docker Compose
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/docker)**
 
@@ -354,9 +354,9 @@ Sablier integrates seamlessly with Docker Engine to manage container lifecycle b
 Sablier supports Docker Swarm mode for managing services across a cluster of Docker engines.
 
 **Features:**
-- Scale Swarm services on demand
-- Distributed scaling across multiple nodes
-- Seamless integration with Docker Swarm orchestration
+- Connects to the Docker socket (Manager node)
+- Scales services to 0 and back
+- Compatible with Docker Stack
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/docker_swarm)**
 
@@ -369,9 +369,9 @@ Sablier supports Docker Swarm mode for managing services across a cluster of Doc
 Sablier works with Podman, the daemonless container engine, providing the same dynamic scaling capabilities as Docker.
 
 **Features:**
-- Rootless container management
-- Docker-compatible API integration
-- Seamless migration from Docker
+- Connects to the Podman socket
+- Starts/Stops containers
+- Supports rootless containers
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/podman)**
 
@@ -384,9 +384,9 @@ Sablier works with Podman, the daemonless container engine, providing the same d
 Sablier provides native Kubernetes support for managing deployments, scaling workloads dynamically.
 
 **Features:**
-- Scale Kubernetes deployments and statefulsets
-- Works with any Kubernetes cluster
-- Label-based workload selection
+- Connects to the Kubernetes API
+- Scales Deployments and StatefulSets to 0 and back
+- Supports in-cluster and out-of-cluster configuration
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/kubernetes)**
 
