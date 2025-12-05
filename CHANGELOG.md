@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.0](https://github.com/sablierapp/sablier/compare/v1.10.5...v1.11.0) (2025-12-05)
+
+
+### Features
+
+* **docker:** add docker pause strategy  ([#755](https://github.com/sablierapp/sablier/issues/755)) ([0d699ef](https://github.com/sablierapp/sablier/commit/0d699effc34260be35aba0d3acb57d8775bf8f8b))
+
+
+### Documentation
+
+* add mimic healthcheck ([ff5c447](https://github.com/sablierapp/sablier/commit/ff5c4476bd0a45f4495fdb8e32e1d18e0b32ec4e))
+* add quick start ([58896b9](https://github.com/sablierapp/sablier/commit/58896b9feb27577ff8a41e5a8f3e3438761b2f5f))
+* update provider features ([d7685f0](https://github.com/sablierapp/sablier/commit/d7685f04a1afd4df1b4acb511ecd9c6051b17e99))
+
 ## [1.10.5](https://github.com/sablierapp/sablier/compare/v1.10.4...v1.10.5) (2025-11-23)
 
 
