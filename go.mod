@@ -22,7 +22,7 @@ require (
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
 	github.com/valkey-io/valkey-go v1.0.68
 	go.uber.org/mock v0.6.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	gotest.tools/v3 v3.5.2
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
