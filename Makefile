@@ -1,3 +1,5 @@
+.PHONY: build
+
 PLATFORMS := linux/amd64 linux/arm64 linux/arm/v7 linux/arm
 
 temp = $(subst /, ,$@)

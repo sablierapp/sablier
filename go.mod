@@ -29,7 +29,10 @@ require (
 	k8s.io/client-go v0.35.0
 )
 
-require github.com/containers/image/v5 v5.36.2
+require (
+	github.com/containers/image/v5 v5.36.2
+	go.podman.io/image/v5 v5.38.0
+)
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
@@ -207,7 +210,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.podman.io/common v0.66.1 // indirect
-	go.podman.io/image/v5 v5.38.0 // indirect
 	go.podman.io/storage v1.61.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
