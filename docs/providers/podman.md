@@ -24,7 +24,7 @@ sablier start --provider.name=podman
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=podman
+SABLIER_PROVIDER_NAME=podman
 ```
 
 <!-- tabs:end -->

@@ -70,6 +70,28 @@ func TestPrecedence(t *testing.T) {
 		assert.Equal(t, string(wantConfig), gotOutput)
 	})
 
+	t.Run("legacy env var", func(t *testing.T) {
+		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
+		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
+
+		wantConfig, err := os.ReadFile(filepath.Join(testDir, "testdata", "config_env_wanted.json"))
+		require.NoError(t, err, "error reading test config file")
+
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{
+			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
+			"start",
+		})
+		_ = cmd.Execute()
+
+		gotOutput := output.String()
+
+		assert.Equal(t, string(wantConfig), gotOutput)
+	})
+
 	t.Run("env var", func(t *testing.T) {
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.env"))

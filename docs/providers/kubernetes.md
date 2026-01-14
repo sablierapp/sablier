@@ -24,7 +24,7 @@ sablier start --provider.name=kubernetes
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=kubernetes
+SABLIER_PROVIDER_NAME=kubernetes
 ```
 
 <!-- tabs:end -->

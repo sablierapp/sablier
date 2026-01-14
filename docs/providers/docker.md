@@ -24,7 +24,7 @@ sablier start --provider.name=docker
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=docker
+SABLIER_PROVIDER_NAME=docker
 ```
 
 <!-- tabs:end -->
@@ -86,7 +86,7 @@ sablier start --provider.docker.strategy=stop
 #### **Environment Variable**
 
 ```bash
-PROVIDER_DOCKER_STRATEGY=stop
+SABLIER_PROVIDER_DOCKER_STRATEGY=stop
 ```
 
 <!-- tabs:end -->
@@ -114,7 +114,7 @@ sablier start --provider.docker.strategy=pause
 #### **Environment Variable**
 
 ```bash
-PROVIDER_DOCKER_STRATEGY=pause
+SABLIER_PROVIDER_DOCKER_STRATEGY=pause
 ```
 
 <!-- tabs:end -->
