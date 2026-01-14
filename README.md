@@ -226,7 +226,7 @@ There are three ways to configure Sablier:
 2. [As environment variables](#environment-variables)
 3. [As command-line arguments](#arguments)
 
-Configuration sources are evaluated in the order listed above.
+Configuration sources are evaluated in the order listed above with later methods overriding earlier ones.
 
 If no value is provided for a given option, a default value is used.
 
