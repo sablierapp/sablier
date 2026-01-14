@@ -283,7 +283,7 @@ strategy:
 
 ### Environment Variables
 
-Environment variables follow the same structure as the configuration file. For example:
+Environment variables follow the same structure as the configuration file and are prefixed with `SABLIER_`. For example:
 
 ```yaml
 strategy:
@@ -294,7 +294,7 @@ strategy:
 becomes
 
 ```bash
-STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
+SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 ```
 
 ### Arguments

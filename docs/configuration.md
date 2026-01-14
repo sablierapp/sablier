@@ -66,7 +66,7 @@ strategy:
 
 ## Environment Variables
 
-All configuration options can be set as environment variables. The variable names follow the structure of the configuration file.
+All configuration options can be set as environment variables. The variable names follow the structure of the configuration file and are prefixed with `SABLIER_`.
 
 For example, this configuration:
 
@@ -79,7 +79,7 @@ strategy:
 Becomes:
 
 ```bash
-STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
+SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 ```
 
 ## Arguments

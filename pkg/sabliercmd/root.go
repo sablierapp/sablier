@@ -135,9 +135,9 @@ func initializeConfig(cmd *cobra.Command) error {
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)
 func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		envVarSuffix := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
-		envVarSuffix = strings.ToUpper(strings.ReplaceAll(envVarSuffix, ".", "_"))
-		_ = v.BindEnv(f.Name, envVarSuffix)
+		envVar := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+		envVar = strings.ToUpper(strings.ReplaceAll(envVar, ".", "_"))
+		_ = v.BindEnv(f.Name, envVar, "SABLIER_"+envVar)
 
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {

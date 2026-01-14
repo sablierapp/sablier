@@ -24,7 +24,7 @@ sablier start --provider.name=docker_swarm # or swarm
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=docker_swarm # or swarm
+SABLIER_PROVIDER_NAME=docker_swarm # or swarm
 ```
 
 <!-- tabs:end -->
