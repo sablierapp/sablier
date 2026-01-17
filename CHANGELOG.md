@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.1](https://github.com/sablierapp/sablier/compare/v1.11.0...v1.11.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* **config:** use SABLIER_ environment variable prefix ([#790](https://github.com/sablierapp/sablier/issues/790)) ([e9c2213](https://github.com/sablierapp/sablier/commit/e9c2213d49320bba9cf7ecd0f6585c221da13f64))
+* **logging:** access log level is set to debug ([#791](https://github.com/sablierapp/sablier/issues/791)) ([6e46cdb](https://github.com/sablierapp/sablier/commit/6e46cdba313605e01af52072e695db32d84282e3))
+
+
+### Documentation
+
+* clarify configuration source evaluation order ([#788](https://github.com/sablierapp/sablier/issues/788)) ([ecdfd37](https://github.com/sablierapp/sablier/commit/ecdfd37901fff470ded9690e62f414330b5afbf6))
+
 ## [1.11.0](https://github.com/sablierapp/sablier/compare/v1.10.5...v1.11.0) (2025-12-05)
 
 
