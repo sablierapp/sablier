@@ -58,7 +58,7 @@ jobs:
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           distribution: goreleaser
-          version: "v2.12.7"
+          version: "v2.14.0"
           args: release --clean ${{ github.ref_type != 'tag' && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,3 +74,33 @@ jobs:
         if: github.ref_type == 'tag'
         with:
           subject-checksums: ./dist/digests.txt
+
+      - name: Download latest released Sablier binary
+        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        id: latest-release
+        run: |
+          release_data=$(curl -s https://api.github.com/repos/sablierapp/sablier/releases/latest)
+          artifact_url=$(echo $release_data | jq -r '.assets[] | select(.name | contains("linux-amd64")) | .browser_download_url')
+          version=$(echo $release_data | jq -r '.tag_name')
+          wget -q $artifact_url -O sablier_${version}_linux-amd64
+          tar -xzf sablier_${version}_linux-amd64
+          echo "artifact_path=sablier" >> $GITHUB_OUTPUT
+
+      - name: Compare the downloaded binary with the built binary
+        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        id: diff
+        run: |
+          go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$(cat diff.txt)" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment diff on pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
+        with:
+          message: |
+            ```
+            ${{ steps.diff.outputs.diff }}
+            ```
+          comment-tag: go-binary-diff
