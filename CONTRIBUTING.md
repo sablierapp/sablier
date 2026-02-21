@@ -110,6 +110,13 @@ BREAKING CHANGE: API now requires API key in header instead of query parameter"
 
 ## Development Guide
 
+### Setup
+
+Before building the project, use `mise` to prepare the development environment:
+
+- Install `mise` (if not already installed): https://mise.jdx.dev/getting-started.html
+- Run `mise` in the project root to provision the environment or follow the project's `mise` configuration.
+
 ### Compiling
 
 #### Build the Binary
