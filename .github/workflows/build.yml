@@ -28,7 +28,9 @@ jobs:
       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version-file: 'go.mod'
-        cache-dependency-path: go.sum
+        cache-dependency-path: |
+          go.sum
+          tools.mod
 
     - name: Disable AppArmor on the GitHub runner
       uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
