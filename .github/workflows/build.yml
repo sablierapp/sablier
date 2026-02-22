@@ -28,10 +28,9 @@ jobs:
       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version-file: 'go.mod'
-        cache-dependency-path: go.sum
-
-    - name: Build
-      run: make
+        cache-dependency-path: |
+          go.sum
+          tools.mod
 
     - name: Disable AppArmor on the GitHub runner
       uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
@@ -40,7 +39,7 @@ jobs:
       run: sudo sysctl -w kernel.unprivileged_userns_clone=1
 
     - name: Test
-      run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
+      run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool -modfile=tools.mod go-junit-report -parser gojson -set-exit-code > junit.xml
 
     - name: Display JUnit report
       if: ${{ !cancelled() }}
@@ -74,34 +73,3 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: junit.xml
         disable-search: true
-
-    # TODO: Download release asset action with cache
-    - name: Download latest released Sablier binary
-      if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
-      id: latest-release
-      run: |
-        release_data=$(curl -s https://api.github.com/repos/sablierapp/sablier/releases/latest)
-        artifact_url=$(echo $release_data | jq -r '.assets[] | select(.name | contains("linux-amd64")) | .browser_download_url')
-        version=$(echo $release_data | jq -r '.tag_name')
-        wget -q $artifact_url -O sablier_${version}_linux-amd64
-        tar -xzf sablier_${version}_linux-amd64
-        echo "artifact_path=sablier" >> $GITHUB_OUTPUT
-
-    - name: Compare the downloaded binary with the built binary
-      if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
-      id: diff
-      run: |
-        go tool gsa -o diff.txt ${{ steps.latest-release.outputs.artifact_path }} sablier_draft_linux-amd64
-        echo "diff<<EOF" >> $GITHUB_OUTPUT
-        echo "$(cat diff.txt)" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Comment diff on pull request
-      if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
-      uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
-      with:
-        message: |
-          ```
-          ${{ steps.diff.outputs.diff }}
-          ```
-        comment-tag: go-binary-diff
