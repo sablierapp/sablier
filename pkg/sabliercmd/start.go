@@ -22,16 +22,12 @@ var newStartCommand = func() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Start the Sablier server",
-		Run: func(cmd *cobra.Command, args []string) {
-			err := viper.Unmarshal(&conf)
-			if err != nil {
-				panic(err)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := viper.Unmarshal(&conf); err != nil {
+				return fmt.Errorf("unable to read configuration file: %w", err)
 			}
 
-			err = Start(cmd.Context(), conf)
-			if err != nil {
-				panic(err)
-			}
+			return Start(cmd.Context(), conf)
 		},
 	}
 }
