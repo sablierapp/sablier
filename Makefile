@@ -1,6 +1,6 @@
 .PHONY: run gen build test lint fmt docker docs
 
-GO_FLAGS := "nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp"
+GO_FLAGS := nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp
 
 run:
 	go run -tags="$(GO_FLAGS)" ./cmd/sablier start --storage.file=state.json --logging.level=debug
