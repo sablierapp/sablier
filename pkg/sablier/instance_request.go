@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/store"
 	"log/slog"
 	"time"
+
+	"github.com/sablierapp/sablier/pkg/store"
 )
 
 func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
@@ -18,7 +19,15 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
-		err = s.provider.InstanceStart(ctx, name)
+		// When multiple requests come in for the same instance, we only want to start it once. The singleflight package
+		// ensures that the function is only called once for a given key, and that all callers receive the same result.
+		_, err, shared := s.singleflight.Do(name, func() (any, error) {
+			err := s.provider.InstanceStart(ctx, name)
+			if err != nil {
+				return nil, err
+			}
+			return nil, nil
+		})
 		if err != nil {
 			return InstanceInfo{}, err
 		}
@@ -27,7 +36,7 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 		if err != nil {
 			return InstanceInfo{}, err
 		}
-		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", string(state.Status)))
+		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", string(state.Status)), slog.Bool("singleflight_shared", shared))
 	} else if err != nil {
 		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
 		return InstanceInfo{}, fmt.Errorf("cannot retrieve instance from store: %w", err)

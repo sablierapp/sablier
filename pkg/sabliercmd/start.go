@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"os/signal"
 	"syscall"
 	"time"
 
+	natsserver "github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
 	"github.com/sablierapp/sablier/internal/api"
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/pkg/config"
@@ -45,7 +48,21 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	logger.Info("running Sablier version " + version.Info())
 
-	provider, err := setupProvider(ctx, logger, conf.Provider)
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: -1, NoLog: true, NoSigs: true}
+	srv := natsserver.New(opts)
+	go srv.Start()
+	if !srv.ReadyForConnections(5 * time.Second) {
+		return fmt.Errorf("nats server did not start in time")
+	}
+	defer srv.Shutdown()
+
+	addr := srv.Addr().(*net.TCPAddr)
+	url := fmt.Sprintf("nats://%s:%d", opts.Host, addr.Port)
+
+	nc, _ := nats.Connect(url)
+	defer nc.Close()
+
+	provider, err := setupProvider(ctx, logger, conf.Provider, nc)
 	if err != nil {
 		return fmt.Errorf("cannot setup provider: %w", err)
 	}
@@ -56,7 +73,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		return err
 	}
 
-	s := sablier.New(logger, store, provider)
+	s := sablier.New(logger, store, provider, nc)
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 
 	groups, err := provider.InstanceGroups(ctx)

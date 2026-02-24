@@ -7,6 +7,7 @@ import (
 
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/docker/docker/client"
+	"github.com/nats-io/nats.go"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
@@ -17,7 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provider) (sablier.Provider, error) {
+func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provider, nc *nats.Conn) (sablier.Provider, error) {
 	if err := config.IsValid(); err != nil {
 		return nil, err
 	}
@@ -34,7 +35,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
-		return docker.New(ctx, cli, logger, config.Docker.Strategy)
+		return docker.New(ctx, cli, logger, config.Docker.Strategy, nc)
 	case "kubernetes":
 		kubeclientConfig, err := rest.InClusterConfig()
 		if err != nil {

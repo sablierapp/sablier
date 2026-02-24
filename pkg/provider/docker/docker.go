@@ -38,3 +38,7 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		strategy:        strategy,
 	}, nil
 }
+
+func (p *Provider) Name() string {
+	return "docker"
+}
