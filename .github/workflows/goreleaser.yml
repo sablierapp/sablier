@@ -62,7 +62,7 @@ jobs:
         id: goreleaser
         with:
           distribution: goreleaser
-          version: "v2.14.0"
+          version-file: ".tools-version"
           args: release --clean ${{ github.ref_type != 'tag' && '--snapshot' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
