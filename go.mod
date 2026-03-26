@@ -3,7 +3,7 @@ module github.com/sablierapp/sablier
 go 1.26.0
 
 require (
-	github.com/containers/podman/v5 v5.8.0
+	github.com/containers/podman/v5 v5.8.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/go-cmp v0.7.0
