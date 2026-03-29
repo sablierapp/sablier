@@ -52,6 +52,14 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
 	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
 	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.URL, "provider.proxmox-lxc.url", "", "Proxmox VE API URL (e.g. https://proxmox:8006/api2/json)")
+	_ = viper.BindPFlag("provider.proxmox-lxc.url", startCmd.Flags().Lookup("provider.proxmox-lxc.url"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.TokenID, "provider.proxmox-lxc.token-id", "", "Proxmox VE API token ID (e.g. root@pam!sablier)")
+	_ = viper.BindPFlag("provider.proxmox-lxc.token-id", startCmd.Flags().Lookup("provider.proxmox-lxc.token-id"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.TokenSecret, "provider.proxmox-lxc.token-secret", "", "Proxmox VE API token secret")
+	_ = viper.BindPFlag("provider.proxmox-lxc.token-secret", startCmd.Flags().Lookup("provider.proxmox-lxc.token-secret"))
+	startCmd.Flags().BoolVar(&conf.Provider.ProxmoxLXC.TLSInsecure, "provider.proxmox-lxc.tls-insecure", false, "Skip TLS certificate verification for Proxmox VE API")
+	_ = viper.BindPFlag("provider.proxmox-lxc.tls-insecure", startCmd.Flags().Lookup("provider.proxmox-lxc.tls-insecure"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
