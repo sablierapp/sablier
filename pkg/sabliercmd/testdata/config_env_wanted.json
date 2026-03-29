@@ -19,6 +19,12 @@
     },
     "Docker": {
       "Strategy": "pause"
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
     }
   },
   "Sessions": {
