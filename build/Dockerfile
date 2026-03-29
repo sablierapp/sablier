@@ -11,4 +11,4 @@ EXPOSE 10000
 VOLUME [ "/etc/sablier/state.json", "/etc/sablier/themes" ]
 
 ENTRYPOINT [ "/bin/sablier" ]
-CMD [ "--configFile=/etc/sablier/sablier.yaml", "start" ]
+CMD [ "start" ]
