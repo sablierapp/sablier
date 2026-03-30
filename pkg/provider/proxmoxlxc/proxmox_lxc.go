@@ -30,8 +30,9 @@ type Provider struct {
 	desiredReplicas int32
 	pollInterval    time.Duration
 
-	mu    sync.RWMutex
-	cache map[string]containerRef // hostname or VMID string → ref
+	mu           sync.RWMutex
+	cache        map[string]containerRef // hostname or VMID string → ref
+	failedStarts map[string]string       // instance name → error message from last failed start
 }
 
 // New creates a new Proxmox LXC provider and verifies the connection.
@@ -54,6 +55,7 @@ func New(ctx context.Context, client *proxmox.Client, logger *slog.Logger) (*Pro
 		desiredReplicas: 1,
 		pollInterval:    10 * time.Second,
 		cache:           make(map[string]containerRef),
+		failedStarts:    make(map[string]string),
 	}, nil
 }
 

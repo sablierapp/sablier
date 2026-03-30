@@ -42,3 +42,24 @@ func TestProxmoxLXCProvider_InstanceStart_NotFound(t *testing.T) {
 	err := p.InstanceStart(t.Context(), "nonexistent")
 	assert.ErrorContains(t, err, "not found")
 }
+
+func TestProxmoxLXCProvider_InstanceStart_TaskFailure(t *testing.T) {
+	t.Parallel()
+
+	server := mockServer(t, []string{"pve1"}, []testContainer{
+		{VMID: 100, Name: "broken", Status: "stopped", Tags: "sablier", Node: "pve1", StartTaskExitStatus: "startup for container '100' failed"},
+	})
+	defer server.Close()
+
+	p := newTestProvider(t, server.URL)
+
+	// InstanceStart should return nil (not an error) so that InstanceInspect can report the failure.
+	err := p.InstanceStart(t.Context(), "broken")
+	assert.NilError(t, err)
+
+	// InstanceInspect should now return UnrecoverableInstanceState.
+	got, err := p.InstanceInspect(t.Context(), "broken")
+	assert.NilError(t, err)
+	assert.Equal(t, string(got.Status), "unrecoverable")
+	assert.Assert(t, got.Message != "", "expected a non-empty error message")
+}

@@ -30,11 +30,12 @@ func writeJSON(t *testing.T, w http.ResponseWriter, data interface{}) {
 
 // testContainer represents a container in the mock API.
 type testContainer struct {
-	VMID   int    `json:"vmid"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Tags   string `json:"tags"`
-	Node   string `json:"-"` // not sent in API response, used for routing
+	VMID               int    `json:"vmid"`
+	Name               string `json:"name"`
+	Status             string `json:"status"`
+	Tags               string `json:"tags"`
+	Node               string `json:"-"` // not sent in API response, used for routing
+	StartTaskExitStatus string `json:"-"` // non-empty overrides the task exit status (default "OK")
 }
 
 // mockServer sets up a mock Proxmox API server with the given nodes and containers.
@@ -132,6 +133,14 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 			})
 		}
 
+		// Build a VMID → exit status map for this node.
+		taskExitStatus := make(map[string]string) // vmid string → exit status
+		for _, c := range nodeContainers[node] {
+			if c.StartTaskExitStatus != "" {
+				taskExitStatus[fmt.Sprintf("%d", c.VMID)] = c.StartTaskExitStatus
+			}
+		}
+
 		// GET /api2/json/nodes/{node}/tasks/{upid}/status - task status
 		// The Task.UnmarshalJSON uses copier.Copy which zeroes fields not in the response,
 		// so we must include upid/node/type/id/user to preserve them (matching real Proxmox API).
@@ -140,9 +149,20 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 			// Extract UPID from the URL path: /api2/json/nodes/{node}/tasks/{upid}/status
 			rest := strings.TrimPrefix(r.URL.Path, tasksPrefix)
 			upid := strings.TrimSuffix(rest, "/status")
+
+			// Determine exit status from UPID (format: UPID:node:pid:pstart:time:type:vmid:user:)
+			exitStatus := "OK"
+			parts := strings.Split(upid, ":")
+			if len(parts) >= 7 {
+				vmid := parts[6]
+				if es, ok := taskExitStatus[vmid]; ok {
+					exitStatus = es
+				}
+			}
+
 			writeJSON(t, w, map[string]interface{}{
 				"status":     "stopped",
-				"exitstatus": "OK",
+				"exitstatus": exitStatus,
 				"upid":       upid,
 				"node":       node,
 				"type":       "lxcstart",
@@ -168,5 +188,6 @@ func newTestProvider(t *testing.T, serverURL string) *Provider {
 		desiredReplicas: 1,
 		pollInterval:    50 * time.Millisecond,
 		cache:           make(map[string]containerRef),
+		failedStarts:    make(map[string]string),
 	}
 }

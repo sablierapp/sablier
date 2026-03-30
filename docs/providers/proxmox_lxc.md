@@ -117,4 +117,7 @@ Sablier checks the LXC container status reported by Proxmox. Additionally, for `
 | `running` (with IP) | Ready |
 | `running` (no IP yet) | Not Ready |
 | `stopped` | Not Ready |
+| `stopped` (after failed start) | Unrecoverable |
 | Other | Unrecoverable |
+
+?> When a start task fails (e.g. `startup for container '100' failed`), Sablier marks the instance as **Unrecoverable** instead of retrying indefinitely. The failure is cleared automatically when the session expires, allowing a new start attempt on the next request.
