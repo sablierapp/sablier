@@ -100,7 +100,7 @@ In the Proxmox web UI, select a container and click the **pencil icon** next to 
 
 ## Instance naming
 
-Sablier uses the LXC container **hostname** as the instance name. You can also reference containers by their **VMID** (e.g. `100`).
+Sablier uses the LXC container **hostname** as the instance name. You can also reference containers by their **VMID** (e.g. `100`) or by **node/VMID** format (e.g. `pve1/100`).
 
 !> Hostnames must be unique among Sablier-managed containers. If duplicate hostnames are detected, Sablier will return an error.
 

@@ -63,6 +63,23 @@ func TestProxmoxLXCProvider_InstanceInspect_ByVMID(t *testing.T) {
 	assert.DeepEqual(t, got, sablier.ReadyInstanceState("web", 1))
 }
 
+func TestProxmoxLXCProvider_InstanceInspect_ByNodeVMID(t *testing.T) {
+	t.Parallel()
+
+	server := mockServer(t, []string{"pve1"}, []testContainer{
+		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
+	})
+	defer server.Close()
+
+	p := newTestProvider(t, server.URL)
+
+	// Resolve by "node/vmid" format
+	got, err := p.InstanceInspect(t.Context(), "pve1/100")
+	assert.NilError(t, err)
+	// node/vmid resolves to the hostname via scanContainers.
+	assert.DeepEqual(t, got, sablier.ReadyInstanceState("web", 1))
+}
+
 func TestProxmoxLXCProvider_InstanceInspect_NotFound(t *testing.T) {
 	t.Parallel()
 

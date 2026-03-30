@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,13 +57,33 @@ func New(ctx context.Context, client *proxmox.Client, logger *slog.Logger) (*Pro
 	}, nil
 }
 
-// resolve looks up a container by hostname or VMID string.
+// resolve looks up a container by hostname, VMID string, or "node/vmid" format.
 // It first checks the cache, then rescans all nodes if not found.
 func (p *Provider) resolve(ctx context.Context, name string) (containerRef, error) {
-	p.mu.RLock()
-	ref, ok := p.cache[name]
-	p.mu.RUnlock()
-	if ok {
+	// Handle "node/vmid" format (e.g. "pve/111")
+	if node, vmidStr, ok := strings.Cut(name, "/"); ok {
+		vmid, err := strconv.Atoi(vmidStr)
+		if err != nil {
+			return containerRef{}, fmt.Errorf("invalid VMID in %q: %w", name, err)
+		}
+		// Try to resolve hostname from cache via VMID so that ref.name matches
+		// the hostname used by stop-event detection in NotifyInstanceStopped.
+		if ref, ok := p.lookupCache(vmidStr); ok && ref.node == node {
+			return ref, nil
+		}
+		// Cache miss for node/vmid — rescan containers to refresh hostname mapping.
+		if _, err := p.scanContainers(ctx); err != nil {
+			return containerRef{}, fmt.Errorf("cannot scan containers: %w", err)
+		}
+		if ref, ok := p.lookupCache(vmidStr); ok && ref.node == node {
+			return ref, nil
+		}
+		// Fall back to a best-effort reference when the container cannot be
+		// discovered via scan; name will be the original "node/vmid" string.
+		return containerRef{node: node, vmid: vmid, name: name}, nil
+	}
+
+	if ref, ok := p.lookupCache(name); ok {
 		return ref, nil
 	}
 
@@ -71,14 +92,18 @@ func (p *Provider) resolve(ctx context.Context, name string) (containerRef, erro
 		return containerRef{}, fmt.Errorf("cannot scan containers: %w", err)
 	}
 
-	p.mu.RLock()
-	ref, ok = p.cache[name]
-	p.mu.RUnlock()
-	if ok {
+	if ref, ok := p.lookupCache(name); ok {
 		return ref, nil
 	}
 
 	return containerRef{}, fmt.Errorf("container %q not found", name)
+}
+
+func (p *Provider) lookupCache(key string) (containerRef, bool) {
+	p.mu.RLock()
+	ref, ok := p.cache[key]
+	p.mu.RUnlock()
+	return ref, ok
 }
 
 // getContainer fetches a proxmox.Container from the API for the given ref.
