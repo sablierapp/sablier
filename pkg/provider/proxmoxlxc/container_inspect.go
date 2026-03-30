@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -28,10 +29,43 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 
 	switch ct.Status {
 	case "running":
+		// Check if the container's network interfaces have an IP address assigned.
+		// Proxmox reports "running" as soon as the LXC starts, but services inside
+		// may not be ready yet. Checking for a non-loopback interface with an IP
+		// is a lightweight readiness signal.
+		ifaces, err := ct.Interfaces(ctx)
+		if err != nil {
+			p.l.WarnContext(ctx, "cannot check container interfaces, assuming ready",
+				slog.String("name", ref.name),
+				slog.Any("error", err),
+			)
+			return sablier.ReadyInstanceState(ref.name, p.desiredReplicas), nil
+		}
+
+		if !hasNonLoopbackIP(ifaces) {
+			p.l.DebugContext(ctx, "container running but no network interface has an IP yet",
+				slog.String("name", ref.name),
+			)
+			return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), nil
+		}
+
 		return sablier.ReadyInstanceState(ref.name, p.desiredReplicas), nil
 	case "stopped":
 		return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), nil
 	default:
 		return sablier.UnrecoverableInstanceState(ref.name, fmt.Sprintf("container status %q not handled", ct.Status), p.desiredReplicas), nil
 	}
+}
+
+// hasNonLoopbackIP returns true if any non-loopback interface has an IPv4 or IPv6 address.
+func hasNonLoopbackIP(ifaces proxmox.ContainerInterfaces) bool {
+	for _, iface := range ifaces {
+		if iface.Name == "lo" {
+			continue
+		}
+		if iface.Inet != "" || iface.Inet6 != "" {
+			return true
+		}
+	}
+	return false
 }

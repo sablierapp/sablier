@@ -106,6 +106,19 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 				})
 			})
 
+			// GET /api2/json/nodes/{node}/lxc/{vmid}/interfaces
+			mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/lxc/%d/interfaces", node, c.VMID), func(w http.ResponseWriter, r *http.Request) {
+				if c.Status == "running" {
+					writeJSON(t, w, []map[string]string{
+						{"name": "lo", "hwaddr": "00:00:00:00:00:00", "inet": "127.0.0.1/8", "inet6": "::1/128"},
+						{"name": "eth0", "hwaddr": "bc:24:11:89:67:07", "inet": "192.168.1.100/24", "inet6": "fe80::1/64"},
+					})
+				} else {
+					// Stopped containers have no interfaces
+					writeJSON(t, w, []map[string]string{})
+				}
+			})
+
 			// POST /api2/json/nodes/{node}/lxc/{vmid}/status/start
 			mux.HandleFunc(fmt.Sprintf("POST /api2/json/nodes/%s/lxc/%d/status/start", node, c.VMID), func(w http.ResponseWriter, r *http.Request) {
 				upid := fmt.Sprintf("UPID:%s:%08X:%08X:%08X:vzstart:%d:root@pam:", node, 1, 1, 1, c.VMID)

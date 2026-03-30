@@ -110,10 +110,11 @@ The Proxmox LXC provider automatically discovers all nodes in the cluster and sc
 
 ## How does Sablier know when a container is ready?
 
-Sablier checks the LXC container status reported by Proxmox:
+Sablier checks the LXC container status reported by Proxmox. Additionally, for `running` containers, Sablier verifies that at least one non-loopback network interface has an IP address assigned before reporting the container as ready.
 
 | Proxmox Status | Sablier Status |
 |---|---|
-| `running` | Ready |
+| `running` (with IP) | Ready |
+| `running` (no IP yet) | Not Ready |
 | `stopped` | Not Ready |
 | Other | Unrecoverable |
