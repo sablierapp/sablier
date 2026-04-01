@@ -1,87 +1,96 @@
-package proxmoxlxc
+package proxmoxlxc_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 	"gotest.tools/v3/assert"
 )
 
 func TestProxmoxLXCProvider_InstanceStart(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1"},
 	})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
-	err := p.InstanceStart(t.Context(), "web")
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
 
-	// Verify the task is stored in pendingTasks.
-	p.mu.RLock()
-	_, hasPending := p.pendingTasks["web"]
-	p.mu.RUnlock()
-	assert.Assert(t, hasPending, "expected pending task to be stored")
+	err = p.InstanceStart(t.Context(), "web")
+	assert.NilError(t, err)
+
+	// Verify via InstanceInspect that the start was accepted.
+	got, err := p.InstanceInspect(t.Context(), "web")
+	assert.NilError(t, err)
+	assert.Equal(t, string(got.Status), "not-ready")
 }
 
 func TestProxmoxLXCProvider_InstanceStart_ByVMID(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1"},
 	})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
-	err := p.InstanceStart(t.Context(), "100")
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), "100")
 	assert.NilError(t, err)
 }
 
 func TestProxmoxLXCProvider_InstanceStart_NotFound(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{})
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
-	err := p.InstanceStart(t.Context(), "nonexistent")
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), "nonexistent")
 	assert.ErrorContains(t, err, "not found")
 }
 
 func TestProxmoxLXCProvider_InstanceStart_AlreadyRunning(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
-	err := p.InstanceStart(t.Context(), "web")
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
 
-	// No task should be stored for an already running container.
-	p.mu.RLock()
-	_, hasPending := p.pendingTasks["web"]
-	p.mu.RUnlock()
-	assert.Assert(t, !hasPending, "expected no pending task for already running container")
+	err = p.InstanceStart(t.Context(), "web")
+	assert.NilError(t, err)
+
+	// Already running container should be ready immediately (no pending task).
+	got, err := p.InstanceInspect(t.Context(), "web")
+	assert.NilError(t, err)
+	assert.Equal(t, string(got.Status), "ready")
 }
 
 func TestProxmoxLXCProvider_InstanceStart_TaskFailure(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "broken", Status: "stopped", Tags: "sablier", Node: "pve1",
-			StartTaskState: taskFailed, StartTaskExitStatus: "startup for container '100' failed"},
+			StartTaskState: proxmoxlxc.TaskFailed, StartTaskExitStatus: "startup for container '100' failed"},
 	})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
 
 	// InstanceStart should return nil (task is stored, not awaited).
-	err := p.InstanceStart(t.Context(), "broken")
+	err = p.InstanceStart(t.Context(), "broken")
 	assert.NilError(t, err)
 
 	// InstanceInspect should detect the failed task via Ping() and report unrecoverable state.
@@ -89,12 +98,6 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailure(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, string(got.Status), "unrecoverable")
 	assert.Assert(t, got.Message != "", "expected a non-empty error message")
-
-	// Pending task should be cleaned up after failure detection.
-	p.mu.RLock()
-	_, hasPending := p.pendingTasks["broken"]
-	p.mu.RUnlock()
-	assert.Assert(t, !hasPending, "expected pending task to be removed after failure")
 }
 
 func TestProxmoxLXCProvider_InstanceStart_TaskFailureTTLExpiry(t *testing.T) {
@@ -126,25 +129,20 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailureTTLExpiry(t *testing.T) {
 func TestProxmoxLXCProvider_InstanceStart_TaskInProgress(t *testing.T) {
 	t.Parallel()
 
-	server := mockServer(t, []string{"pve1"}, []testContainer{
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "slow", Status: "stopped", Tags: "sablier", Node: "pve1",
-			StartTaskState: taskRunning},
+			StartTaskState: proxmoxlxc.TaskRunning},
 	})
 	defer server.Close()
 
-	p := newTestProvider(t, server.URL)
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
 
-	err := p.InstanceStart(t.Context(), "slow")
+	err = p.InstanceStart(t.Context(), "slow")
 	assert.NilError(t, err)
 
 	// InstanceInspect should report not-ready while the task is still running.
 	got, err := p.InstanceInspect(t.Context(), "slow")
 	assert.NilError(t, err)
 	assert.Equal(t, string(got.Status), "not-ready")
-
-	// Pending task should still be stored.
-	p.mu.RLock()
-	_, hasPending := p.pendingTasks["slow"]
-	p.mu.RUnlock()
-	assert.Assert(t, hasPending, "expected pending task to remain while task is running")
 }

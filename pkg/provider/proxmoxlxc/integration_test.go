@@ -1,4 +1,4 @@
-package proxmoxlxc
+package proxmoxlxc_test
 
 import (
 	"context"

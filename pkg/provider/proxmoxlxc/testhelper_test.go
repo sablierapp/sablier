@@ -3,14 +3,11 @@ package proxmoxlxc
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
-
-	proxmox "github.com/luthermonson/go-proxmox"
 )
 
 // taskState controls how the mock API reports a task's status.
@@ -206,21 +203,4 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 	}
 
 	return httptest.NewServer(mux)
-}
-
-// newTestProvider creates a Provider connected to the mock server.
-func newTestProvider(t *testing.T, serverURL string) *Provider {
-	t.Helper()
-	client := proxmox.NewClient(
-		serverURL+"/api2/json",
-		proxmox.WithAPIToken("test@pam!test", "test-secret"),
-	)
-	return &Provider{
-		client:          client,
-		l:               slog.Default(),
-		desiredReplicas: 1,
-		pollInterval:    50 * time.Millisecond,
-		cache:        make(map[string]containerRef),
-		pendingTasks: make(map[string]*proxmox.Task),
-	}
 }

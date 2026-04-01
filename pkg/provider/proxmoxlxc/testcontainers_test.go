@@ -1,10 +1,9 @@
-package proxmoxlxc
+package proxmoxlxc_test
 
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,11 +12,12 @@ import (
 
 	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 )
 
 // proxmoxTestEnv holds the state for an integration test against a real Proxmox VE.
 type proxmoxTestEnv struct {
-	provider *Provider
+	provider *proxmoxlxc.Provider
 	node     string
 	vmid     int    // VMID of the cloned test container
 	name     string // hostname of the cloned test container
@@ -158,19 +158,14 @@ func setupProxmox(t *testing.T) *proxmoxTestEnv {
 		t.Logf("cleanup: container %d deleted", newID)
 	})
 
-	// Create the provider
-	logger := slogt.New(t).With(slog.String("provider", "proxmox_lxc"))
-	provider := &Provider{
-		client:          client,
-		l:               logger,
-		desiredReplicas: 1,
-		pollInterval:    2 * time.Second,
-		cache:           make(map[string]containerRef),
-		pendingTasks:    make(map[string]*proxmox.Task),
+	// Create the provider with a shorter poll interval for integration tests.
+	p, err := proxmoxlxc.NewForTest(ctx, client, slogt.New(t), 2*time.Second)
+	if err != nil {
+		t.Fatalf("cannot create provider: %v", err)
 	}
 
 	return &proxmoxTestEnv{
-		provider: provider,
+		provider: p,
 		node:     nodeName,
 		vmid:     newID,
 		name:     hostname,
