@@ -18,6 +18,11 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 		return err
 	}
 
+	// Clear any pending start task — the stop supersedes it.
+	p.mu.Lock()
+	delete(p.pendingTasks, name)
+	p.mu.Unlock()
+
 	if ct.Status == "stopped" {
 		p.l.DebugContext(ctx, "container already stopped", slog.String("name", ref.name), slog.Int("vmid", ref.vmid))
 		return nil

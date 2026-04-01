@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 )
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) error {
@@ -23,11 +22,6 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 		return nil
 	}
 
-	// Clear any previous start failure so a retry is possible.
-	p.mu.Lock()
-	delete(p.failedStarts, name)
-	p.mu.Unlock()
-
 	p.l.DebugContext(ctx, "starting container", slog.String("name", ref.name), slog.Int("vmid", ref.vmid), slog.String("node", ref.node))
 
 	task, err := ct.Start(ctx)
@@ -35,28 +29,17 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 		return fmt.Errorf("cannot start container %q (VMID %d): %w", ref.name, ref.vmid, err)
 	}
 
-	if err := task.Wait(ctx, 1*time.Second, 60*time.Second); err != nil {
-		// Timeout or API error — record as failed start so InstanceInspect
-		// can report UnrecoverableInstanceState instead of retrying indefinitely.
-		msg := fmt.Sprintf("start task failed for container %q (VMID %d): %v", ref.name, ref.vmid, err)
-		p.l.WarnContext(ctx, msg)
-		p.mu.Lock()
-		p.failedStarts[name] = msg
-		p.mu.Unlock()
-		return nil
-	}
+	// Store the task so InstanceInspect can track its progress via Ping().
+	// This mirrors the Docker provider pattern: InstanceStart returns quickly,
+	// and readiness is determined by polling InstanceInspect.
+	p.mu.Lock()
+	p.pendingTasks[name] = &pendingTask{task: task}
+	p.mu.Unlock()
 
-	// task.Wait() returns nil when the task completes, but does not check ExitStatus.
-	// We must inspect task.IsFailed to detect e.g. "startup for container '100' failed".
-	if task.IsFailed {
-		msg := fmt.Sprintf("start task failed for container %q (VMID %d): %s", ref.name, ref.vmid, task.ExitStatus)
-		p.l.WarnContext(ctx, msg)
-		p.mu.Lock()
-		p.failedStarts[name] = msg
-		p.mu.Unlock()
-		return nil
-	}
-
-	p.l.DebugContext(ctx, "container started", slog.String("name", ref.name), slog.Int("vmid", ref.vmid))
+	p.l.DebugContext(ctx, "start task submitted",
+		slog.String("name", ref.name),
+		slog.Int("vmid", ref.vmid),
+		slog.String("upid", string(task.UPID)),
+	)
 	return nil
 }

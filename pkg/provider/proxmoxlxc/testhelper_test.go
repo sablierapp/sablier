@@ -13,6 +13,15 @@ import (
 	proxmox "github.com/luthermonson/go-proxmox"
 )
 
+// taskState controls how the mock API reports a task's status.
+type taskState int
+
+const (
+	taskCompleted taskState = iota // "stopped" with "OK" (default)
+	taskRunning                    // "running" (still in progress)
+	taskFailed                     // "stopped" with custom exit status
+)
+
 // proxmoxResponse wraps data in the Proxmox API JSON envelope.
 func proxmoxResponse(data interface{}) []byte {
 	b, _ := json.Marshal(map[string]interface{}{"data": data})
@@ -30,12 +39,14 @@ func writeJSON(t *testing.T, w http.ResponseWriter, data interface{}) {
 
 // testContainer represents a container in the mock API.
 type testContainer struct {
-	VMID               int    `json:"vmid"`
-	Name               string `json:"name"`
-	Status             string `json:"status"`
-	Tags               string `json:"tags"`
-	Node               string `json:"-"` // not sent in API response, used for routing
-	StartTaskExitStatus string `json:"-"` // non-empty overrides the task exit status (default "OK")
+	VMID                int       `json:"vmid"`
+	Name                string    `json:"name"`
+	Status              string    `json:"status"`
+	Tags                string    `json:"tags"`
+	Node                string    `json:"-"` // not sent in API response, used for routing
+	StartTaskState      taskState `json:"-"` // controls mock task status response
+	StartTaskExitStatus string    `json:"-"` // exit status when StartTaskState is taskFailed
+	StartTaskEndTime    time.Time `json:"-"` // if set, used as task endtime; otherwise uses time of first completion response
 }
 
 // mockServer sets up a mock Proxmox API server with the given nodes and containers.
@@ -133,11 +144,20 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 			})
 		}
 
-		// Build a VMID → exit status map for this node.
-		taskExitStatus := make(map[string]string) // vmid string → exit status
+		// Build a VMID → task config map for this node.
+		type taskConfig struct {
+			state      taskState
+			exitStatus string
+			endTime    time.Time
+		}
+		taskConfigs := make(map[string]taskConfig) // vmid string → config
 		for _, c := range nodeContainers[node] {
-			if c.StartTaskExitStatus != "" {
-				taskExitStatus[fmt.Sprintf("%d", c.VMID)] = c.StartTaskExitStatus
+			if c.StartTaskState != taskCompleted {
+				taskConfigs[fmt.Sprintf("%d", c.VMID)] = taskConfig{
+					state:      c.StartTaskState,
+					exitStatus: c.StartTaskExitStatus,
+					endTime:    c.StartTaskEndTime,
+				}
 			}
 		}
 
@@ -150,25 +170,38 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 			rest := strings.TrimPrefix(r.URL.Path, tasksPrefix)
 			upid := strings.TrimSuffix(rest, "/status")
 
-			// Determine exit status from UPID (format: UPID:node:pid:pstart:time:type:vmid:user:)
+			// Determine task status from UPID (format: UPID:node:pid:pstart:time:type:vmid:user:)
+			status := "stopped"
 			exitStatus := "OK"
+			endTime := time.Now()
 			parts := strings.Split(upid, ":")
 			if len(parts) >= 7 {
-				vmid := parts[6]
-				if es, ok := taskExitStatus[vmid]; ok {
-					exitStatus = es
+				if tc, ok := taskConfigs[parts[6]]; ok {
+					switch tc.state {
+					case taskRunning:
+						status = "running"
+						exitStatus = ""
+					case taskFailed:
+						exitStatus = tc.exitStatus
+					}
+					if !tc.endTime.IsZero() {
+						endTime = tc.endTime
+					}
 				}
 			}
 
-			writeJSON(t, w, map[string]interface{}{
-				"status":     "stopped",
+			resp := map[string]interface{}{
+				"status":     status,
 				"exitstatus": exitStatus,
 				"upid":       upid,
 				"node":       node,
 				"type":       "lxcstart",
 				"id":         "100",
 				"user":       "root@pam",
-			})
+				"starttime":  endTime.Add(-2 * time.Second).Unix(),
+				"endtime":    endTime.Unix(),
+			}
+			writeJSON(t, w, resp)
 		})
 	}
 
@@ -187,7 +220,7 @@ func newTestProvider(t *testing.T, serverURL string) *Provider {
 		l:               slog.Default(),
 		desiredReplicas: 1,
 		pollInterval:    50 * time.Millisecond,
-		cache:           make(map[string]containerRef),
-		failedStarts:    make(map[string]string),
+		cache:        make(map[string]containerRef),
+		pendingTasks: make(map[string]*proxmox.Task),
 	}
 }

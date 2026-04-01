@@ -23,6 +23,18 @@ type containerRef struct {
 	name string // LXC hostname
 }
 
+// failedTaskTTL is the duration after a task's EndTime (or first failure detection)
+// before the failed entry is cleared from pendingTasks, allowing a fresh InstanceStart.
+const failedTaskTTL = 30 * time.Second
+
+// pendingTask wraps a Proxmox task with the time failure was first detected.
+// EndTime from the Proxmox API may be zero due to copier.Copy not preserving
+// json:"-" fields, so failedAt serves as a reliable fallback.
+type pendingTask struct {
+	task     *proxmox.Task
+	failedAt time.Time // set once when IsFailed is first observed
+}
+
 // Provider implements the sablier.Provider interface for Proxmox VE LXC containers.
 type Provider struct {
 	client          *proxmox.Client
@@ -32,7 +44,7 @@ type Provider struct {
 
 	mu           sync.RWMutex
 	cache        map[string]containerRef // hostname or VMID string → ref
-	failedStarts map[string]string       // instance name → error message from last failed start
+	pendingTasks map[string]*pendingTask // instance name → start task awaiting completion
 }
 
 // New creates a new Proxmox LXC provider and verifies the connection.
@@ -54,8 +66,8 @@ func New(ctx context.Context, client *proxmox.Client, logger *slog.Logger) (*Pro
 		l:               logger,
 		desiredReplicas: 1,
 		pollInterval:    10 * time.Second,
-		cache:           make(map[string]containerRef),
-		failedStarts:    make(map[string]string),
+		cache:        make(map[string]containerRef),
+		pendingTasks: make(map[string]*pendingTask),
 	}, nil
 }
 
