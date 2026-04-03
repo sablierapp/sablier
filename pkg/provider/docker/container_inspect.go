@@ -47,6 +47,18 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	}
 }
 
+func (p *Provider) ensureManaged(ctx context.Context, name string) error {
+	spec, err := p.Client.ContainerInspect(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	if spec.Config.Labels["sablier.enable"] != "true" {
+		return sablier.ErrInstanceNotManaged{Name: name}
+	}
+	return nil
+}
+
 func healthStatus(health *container.Health) string {
 	if health == nil {
 		return "no healthcheck defined"

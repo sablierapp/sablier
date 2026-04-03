@@ -32,13 +32,32 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("No such container: non-existent"),
+		},
+		{
+			name: "unlabeled container stop",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
 		},
 		{
 			name: "container stop as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					if err != nil {
 						return "", err
 					}
@@ -66,7 +85,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 
 			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}
@@ -95,13 +114,13 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot pause container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("No such container: non-existent"),
 		},
 		{
 			name: "container pause as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					if err != nil {
 						return "", err
 					}
@@ -129,7 +148,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 
 			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

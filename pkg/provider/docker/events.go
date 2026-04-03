@@ -17,6 +17,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 			filters.Arg("scope", "local"),
 			filters.Arg("type", string(events.ContainerEventType)),
 			filters.Arg("event", "die"),
+			filters.Arg("label", "sablier.enable=true"),
 		),
 	})
 	for {

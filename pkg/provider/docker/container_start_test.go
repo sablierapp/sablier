@@ -11,6 +11,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+var managedLabels = map[string]string{"sablier.enable": "true"}
+
 func TestDockerClassicProvider_Start(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -32,13 +34,23 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("No such container: non-existent"),
+		},
+		{
+			name: "unlabeled container start",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					return c.ID, err
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
 		},
 		{
 			name: "container start as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					return c.ID, err
 				},
 			},
@@ -57,7 +69,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}
@@ -86,13 +98,13 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot inspect container non-existent before unpausing: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("No such container: non-existent"),
 		},
 		{
 			name: "container starts because was not paused",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					if err != nil {
 						return "", err
 					}
@@ -116,7 +128,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 			name: "container unpause as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					if err != nil {
 						return "", err
 					}
@@ -149,7 +161,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

@@ -9,6 +9,10 @@ import (
 )
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) error {
+	if err := p.ensureManaged(ctx, name); err != nil {
+		return err
+	}
+
 	if p.strategy == "pause" {
 		return p.dockerUnpause(ctx, name)
 	}

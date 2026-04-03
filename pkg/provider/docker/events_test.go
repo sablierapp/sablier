@@ -22,7 +22,7 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID)
