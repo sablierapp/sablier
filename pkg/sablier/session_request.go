@@ -80,6 +80,10 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 		return session, nil
 	}
 
+	if err := session.InstanceErrors(); err != nil {
+		return nil, err
+	}
+
 	ticker := time.NewTicker(s.BlockingRefreshFrequency)
 	readiness := make(chan *SessionState)
 	errch := make(chan error)
@@ -96,6 +100,11 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 				}
 				if session.IsReady() {
 					readiness <- session
+					return
+				}
+				if err := session.InstanceErrors(); err != nil {
+					errch <- err
+					return
 				}
 			case <-quit:
 				ticker.Stop()

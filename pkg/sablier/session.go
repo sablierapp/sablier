@@ -2,6 +2,8 @@ package sablier
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"maps"
 )
 
@@ -21,6 +23,17 @@ func (s *SessionState) IsReady() bool {
 	}
 
 	return true
+}
+
+// InstanceErrors returns a joined error if any instance has a non-nil error.
+func (s *SessionState) InstanceErrors() error {
+	var errs []error
+	for name, v := range s.Instances {
+		if v.Error != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", name, v.Error))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (s *SessionState) Status() string {
