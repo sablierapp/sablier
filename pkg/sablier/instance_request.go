@@ -19,13 +19,17 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
 		err = s.provider.InstanceStart(ctx, name)
-		if err != nil {
+		if err != nil && !errors.As(err, &ErrInstanceNotManaged{}) {
 			return InstanceInfo{}, err
 		}
+		startErr := err
 
 		state, err = s.provider.InstanceInspect(ctx, name)
 		if err != nil {
 			return InstanceInfo{}, err
+		}
+		if startErr != nil && !state.IsReady() {
+			return InstanceInfo{}, startErr
 		}
 		s.l.DebugContext(ctx, "request to start instance status completed", slog.String("instance", name), slog.String("status", string(state.Status)))
 	} else if err != nil {

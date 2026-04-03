@@ -29,3 +29,11 @@ type ErrTimeout struct {
 func (e ErrTimeout) Error() string {
 	return fmt.Sprintf("timeout after %s", e.Duration)
 }
+
+type ErrInstanceNotManaged struct {
+	Name string
+}
+
+func (e ErrInstanceNotManaged) Error() string {
+	return fmt.Sprintf("instance %s is not managed by sablier", e.Name)
+}
