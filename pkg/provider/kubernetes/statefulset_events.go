@@ -5,6 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -34,7 +35,12 @@ func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexIn
 			instance <- parsed.Original
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second,
+		informers.WithNamespace(core_v1.NamespaceAll),
+		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+			opts.LabelSelector = "sablier.enable=true"
+		}),
+	)
 	informer := factory.Apps().V1().StatefulSets().Informer()
 
 	_, _ = informer.AddEventHandler(handler)

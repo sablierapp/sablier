@@ -40,13 +40,31 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 					return "deployment_default_my-deployment_1", nil
 				},
 			},
-			err: fmt.Errorf("deployments/scale.apps \"my-deployment\" not found"),
+			err: fmt.Errorf("\"my-deployment\" not found"),
+		},
+		{
+			name: "unlabeled deployment start",
+			args: args{
+				do: func(kind *kindContainer) (string, error) {
+					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
 		},
 		{
 			name: "deployment start as expected",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
-					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 					if err != nil {
 						return "", err
 					}
@@ -70,10 +88,28 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err: fmt.Errorf("statefulsets.apps \"my-statefulset\" not found"),
 		},
 		{
-			name: "statefulSet start as expected",
+			name: "unlabeled statefulSet start",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name); err != nil {
+						return "", fmt.Errorf("error waiting for statefulSet: %w", err)
+					}
+
+					return kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
+		},
+		{
+			name: "statefulSet start as expected",
+			args: args{
+				do: func(kind *kindContainer) (string, error) {
+					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 					if err != nil {
 						return "", err
 					}
@@ -100,7 +136,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 

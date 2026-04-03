@@ -30,7 +30,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 	go p.NotifyInstanceStopped(ctx, waitC)
 
 	t.Run("deployment is scaled to 0 replicas", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 		assert.NilError(t, err)
 
 		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
@@ -49,7 +49,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
 	})
 	t.Run("deployment is removed", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 		assert.NilError(t, err)
 
 		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
@@ -64,7 +64,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
 	})
 	t.Run("statefulSet is scaled to 0 replicas", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 		assert.NilError(t, err)
 
 		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
@@ -84,7 +84,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 	})
 
 	t.Run("statefulSet is removed", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 		assert.NilError(t, err)
 
 		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
