@@ -15,6 +15,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 		Filters: filters.NewArgs(
 			filters.Arg("scope", "swarm"),
 			filters.Arg("type", "service"),
+			filters.Arg("label", "sablier.enable=true"),
 		),
 	})
 

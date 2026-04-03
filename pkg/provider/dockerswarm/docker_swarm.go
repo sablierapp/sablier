@@ -50,6 +50,10 @@ func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, repli
 		return fmt.Errorf("cannot get service: %w", err)
 	}
 
+	if service.Spec.Labels["sablier.enable"] != "true" {
+		return sablier.ErrInstanceNotManaged{Name: name}
+	}
+
 	if service.Spec.Mode.Replicated == nil {
 		return errors.New("swarm service is not in \"replicated\" mode")
 	}

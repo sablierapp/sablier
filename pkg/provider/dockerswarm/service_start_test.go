@@ -36,6 +36,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
 						Cmd:         []string{"/mimic"},
 						Healthcheck: nil,
+						Labels:      map[string]string{"sablier.enable": "true"},
 					})
 					if err != nil {
 						return "", err
@@ -70,6 +71,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 							StartInterval: time.Second,
 							Retries:       10,
 						},
+						Labels: map[string]string{"sablier.enable": "true"},
 					})
 					if err != nil {
 						return "", err
@@ -95,7 +97,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			name: "service with 0/0 replicas",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					s, err := dind.CreateMimic(ctx, MimicOptions{})
+					s, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 					if err != nil {
 						return "", err
 					}

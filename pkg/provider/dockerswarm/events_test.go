@@ -22,7 +22,7 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 	assert.NilError(t, err)
 
 	waitC := make(chan string)
