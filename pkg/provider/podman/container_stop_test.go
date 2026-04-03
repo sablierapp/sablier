@@ -32,13 +32,32 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot stop container non-existent: no container with name or ID \"non-existent\" found: no such container"),
+			err: fmt.Errorf("no such container"),
+		},
+		{
+			name: "unlabeled container stop",
+			args: args{
+				do: func(pind *pindContainer) (string, error) {
+					c, err := pind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = containers.Start(pind.connText, c.ID, nil)
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
 		},
 		{
 			name: "container stop as expected",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
-					c, err := pind.CreateMimic(ctx, MimicOptions{})
+					c, err := pind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					if err != nil {
 						return "", err
 					}
@@ -66,7 +85,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 
 			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

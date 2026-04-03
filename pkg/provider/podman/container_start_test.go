@@ -10,6 +10,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+var managedLabels = map[string]string{"sablier.enable": "true"}
+
 func TestPodmanProvider_Start(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -31,13 +33,23 @@ func TestPodmanProvider_Start(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent: no container with name or ID \"non-existent\" found: no such container"),
+			err: fmt.Errorf("no such container"),
+		},
+		{
+			name: "unlabeled container start",
+			args: args{
+				do: func(dind *pindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					return c.ID, err
+				},
+			},
+			err: fmt.Errorf("is not managed by sablier"),
 		},
 		{
 			name: "container start as expected",
 			args: args{
 				do: func(dind *pindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
 					return c.ID, err
 				},
 			},
@@ -56,7 +68,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

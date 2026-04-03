@@ -10,6 +10,18 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+func (p *Provider) ensureManaged(_ context.Context, name string) error {
+	spec, err := containers.Inspect(p.conn, name, nil)
+	if err != nil {
+		return err
+	}
+
+	if spec.Config.Labels["sablier.enable"] != "true" {
+		return sablier.ErrInstanceNotManaged{Name: name}
+	}
+	return nil
+}
+
 func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	spec, err := containers.Inspect(p.conn, name, nil)
 	if err != nil {

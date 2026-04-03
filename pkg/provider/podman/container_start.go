@@ -9,6 +9,10 @@ import (
 )
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) error {
+	if err := p.ensureManaged(ctx, name); err != nil {
+		return err
+	}
+
 	p.l.DebugContext(ctx, "starting container", "name", name)
 
 	// TODO: Create a context from the ctx argument with the p.conn

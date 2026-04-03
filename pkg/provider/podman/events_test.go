@@ -21,7 +21,7 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 	p, err := podman.New(pind.connText, slogt.New(t))
 	assert.NilError(t, err)
 
-	c, err := pind.CreateMimic(ctx, MimicOptions{})
+	c, err := pind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := containers.Inspect(pind.connText, c.ID, nil)

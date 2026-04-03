@@ -9,6 +9,9 @@ import (
 )
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
+	if err := p.ensureManaged(ctx, name); err != nil {
+		return err
+	}
 
 	p.l.DebugContext(ctx, "stopping container", slog.String("name", name))
 	err := containers.Stop(p.conn, name, nil)
