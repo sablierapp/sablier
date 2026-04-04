@@ -19,7 +19,7 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	dind := setupDinD(t)
-	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})

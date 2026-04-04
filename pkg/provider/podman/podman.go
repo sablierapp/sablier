@@ -16,9 +16,10 @@ type Provider struct {
 	conn            context.Context
 	desiredReplicas int32
 	l               *slog.Logger
+	strictLabels   bool
 }
 
-func New(ctx context.Context, logger *slog.Logger) (*Provider, error) {
+func New(ctx context.Context, logger *slog.Logger, strictLabels bool) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "podman"))
 
 	version, err := system.Version(ctx, nil)
@@ -33,5 +34,6 @@ func New(ctx context.Context, logger *slog.Logger) (*Provider, error) {
 		conn:            ctx,
 		desiredReplicas: 1,
 		l:               logger,
+		strictLabels:   strictLabels,
 	}, nil
 }

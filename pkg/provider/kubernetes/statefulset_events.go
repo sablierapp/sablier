@@ -35,12 +35,15 @@ func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexIn
 			instance <- parsed.Original
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second,
+	opts := []informers.SharedInformerOption{
 		informers.WithNamespace(core_v1.NamespaceAll),
-		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.LabelSelector = "sablier.enable=true"
-		}),
-	)
+	}
+	if p.strictLabels {
+		opts = append(opts, informers.WithTweakListOptions(func(o *metav1.ListOptions) {
+			o.LabelSelector = "sablier.enable=true"
+		}))
+	}
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, opts...)
 	informer := factory.Apps().V1().StatefulSets().Informer()
 
 	_, _ = informer.AddEventHandler(handler)

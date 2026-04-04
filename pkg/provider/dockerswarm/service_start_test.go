@@ -129,7 +129,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := dockerswarm.New(ctx, c.client, slogt.New(t))
+			p, err := dockerswarm.New(ctx, c.client, slogt.New(t), true)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

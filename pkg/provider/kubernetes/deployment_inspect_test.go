@@ -119,7 +119,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes, true)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

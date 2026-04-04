@@ -21,7 +21,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	s1, err := dind.CreateMimic(ctx, MimicOptions{
@@ -78,7 +78,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	s1, err := dind.CreateMimic(ctx, MimicOptions{

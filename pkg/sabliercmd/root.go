@@ -42,6 +42,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
 	startCmd.Flags().BoolVar(&conf.Provider.AutoStopOnStartup, "provider.auto-stop-on-startup", true, "")
 	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
+	startCmd.Flags().BoolVar(&conf.Provider.StrictLabels, "provider.strict-labels", false, "Strictly require sablier.enable=true label on instance operations")
+	_ = viper.BindPFlag("provider.strict-labels", startCmd.Flags().Lookup("provider.strict-labels"))
 	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
 	_ = viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
 	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API acees client-side throttling")

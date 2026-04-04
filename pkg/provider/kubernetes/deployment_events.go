@@ -35,12 +35,15 @@ func (p *Provider) watchDeployments(instance chan<- string) cache.SharedIndexInf
 			instance <- parsed.Original
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second,
+	opts := []informers.SharedInformerOption{
 		informers.WithNamespace(corev1.NamespaceAll),
-		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.LabelSelector = "sablier.enable=true"
-		}),
-	)
+	}
+	if p.strictLabels {
+		opts = append(opts, informers.WithTweakListOptions(func(o *metav1.ListOptions) {
+			o.LabelSelector = "sablier.enable=true"
+		}))
+	}
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, opts...)
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	_, _ = informer.AddEventHandler(handler)

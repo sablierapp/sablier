@@ -263,7 +263,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			t.Parallel()
 			con, cancel := context.WithTimeout(c.connText, 30*time.Second)
 			defer cancel() // releases resources if slowOperation completes before timeout elapses
-			p, err := podman.New(con, slogt.New(t))
+			p, err := podman.New(con, slogt.New(t), true)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

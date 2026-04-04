@@ -8,8 +8,10 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := p.ensureManaged(ctx, parsed); err != nil {
-		return err
+	if p.strictLabels {
+		if err := p.ensureManaged(ctx, parsed); err != nil {
+			return err
+		}
 	}
 
 	return p.scale(ctx, parsed, parsed.Replicas)

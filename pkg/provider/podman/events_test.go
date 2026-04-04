@@ -18,7 +18,7 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	pind := setupPinD(t)
-	p, err := podman.New(pind.connText, slogt.New(t))
+	p, err := podman.New(pind.connText, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	c, err := pind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})

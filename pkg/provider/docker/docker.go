@@ -17,9 +17,10 @@ type Provider struct {
 	desiredReplicas int32
 	l               *slog.Logger
 	strategy        string
+	strictLabels   bool
 }
 
-func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string, strictLabels bool) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "docker"), slog.String("strategy", strategy))
 
 	serverVersion, err := cli.ServerVersion(ctx)
@@ -36,5 +37,6 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		desiredReplicas: 1,
 		l:               logger,
 		strategy:        strategy,
+		strictLabels:   strictLabels,
 	}, nil
 }

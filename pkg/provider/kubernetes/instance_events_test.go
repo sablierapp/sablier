@@ -23,7 +23,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 	conf := config.NewProviderConfig().Kubernetes
 	conf.QPS = 100
 	conf.Burst = 100
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf, true)
 	assert.NilError(t, err)
 
 	waitC := make(chan string)

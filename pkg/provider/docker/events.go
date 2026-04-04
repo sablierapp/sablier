@@ -12,13 +12,16 @@ import (
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
+	args := []filters.KeyValuePair{
+		filters.Arg("scope", "local"),
+		filters.Arg("type", string(events.ContainerEventType)),
+		filters.Arg("event", "die"),
+	}
+	if p.strictLabels {
+		args = append(args, filters.Arg("label", "sablier.enable=true"))
+	}
 	msgs, errs := p.Client.Events(ctx, events.ListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "local"),
-			filters.Arg("type", string(events.ContainerEventType)),
-			filters.Arg("event", "die"),
-			filters.Arg("label", "sablier.enable=true"),
-		),
+		Filters: filters.NewArgs(args...),
 	})
 	for {
 		select {

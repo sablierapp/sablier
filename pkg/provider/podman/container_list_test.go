@@ -19,7 +19,7 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	pind := setupPinD(t)
-	p, err := podman.New(pind.connText, slogt.New(t))
+	p, err := podman.New(pind.connText, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	c1, err := pind.CreateMimic(ctx, MimicOptions{
@@ -78,7 +78,7 @@ func TestPodmanProvider_GetGroups(t *testing.T) {
 
 	ctx := t.Context()
 	pind := setupPinD(t)
-	p, err := podman.New(pind.connText, slogt.New(t))
+	p, err := podman.New(pind.connText, slogt.New(t), true)
 	assert.NilError(t, err)
 
 	c1, err := pind.CreateMimic(ctx, MimicOptions{

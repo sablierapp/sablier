@@ -11,12 +11,15 @@ import (
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
+	args := []filters.KeyValuePair{
+		filters.Arg("scope", "swarm"),
+		filters.Arg("type", "service"),
+	}
+	if p.strictLabels {
+		args = append(args, filters.Arg("label", "sablier.enable=true"))
+	}
 	msgs, errs := p.Client.Events(ctx, events.ListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "swarm"),
-			filters.Arg("type", "service"),
-			filters.Arg("label", "sablier.enable=true"),
-		),
+		Filters: filters.NewArgs(args...),
 	})
 
 	go func() {

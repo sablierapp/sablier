@@ -10,6 +10,7 @@ type Provider struct {
 	// It can be either docker, swarm or kubernetes. Defaults to "docker"
 	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
+	StrictLabels      bool   `yaml:"strict-labels,omitempty" default:"false"`
 	Kubernetes        Kubernetes
 	Podman            Podman
 	Docker            Docker

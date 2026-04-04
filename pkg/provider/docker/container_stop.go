@@ -9,8 +9,10 @@ import (
 )
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
-	if err := p.ensureManaged(ctx, name); err != nil {
-		return err
+	if p.strictLabels {
+		if err := p.ensureManaged(ctx, name); err != nil {
+			return err
+		}
 	}
 
 	if p.strategy == "pause" {

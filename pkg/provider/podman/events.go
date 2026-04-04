@@ -11,11 +11,12 @@ import (
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	// Set up event filters for container die events (only managed containers)
 	eventFilters := map[string][]string{
 		"type":  {"container"},
 		"event": {"died"},
-		"label": {"sablier.enable=true"},
+	}
+	if p.strictLabels {
+		eventFilters["label"] = []string{"sablier.enable=true"}
 	}
 
 	eventChan := make(chan types.Event)

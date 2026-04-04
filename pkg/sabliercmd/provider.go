@@ -28,13 +28,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker swarm client: %v", err)
 		}
-		return dockerswarm.New(ctx, cli, logger)
+		return dockerswarm.New(ctx, cli, logger, config.StrictLabels)
 	case "docker":
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
-		return docker.New(ctx, cli, logger, config.Docker.Strategy)
+		return docker.New(ctx, cli, logger, config.Docker.Strategy, config.StrictLabels)
 	case "kubernetes":
 		kubeclientConfig, err := rest.InClusterConfig()
 		if err != nil {
@@ -47,13 +47,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, err
 		}
-		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
+		return kubernetes.New(ctx, cli, logger, config.Kubernetes, config.StrictLabels)
 	case "podman":
 		connText, err := bindings.NewConnection(ctx, config.Podman.Uri)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create podman connection: %w", err)
 		}
-		return podman.New(connText, logger)
+		return podman.New(connText, logger, config.StrictLabels)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
