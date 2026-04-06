@@ -21,7 +21,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/valkey v0.40.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
 	github.com/valkey-io/valkey-go v1.0.72
-	go.podman.io/image/v5 v5.39.1
+	go.podman.io/image/v5 v5.39.2
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.20.0
 	gotest.tools/v3 v3.5.2
