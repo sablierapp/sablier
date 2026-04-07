@@ -151,8 +151,10 @@ type discoveredContainer struct {
 	status string
 }
 
-// scanContainers scans all nodes for sablier-tagged LXC containers and rebuilds the cache.
-// Returns the list of discovered containers with their tags.
+// scanContainers scans all nodes for LXC containers and rebuilds the cache.
+// All containers are cached so that resolve() can find any container by name or VMID
+// (matching Docker/Podman behavior where labels are not required for direct access).
+// Returns only sablier-tagged containers for use by InstanceList/InstanceGroups.
 func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, error) {
 	nodes, err := p.client.Nodes(ctx)
 	if err != nil {
@@ -161,6 +163,7 @@ func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, e
 
 	var discovered []discoveredContainer
 	newCache := make(map[string]containerRef)
+	sablierNames := make(map[string]containerRef) // for duplicate detection among managed containers
 
 	for _, ns := range nodes {
 		node, err := p.client.Node(ctx, ns.Node)
@@ -176,25 +179,27 @@ func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, e
 		}
 
 		for _, c := range containers {
-			tags := parseTags(c.Tags)
-			if !hasSablierTag(tags) {
-				continue
-			}
-
 			ref := containerRef{
 				node: ns.Node,
 				vmid: int(c.VMID),
 				name: c.Name,
 			}
 
-			// Check for hostname collision
-			if existing, ok := newCache[c.Name]; ok {
+			// Cache all containers for resolve() lookups.
+			newCache[c.Name] = ref
+			newCache[strconv.Itoa(int(c.VMID))] = ref
+
+			tags := parseTags(c.Tags)
+			if !hasSablierTag(tags) {
+				continue
+			}
+
+			// Check for hostname collision among sablier-managed containers.
+			if existing, ok := sablierNames[c.Name]; ok {
 				return nil, fmt.Errorf("duplicate hostname %q found on node %q (VMID %d) and node %q (VMID %d) among sablier-managed containers",
 					c.Name, existing.node, existing.vmid, ns.Node, int(c.VMID))
 			}
-
-			newCache[c.Name] = ref
-			newCache[strconv.Itoa(int(c.VMID))] = ref
+			sablierNames[c.Name] = ref
 
 			discovered = append(discovered, discoveredContainer{
 				ref:    ref,

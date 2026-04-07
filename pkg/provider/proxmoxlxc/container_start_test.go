@@ -57,6 +57,22 @@ func TestProxmoxLXCProvider_InstanceStart_NotFound(t *testing.T) {
 	assert.ErrorContains(t, err, "not found")
 }
 
+func TestProxmoxLXCProvider_InstanceStart_WithoutSablierTag(t *testing.T) {
+	t.Parallel()
+
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
+		{VMID: 200, Name: "unmanaged", Status: "stopped", Tags: "", Node: "pve1"},
+	})
+	defer server.Close()
+
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	// Containers without the sablier tag can still be started by name, matching Docker behavior.
+	err = p.InstanceStart(t.Context(), "unmanaged")
+	assert.NilError(t, err)
+}
+
 func TestProxmoxLXCProvider_InstanceStart_AlreadyRunning(t *testing.T) {
 	t.Parallel()
 
