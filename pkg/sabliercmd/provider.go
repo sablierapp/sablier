@@ -2,16 +2,20 @@ package sabliercmd
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/docker/docker/client"
+	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
+	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -54,6 +58,21 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, fmt.Errorf("cannot create podman connection: %w", err)
 		}
 		return podman.New(connText, logger)
+	case "proxmox_lxc":
+		opts := []proxmox.Option{
+			proxmox.WithAPIToken(config.ProxmoxLXC.TokenID, config.ProxmoxLXC.TokenSecret),
+		}
+		if config.ProxmoxLXC.TLSInsecure {
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec // user-configured option for self-signed certs
+			}
+			opts = append(opts, proxmox.WithHTTPClient(&http.Client{
+				Transport: transport,
+			}))
+		}
+		cli := proxmox.NewClient(config.ProxmoxLXC.URL, opts...)
+		return proxmoxlxc.New(ctx, cli, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }
