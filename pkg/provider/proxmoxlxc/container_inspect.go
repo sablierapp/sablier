@@ -17,9 +17,9 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	}
 
 	// Check if there is a pending start task for this instance.
-	p.mu.RLock()
+	p.mu.Lock()
 	pt, hasPending := p.pendingTasks[name]
-	p.mu.RUnlock()
+	p.mu.Unlock()
 
 	if hasPending {
 		info, done := p.checkPendingTask(ctx, name, ref, pt)
