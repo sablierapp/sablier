@@ -16,6 +16,9 @@ type Sablier struct {
 	groupsMu sync.RWMutex
 	groups   map[string][]string
 
+	dependenciesMu sync.RWMutex
+	dependencies   map[string][]string
+
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
 
@@ -36,6 +39,8 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                 store,
 		groupsMu:                 sync.RWMutex{},
 		groups:                   map[string][]string{},
+		dependenciesMu:           sync.RWMutex{},
+		dependencies:             map[string][]string{},
 		pendingStarts:            map[string]*pendingStart{},
 		l:                        logger,
 		BlockingRefreshFrequency: 5 * time.Second,
@@ -54,6 +59,29 @@ func (s *Sablier) SetGroups(groups map[string][]string) {
 		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
 		s.groups = groups
 	}
+}
+
+func (s *Sablier) SetDependencies(deps map[string][]string) {
+	s.dependenciesMu.Lock()
+	defer s.dependenciesMu.Unlock()
+	if deps == nil {
+		deps = map[string][]string{}
+	}
+	if diff := cmp.Diff(s.dependencies, deps); diff != "" {
+		s.l.Info("set dependencies", slog.Any("old", s.dependencies), slog.Any("new", deps), slog.Any("diff", diff))
+		s.dependencies = deps
+	}
+}
+
+func (s *Sablier) GetDependencies() map[string][]string {
+	s.dependenciesMu.RLock()
+	defer s.dependenciesMu.RUnlock()
+	// Return a copy to avoid data races.
+	result := make(map[string][]string, len(s.dependencies))
+	for k, v := range s.dependencies {
+		result[k] = append([]string(nil), v...)
+	}
+	return result
 }
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {

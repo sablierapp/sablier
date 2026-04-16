@@ -14,6 +14,7 @@ type Provider interface {
 	InstanceInspect(ctx context.Context, name string) (InstanceInfo, error)
 	InstanceGroups(ctx context.Context) (map[string][]string, error)
 	InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]InstanceConfiguration, error)
+	InstanceDependencies(ctx context.Context) (map[string][]string, error)
 
 	NotifyInstanceStopped(ctx context.Context, instance chan<- string)
 }

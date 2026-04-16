@@ -36,7 +36,8 @@ type Podman struct {
 }
 
 type Docker struct {
-	Strategy string `mapstructure:"STRATEGY" yaml:"strategy,omitempty" default:"stop"`
+	Strategy         string `mapstructure:"STRATEGY" yaml:"strategy,omitempty" default:"stop"`
+	ComposeAutoGroup bool   `mapstructure:"COMPOSE_AUTO_GROUP" yaml:"compose-auto-group,omitempty" default:"false"`
 }
 
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}

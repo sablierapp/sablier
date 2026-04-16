@@ -42,6 +42,21 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
+// InstanceDependencies mocks base method.
+func (m *MockProvider) InstanceDependencies(ctx context.Context) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceDependencies", ctx)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstanceDependencies indicates an expected call of InstanceDependencies.
+func (mr *MockProviderMockRecorder) InstanceDependencies(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceDependencies", reflect.TypeOf((*MockProvider)(nil).InstanceDependencies), ctx)
+}
+
 // InstanceGroups mocks base method.
 func (m *MockProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	m.ctrl.T.Helper()
