@@ -79,6 +79,7 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 			ps.err = err
 			s.l.Error("async instance start failed", slog.String("instance", name), slog.Any("error", err))
 		} else {
+			s.l.InfoContext(ctx, "instance is ready", slog.String("instance", name))
 			// Success — clean up immediately so the entry doesn't linger
 			s.pendingMu.Lock()
 			// Only delete if ps is still the current entry (not replaced by a retry)
@@ -106,7 +107,7 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 			return InstanceInfo{}, err
 		}
 
-		s.l.DebugContext(ctx, "request to start instance dispatched", slog.String("instance", name), slog.String("status", string(state.Status)))
+		s.l.InfoContext(ctx, "request to start instance dispatched", slog.String("instance", name), slog.String("status", string(state.Status)), slog.Duration("expiration", duration))
 	} else if err != nil {
 		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
 		return InstanceInfo{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
@@ -134,7 +135,7 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 
 	err = s.sessions.Put(ctx, state, duration)
 	if err != nil {
-		s.l.Error("could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))
+		s.l.ErrorContext(ctx, "could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))
 		return InstanceInfo{}, fmt.Errorf("could not put instance to store: %w", err)
 	}
 	return state, nil
