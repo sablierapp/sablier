@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.3](https://github.com/sablierapp/sablier/compare/v1.11.2...v1.11.3) (2026-04-16)
+
+
+### Bug Fixes
+
+* async InstanceStart calls ([#869](https://github.com/sablierapp/sablier/issues/869)) ([3c1430f](https://github.com/sablierapp/sablier/commit/3c1430f18d2573f326b9eb6f7c6565a4e51ad9ac))
+* **log:** add INFO logs for started instances ([#871](https://github.com/sablierapp/sablier/issues/871)) ([4d1ea62](https://github.com/sablierapp/sablier/commit/4d1ea622a2ca436cee4408aa71d8e6231660ea98))
+
 ## [1.11.2](https://github.com/sablierapp/sablier/compare/v1.11.1...v1.11.2) (2026-04-03)
 
 
