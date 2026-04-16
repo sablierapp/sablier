@@ -23,6 +23,10 @@ type Sablier struct {
 	// against the provider. Defaults to 5 seconds.
 	BlockingRefreshFrequency time.Duration
 
+	// InstanceStartTimeout is the maximum time allowed for an async InstanceStart
+	// call before it is cancelled. Defaults to 5 minutes.
+	InstanceStartTimeout time.Duration
+
 	l *slog.Logger
 }
 
@@ -35,6 +39,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		pendingStarts:            map[string]*pendingStart{},
 		l:                        logger,
 		BlockingRefreshFrequency: 5 * time.Second,
+		InstanceStartTimeout:     5 * time.Minute,
 	}
 }
 
