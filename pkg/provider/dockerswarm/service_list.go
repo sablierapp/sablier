@@ -83,3 +83,7 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	return groups, nil
 }
+
+func (p *Provider) InstanceDependencies(ctx context.Context) (map[string][]string, error) {
+	return nil, nil
+}

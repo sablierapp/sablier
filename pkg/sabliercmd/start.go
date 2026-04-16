@@ -62,6 +62,13 @@ func Start(ctx context.Context, conf config.Config) error {
 		s.SetGroups(groups)
 	}
 
+	deps, err := provider.InstanceDependencies(ctx)
+	if err != nil {
+		logger.WarnContext(ctx, "initial dependency scan failed", slog.Any("reason", err))
+	} else {
+		s.SetDependencies(deps)
+	}
+
 	go s.GroupWatch(ctx)
 	instanceStopped := make(chan string)
 	go provider.NotifyInstanceStopped(ctx, instanceStopped)

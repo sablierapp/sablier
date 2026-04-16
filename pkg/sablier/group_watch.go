@@ -21,6 +21,13 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 			} else if groups != nil {
 				s.SetGroups(groups)
 			}
+
+			deps, err := s.provider.InstanceDependencies(ctx)
+			if err != nil {
+				s.l.ErrorContext(ctx, "cannot retrieve dependencies from provider", slog.Any("reason", err))
+			} else {
+				s.SetDependencies(deps)
+			}
 		}
 	}
 }

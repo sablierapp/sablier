@@ -21,6 +21,16 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 		return nil, fmt.Errorf("names cannot be empty")
 	}
 
+	// Resolve dependencies and compute start order.
+	deps := s.GetDependencies()
+	ordered, err := s.resolveStartOrder(names, deps)
+	if err != nil {
+		s.l.WarnContext(ctx, "failed to resolve dependency order, falling back to parallel start", slog.Any("error", err))
+		ordered = names
+	}
+
+	s.l.DebugContext(ctx, "resolved start order", slog.Any("order", ordered))
+
 	var wg sync.WaitGroup
 
 	mx := sync.Mutex{}
@@ -28,9 +38,9 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 		Instances: map[string]InstanceInfoWithError{},
 	}
 
-	wg.Add(len(names))
+	wg.Add(len(ordered))
 
-	for i := 0; i < len(names); i++ {
+	for i := 0; i < len(ordered); i++ {
 		go func(name string) {
 			defer wg.Done()
 			state, err := s.InstanceRequest(ctx, name, duration)
@@ -40,12 +50,39 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 				Instance: state,
 				Error:    err,
 			}
-		}(names[i])
+		}(ordered[i])
 	}
 
 	wg.Wait()
 
 	return sessionState, nil
+}
+
+// resolveStartOrder takes a list of requested instance names and a dependency
+// graph, resolves all transitive dependencies, deduplicates, and returns them
+// in topological order (deepest dependencies first).
+func (s *Sablier) resolveStartOrder(names []string, deps map[string][]string) ([]string, error) {
+	if len(deps) == 0 {
+		return names, nil
+	}
+
+	seen := make(map[string]bool)
+	var ordered []string
+
+	for _, name := range names {
+		resolved, err := ResolveDependencyOrder(name, deps)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range resolved {
+			if !seen[r] {
+				seen[r] = true
+				ordered = append(ordered, r)
+			}
+		}
+	}
+
+	return ordered, nil
 }
 
 func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
