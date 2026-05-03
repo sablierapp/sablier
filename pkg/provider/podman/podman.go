@@ -16,10 +16,10 @@ type Provider struct {
 	conn            context.Context
 	desiredReplicas int32
 	l               *slog.Logger
-	strictLabels   bool
+	ignoreUnlabeled bool
 }
 
-func New(ctx context.Context, logger *slog.Logger, strictLabels bool) (*Provider, error) {
+func New(ctx context.Context, logger *slog.Logger, ignoreUnlabeled bool) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "podman"))
 
 	version, err := system.Version(ctx, nil)
@@ -34,6 +34,6 @@ func New(ctx context.Context, logger *slog.Logger, strictLabels bool) (*Provider
 		conn:            ctx,
 		desiredReplicas: 1,
 		l:               logger,
-		strictLabels:   strictLabels,
+		ignoreUnlabeled: ignoreUnlabeled,
 	}, nil
 }
