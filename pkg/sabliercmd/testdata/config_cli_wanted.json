@@ -9,7 +9,7 @@
   "Provider": {
     "Name": "cli",
     "AutoStopOnStartup": false,
-    "StrictLabels": false,
+    "IgnoreUnlabeled": true,
     "Kubernetes": {
       "QPS": 256,
       "Burst": 512,

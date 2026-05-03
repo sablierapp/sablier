@@ -9,7 +9,7 @@
   "Provider": {
     "Name": "envvar",
     "AutoStopOnStartup": false,
-    "StrictLabels": false,
+    "IgnoreUnlabeled": false,
     "Kubernetes": {
       "QPS": 16,
       "Burst": 32,
