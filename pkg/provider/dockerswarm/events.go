@@ -15,7 +15,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 		filters.Arg("scope", "swarm"),
 		filters.Arg("type", "service"),
 	}
-	if p.strictLabels {
+	if p.ignoreUnlabeled {
 		args = append(args, filters.Arg("label", "sablier.enable=true"))
 	}
 	msgs, errs := p.Client.Events(ctx, events.ListOptions{

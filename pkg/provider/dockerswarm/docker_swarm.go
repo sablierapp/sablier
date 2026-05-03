@@ -20,11 +20,11 @@ type Provider struct {
 	Client          client.APIClient
 	desiredReplicas int32
 
-	l             *slog.Logger
-	strictLabels bool
+	l               *slog.Logger
+	ignoreUnlabeled bool
 }
 
-func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strictLabels bool) (*Provider, error) {
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger, ignoreUnlabeled bool) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "swarm"))
 
 	serverVersion, err := cli.ServerVersion(ctx)
@@ -41,7 +41,7 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strictLab
 		Client:          cli,
 		desiredReplicas: 1,
 		l:               logger,
-		strictLabels:   strictLabels,
+		ignoreUnlabeled: ignoreUnlabeled,
 	}, nil
 
 }
@@ -52,7 +52,7 @@ func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, repli
 		return fmt.Errorf("cannot get service: %w", err)
 	}
 
-	if p.strictLabels && service.Spec.Labels["sablier.enable"] != "true" {
+	if p.ignoreUnlabeled && service.Spec.Labels["sablier.enable"] != "true" {
 		return sablier.ErrInstanceNotManaged{Name: name}
 	}
 
