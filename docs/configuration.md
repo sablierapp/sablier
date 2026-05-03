@@ -118,6 +118,7 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
   -h, --help                                                  help for start
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes] (default "docker")
+      --provider.ignore-unlabeled                             Ignore instances without sablier.enable=true during start, stop, and event operations
       --server.base-path string                               The base path for the API (default "/")
       --server.port int                                       The server port to use (default 10000)
       --sessions.default-duration duration                    The default session duration (default 5m0s)
