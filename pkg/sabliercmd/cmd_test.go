@@ -129,6 +129,7 @@ func TestPrecedence(t *testing.T) {
 			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
 			"start",
 			"--provider.name", "cli",
+			"--provider.ignore-unlabeled",
 			"--provider.kubernetes.qps", "256",
 			"--provider.kubernetes.burst", "512",
 			"--provider.kubernetes.delimiter", "_",
