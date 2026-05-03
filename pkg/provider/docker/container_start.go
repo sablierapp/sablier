@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) error {
-	if p.strictLabels {
+	if p.ignoreUnlabeled {
 		if err := p.ensureManaged(ctx, name); err != nil {
 			return err
 		}
