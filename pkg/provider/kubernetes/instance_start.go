@@ -8,7 +8,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 		return err
 	}
 
-	if p.strictLabels {
+	if p.ignoreUnlabeled {
 		if err := p.ensureManaged(ctx, parsed); err != nil {
 			return err
 		}

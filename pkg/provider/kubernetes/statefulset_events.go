@@ -38,7 +38,7 @@ func (p *Provider) watchStatefulSets(instance chan<- string) cache.SharedIndexIn
 	opts := []informers.SharedInformerOption{
 		informers.WithNamespace(core_v1.NamespaceAll),
 	}
-	if p.strictLabels {
+	if p.ignoreUnlabeled {
 		opts = append(opts, informers.WithTweakListOptions(func(o *metav1.ListOptions) {
 			o.LabelSelector = "sablier.enable=true"
 		}))

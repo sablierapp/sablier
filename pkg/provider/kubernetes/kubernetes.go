@@ -13,13 +13,13 @@ import (
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client        kubernetes.Interface
-	delimiter     string
-	l             *slog.Logger
-	strictLabels bool
+	Client          kubernetes.Interface
+	delimiter       string
+	l               *slog.Logger
+	ignoreUnlabeled bool
 }
 
-func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger, config providerConfig.Kubernetes, strictLabels bool) (*Provider, error) {
+func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger, config providerConfig.Kubernetes, ignoreUnlabeled bool) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "kubernetes"))
 
 	info, err := client.ServerVersion()
@@ -34,10 +34,10 @@ func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger,
 	)
 
 	return &Provider{
-		Client:        client,
-		delimiter:     config.Delimiter,
-		l:             logger,
-		strictLabels: strictLabels,
+		Client:          client,
+		delimiter:       config.Delimiter,
+		l:               logger,
+		ignoreUnlabeled: ignoreUnlabeled,
 	}, nil
 
 }
