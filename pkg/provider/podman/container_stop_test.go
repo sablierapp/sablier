@@ -21,9 +21,10 @@ func TestPodmanProvider_Stop(t *testing.T) {
 		do func(pind *pindContainer) (string, error)
 	}
 	tests := []struct {
-		name string
-		args args
-		err  error
+		name            string
+		args            args
+		ignoreUnlabeled bool
+		err             error
 	}{
 		{
 			name: "non existing container stop",
@@ -32,7 +33,8 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("no such container"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("no such container"),
 		},
 		{
 			name: "unlabeled container stop",
@@ -51,7 +53,28 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			err: fmt.Errorf("is not managed by sablier"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("is not managed by sablier"),
+		},
+		{
+			name: "unlabeled container stop when allowed",
+			args: args{
+				do: func(pind *pindContainer) (string, error) {
+					c, err := pind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = containers.Start(pind.connText, c.ID, nil)
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			ignoreUnlabeled: false,
+			err:             nil,
 		},
 		{
 			name: "container stop as expected",
@@ -70,14 +93,15 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			err: nil,
+			ignoreUnlabeled: true,
+			err:             nil,
 		},
 	}
 	c := setupPinD(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t), true)
+			p, err := podman.New(c.connText, slogt.New(t), tt.ignoreUnlabeled)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
