@@ -2,12 +2,12 @@ package dockerswarm_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -29,6 +29,25 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		want    sablier.InstanceInfo
 		wantErr error
 	}{
+		{
+			name: "unlabeled service start",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					s, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return service.Spec.Name, nil
+				},
+			},
+			wantErr: fmt.Errorf("is not managed by sablier"),
+		},
 		{
 			name: "service with 1/1 replicas",
 			args: args{
@@ -137,10 +156,11 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 
 			tt.want.Name = name
 			err = p.InstanceStart(ctx, name)
-			if !cmp.Equal(err, tt.wantErr) {
-				t.Errorf("Provider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr != nil {
+				assert.ErrorContains(t, err, tt.wantErr.Error())
 				return
 			}
+			assert.NilError(t, err)
 
 			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
 			assert.NilError(t, err)
