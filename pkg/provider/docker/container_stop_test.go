@@ -21,9 +21,10 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name string
-		args args
-		err  error
+		name            string
+		args            args
+		ignoreUnlabeled bool
+		err             error
 	}{
 		{
 			name: "non existing container stop",
@@ -32,7 +33,8 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("No such container: non-existent"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("No such container: non-existent"),
 		},
 		{
 			name: "unlabeled container stop",
@@ -51,7 +53,28 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			err: fmt.Errorf("is not managed by sablier"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("is not managed by sablier"),
+		},
+		{
+			name: "unlabeled container stop when allowed",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			ignoreUnlabeled: false,
+			err:             nil,
 		},
 		{
 			name: "container stop as expected",
@@ -70,14 +93,15 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			err: nil,
+			ignoreUnlabeled: true,
+			err:             nil,
 		},
 	}
 	c := setupDinD(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := docker.New(ctx, c.client, slogt.New(t), "stop", true)
+			p, err := docker.New(ctx, c.client, slogt.New(t), "stop", tt.ignoreUnlabeled)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

@@ -39,8 +39,43 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	err = dind.client.ContainerStop(ctx, c.ID, container.StopOptions{})
 	assert.NilError(t, err)
 
-	name := <-waitC
+	name := waitForInstanceStopped(t, waitC)
 
 	// Docker container name is prefixed with a slash, but we don't use it
 	assert.Equal(t, "/"+name, inspected.Name)
+
+	unlabeled, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	err = dind.client.ContainerStart(ctx, unlabeled.ID, container.StartOptions{})
+	assert.NilError(t, err)
+
+	err = dind.client.ContainerStop(ctx, unlabeled.ID, container.StopOptions{})
+	assert.NilError(t, err)
+
+	assertNoInstanceStopped(t, waitC)
+}
+
+func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
+	t.Helper()
+
+	select {
+	case name, ok := <-waitC:
+		assert.Assert(t, ok, "event stream closed before receiving a stopped instance")
+		return name
+	case <-time.After(30 * time.Second):
+		t.Fatal("timed out waiting for stopped instance notification")
+		return ""
+	}
+}
+
+func assertNoInstanceStopped(t *testing.T, waitC <-chan string) {
+	t.Helper()
+
+	select {
+	case name, ok := <-waitC:
+		assert.Assert(t, ok, "event stream closed while checking for ignored stopped instance")
+		t.Fatalf("unexpected stopped instance notification for %q", name)
+	case <-time.After(time.Second):
+	}
 }
