@@ -20,9 +20,10 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 		do func(kind *kindContainer) (string, error)
 	}
 	tests := []struct {
-		name string
-		args args
-		err  error
+		name            string
+		args            args
+		ignoreUnlabeled bool
+		err             error
 	}{
 		{
 			name: "invalid name",
@@ -31,7 +32,8 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return "invalid-name", nil
 				},
 			},
-			err: fmt.Errorf("invalid name [invalid-name] should be: kind_namespace_name_replicas"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("invalid name [invalid-name] should be: kind_namespace_name_replicas"),
 		},
 		{
 			name: "non existing deployment stop",
@@ -40,7 +42,8 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return "deployment_default_my-deployment_1", nil
 				},
 			},
-			err: fmt.Errorf("\"my-deployment\" not found"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("\"my-deployment\" not found"),
 		},
 		{
 			name: "unlabeled deployment stop",
@@ -58,7 +61,27 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			err: fmt.Errorf("is not managed by sablier"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("is not managed by sablier"),
+		},
+		{
+			name: "unlabeled deployment stop when allowed",
+			args: args{
+				do: func(kind *kindContainer) (string, error) {
+					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			ignoreUnlabeled: false,
+			err:             nil,
 		},
 		{
 			name: "deployment stop as expected",
@@ -76,7 +99,8 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			err: nil,
+			ignoreUnlabeled: true,
+			err:             nil,
 		},
 		{
 			name: "non existing statefulSet stop",
@@ -85,7 +109,8 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return "statefulset_default_my-statefulset_1", nil
 				},
 			},
-			err: fmt.Errorf("statefulsets.apps \"my-statefulset\" not found"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("statefulsets.apps \"my-statefulset\" not found"),
 		},
 		{
 			name: "unlabeled statefulSet stop",
@@ -103,7 +128,27 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			err: fmt.Errorf("is not managed by sablier"),
+			ignoreUnlabeled: true,
+			err:             fmt.Errorf("is not managed by sablier"),
+		},
+		{
+			name: "unlabeled statefulSet stop when allowed",
+			args: args{
+				do: func(kind *kindContainer) (string, error) {
+					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name); err != nil {
+						return "", fmt.Errorf("error waiting for statefulSet: %w", err)
+					}
+
+					return kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			ignoreUnlabeled: false,
+			err:             nil,
 		},
 		{
 			name: "statefulSet stop as expected",
@@ -121,14 +166,15 @@ func TestKubernetesProvider_InstanceStop(t *testing.T) {
 					return kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
 				},
 			},
-			err: nil,
+			ignoreUnlabeled: true,
+			err:             nil,
 		},
 	}
 	kind := setupKinD(t, ctx)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes, true)
+			p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes, tt.ignoreUnlabeled)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(kind)

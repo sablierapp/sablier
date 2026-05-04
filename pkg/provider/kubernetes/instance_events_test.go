@@ -43,10 +43,26 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 
-		name := <-waitC
+		name := waitForInstanceStopped(t, waitC)
 
 		// Docker container name is prefixed with a slash, but we don't use it
 		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+	t.Run("unlabeled deployment is ignored", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		assert.NilError(t, err)
+
+		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(ctx, d.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		assertNoInstanceStopped(t, waitC)
 	})
 	t.Run("deployment is removed", func(t *testing.T) {
 		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
@@ -58,7 +74,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		err = p.Client.AppsV1().Deployments(d.Namespace).Delete(ctx, d.Name, metav1.DeleteOptions{})
 		assert.NilError(t, err)
 
-		name := <-waitC
+		name := waitForInstanceStopped(t, waitC)
 
 		// Docker container name is prefixed with a slash, but we don't use it
 		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
@@ -77,10 +93,26 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 
-		name := <-waitC
+		name := waitForInstanceStopped(t, waitC)
 
 		// Docker container name is prefixed with a slash, but we don't use it
 		assert.Equal(t, name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+	t.Run("unlabeled statefulSet is ignored", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		assert.NilError(t, err)
+
+		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(ctx, ss.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		assertNoInstanceStopped(t, waitC)
 	})
 
 	t.Run("statefulSet is removed", func(t *testing.T) {
@@ -93,9 +125,33 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		err = p.Client.AppsV1().StatefulSets(ss.Namespace).Delete(ctx, ss.Name, metav1.DeleteOptions{})
 		assert.NilError(t, err)
 
-		name := <-waitC
+		name := waitForInstanceStopped(t, waitC)
 
 		// Docker container name is prefixed with a slash, but we don't use it
 		assert.Equal(t, name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
 	})
+}
+
+func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
+	t.Helper()
+
+	select {
+	case name, ok := <-waitC:
+		assert.Assert(t, ok, "event stream closed before receiving a stopped instance")
+		return name
+	case <-time.After(30 * time.Second):
+		t.Fatal("timed out waiting for stopped instance notification")
+		return ""
+	}
+}
+
+func assertNoInstanceStopped(t *testing.T, waitC <-chan string) {
+	t.Helper()
+
+	select {
+	case name, ok := <-waitC:
+		assert.Assert(t, ok, "event stream closed while checking for ignored stopped instance")
+		t.Fatalf("unexpected stopped instance notification for %q", name)
+	case <-time.After(time.Second):
+	}
 }
