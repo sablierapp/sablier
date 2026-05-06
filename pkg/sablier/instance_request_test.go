@@ -344,3 +344,99 @@ func TestInstanceRequest_StoreGetError(t *testing.T) {
 	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.ErrorContains(t, err, "cannot retrieve instance from store")
 }
+
+func TestInstanceRequest_NewInstance_RecordsStartMetrics_Success(t *testing.T) {
+	manager, sessions, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	startDone := make(chan struct{})
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	sessions.EXPECT().Put(ctx, sablier.NotReadyInstanceState("nginx", 0, 1), time.Minute).Return(nil)
+
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+		close(startDone)
+		return nil
+	})
+
+	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.NilError(t, err)
+
+	select {
+	case <-startDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceStart goroutine never completed")
+	}
+	// Settle for the goroutine to record the end metric.
+	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
+		for _, c := range rec.snapshot() {
+			if c == "start_end:nginx" {
+				return true
+			}
+		}
+		return false
+	}), "expected start_end metric")
+
+	calls := rec.snapshot()
+	assertContains(t, calls, "ready_begin:nginx")
+	assertContains(t, calls, "active+:nginx")
+}
+
+func TestInstanceRequest_NewInstance_RecordsStartFailure(t *testing.T) {
+	manager, sessions, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	sessions.EXPECT().Put(ctx, sablier.NotReadyInstanceState("nginx", 0, 1), time.Minute).Return(nil)
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("boom"))
+
+	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.NilError(t, err) // first call returns not-ready, error surfaces on next
+
+	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
+		for _, c := range rec.snapshot() {
+			if c == "start_fail:nginx" {
+				return true
+			}
+		}
+		return false
+	}), "expected start_fail metric")
+
+	calls := rec.snapshot()
+	for _, c := range calls {
+		if c == "start_end:nginx" {
+			t.Errorf("did not expect start_end on failure, got: %v", calls)
+		}
+	}
+}
+
+func TestInstanceRequest_ReadyTransition_RecordsReadyEnd(t *testing.T) {
+	manager, sessions, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
+	ready := sablier.ReadyInstanceState("nginx", 1)
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(ready, nil)
+	sessions.EXPECT().Put(ctx, ready, time.Minute).Return(nil)
+
+	// Pre-seed the ready-wait state by simulating a previous Begin.
+	rec.RecordReadyWaitBegin("nginx")
+
+	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.NilError(t, err)
+
+	calls := rec.snapshot()
+	assertContains(t, calls, "ready_end:nginx")
+}
+
+func assertContains(t *testing.T, calls []string, want string) {
+	t.Helper()
+	for _, c := range calls {
+		if c == want {
+			return
+		}
+	}
+	t.Errorf("expected %q in calls, got: %v", want, calls)
+}
