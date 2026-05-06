@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sablierapp/sablier/pkg/metrics"
 )
 
 type Sablier struct {
@@ -27,6 +28,8 @@ type Sablier struct {
 	// call before it is cancelled. Defaults to 5 minutes.
 	InstanceStartTimeout time.Duration
 
+	metrics metrics.Recorder
+
 	l *slog.Logger
 }
 
@@ -38,9 +41,32 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		groups:                   map[string][]string{},
 		pendingStarts:            map[string]*pendingStart{},
 		l:                        logger,
+		metrics:                  metrics.Noop{},
 		BlockingRefreshFrequency: 5 * time.Second,
 		InstanceStartTimeout:     5 * time.Minute,
 	}
+}
+
+// WithMetrics installs a Recorder. Defaults to metrics.Noop until called.
+func (s *Sablier) WithMetrics(r metrics.Recorder) {
+	if r == nil {
+		r = metrics.Noop{}
+	}
+	s.metrics = r
+}
+
+// Groups returns a defensive copy of the current group→instances map. Safe for
+// concurrent use; intended for the metrics GroupLockCollector.
+func (s *Sablier) Groups() map[string][]string {
+	s.groupsMu.RLock()
+	defer s.groupsMu.RUnlock()
+	out := make(map[string][]string, len(s.groups))
+	for k, v := range s.groups {
+		cp := make([]string, len(v))
+		copy(cp, v)
+		out[k] = cp
+	}
+	return out
 }
 
 func (s *Sablier) SetGroups(groups map[string][]string) {
