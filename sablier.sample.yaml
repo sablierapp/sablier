@@ -5,6 +5,8 @@ provider:
 server:
   port: 10000
   base-path: /
+  metrics:
+    enabled: true
 storage:
   file:
 sessions:
