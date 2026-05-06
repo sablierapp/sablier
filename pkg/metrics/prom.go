@@ -106,3 +106,7 @@ func (r *PromRecorder) RecordInstanceStartFailure(instance string) {
 func (r *PromRecorder) RecordInstanceStop(instance, reason string) {
 	r.instanceStops.WithLabelValues(instance, reason).Inc()
 }
+
+func (r *PromRecorder) RecordInstanceStartEnd(instance string, dur time.Duration) {
+	r.instanceStartDuration.WithLabelValues(instance).Observe(dur.Seconds())
+}

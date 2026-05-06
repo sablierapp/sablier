@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
@@ -96,4 +97,39 @@ func labelsMatch(got []*io_prometheus_client.LabelPair, want map[string]string) 
 		}
 	}
 	return true
+}
+
+func TestPromRecorder_InstanceStartDuration(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordInstanceStartEnd("nginx", 750*time.Millisecond)
+	r.RecordInstanceStartEnd("nginx", 3*time.Second)
+	r.RecordInstanceStartEnd("redis", 30*time.Second)
+
+	mustHistogramCount(t, r, "sablier_instance_start_duration_seconds", map[string]string{"instance": "nginx"}, 2)
+	mustHistogramCount(t, r, "sablier_instance_start_duration_seconds", map[string]string{"instance": "redis"}, 1)
+}
+
+func mustHistogramCount(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string, want uint64) {
+	t.Helper()
+	mfs, err := r.Registry().(*prometheus.Registry).Gather()
+	if err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if mf.GetName() != name {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			if !labelsMatch(m.GetLabel(), labels) {
+				continue
+			}
+			got := m.GetHistogram().GetSampleCount()
+			if got != want {
+				t.Errorf("%s%v sample count = %d, want %d", name, labels, got, want)
+			}
+			return
+		}
+	}
+	t.Errorf("histogram %s%v not found", name, labels)
 }
