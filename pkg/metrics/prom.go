@@ -94,3 +94,15 @@ func NewPromRecorder() *PromRecorder {
 func (r *PromRecorder) Registry() prometheus.Registerer {
 	return r.registry
 }
+
+func (r *PromRecorder) RecordSessionRequest(strategy, target string) {
+	r.sessionRequests.WithLabelValues(strategy, target).Inc()
+}
+
+func (r *PromRecorder) RecordInstanceStartFailure(instance string) {
+	r.instanceStartFailures.WithLabelValues(instance).Inc()
+}
+
+func (r *PromRecorder) RecordInstanceStop(instance, reason string) {
+	r.instanceStops.WithLabelValues(instance, reason).Inc()
+}
