@@ -56,6 +56,11 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	s := sablier.New(logger, store, provider)
 	s.WithMetrics(rec)
+	// Register the GroupLockCollector on the same registry so the gauges show
+	// up alongside everything else when /metrics is scraped.
+	if pr, ok := rec.(*metrics.PromRecorder); ok {
+		pr.Registry().MustRegister(metrics.NewGroupLockCollector(s, pr))
+	}
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 
 	groups, err := provider.InstanceGroups(ctx)
