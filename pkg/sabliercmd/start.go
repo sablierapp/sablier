@@ -11,6 +11,7 @@ import (
 	"github.com/sablierapp/sablier/internal/api"
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/version"
@@ -46,13 +47,15 @@ func Start(ctx context.Context, conf config.Config) error {
 		return fmt.Errorf("cannot setup provider: %w", err)
 	}
 
+	rec := buildRecorder(conf.Server.Metrics.Enabled)
 	store := inmemory.NewInMemory()
-	err = store.OnExpire(ctx, sablier.OnInstanceExpired(ctx, provider, logger))
+	err = store.OnExpire(ctx, sablier.OnInstanceExpired(ctx, provider, rec, logger))
 	if err != nil {
 		return err
 	}
 
 	s := sablier.New(logger, store, provider)
+	s.WithMetrics(rec)
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 
 	groups, err := provider.InstanceGroups(ctx)
@@ -89,6 +92,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	strategy := &api.ServeStrategy{
 		Theme:          t,
 		Sablier:        s,
+		Metrics:        rec,
 		StrategyConfig: conf.Strategy,
 		SessionsConfig: conf.Sessions,
 	}
@@ -107,4 +111,11 @@ func Start(ctx context.Context, conf config.Config) error {
 	logger.InfoContext(ctx, "Server exiting")
 
 	return nil
+}
+
+func buildRecorder(enabled bool) metrics.Recorder {
+	if enabled {
+		return metrics.NewPromRecorder()
+	}
+	return metrics.Noop{}
 }
