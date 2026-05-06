@@ -110,7 +110,15 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 		return
 	}
 
-	for _, v := range sessionState.Instances {
+	for name, v := range sessionState.Instances {
+		if v.Error != nil {
+			instances = append(instances, theme.Instance{
+				Name:   name,
+				Status: string(sablier.InstanceStatusUnrecoverable),
+				Error:  v.Error,
+			})
+			continue
+		}
 		instances = append(instances, instanceStateToRenderOptionsRequestState(v.Instance))
 	}
 

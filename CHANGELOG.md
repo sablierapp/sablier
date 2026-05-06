@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.11.2](https://github.com/sablierapp/sablier/compare/v1.11.1...v1.11.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* **cmd:** return an error instead of panic ([#820](https://github.com/sablierapp/sablier/issues/820)) ([d7f6403](https://github.com/sablierapp/sablier/commit/d7f640382c2f82f1f3918aec3899a661bcf0e9bb))
+* **deps:** bump the k8s-io group across 1 directory with 3 updates ([#828](https://github.com/sablierapp/sablier/issues/828)) ([13bd6b2](https://github.com/sablierapp/sablier/commit/13bd6b2c46ca502911e9e318f0489753833313c3))
+* handle instance start errors in dynamic and blocking strategies ([#854](https://github.com/sablierapp/sablier/issues/854)) ([69b3d57](https://github.com/sablierapp/sablier/commit/69b3d57035c6036c925f47c791b8e4f4219407ea))
+
 ## [1.11.1](https://github.com/sablierapp/sablier/compare/v1.11.0...v1.11.1) (2026-01-14)
 
 
