@@ -1,7 +1,10 @@
 {
   "Server": {
     "Port": 3333,
-    "BasePath": "/cli/"
+    "BasePath": "/cli/",
+    "Metrics": {
+      "Enabled": false
+    }
   },
   "Storage": {
     "File": "/tmp/cli.json"

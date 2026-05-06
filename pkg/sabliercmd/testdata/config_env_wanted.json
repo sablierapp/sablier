@@ -1,7 +1,10 @@
 {
   "Server": {
     "Port": 2222,
-    "BasePath": "/envvar/"
+    "BasePath": "/envvar/",
+    "Metrics": {
+      "Enabled": false
+    }
   },
   "Storage": {
     "File": "/tmp/envvar.json"
