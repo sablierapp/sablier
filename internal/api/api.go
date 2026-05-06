@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
 )
@@ -22,6 +23,7 @@ type ServeStrategy struct {
 	Theme *theme.Themes
 
 	Sablier        Sablier
+	Metrics        metrics.Recorder
 	StrategyConfig config.Strategy
 	SessionsConfig config.Sessions
 }
