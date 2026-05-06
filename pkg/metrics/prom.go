@@ -110,3 +110,34 @@ func (r *PromRecorder) RecordInstanceStop(instance, reason string) {
 func (r *PromRecorder) RecordInstanceStartEnd(instance string, dur time.Duration) {
 	r.instanceStartDuration.WithLabelValues(instance).Observe(dur.Seconds())
 }
+
+func (r *PromRecorder) RecordReadyWaitBegin(instance string) {
+	r.readyMu.Lock()
+	defer r.readyMu.Unlock()
+	if _, exists := r.readyWait[instance]; exists {
+		return
+	}
+	r.readyWait[instance] = time.Now()
+}
+
+func (r *PromRecorder) RecordReadyWaitEnd(instance string) {
+	r.readyMu.Lock()
+	start, exists := r.readyWait[instance]
+	if !exists {
+		r.readyMu.Unlock()
+		return
+	}
+	delete(r.readyWait, instance)
+	r.readyMu.Unlock()
+
+	r.instanceReadyDuration.WithLabelValues(instance).Observe(time.Since(start).Seconds())
+}
+
+// ReadyWaitStartedAt returns the timestamp recorded for an instance's pending
+// ready transition, if any. Test-only helper.
+func (r *PromRecorder) ReadyWaitStartedAt(instance string) (time.Time, bool) {
+	r.readyMu.Lock()
+	defer r.readyMu.Unlock()
+	t, ok := r.readyWait[instance]
+	return t, ok
+}

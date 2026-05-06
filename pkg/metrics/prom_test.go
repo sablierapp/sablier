@@ -133,3 +133,52 @@ func mustHistogramCount(t *testing.T, r *metrics.PromRecorder, name string, labe
 	}
 	t.Errorf("histogram %s%v not found", name, labels)
 }
+
+func TestPromRecorder_ReadyWait_BeginThenEnd(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordReadyWaitBegin("nginx")
+	r.RecordReadyWaitEnd("nginx")
+
+	mustHistogramCount(t, r, "sablier_instance_ready_duration_seconds", map[string]string{"instance": "nginx"}, 1)
+}
+
+func TestPromRecorder_ReadyWait_EndWithoutBeginIsNoop(t *testing.T) {
+	r := metrics.NewPromRecorder()
+	r.RecordReadyWaitEnd("nginx")
+
+	mfs, err := r.Registry().(*prometheus.Registry).Gather()
+	if err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if mf.GetName() != "sablier_instance_ready_duration_seconds" {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			if labelsMatch(m.GetLabel(), map[string]string{"instance": "nginx"}) {
+				t.Errorf("expected no samples but found %d", m.GetHistogram().GetSampleCount())
+			}
+		}
+	}
+}
+
+func TestPromRecorder_ReadyWait_BeginIsIdempotent(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordReadyWaitBegin("nginx")
+	first, ok := r.ReadyWaitStartedAt("nginx")
+	if !ok {
+		t.Fatal("expected timestamp")
+	}
+	time.Sleep(20 * time.Millisecond)
+	r.RecordReadyWaitBegin("nginx")
+	second, ok := r.ReadyWaitStartedAt("nginx")
+	if !ok {
+		t.Fatal("expected timestamp")
+	}
+
+	if !first.Equal(second) {
+		t.Errorf("RecordReadyWaitBegin reset the timestamp: %v -> %v", first, second)
+	}
+}
