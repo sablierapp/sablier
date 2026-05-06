@@ -182,3 +182,31 @@ func TestPromRecorder_ReadyWait_BeginIsIdempotent(t *testing.T) {
 		t.Errorf("RecordReadyWaitBegin reset the timestamp: %v -> %v", first, second)
 	}
 }
+
+func TestPromRecorder_ActiveInstances(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordActiveInstance("nginx")
+	r.RecordActiveInstance("redis")
+	r.RecordActiveInstance("nginx")
+
+	got := r.SnapshotActiveInstances()
+	want := map[string]bool{"nginx": true, "redis": true}
+	if len(got) != len(want) {
+		t.Fatalf("active set size = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for k := range want {
+		if _, ok := got[k]; !ok {
+			t.Errorf("expected %q in active set, got %v", k, got)
+		}
+	}
+
+	r.RecordInactiveInstance("nginx")
+	got = r.SnapshotActiveInstances()
+	if _, ok := got["nginx"]; ok {
+		t.Errorf("expected nginx removed, got %v", got)
+	}
+	if _, ok := got["redis"]; !ok {
+		t.Errorf("expected redis still present, got %v", got)
+	}
+}

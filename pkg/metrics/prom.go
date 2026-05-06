@@ -141,3 +141,26 @@ func (r *PromRecorder) ReadyWaitStartedAt(instance string) (time.Time, bool) {
 	t, ok := r.readyWait[instance]
 	return t, ok
 }
+
+func (r *PromRecorder) RecordActiveInstance(instance string) {
+	r.activeMu.Lock()
+	defer r.activeMu.Unlock()
+	r.activeInstances[instance] = struct{}{}
+}
+
+func (r *PromRecorder) RecordInactiveInstance(instance string) {
+	r.activeMu.Lock()
+	defer r.activeMu.Unlock()
+	delete(r.activeInstances, instance)
+}
+
+// SnapshotActiveInstances returns a copy of the current active set.
+func (r *PromRecorder) SnapshotActiveInstances() map[string]struct{} {
+	r.activeMu.RLock()
+	defer r.activeMu.RUnlock()
+	out := make(map[string]struct{}, len(r.activeInstances))
+	for k := range r.activeInstances {
+		out[k] = struct{}{}
+	}
+	return out
+}
