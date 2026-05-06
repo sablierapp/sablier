@@ -47,6 +47,7 @@ func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
 			s.l.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
 			return err
 		}
+		s.metrics.RecordInstanceStop(name, "unregistered")
 		s.l.InfoContext(ctx, "stopped unregistered instance", slog.String("instance", name), slog.String("reason", "instance is enabled but not started by Sablier"))
 		return nil
 	}
