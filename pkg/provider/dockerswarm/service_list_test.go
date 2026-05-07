@@ -1,7 +1,7 @@
 package dockerswarm_test
 
 import (
-	"github.com/docker/docker/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/sablier"
 
 	"sort"
@@ -31,8 +31,9 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i1, _, err := dind.client.ServiceInspectWithRaw(ctx, s1.ID, swarm.ServiceInspectOptions{})
+	i1Result, err := dind.client.ServiceInspect(ctx, s1.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
+	i1 := i1Result.Service
 
 	s2, err := dind.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -42,8 +43,9 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i2, _, err := dind.client.ServiceInspectWithRaw(ctx, s2.ID, swarm.ServiceInspectOptions{})
+	i2Result, err := dind.client.ServiceInspect(ctx, s2.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
+	i2 := i2Result.Service
 
 	got, err := p.InstanceList(ctx, provider.InstanceListOptions{
 		All: true,
@@ -88,8 +90,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i1, _, err := dind.client.ServiceInspectWithRaw(ctx, s1.ID, swarm.ServiceInspectOptions{})
+	i1Result, err := dind.client.ServiceInspect(ctx, s1.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
+	i1 := i1Result.Service
 
 	s2, err := dind.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -99,8 +102,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i2, _, err := dind.client.ServiceInspectWithRaw(ctx, s2.ID, swarm.ServiceInspectOptions{})
+	i2Result, err := dind.client.ServiceInspect(ctx, s2.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
+	i2 := i2Result.Service
 
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)

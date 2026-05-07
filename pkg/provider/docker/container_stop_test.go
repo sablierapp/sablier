@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
@@ -43,7 +43,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -106,7 +106,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}

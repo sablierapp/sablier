@@ -6,22 +6,21 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/moby/moby/client"
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := p.Client.Events(ctx, events.ListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "swarm"),
-			filters.Arg("type", "service"),
-		),
+	filters := client.Filters{}
+	filters.Add("scope", "swarm")
+	filters.Add("type", "service")
+	result := p.Client.Events(ctx, client.EventsListOptions{
+		Filters: filters,
 	})
 
 	go func() {
 		for {
 			select {
-			case msg, ok := <-msgs:
+			case msg, ok := <-result.Messages:
 				if !ok {
 					p.l.ErrorContext(ctx, "event stream closed")
 					return
@@ -32,7 +31,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 				} else if msg.Action == "remove" {
 					instance <- msg.Actor.Attributes["name"]
 				}
-			case err, ok := <-errs:
+			case err, ok := <-result.Err:
 				if !ok {
 					p.l.ErrorContext(ctx, "event stream closed")
 					return

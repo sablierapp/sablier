@@ -48,7 +48,7 @@ func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (ent
 func setupPinD(t *testing.T) *pindContainer {
 	t.Helper()
 	ctx := t.Context()
-	c, err := pind.Run(ctx, "quay.io/podman/stable:v5.5.2")
+	c, err := pind.Run(ctx, "quay.io/podman/stable:v5.8.2")
 	assert.NilError(t, err)
 	testcontainers.CleanupContainer(t, c)
 

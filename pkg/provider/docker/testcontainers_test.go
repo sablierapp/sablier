@@ -2,12 +2,13 @@ package docker_test
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"testing"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/dind"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 type dindContainer struct {
@@ -23,18 +24,21 @@ type MimicOptions struct {
 	Labels        map[string]string
 }
 
-func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (container.CreateResponse, error) {
+func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ContainerCreateResult, error) {
 	if len(opts.Cmd) == 0 {
 		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
 	}
 
 	d.t.Log("Creating mimic container with options", opts)
-	return d.client.ContainerCreate(ctx, &container.Config{
-		Entrypoint:  opts.Cmd,
-		Image:       "sablierapp/mimic:v0.3.1",
-		Labels:      opts.Labels,
-		Healthcheck: opts.Healthcheck,
-	}, &container.HostConfig{RestartPolicy: opts.RestartPolicy}, nil, nil, "")
+	return d.client.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config: &container.Config{
+			Entrypoint:  opts.Cmd,
+			Image:       "sablierapp/mimic:v0.3.1",
+			Labels:      opts.Labels,
+			Healthcheck: opts.Healthcheck,
+		},
+		HostConfig: &container.HostConfig{RestartPolicy: opts.RestartPolicy}},
+	)
 }
 
 func setupDinD(t *testing.T) *dindContainer {
@@ -47,7 +51,7 @@ func setupDinD(t *testing.T) *dindContainer {
 	host, err := c.Host(ctx)
 	assert.NilError(t, err)
 
-	dindCli, err := client.NewClientWithOpts(client.WithHost(host), client.WithAPIVersionNegotiation())
+	dindCli, err := client.New(client.WithHost(host))
 	assert.NilError(t, err)
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()

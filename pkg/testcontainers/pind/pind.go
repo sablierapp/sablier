@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Container represents the Podman in Docker container type used in the module
@@ -78,6 +79,9 @@ func (c *Container) LoadImage(ctx context.Context, image string) (err error) {
 	imagesTar, err := os.CreateTemp(os.TempDir(), "image*.tar")
 	if err != nil {
 		return fmt.Errorf("create temporary images file: %w", err)
+	}
+	if err = imagesTar.Close(); err != nil {
+		return fmt.Errorf("close temporary images file: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, os.Remove(imagesTar.Name()))
