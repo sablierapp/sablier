@@ -90,7 +90,6 @@ func (c context) mangle(templateName string) string {
 // is a single token in HTML's grammar but in a template spans several nodes.
 type state uint8
 
-//go:generate stringer -type state
 
 const (
 	// stateText is parsed character data. An HTML parser is in
@@ -196,7 +195,6 @@ func isInScriptLiteral(s state) bool {
 // delim is the delimiter that will end the current HTML attribute.
 type delim uint8
 
-//go:generate stringer -type delim
 
 const (
 	// delimNone occurs outside any attribute.
@@ -214,7 +212,6 @@ const (
 // encoding strategies.
 type urlPart uint8
 
-//go:generate stringer -type urlPart
 
 const (
 	// urlPartNone occurs when not in a URL, or possibly at the start:
@@ -235,7 +232,6 @@ const (
 // division operator.
 type jsCtx uint8
 
-//go:generate stringer -type jsCtx
 
 const (
 	// jsCtxRegexp occurs where a '/' would start a regexp literal.
@@ -253,7 +249,6 @@ const (
 // end delimiter for the body.
 type element uint8
 
-//go:generate stringer -type element
 
 const (
 	// elementNone occurs outside a special tag or special element body.
@@ -269,7 +264,6 @@ const (
 	elementTitle
 )
 
-//go:generate stringer -type attr
 
 // attr identifies the current HTML attribute when inside the attribute,
 // that is, starting from stateAttrName until stateTag/stateText (exclusive).

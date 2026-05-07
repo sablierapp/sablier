@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	"text/template"
+
+	template "github.com/sablierapp/sablier/pkg/template/text"
 )
 
 // Build information. Populated at build-time.

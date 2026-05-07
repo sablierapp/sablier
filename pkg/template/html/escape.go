@@ -11,7 +11,7 @@ import (
 	"io"
 	"maps"
 	"regexp"
-	"github.com/sablierapp/sablier/pkg/template/text"
+	template "github.com/sablierapp/sablier/pkg/template/text"
 	"text/template/parse"
 )
 

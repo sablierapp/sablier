@@ -7,12 +7,13 @@ package template
 import (
 	"errors"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/template/internal/fmtsort"
 	"io"
 	"reflect"
 	"runtime"
 	"strings"
 	"text/template/parse"
+
+	"github.com/sablierapp/sablier/pkg/template/internal/fmtsort"
 )
 
 // maxExecDepth specifies the maximum stack depth of templates within
