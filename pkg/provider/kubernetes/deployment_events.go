@@ -7,9 +7,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) watchDeployments(instance chan<- string) cache.SharedIndexInformer {
+func (p *Provider) watchDeployments(instance chan<- sablier.InstanceInfo) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)
@@ -25,13 +27,13 @@ func (p *Provider) watchDeployments(instance chan<- string) cache.SharedIndexInf
 
 			if *newDeployment.Spec.Replicas == 0 {
 				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
-				instance <- parsed.Original
+				instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusNotReady}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			deletedDeployment := obj.(*appsv1.Deployment)
 			parsed := DeploymentName(deletedDeployment, ParseOptions{Delimiter: p.delimiter})
-			instance <- parsed.Original
+			instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusNotReady}
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))

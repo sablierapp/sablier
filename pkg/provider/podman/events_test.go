@@ -8,11 +8,12 @@ import (
 
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"gotest.tools/v3/assert"
 )
 
-func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
+func TestPodmanProvider_InstanceEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -35,14 +36,18 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 	err = WaitForContainerRunning(ctx, pind.client, c.ID)
 	assert.NilError(t, err)
 
-	waitC := make(chan string)
-	go p.NotifyInstanceStopped(ctx, waitC)
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
+	})
 
 	_, err = pind.client.ContainerStop(ctx, c.ID, client.ContainerStopOptions{})
 	assert.NilError(t, err)
 
-	name := <-waitC
-
-	// Podman may or may not prefix container names with "/" — compare without the slash.
-	assert.Equal(t, name, strings.TrimPrefix(inspected.Container.Name, "/"))
+	select {
+	case info := <-stream.Events:
+		// Podman may or may not prefix container names with "/" — compare without the slash.
+		assert.Equal(t, info.Name, strings.TrimPrefix(inspected.Container.Name, "/"))
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	}
 }

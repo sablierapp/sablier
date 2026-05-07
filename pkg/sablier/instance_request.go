@@ -17,9 +17,9 @@ type pendingStart struct {
 
 // consumePendingError checks whether a pending start exists for the given
 // instance. It returns (pending, error):
-//   - pending=true, err=nil  → start still in progress, caller should skip inspect
-//   - pending=false, err!=nil → start completed with error, entry cleared for retry
-//   - pending=false, err=nil  → no pending entry or already cleaned up
+//   - pending=true, err=nil  -> start still in progress, caller should skip inspect
+//   - pending=false, err!=nil -> start completed with error, entry cleared for retry
+//   - pending=false, err=nil  -> no pending entry or already cleaned up
 func (s *Sablier) consumePendingError(name string) (bool, error) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()

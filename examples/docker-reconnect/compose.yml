@@ -1,0 +1,33 @@
+services:
+  # socat bridges TCP :2375 → /var/run/docker.sock
+  # Stopping this container simulates a Docker API connection loss.
+  # Restarting it lets sablier's reconnect loop take over.
+  docker-proxy:
+    image: alpine/socat:latest
+    command: TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=1s
+    environment:
+      # Point the Docker client at the proxy instead of the local socket
+      - DOCKER_HOST=tcp://docker-proxy:2375
+    ports:
+      - "10000:10000"
+    depends_on:
+      - docker-proxy
+
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=whoami"
+    ports:
+      - "8080:80"
