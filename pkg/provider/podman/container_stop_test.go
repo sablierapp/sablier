@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"gotest.tools/v3/assert"
@@ -32,7 +32,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot stop container non-existent: no container with name or ID \"non-existent\" found: no such container"),
+			err: fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
 		},
 		{
 			name: "container stop as expected",
@@ -43,7 +43,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -58,7 +58,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t))
+			p, err := podman.New(ctx, c.client, slogt.New(t))
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

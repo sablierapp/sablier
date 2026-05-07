@@ -4,45 +4,41 @@ import (
 	"context"
 	"testing"
 
-	"github.com/containers/podman/v5/libpod/define"
-
-	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/domain/entities"
-	"github.com/containers/podman/v5/pkg/specgen"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/testcontainers/pind"
 	"github.com/testcontainers/testcontainers-go"
-	"go.podman.io/image/v5/manifest"
 	"gotest.tools/v3/assert"
 )
 
 type pindContainer struct {
 	testcontainers.Container
-	connText context.Context
-	t        *testing.T
+	client *client.Client
+	t      *testing.T
 }
 
 type MimicOptions struct {
 	Cmd           []string
-	Healthcheck   *manifest.Schema2HealthConfig
-	RestartPolicy string
+	Healthcheck   *container.HealthConfig
+	RestartPolicy container.RestartPolicy
 	Labels        map[string]string
 }
 
-func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (entities.ContainerCreateResponse, error) {
+func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ContainerCreateResult, error) {
 	if len(opts.Cmd) == 0 {
-		opts.Cmd = []string{"-running", "-running-after=1s", "-healthy=false"}
+		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
 	}
 
 	d.t.Log("Creating mimic container with options", opts)
-	// Container create
-	s := specgen.NewSpecGenerator("docker.io/sablierapp/mimic:v0.3.1", false)
-	s.Labels = opts.Labels
-	s.Command = opts.Cmd
-	s.HealthConfig = opts.Healthcheck
-	s.HealthCheckOnFailureAction = define.HealthCheckOnFailureActionNone
-	s.RestartPolicy = opts.RestartPolicy
-	return containers.CreateWithSpec(d.connText, s, nil)
+	return d.client.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config: &container.Config{
+			Entrypoint:  opts.Cmd,
+			Image:       "docker.io/sablierapp/mimic:v0.3.1",
+			Labels:      opts.Labels,
+			Healthcheck: opts.Healthcheck,
+		},
+		HostConfig: &container.HostConfig{RestartPolicy: opts.RestartPolicy},
+	})
 }
 
 func setupPinD(t *testing.T) *pindContainer {
@@ -55,7 +51,7 @@ func setupPinD(t *testing.T) *pindContainer {
 	host, err := c.Host(ctx)
 	assert.NilError(t, err)
 
-	connText, err := bindings.NewConnection(ctx, host)
+	pindCli, err := client.New(client.WithHost(host))
 	assert.NilError(t, err)
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()
@@ -69,7 +65,7 @@ func setupPinD(t *testing.T) *pindContainer {
 
 	return &pindContainer{
 		Container: c,
-		connText:  connText,
+		client:    pindCli,
 		t:         t,
 	}
 }

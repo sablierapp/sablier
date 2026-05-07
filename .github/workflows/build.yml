@@ -47,7 +47,7 @@ jobs:
           --rerun-fails-max-failures=10 \
           --packages="./..." \
           --post-run-command .github/scripts/test-summary.sh \
-          -- -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -race -covermode atomic -coverprofile=coverage.out ./...
+          -- -tags="nomsgpack" -race -covermode atomic -coverprofile=coverage.out ./...
 
     - name: Generate HTML test report
       if: ${{ !cancelled() }}

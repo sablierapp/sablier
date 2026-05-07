@@ -17,7 +17,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 
 	ctx := context.Background()
 	type args struct {
-		do func(dind *pindContainer) (string, error)
+		do func(pind *pindContainer) (string, error)
 	}
 	tests := []struct {
 		name string
@@ -27,17 +27,17 @@ func TestPodmanProvider_Start(t *testing.T) {
 		{
 			name: "non existing container start",
 			args: args{
-				do: func(dind *pindContainer) (string, error) {
+				do: func(pind *pindContainer) (string, error) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent: no container with name or ID \"non-existent\" found: no such container"),
+			err: fmt.Errorf("cannot start container non-existent: Error response from daemon: No such container: non-existent"),
 		},
 		{
 			name: "container start as expected",
 			args: args{
-				do: func(dind *pindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+				do: func(pind *pindContainer) (string, error) {
+					c, err := pind.CreateMimic(ctx, MimicOptions{})
 					return c.ID, err
 				},
 			},
@@ -48,7 +48,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t))
+			p, err := podman.New(ctx, c.client, slogt.New(t))
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

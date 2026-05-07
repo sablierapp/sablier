@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL := build
 
-export GOFLAGS=-tags=nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp
+export GOFLAGS=-tags=nomsgpack
 
 run:
 	go run ./cmd/sablier start --storage.file=state.json --logging.level=debug
