@@ -24,13 +24,14 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t), true)
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
-	assert.NilError(t, err)
-
 	waitC := make(chan string)
 	p.NotifyInstanceStopped(ctx, waitC)
+	<-time.After(time.Second)
 
-	t.Run("service is scaled to 0 replicas", func(t *testing.T) {
+	t.Run("labeled service scale to zero sends notification", func(t *testing.T) {
+		c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
+		assert.NilError(t, err)
+
 		service, _, err := dind.client.ServiceInspectWithRaw(ctx, c.ID, swarm.ServiceInspectOptions{})
 		assert.NilError(t, err)
 
@@ -46,7 +47,23 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 		assert.Equal(t, name, service.Spec.Name)
 	})
 
-	t.Run("unlabeled service is ignored", func(t *testing.T) {
+	t.Run("labeled service remove sends notification", func(t *testing.T) {
+		c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
+		assert.NilError(t, err)
+
+		service, _, err := dind.client.ServiceInspectWithRaw(ctx, c.ID, swarm.ServiceInspectOptions{})
+		assert.NilError(t, err)
+
+		err = p.Client.ServiceRemove(ctx, service.ID)
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		// Docker container name is prefixed with a slash, but we don't use it
+		assert.Equal(t, name, service.Spec.Name)
+	})
+
+	t.Run("unlabeled service scale to zero is ignored", func(t *testing.T) {
 		unlabeled, err := dind.CreateMimic(ctx, MimicOptions{})
 		assert.NilError(t, err)
 
@@ -60,24 +77,19 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 		assert.NilError(t, err)
 
 		assertNoInstanceStopped(t, waitC)
+	})
+
+	t.Run("unlabeled service remove is ignored", func(t *testing.T) {
+		unlabeled, err := dind.CreateMimic(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		service, _, err := dind.client.ServiceInspectWithRaw(ctx, unlabeled.ID, swarm.ServiceInspectOptions{})
+		assert.NilError(t, err)
 
 		err = p.Client.ServiceRemove(ctx, service.ID)
 		assert.NilError(t, err)
 
 		assertNoInstanceStopped(t, waitC)
-	})
-
-	t.Run("service is removed", func(t *testing.T) {
-		service, _, err := dind.client.ServiceInspectWithRaw(ctx, c.ID, swarm.ServiceInspectOptions{})
-		assert.NilError(t, err)
-
-		err = p.Client.ServiceRemove(ctx, service.ID)
-		assert.NilError(t, err)
-
-		name := waitForInstanceStopped(t, waitC)
-
-		// Docker container name is prefixed with a slash, but we don't use it
-		assert.Equal(t, name, service.Spec.Name)
 	})
 }
 

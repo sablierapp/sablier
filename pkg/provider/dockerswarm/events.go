@@ -41,14 +41,14 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 				}
 				p.l.DebugContext(ctx, "event received", "event", msg)
 
+				if p.ignoreUnlabeled && !p.isManagedServiceEvent(ctx, managedServices, msg) {
+					continue
+				}
+
 				name := msg.Actor.Attributes["name"]
 				stopped := msg.Actor.Attributes["replicas.new"] == "0"
 				removed := msg.Action == "remove"
 				if !stopped && !removed {
-					continue
-				}
-
-				if p.ignoreUnlabeled && !p.isManagedServiceEvent(ctx, managedServices, msg) {
 					continue
 				}
 
