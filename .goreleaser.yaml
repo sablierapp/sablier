@@ -33,9 +33,6 @@ builds:
       - -X github.com/sablierapp/sablier/pkg/version.BuildUser=goreleaser
     tags:
       - nomsgpack
-      - remote
-      - exclude_graphdriver_btrfs
-      - containers_image_openpgp
     flags:
       - -trimpath
 

@@ -2,74 +2,99 @@ package podman_test
 
 import (
 	"context"
+	"flag"
+	"log"
+	"os"
 	"testing"
 
-	"github.com/containers/podman/v5/libpod/define"
-
-	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/domain/entities"
-	"github.com/containers/podman/v5/pkg/specgen"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/testcontainers/pind"
 	"github.com/testcontainers/testcontainers-go"
-	"go.podman.io/image/v5/manifest"
-	"gotest.tools/v3/assert"
 )
+
+// sharedPinD is the single Podman-in-Docker container shared across all tests in this package.
+// It is initialized by TestMain, which avoids the overhead of starting a new PinD per test.
+var sharedPinD *pindContainer
 
 type pindContainer struct {
 	testcontainers.Container
-	connText context.Context
-	t        *testing.T
+	client *client.Client
 }
 
 type MimicOptions struct {
 	Cmd           []string
-	Healthcheck   *manifest.Schema2HealthConfig
-	RestartPolicy string
+	Healthcheck   *container.HealthConfig
+	RestartPolicy container.RestartPolicy
 	Labels        map[string]string
 }
 
-func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (entities.ContainerCreateResponse, error) {
+func (d *pindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ContainerCreateResult, error) {
 	if len(opts.Cmd) == 0 {
-		opts.Cmd = []string{"-running", "-running-after=1s", "-healthy=false"}
+		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
 	}
 
-	d.t.Log("Creating mimic container with options", opts)
-	// Container create
-	s := specgen.NewSpecGenerator("docker.io/sablierapp/mimic:v0.3.1", false)
-	s.Labels = opts.Labels
-	s.Command = opts.Cmd
-	s.HealthConfig = opts.Healthcheck
-	s.HealthCheckOnFailureAction = define.HealthCheckOnFailureActionNone
-	s.RestartPolicy = opts.RestartPolicy
-	return containers.CreateWithSpec(d.connText, s, nil)
+	return d.client.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config: &container.Config{
+			Entrypoint:  opts.Cmd,
+			Image:       "docker.io/sablierapp/mimic:v0.3.3",
+			Labels:      opts.Labels,
+			Healthcheck: opts.Healthcheck,
+		},
+		HostConfig: &container.HostConfig{RestartPolicy: opts.RestartPolicy},
+	})
 }
 
-func setupPinD(t *testing.T) *pindContainer {
-	t.Helper()
-	ctx := t.Context()
+func TestMain(m *testing.M) {
+	// flag.Parse must be called before testing.Short() is usable.
+	flag.Parse()
+
+	// Skip the expensive container setup when running in short mode.
+	if testing.Short() {
+		os.Exit(m.Run())
+	}
+
+	ctx := context.Background()
+
 	c, err := pind.Run(ctx, "quay.io/podman/stable:v5.8.2")
-	assert.NilError(t, err)
-	testcontainers.CleanupContainer(t, c)
+	if err != nil {
+		log.Fatalf("failed to start PinD: %v", err)
+	}
 
 	host, err := c.Host(ctx)
-	assert.NilError(t, err)
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to get PinD host: %v", err)
+	}
 
-	connText, err := bindings.NewConnection(ctx, host)
-	assert.NilError(t, err)
+	pindCli, err := client.New(client.WithHost(host))
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to create podman client: %v", err)
+	}
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()
-	assert.NilError(t, err)
-
-	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
-	assert.NilError(t, err)
-
-	err = c.LoadImage(ctx, "sablierapp/mimic:v0.3.1")
-	assert.NilError(t, err)
-
-	return &pindContainer{
-		Container: c,
-		connText:  connText,
-		t:         t,
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to get docker provider: %v", err)
 	}
+
+	if err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to pull mimic image: %v", err)
+	}
+
+	if err = c.LoadImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to load mimic image: %v", err)
+	}
+
+	sharedPinD = &pindContainer{
+		Container: c,
+		client:    pindCli,
+	}
+
+	code := m.Run()
+	_ = c.Terminate(ctx)
+	os.Exit(code)
 }

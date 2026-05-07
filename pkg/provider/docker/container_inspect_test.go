@@ -19,6 +19,8 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
@@ -271,7 +273,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

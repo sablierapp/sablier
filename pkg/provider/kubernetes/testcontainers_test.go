@@ -3,6 +3,11 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/k3s"
 	"gotest.tools/v3/assert"
@@ -11,10 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"math/rand"
-	"sync"
-	"testing"
-	"time"
 )
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -61,7 +62,7 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 					Containers: []corev1.Container{
 						{
 							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.1",
+							Image:   "sablierapp/mimic:v0.3.3",
 							Command: opts.Cmd,
 							// ReadinessProbe: opts.Healthcheck,
 						},
@@ -106,7 +107,7 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 					Containers: []corev1.Container{
 						{
 							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.1",
+							Image:   "sablierapp/mimic:v0.3.3",
 							Command: opts.Cmd,
 							// ReadinessProbe: opts.Healthcheck,
 						},
@@ -138,10 +139,10 @@ func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
 	provider, err := testcontainers.ProviderDocker.GetProvider()
 	assert.NilError(t, err)
 
-	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
+	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.3")
 	assert.NilError(t, err)
 
-	err = kind.LoadImages(ctx, "sablierapp/mimic:v0.3.1")
+	err = kind.LoadImages(ctx, "sablierapp/mimic:v0.3.3")
 	assert.NilError(t, err)
 
 	k8s, err := kubernetes.NewForConfig(restcfg)

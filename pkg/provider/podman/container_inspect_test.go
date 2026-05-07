@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"go.podman.io/image/v5/manifest"
 	"gotest.tools/v3/assert"
 )
 
@@ -18,6 +18,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -34,6 +35,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					resp, err := pind.CreateMimic(ctx, MimicOptions{
+						Cmd:         []string{"/mimic"},
 						Healthcheck: nil,
 					})
 					return resp.ID, err
@@ -51,14 +53,15 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd:         []string{"-running", "-running-after", "1s", "-healthy", "true", "-port=81"},
+						Cmd:         []string{"/mimic"},
 						Healthcheck: nil,
 					})
 					if err != nil {
 						return "", err
 					}
 
-					return c.ID, containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -73,9 +76,9 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running", "-running-after", "1s", "-healthy", "true", "-port=82"},
+						Cmd: []string{"/mimic", "-running", "-running-after", "1s", "-healthy", "true", "-port=82"},
 						// Keep long interval so that the container is still in starting state
-						Healthcheck: &manifest.Schema2HealthConfig{
+						Healthcheck: &container.HealthConfig{
 							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=82"},
 							Interval:      time.Second,
 							Timeout:       10 * time.Second,
@@ -88,7 +91,8 @@ func TestPodmanProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					return c.ID, containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -98,40 +102,30 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			},
 			wantErr: nil,
 		},
-		/* Tests are unstable, disable them for now
 		{
 			name: "running container with \"unhealthy\" health",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms", "-port=83"},
-						Healthcheck: &manifest.Schema2HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=83"},
-							Timeout:       time.Second,
-							Interval:      time.Millisecond,
-							StartInterval: time.Millisecond,
-							StartPeriod:   0,
-							Retries:       1,
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms", "-port=83"},
+						Healthcheck: &container.HealthConfig{
+							Test:        []string{"CMD", "/mimic", "healthcheck", "-port=83"},
+							Timeout:     time.Second,
+							Interval:    time.Second,
+							StartPeriod: time.Second,
+							Retries:     1,
 						},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
-						Conditions: []string{"running"},
-					})
-
-					// Podman is not running with a healthcheck daemon, so we need to run the healthcheck manually
-					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
-					if err != nil {
-						return "", err
-					}
+					<-time.After(2 * time.Second)
 
 					return c.ID, nil
 				},
@@ -149,41 +143,25 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running", "-running-after=1ms", "-healthy", "-healthy-after=1ms"},
-						Healthcheck: &manifest.Schema2HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck"},
-							Interval:      100 * time.Millisecond,
-							Timeout:       time.Second,
-							StartPeriod:   0,
-							StartInterval: 100 * time.Millisecond,
-							Retries:       10,
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy", "-healthy-after=1ms", "-port=84"},
+						Healthcheck: &container.HealthConfig{
+							Test:        []string{"CMD", "/mimic", "healthcheck", "-port=84"},
+							Interval:    time.Second,
+							Timeout:     time.Second,
+							StartPeriod: time.Second,
+							Retries:     10,
 						},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
-						Conditions: []string{"running"},
-					})
-
-					// Podman is not running with a healthcheck daemon, so we need to run the healthcheck manually
-					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
-					if err != nil {
-						return "", err
-					}
-
-					<-time.After(5 * time.Second)
-
-					_, err = containers.RunHealthCheck(pind.connText, c.ID, nil)
-					if err != nil {
-						return "", err
-					}
+					<-time.After(2 * time.Second)
 
 					return c.ID, nil
 				},
@@ -195,27 +173,31 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			},
 			wantErr: nil,
 		},
-		*/
 		{
 			name: "exited container with status code 0",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running=false", "-exit-code=0"},
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=0"},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
-						Conditions: []string{"stopped"},
+					waitResult := pind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{
+						Condition: container.WaitConditionNotRunning,
 					})
-					return c.ID, err
+					select {
+					case <-waitResult.Result:
+					case err = <-waitResult.Error:
+						return "", err
+					}
+					return c.ID, nil
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -226,26 +208,30 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "nginx exited container state with status code 137",
+			name: "exited container with status code 137",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
-						Cmd: []string{"-running=false", "-exit-code=137"},
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=137"},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					_, err = containers.Wait(pind.connText, c.ID, &containers.WaitOptions{
-						Conditions: []string{"stopped"},
+					waitResult := pind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{
+						Condition: container.WaitConditionNotRunning,
 					})
-
-					return c.ID, err
+					select {
+					case <-waitResult.Result:
+					case err = <-waitResult.Error:
+						return "", err
+					}
+					return c.ID, nil
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -257,20 +243,18 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 	}
-	c := setupPinD(t)
+	c := sharedPinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			con, cancel := context.WithTimeout(c.connText, 30*time.Second)
-			defer cancel() // releases resources if slowOperation completes before timeout elapses
-			p, err := podman.New(con, slogt.New(t))
+			p, err := podman.New(ctx, c.client, slogt.New(t))
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
 			tt.want.Name = name
-			got, err := p.InstanceInspect(con, name)
+			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("PodmanProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return

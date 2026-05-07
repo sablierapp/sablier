@@ -15,6 +15,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -54,7 +55,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			err: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -78,6 +79,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -117,7 +119,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 			err: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
