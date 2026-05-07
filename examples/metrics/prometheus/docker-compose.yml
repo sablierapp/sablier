@@ -1,0 +1,27 @@
+services:
+  sablier:
+    image: sablierapp/sablier:1.11.2 # x-release-please-version
+    command:
+      - --configFile=/etc/sablier/sablier.yaml
+      - start
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./sablier.yaml:/etc/sablier/sablier.yaml:ro
+    ports:
+      - "10000:10000"
+
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - sablier.enable=true
+      - sablier.group=demo
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
