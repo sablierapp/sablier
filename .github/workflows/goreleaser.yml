@@ -79,7 +79,7 @@ jobs:
           subject-checksums: ./dist/digests.txt
 
       - name: Download latest released Sablier binary
-        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         id: latest-release
         run: |
           release_data=$(curl -s https://api.github.com/repos/sablierapp/sablier/releases/latest)
@@ -90,7 +90,7 @@ jobs:
           echo "artifact_path=sablier" >> $GITHUB_OUTPUT
 
       - name: Compare the downloaded binary with the built binary
-        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         id: diff
         run: |
           # Extract the built linux/amd64 artifact path from GoReleaser's artifacts.json
@@ -106,7 +106,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Comment diff on pull request
-        if: ${{ !cancelled() && github.event_name == 'pull_request'  }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3.0.1
         with:
           message: |
