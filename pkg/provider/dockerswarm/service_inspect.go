@@ -30,8 +30,6 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 
 func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
 	filters := client.Filters{}
-	filters.Add("scope", "swarm")
-	filters.Add("type", "service")
 	filters.Add("name", name)
 
 	opts := client.ServiceListOptions{
