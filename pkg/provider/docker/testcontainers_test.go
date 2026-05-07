@@ -84,6 +84,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("failed to pull mimic image: %v", err)
 	}
 
+	//nolint:staticcheck // Ignore "SA9003: Need https://github.com/testcontainers/testcontainers-go/pull/3672 to be released
 	if err = c.LoadImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
 		// _ = c.Terminate(ctx)
 		// log.Fatalf("failed to load mimic image: %v", err)
