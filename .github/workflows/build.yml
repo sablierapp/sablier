@@ -60,6 +60,7 @@ jobs:
         name: html-test-report
         path: test_report.html
         compression-level: 0
+        archive: false
         retention-days: 2
 
     - name: Find existing test results comment
