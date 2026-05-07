@@ -57,6 +57,7 @@ dockers_v2:
       - 'ghcr.io/sablierapp/sablier'
     tags:
       - '{{ .Version }}'
+      - 'latest'
     dockerfile: build/Dockerfile
     platforms:
       - linux/amd64

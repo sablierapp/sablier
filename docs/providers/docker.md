@@ -24,7 +24,7 @@ sablier start --provider.name=docker
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=docker
+SABLIER_PROVIDER_NAME=docker
 ```
 
 <!-- tabs:end -->
@@ -35,7 +35,7 @@ PROVIDER_NAME=docker
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.5
+    image: sablierapp/sablier:1.11.2
     command:
       - start
       - --provider.name=docker
@@ -58,6 +58,66 @@ services:
       - sablier.enable=true
       - sablier.group=mygroup
 ```
+
+## Strategies
+
+The Docker provider supports two strategies for managing containers:
+
+### Stop Strategy (default)
+
+The `stop` strategy completely stops containers when they become idle and starts them again when needed.
+
+<!-- tabs:start -->
+
+#### **File (YAML)**
+
+```yaml
+provider:
+  docker:
+    strategy: stop
+```
+
+#### **CLI**
+
+```bash
+sablier start --provider.docker.strategy=stop
+```
+
+#### **Environment Variable**
+
+```bash
+SABLIER_PROVIDER_DOCKER_STRATEGY=stop
+```
+
+<!-- tabs:end -->
+
+### Pause Strategy
+
+The `pause` strategy pauses containers instead of stopping them. This is faster than stop/start as the container state remains in memory, but uses more system resources.
+
+<!-- tabs:start -->
+
+#### **File (YAML)**
+
+```yaml
+provider:
+  docker:
+    strategy: pause
+```
+
+#### **CLI**
+
+```bash
+sablier start --provider.docker.strategy=pause
+```
+
+#### **Environment Variable**
+
+```bash
+SABLIER_PROVIDER_DOCKER_STRATEGY=pause
+```
+
+<!-- tabs:end -->
 
 ## How does Sablier knows when a container is ready?
 

@@ -2,10 +2,11 @@ package sablier
 
 import (
 	"context"
+
 	"github.com/sablierapp/sablier/pkg/provider"
 )
 
-//go:generate go tool mockgen -package providertest -source=provider.go -destination=../provider/providertest/mock_provider.go *
+//go:generate go tool -modfile=../../tools.mod mockgen -package providertest -source=provider.go -destination=../provider/providertest/mock_provider.go *
 
 type Provider interface {
 	InstanceStart(ctx context.Context, name string) error

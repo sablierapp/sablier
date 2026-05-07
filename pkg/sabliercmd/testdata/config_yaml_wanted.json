@@ -16,6 +16,9 @@
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock.yml"
+    },
+    "Docker": {
+      "Strategy": "pause"
     }
   },
   "Sessions": {

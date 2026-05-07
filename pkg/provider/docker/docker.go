@@ -16,10 +16,11 @@ type Provider struct {
 	Client          client.APIClient
 	desiredReplicas int32
 	l               *slog.Logger
+	strategy        string
 }
 
-func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provider, error) {
-	logger = logger.With(slog.String("provider", "docker"))
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
+	logger = logger.With(slog.String("provider", "docker"), slog.String("strategy", strategy))
 
 	serverVersion, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
@@ -34,5 +35,6 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provide
 		Client:          cli,
 		desiredReplicas: 1,
 		l:               logger,
+		strategy:        strategy,
 	}, nil
 }

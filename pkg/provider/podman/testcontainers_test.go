@@ -2,16 +2,17 @@ package podman_test
 
 import (
 	"context"
-	"github.com/containers/podman/v5/libpod/define"
 	"testing"
 
-	"github.com/containers/image/v5/manifest"
+	"github.com/containers/podman/v5/libpod/define"
+
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/sablierapp/sablier/pkg/testcontainers/pind"
 	"github.com/testcontainers/testcontainers-go"
+	"go.podman.io/image/v5/manifest"
 	"gotest.tools/v3/assert"
 )
 

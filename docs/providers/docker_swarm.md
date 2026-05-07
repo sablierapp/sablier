@@ -24,7 +24,7 @@ sablier start --provider.name=docker_swarm # or swarm
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=docker_swarm # or swarm
+SABLIER_PROVIDER_NAME=docker_swarm # or swarm
 ```
 
 <!-- tabs:end -->
@@ -36,7 +36,7 @@ PROVIDER_NAME=docker_swarm # or swarm
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.5
+    image: sablierapp/sablier:1.11.2
     command:
       - start
       - --provider.name=docker_swarm # or swarm

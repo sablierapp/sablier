@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -41,10 +41,11 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, err
 				},
@@ -75,10 +76,11 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, nil
 				},
@@ -108,9 +110,9 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 				return
 			}
 
-			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
+			service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{})
 			assert.NilError(t, err)
-			assert.Equal(t, *service.Spec.Mode.Replicated.Replicas, uint64(0))
+			assert.Equal(t, *service.Service.Spec.Mode.Replicated.Replicas, uint64(0))
 		})
 	}
 }

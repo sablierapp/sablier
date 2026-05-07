@@ -1,5 +1,7 @@
 provider:
   name: docker
+  docker:
+    strategy: stop
 server:
   port: 10000
   base-path: /

@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.11.2](https://github.com/sablierapp/sablier/compare/v1.11.1...v1.11.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* **cmd:** return an error instead of panic ([#820](https://github.com/sablierapp/sablier/issues/820)) ([d7f6403](https://github.com/sablierapp/sablier/commit/d7f640382c2f82f1f3918aec3899a661bcf0e9bb))
+* **deps:** bump the k8s-io group across 1 directory with 3 updates ([#828](https://github.com/sablierapp/sablier/issues/828)) ([13bd6b2](https://github.com/sablierapp/sablier/commit/13bd6b2c46ca502911e9e318f0489753833313c3))
+* handle instance start errors in dynamic and blocking strategies ([#854](https://github.com/sablierapp/sablier/issues/854)) ([69b3d57](https://github.com/sablierapp/sablier/commit/69b3d57035c6036c925f47c791b8e4f4219407ea))
+
+## [1.11.1](https://github.com/sablierapp/sablier/compare/v1.11.0...v1.11.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* **config:** use SABLIER_ environment variable prefix ([#790](https://github.com/sablierapp/sablier/issues/790)) ([e9c2213](https://github.com/sablierapp/sablier/commit/e9c2213d49320bba9cf7ecd0f6585c221da13f64))
+* **logging:** access log level is set to debug ([#791](https://github.com/sablierapp/sablier/issues/791)) ([6e46cdb](https://github.com/sablierapp/sablier/commit/6e46cdba313605e01af52072e695db32d84282e3))
+
+
+### Documentation
+
+* clarify configuration source evaluation order ([#788](https://github.com/sablierapp/sablier/issues/788)) ([ecdfd37](https://github.com/sablierapp/sablier/commit/ecdfd37901fff470ded9690e62f414330b5afbf6))
+
+## [1.11.0](https://github.com/sablierapp/sablier/compare/v1.10.5...v1.11.0) (2025-12-05)
+
+
+### Features
+
+* **docker:** add docker pause strategy  ([#755](https://github.com/sablierapp/sablier/issues/755)) ([0d699ef](https://github.com/sablierapp/sablier/commit/0d699effc34260be35aba0d3acb57d8775bf8f8b))
+
+
+### Documentation
+
+* add mimic healthcheck ([ff5c447](https://github.com/sablierapp/sablier/commit/ff5c4476bd0a45f4495fdb8e32e1d18e0b32ec4e))
+* add quick start ([58896b9](https://github.com/sablierapp/sablier/commit/58896b9feb27577ff8a41e5a8f3e3438761b2f5f))
+* update provider features ([d7685f0](https://github.com/sablierapp/sablier/commit/d7685f04a1afd4df1b4acb511ecd9c6051b17e99))
+
 ## [1.10.5](https://github.com/sablierapp/sablier/compare/v1.10.4...v1.10.5) (2025-11-23)
 
 

@@ -1,14 +1,16 @@
 package docker_test
 
 import (
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"sort"
-	"strings"
-	"testing"
 )
 
 func TestDockerClassicProvider_InstanceList(t *testing.T) {
@@ -18,7 +20,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := docker.New(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c1, err := dind.CreateMimic(ctx, MimicOptions{
@@ -28,7 +30,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i1, err := dind.client.ContainerInspect(ctx, c1.ID)
+	i1, err := dind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
 	assert.NilError(t, err)
@@ -41,7 +43,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i2, err := dind.client.ContainerInspect(ctx, c2.ID)
+	i2, err := dind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
 	got, err := p.InstanceList(ctx, provider.InstanceListOptions{
@@ -51,11 +53,11 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  strings.TrimPrefix(i1.Name, "/"),
+			Name:  strings.TrimPrefix(i1.Container.Name, "/"),
 			Group: "default",
 		},
 		{
-			Name:  strings.TrimPrefix(i2.Name, "/"),
+			Name:  strings.TrimPrefix(i2.Container.Name, "/"),
 			Group: "my-group",
 		},
 	}
@@ -77,7 +79,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 
 	ctx := t.Context()
 	dind := setupDinD(t)
-	p, err := docker.New(ctx, dind.client, slogt.New(t))
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c1, err := dind.CreateMimic(ctx, MimicOptions{
@@ -87,7 +89,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i1, err := dind.client.ContainerInspect(ctx, c1.ID)
+	i1, err := dind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
 	assert.NilError(t, err)
@@ -100,15 +102,15 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	i2, err := dind.client.ContainerInspect(ctx, c2.ID)
+	i2, err := dind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)
 
 	want := map[string][]string{
-		"default":  {strings.TrimPrefix(i1.Name, "/")},
-		"my-group": {strings.TrimPrefix(i2.Name, "/")},
+		"default":  {strings.TrimPrefix(i1.Container.Name, "/")},
+		"my-group": {strings.TrimPrefix(i2.Container.Name, "/")},
 	}
 
 	assert.DeepEqual(t, got, want)

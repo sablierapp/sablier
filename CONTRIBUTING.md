@@ -13,6 +13,7 @@ Thank you for your interest in contributing to Sablier! This guide will help you
   - [Contribution Guidelines](#contribution-guidelines)
     - [Conventional Commits](#conventional-commits)
   - [Development Guide](#development-guide)
+    - [Setup](#setup)
     - [Compiling](#compiling)
       - [Build the Binary](#build-the-binary)
       - [Build for Specific Platform](#build-for-specific-platform)
@@ -110,6 +111,13 @@ BREAKING CHANGE: API now requires API key in header instead of query parameter"
 
 ## Development Guide
 
+### Setup
+
+Before building the project, use `mise` to prepare the development environment:
+
+- Install `mise` (if not already installed): https://mise.jdx.dev/getting-started.html
+- Run `mise install` in the project root to install all required tools from the project's `.tool-versions`/`mise` configuration.
+
 ### Compiling
 
 #### Build the Binary
@@ -138,7 +146,7 @@ GOOS=windows GOARCH=amd64 make build
 ```bash
 # Build and run
 make build
-./sablier_draft_linux-amd64 start --help
+./sablier start --help
 
 # Or run directly
 go run cmd/sablier/sablier.go start --provider.name=docker
@@ -147,7 +155,7 @@ go run cmd/sablier/sablier.go start --provider.name=docker
 #### Build Docker Image
 
 ```bash
-docker build -t sablier:dev .
+make docker
 ```
 
 ---

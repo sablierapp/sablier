@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containers/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"go.podman.io/image/v5/manifest"
 	"gotest.tools/v3/assert"
 )
 

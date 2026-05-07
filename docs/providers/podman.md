@@ -24,7 +24,7 @@ sablier start --provider.name=podman
 #### **Environment Variable**
 
 ```bash
-PROVIDER_NAME=podman
+SABLIER_PROVIDER_NAME=podman
 ```
 
 <!-- tabs:end -->
@@ -35,7 +35,7 @@ PROVIDER_NAME=podman
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.10.5
+    image: sablierapp/sablier:1.11.2
     command:
       - start
       - --provider.name=podman
