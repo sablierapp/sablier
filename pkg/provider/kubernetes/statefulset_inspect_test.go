@@ -20,6 +20,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -115,7 +116,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 			wantErr: nil,
 		},
 	}
-	c := setupKinD(t, ctx)
+	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -124,6 +125,13 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+
+			// Clean up the statefulset created by this subtest.
+			if parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"}); parseErr == nil {
+				t.Cleanup(func() {
+					_ = c.client.AppsV1().StatefulSets(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
+				})
+			}
 
 			tt.want.Name = name
 			got, err := p.InstanceInspect(ctx, name)

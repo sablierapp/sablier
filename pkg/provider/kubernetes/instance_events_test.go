@@ -19,7 +19,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	kind := setupKinD(t, ctx)
+	kind := sharedKinD
 	conf := config.NewProviderConfig().Kubernetes
 	conf.QPS = 100
 	conf.Burst = 100

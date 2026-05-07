@@ -19,6 +19,8 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
@@ -47,7 +49,9 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 					}
 					service := inspectResult.Service
 
-					<-time.After(5 * time.Second)
+					if err = WaitForServiceRunning(ctx, dind.client, service.Spec.Name, 1); err != nil {
+						return "", err
+					}
 
 					return service.Spec.Name, err
 				},
@@ -127,7 +131,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -136,6 +140,9 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+			t.Cleanup(func() {
+				_, _ = sharedDinD.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+			})
 
 			tt.want.Name = name
 			got, err := p.InstanceInspect(ctx, name)

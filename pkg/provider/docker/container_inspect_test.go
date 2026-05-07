@@ -127,7 +127,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, dind.client, c.ID, "unhealthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},
@@ -164,7 +166,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, dind.client, c.ID, "healthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},

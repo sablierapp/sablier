@@ -3,9 +3,11 @@ package docker_test
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -98,4 +100,46 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	_ = c.Terminate(ctx)
 	os.Exit(code)
+}
+
+// WaitForContainerHealth polls ContainerInspect until the container's health status matches wantStatus.
+func WaitForContainerHealth(ctx context.Context, cli *client.Client, id, wantStatus string) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled waiting for container %s health status %q", id, wantStatus)
+		case <-ticker.C:
+			info, err := cli.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
+			if err != nil {
+				return fmt.Errorf("error inspecting container: %w", err)
+			}
+			if info.Container.State.Health != nil && string(info.Container.State.Health.Status) == wantStatus {
+				return nil
+			}
+		}
+	}
+}
+
+// WaitForContainerRunning polls ContainerInspect until the container is running.
+func WaitForContainerRunning(ctx context.Context, cli *client.Client, id string) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled waiting for container %s to be running", id)
+		case <-ticker.C:
+			info, err := cli.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
+			if err != nil {
+				return fmt.Errorf("error inspecting container: %w", err)
+			}
+			if info.Container.State.Status == "running" {
+				return nil
+			}
+		}
+	}
 }
