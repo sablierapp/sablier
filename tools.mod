@@ -4,7 +4,7 @@ go 1.26.0
 
 tool (
 	github.com/Zxilly/go-size-analyzer/cmd/gsa
-	github.com/jstemmer/go-junit-report/v2
+	github.com/vakenbolt/go-test-report
 	go.uber.org/mock/mockgen
 )
 
@@ -31,6 +31,7 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-delve/delve v1.26.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.7.8 // indirect
 	github.com/jstemmer/go-junit-report/v2 v2.1.0 // indirect
 	github.com/knadh/profiler v0.2.0 // indirect
@@ -48,6 +49,9 @@ require (
 	github.com/puzpuzpuz/xsync/v4 v4.4.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/samber/lo v1.52.0 // indirect
+	github.com/spf13/cobra v1.9.1 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/vakenbolt/go-test-report v0.9.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/arch v0.24.0 // indirect

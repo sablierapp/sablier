@@ -15,8 +15,6 @@ jobs:
     name: Build
     permissions:
       contents: read
-      id-token: write # OIDC with Codecov
-      issues: write
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
@@ -39,37 +37,48 @@ jobs:
       run: sudo sysctl -w kernel.unprivileged_userns_clone=1
 
     - name: Test
-      run: go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -json -race -covermode atomic -coverprofile coverage.txt ./... 2>&1 | go tool -modfile=tools.mod go-junit-report -parser gojson -set-exit-code > junit.xml
+      id: test
+      run: |
+        go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -race -json -covermode atomic -coverprofile coverage.out ./... > test-report.json; TEST_EXIT=$?
+        cat test-report.json | go tool -modfile=tools.mod go-test-report
+        exit $TEST_EXIT
 
-    - name: Display JUnit report
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
       if: ${{ !cancelled() }}
-      run: cat junit.xml
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.go.tests.reportPaths=test-report.json
+          -Dsonar.go.coverage.reportPaths=coverage.out
 
-    - name: Upload junit report
+    - name: Upload HTML Test report
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: junit-report
-        path: junit.xml
+        name: html-test-report
+        path: test_report.html
+        compression-level: 0
+        retention-days: 2
 
-    - name: Upload coverage to Codecov
-      if: ${{ !cancelled() }}
-      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+    - name: Find existing test results comment
+      if: github.event_name == 'pull_request' && !cancelled()
+      uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
+      id: fc
       with:
-        use_oidc: true
-        fail_ci_if_error: true
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: Test Results
 
-    - name: Upload test results to Codecov
-      if: ${{ !cancelled() }}
-      uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
+    - name: Create or update test results comment
+      if: github.event_name == 'pull_request' && !cancelled()
+      uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
       with:
-        use_oidc: true
-        fail_ci_if_error: true
-
-    - name: Run Basic Test Results Action
-      if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-      uses: codecov/basic-test-results@c46ff461955b5cd6eb57cbe9ff22f3b77fc15824 # v1
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        file: junit.xml
-        disable-search: true
+        comment-id: ${{ steps.fc.outputs.comment-id }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          ## Test Results
+          ${{ steps.test.outcome == 'success' && '✅ All tests passed!' || '❌ Some tests failed' }}
+          [View HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        edit-mode: replace
