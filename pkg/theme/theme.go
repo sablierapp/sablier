@@ -2,9 +2,10 @@ package theme
 
 import (
 	"embed"
-	"html/template"
 	"io/fs"
 	"log/slog"
+
+	template "github.com/sablierapp/sablier/pkg/template/html"
 )
 
 // List of built-it themes
