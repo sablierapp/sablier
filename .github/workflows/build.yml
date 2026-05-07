@@ -40,8 +40,18 @@ jobs:
     - name: Test
       id: test
       run: |
-        set -o pipefail
-        go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -race -json -covermode atomic -coverprofile coverage.out ./... | tee test-report.json | go tool -modfile=tools.mod go-test-report
+        go tool -modfile=tools.mod gotestsum \
+          --jsonfile test-report.json \
+          --format testname \
+          --rerun-fails=3 \
+          --rerun-fails-max-failures=10 \
+          --packages="./..." \
+          --post-run-command .github/scripts/test-summary.sh \
+          -- -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -race -covermode atomic -coverprofile coverage.out
+
+    - name: Generate HTML test report
+      if: ${{ !cancelled() }}
+      run: cat test-report.json | go tool -modfile=tools.mod go-test-report
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
@@ -81,6 +91,8 @@ jobs:
         issue-number: ${{ github.event.pull_request.number }}
         body: |
           ## Test Results
-          ${{ steps.test.outcome == 'success' && '✅ All tests passed!' || '❌ Some tests failed' }}
+          ${{ steps.test.outcome == 'success' && '✅ All tests passed!' || '❌ Some tests failed' }} | ${{ steps.test.outputs.tests_total }} tests in ${{ steps.test.outputs.elapsed }}
+          ${{ steps.test.outputs.has_flaky == 'true' && format('> ⚠️ {0} test(s) were flaky (failed then passed on rerun)', steps.test.outputs.flaky_count) || '' }}
+          ${{ steps.test.outputs.flaky_names }}
           [View HTML Test Report](${{ steps.upload.outputs.artifact-url }})
         edit-mode: replace
