@@ -100,7 +100,7 @@ jobs:
             exit 1
           fi
 
-          go tool -modfile=tools.mod gsa -o diff.txt "${{ steps.latest-release.outputs.artifact_path }}" "$built_path"
+          GOEXPERIMENT=jsonv2 go tool -modfile=tools.mod gsa -o diff.txt "${{ steps.latest-release.outputs.artifact_path }}" "$built_path"
           echo "diff<<EOF" >> $GITHUB_OUTPUT
           echo "$(cat diff.txt)" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT

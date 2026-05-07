@@ -7,21 +7,21 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/moby/moby/api/types/events"
+	"github.com/moby/moby/client"
 )
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	msgs, errs := p.Client.Events(ctx, events.ListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("scope", "local"),
-			filters.Arg("type", string(events.ContainerEventType)),
-			filters.Arg("event", "die"),
-		),
+	filters := client.Filters{}
+	filters.Add("scope", "local")
+	filters.Add("type", string(events.ContainerEventType))
+	filters.Add("event", "die")
+	result := p.Client.Events(ctx, client.EventsListOptions{
+		Filters: filters,
 	})
 	for {
 		select {
-		case msg, ok := <-msgs:
+		case msg, ok := <-result.Messages:
 			if !ok {
 				p.l.ErrorContext(ctx, "event stream closed")
 				close(instance)
@@ -30,7 +30,7 @@ func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- st
 			// Send the container that has died to the channel
 			p.l.DebugContext(ctx, "event received", "event", msg)
 			instance <- strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
-		case err, ok := <-errs:
+		case err, ok := <-result.Err:
 			if !ok {
 				p.l.ErrorContext(ctx, "event stream closed")
 				close(instance)

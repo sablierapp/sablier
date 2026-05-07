@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -58,7 +59,8 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -88,7 +90,8 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -117,7 +120,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -154,7 +157,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -180,12 +183,12 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					err = dind.client.ContainerPause(ctx, c.ID)
+					_, err = dind.client.ContainerPause(ctx, c.ID, client.ContainerPauseOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -211,13 +214,17 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
-					<-waitC
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
 
 					return c.ID, nil
 				},
@@ -240,13 +247,17 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
-					<-waitC
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
 
 					return c.ID, nil
 				},

@@ -1,5 +1,7 @@
 .PHONY: run gen build test lint fmt docker docs
 
+.DEFAULT_GOAL := build
+
 export GOFLAGS=-tags=nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp
 
 run:
@@ -8,6 +10,7 @@ run:
 gen:
 	go generate -v ./...
 
+.PHONY: build
 build:
 	goreleaser build --single-target --snapshot --clean --output .
 
