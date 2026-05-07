@@ -3,10 +3,10 @@ package sablier
 import (
 	"context"
 	"log/slog"
+	"maps"
+	"slices"
 	"sync"
 	"time"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 type Sablier struct {
@@ -49,9 +49,9 @@ func (s *Sablier) SetGroups(groups map[string][]string) {
 	if groups == nil {
 		groups = map[string][]string{}
 	}
-	if diff := cmp.Diff(s.groups, groups); diff != "" {
+	if !maps.EqualFunc(s.groups, groups, slices.Equal) {
 		// TODO: Change this log for a friendly logging, groups rarely change, so we can put some effort on displaying what changed
-		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
+		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups))
 		s.groups = groups
 	}
 }
