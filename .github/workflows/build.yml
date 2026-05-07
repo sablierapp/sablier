@@ -39,9 +39,8 @@ jobs:
     - name: Test
       id: test
       run: |
-        go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -race -json -covermode atomic -coverprofile coverage.out ./... > test-report.json; TEST_EXIT=$?
-        cat test-report.json | go tool -modfile=tools.mod go-test-report
-        exit $TEST_EXIT
+        set -o pipefail
+        go test -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -v -race -json -covermode atomic -coverprofile coverage.out ./... | tee test-report.json | go tool -modfile=tools.mod go-test-report
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
@@ -55,6 +54,7 @@ jobs:
 
     - name: Upload HTML Test report
       if: ${{ !cancelled() }}
+      id: upload
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: html-test-report
@@ -80,5 +80,5 @@ jobs:
         body: |
           ## Test Results
           ${{ steps.test.outcome == 'success' && '✅ All tests passed!' || '❌ Some tests failed' }}
-          [View HTML Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          [View HTML Test Report](${{ steps.upload.outputs.artifact-url }})
         edit-mode: replace
