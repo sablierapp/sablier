@@ -24,13 +24,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 
 	switch config.Name {
 	case "swarm", "docker_swarm":
-		cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
+		cli, err := client.New(client.FromEnv)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker swarm client: %v", err)
 		}
 		return dockerswarm.New(ctx, cli, logger)
 	case "docker":
-		cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
+		cli, err := client.New(client.FromEnv)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}

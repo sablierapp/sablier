@@ -62,7 +62,7 @@ func setupDinD(t *testing.T) *dindContainer {
 	host, err := c.Host(ctx)
 	assert.NilError(t, err)
 
-	dindCli, err := client.NewClientWithOpts(client.WithHost(host), client.WithAPIVersionNegotiation())
+	dindCli, err := client.New(client.WithHost(host))
 	assert.NilError(t, err)
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()
