@@ -125,7 +125,9 @@ func TestPodmanProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, pind.client, c.ID, "unhealthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},
@@ -161,7 +163,9 @@ func TestPodmanProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, pind.client, c.ID, "healthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},

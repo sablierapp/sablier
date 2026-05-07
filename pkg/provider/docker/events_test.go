@@ -31,7 +31,8 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 	assert.NilError(t, err)
 
-	<-time.After(1 * time.Second)
+	err = WaitForContainerRunning(ctx, dind.client, c.ID)
+	assert.NilError(t, err)
 
 	waitC := make(chan string)
 	go p.NotifyInstanceStopped(ctx, waitC)
