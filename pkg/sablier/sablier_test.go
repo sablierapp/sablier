@@ -54,6 +54,7 @@ func (f *fakeRecorder) RecordInstanceStartFailure(instance string) {
 }
 func (f *fakeRecorder) RecordReadyWaitBegin(instance string)   { f.record("ready_begin:" + instance) }
 func (f *fakeRecorder) RecordReadyWaitEnd(instance string)     { f.record("ready_end:" + instance) }
+func (f *fakeRecorder) DiscardReadyWait(instance string)       { f.record("ready_discard:" + instance) }
 func (f *fakeRecorder) RecordActiveInstance(instance string)   { f.record("active+:" + instance) }
 func (f *fakeRecorder) RecordInactiveInstance(instance string) { f.record("active-:" + instance) }
 func (f *fakeRecorder) RecordInstanceStop(instance, reason string) {

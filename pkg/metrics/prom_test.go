@@ -183,6 +183,39 @@ func TestPromRecorder_ReadyWait_BeginIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestPromRecorder_DiscardReadyWaitDoesNotObserve(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordReadyWaitBegin("nginx")
+	r.DiscardReadyWait("nginx")
+
+	// Subsequent End must be a no-op (no entry exists).
+	r.RecordReadyWaitEnd("nginx")
+
+	// No observation should have happened.
+	mfs, err := r.Registry().(*prometheus.Registry).Gather()
+	if err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
+	for _, mf := range mfs {
+		if mf.GetName() != "sablier_instance_ready_duration_seconds" {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			if labelsMatch(m.GetLabel(), map[string]string{"instance": "nginx"}) {
+				t.Errorf("expected no samples but found %d", m.GetHistogram().GetSampleCount())
+			}
+		}
+	}
+
+	// And the entry must be gone — calling Discard again is harmless.
+	r.DiscardReadyWait("nginx")
+
+	if _, ok := r.ReadyWaitStartedAt("nginx"); ok {
+		t.Errorf("expected readyWait[nginx] to be cleared")
+	}
+}
+
 func TestPromRecorder_ActiveInstances(t *testing.T) {
 	r := metrics.NewPromRecorder()
 

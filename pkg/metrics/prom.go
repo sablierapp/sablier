@@ -133,6 +133,16 @@ func (r *PromRecorder) RecordReadyWaitEnd(instance string) {
 	r.instanceReadyDuration.WithLabelValues(instance).Observe(time.Since(start).Seconds())
 }
 
+// DiscardReadyWait clears any pending ready-wait timestamp for the instance
+// without observing the histogram. Called when an instance is stopped or its
+// session expires before becoming Ready, so the next start of the same
+// instance does not observe a stale duration.
+func (r *PromRecorder) DiscardReadyWait(instance string) {
+	r.readyMu.Lock()
+	defer r.readyMu.Unlock()
+	delete(r.readyWait, instance)
+}
+
 // ReadyWaitStartedAt returns the timestamp recorded for an instance's pending
 // ready transition, if any. Test-only helper.
 func (r *PromRecorder) ReadyWaitStartedAt(instance string) (time.Time, bool) {

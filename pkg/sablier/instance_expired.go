@@ -22,6 +22,7 @@ func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 			}
 			recorder.RecordInstanceStop(key, "expired")
 			recorder.RecordInactiveInstance(key)
+			recorder.DiscardReadyWait(key)
 		}(_key)
 	}
 }

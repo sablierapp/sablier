@@ -12,6 +12,7 @@ type Recorder interface {
 	RecordInstanceStartFailure(instance string)
 	RecordReadyWaitBegin(instance string)
 	RecordReadyWaitEnd(instance string)
+	DiscardReadyWait(instance string)
 	RecordActiveInstance(instance string)
 	RecordInactiveInstance(instance string)
 	RecordInstanceStop(instance, reason string)
@@ -25,6 +26,7 @@ func (Noop) RecordInstanceStartEnd(string, time.Duration) {}
 func (Noop) RecordInstanceStartFailure(string)            {}
 func (Noop) RecordReadyWaitBegin(string)                  {}
 func (Noop) RecordReadyWaitEnd(string)                    {}
+func (Noop) DiscardReadyWait(string)                      {}
 func (Noop) RecordActiveInstance(string)                  {}
 func (Noop) RecordInactiveInstance(string)                {}
 func (Noop) RecordInstanceStop(string, string)            {}
