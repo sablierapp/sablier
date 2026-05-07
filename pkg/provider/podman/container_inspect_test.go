@@ -18,6 +18,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -108,12 +109,11 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
 						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy=false", "-healthy-after=1ms", "-port=83"},
 						Healthcheck: &container.HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=83"},
-							Timeout:       time.Second,
-							Interval:      time.Millisecond,
-							StartInterval: time.Millisecond,
-							StartPeriod:   time.Millisecond,
-							Retries:       1,
+							Test:        []string{"CMD", "/mimic", "healthcheck", "-port=83"},
+							Timeout:     time.Second,
+							Interval:    time.Second,
+							StartPeriod: time.Second,
+							Retries:     1,
 						},
 					})
 					if err != nil {
@@ -145,12 +145,11 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{
 						Cmd: []string{"/mimic", "-running", "-running-after=1ms", "-healthy", "-healthy-after=1ms", "-port=84"},
 						Healthcheck: &container.HealthConfig{
-							Test:          []string{"CMD", "/mimic", "healthcheck", "-port=84"},
-							Interval:      100 * time.Millisecond,
-							Timeout:       time.Second,
-							StartPeriod:   time.Second,
-							StartInterval: 100 * time.Millisecond,
-							Retries:       10,
+							Test:        []string{"CMD", "/mimic", "healthcheck", "-port=84"},
+							Interval:    time.Second,
+							Timeout:     time.Second,
+							StartPeriod: time.Second,
+							Retries:     10,
 						},
 					})
 					if err != nil {
@@ -244,7 +243,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			wantErr: nil,
 		},
 	}
-	c := setupPinD(t)
+	c := sharedPinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

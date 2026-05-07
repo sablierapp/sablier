@@ -40,7 +40,7 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (cli
 			TaskTemplate: swarm.TaskSpec{
 				RestartPolicy: opts.RestartPolicy,
 				ContainerSpec: &swarm.ContainerSpec{
-					Image:       "sablierapp/mimic:v0.3.1",
+					Image:       "sablierapp/mimic:v0.3.3",
 					Healthcheck: opts.Healthcheck,
 					Command:     opts.Cmd,
 				},
@@ -68,10 +68,10 @@ func setupDinD(t *testing.T) *dindContainer {
 	provider, err := testcontainers.ProviderDocker.GetProvider()
 	assert.NilError(t, err)
 
-	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
+	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.3")
 	assert.NilError(t, err)
 
-	_ = c.LoadImage(ctx, "sablierapp/mimic:v0.3.1")
+	_ = c.LoadImage(ctx, "sablierapp/mimic:v0.3.3")
 	// assert.NilError(t, err)
 
 	// Initialize the swarm

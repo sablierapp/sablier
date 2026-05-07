@@ -2,6 +2,7 @@ package podman_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	pind := setupPinD(t)
+	pind := sharedPinD
 	p, err := podman.New(ctx, pind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -41,6 +42,6 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 
 	name := <-waitC
 
-	// Docker container name is prefixed with a slash, but we don't use it
-	assert.Equal(t, "/"+name, inspected.Container.Name)
+	// Podman may or may not prefix container names with "/" — compare without the slash.
+	assert.Equal(t, name, strings.TrimPrefix(inspected.Container.Name, "/"))
 }

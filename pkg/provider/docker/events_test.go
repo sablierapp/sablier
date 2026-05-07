@@ -15,10 +15,11 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 

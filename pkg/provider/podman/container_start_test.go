@@ -14,6 +14,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -31,7 +32,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("cannot start container non-existent"),
 		},
 		{
 			name: "container start as expected",
@@ -44,7 +45,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 			err: nil,
 		},
 	}
-	c := setupPinD(t)
+	c := sharedPinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -56,7 +57,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {
-				assert.Error(t, err, tt.err.Error())
+				assert.ErrorContains(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

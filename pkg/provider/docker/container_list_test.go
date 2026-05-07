@@ -1,6 +1,7 @@
 package docker_test
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
@@ -29,10 +30,11 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = dind.client.ContainerRemove(context.Background(), c1.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i1, err := dind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
-	assert.NilError(t, err)
-
 	assert.NilError(t, err)
 
 	c2, err := dind.CreateMimic(ctx, MimicOptions{
@@ -42,6 +44,9 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = dind.client.ContainerRemove(context.Background(), c2.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i2, err := dind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
@@ -78,7 +83,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
@@ -88,10 +93,11 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = dind.client.ContainerRemove(context.Background(), c1.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i1, err := dind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
-	assert.NilError(t, err)
-
 	assert.NilError(t, err)
 
 	c2, err := dind.CreateMimic(ctx, MimicOptions{
@@ -101,6 +107,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = dind.client.ContainerRemove(context.Background(), c2.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i2, err := dind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)

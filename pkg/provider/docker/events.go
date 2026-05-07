@@ -13,7 +13,6 @@ import (
 
 func (p *Provider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
 	filters := client.Filters{}
-	filters.Add("scope", "local")
 	filters.Add("type", string(events.ContainerEventType))
 	filters.Add("event", "die")
 	result := p.Client.Events(ctx, client.EventsListOptions{

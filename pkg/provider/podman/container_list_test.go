@@ -1,6 +1,7 @@
 package podman_test
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	pind := setupPinD(t)
+	pind := sharedPinD
 	p, err := podman.New(ctx, pind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -29,6 +30,9 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = pind.client.ContainerRemove(context.Background(), c1.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i1, err := pind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
@@ -40,6 +44,9 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = pind.client.ContainerRemove(context.Background(), c2.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i2, err := pind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
@@ -75,7 +82,7 @@ func TestPodmanProvider_GetGroups(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	pind := setupPinD(t)
+	pind := sharedPinD
 	p, err := podman.New(ctx, pind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -85,6 +92,9 @@ func TestPodmanProvider_GetGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = pind.client.ContainerRemove(context.Background(), c1.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i1, err := pind.client.ContainerInspect(ctx, c1.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
@@ -96,6 +106,9 @@ func TestPodmanProvider_GetGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = pind.client.ContainerRemove(context.Background(), c2.ID, client.ContainerRemoveOptions{Force: true})
+	})
 
 	i2, err := pind.client.ContainerInspect(ctx, c2.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
