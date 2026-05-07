@@ -63,7 +63,9 @@ func TestPromRecorder_Counters(t *testing.T) {
 	mustCounter(t, r, "sablier_instance_stops_total", map[string]string{"instance": "nginx", "reason": "unregistered"}, 1)
 }
 
-func mustCounter(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string, want float64) {
+// findMetric gathers the registry and returns the first metric matching
+// (name, labels), or nil if not present.
+func findMetric(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string) *io_prometheus_client.Metric {
 	t.Helper()
 	mfs, err := r.Registry().(*prometheus.Registry).Gather()
 	if err != nil {
@@ -74,17 +76,24 @@ func mustCounter(t *testing.T, r *metrics.PromRecorder, name string, labels map[
 			continue
 		}
 		for _, m := range mf.GetMetric() {
-			if !labelsMatch(m.GetLabel(), labels) {
-				continue
+			if labelsMatch(m.GetLabel(), labels) {
+				return m
 			}
-			got := m.GetCounter().GetValue()
-			if got != want {
-				t.Errorf("%s%v = %v, want %v", name, labels, got, want)
-			}
-			return
 		}
 	}
-	t.Errorf("counter %s%v not found", name, labels)
+	return nil
+}
+
+func mustCounter(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string, want float64) {
+	t.Helper()
+	m := findMetric(t, r, name, labels)
+	if m == nil {
+		t.Errorf("counter %s%v not found", name, labels)
+		return
+	}
+	if got := m.GetCounter().GetValue(); got != want {
+		t.Errorf("%s%v = %v, want %v", name, labels, got, want)
+	}
 }
 
 func labelsMatch(got []*io_prometheus_client.LabelPair, want map[string]string) bool {
@@ -112,26 +121,25 @@ func TestPromRecorder_InstanceStartDuration(t *testing.T) {
 
 func mustHistogramCount(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string, want uint64) {
 	t.Helper()
-	mfs, err := r.Registry().(*prometheus.Registry).Gather()
-	if err != nil {
-		t.Fatalf("Gather: %v", err)
+	m := findMetric(t, r, name, labels)
+	if m == nil {
+		t.Errorf("histogram %s%v not found", name, labels)
+		return
 	}
-	for _, mf := range mfs {
-		if mf.GetName() != name {
-			continue
-		}
-		for _, m := range mf.GetMetric() {
-			if !labelsMatch(m.GetLabel(), labels) {
-				continue
-			}
-			got := m.GetHistogram().GetSampleCount()
-			if got != want {
-				t.Errorf("%s%v sample count = %d, want %d", name, labels, got, want)
-			}
-			return
+	if got := m.GetHistogram().GetSampleCount(); got != want {
+		t.Errorf("%s%v sample count = %d, want %d", name, labels, got, want)
+	}
+}
+
+// assertNoHistogramSamples asserts that no samples have been observed on the
+// named histogram for the given labels.
+func assertNoHistogramSamples(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string) {
+	t.Helper()
+	if m := findMetric(t, r, name, labels); m != nil {
+		if got := m.GetHistogram().GetSampleCount(); got != 0 {
+			t.Errorf("expected no samples on %s%v but found %d", name, labels, got)
 		}
 	}
-	t.Errorf("histogram %s%v not found", name, labels)
 }
 
 func TestPromRecorder_ReadyWait_BeginThenEnd(t *testing.T) {
@@ -146,21 +154,7 @@ func TestPromRecorder_ReadyWait_BeginThenEnd(t *testing.T) {
 func TestPromRecorder_ReadyWait_EndWithoutBeginIsNoop(t *testing.T) {
 	r := metrics.NewPromRecorder()
 	r.RecordReadyWaitEnd("nginx")
-
-	mfs, err := r.Registry().(*prometheus.Registry).Gather()
-	if err != nil {
-		t.Fatalf("Gather: %v", err)
-	}
-	for _, mf := range mfs {
-		if mf.GetName() != "sablier_instance_ready_duration_seconds" {
-			continue
-		}
-		for _, m := range mf.GetMetric() {
-			if labelsMatch(m.GetLabel(), map[string]string{"instance": "nginx"}) {
-				t.Errorf("expected no samples but found %d", m.GetHistogram().GetSampleCount())
-			}
-		}
-	}
+	assertNoHistogramSamples(t, r, "sablier_instance_ready_duration_seconds", map[string]string{"instance": "nginx"})
 }
 
 func TestPromRecorder_ReadyWait_BeginIsIdempotent(t *testing.T) {
@@ -192,21 +186,7 @@ func TestPromRecorder_DiscardReadyWaitDoesNotObserve(t *testing.T) {
 	// Subsequent End must be a no-op (no entry exists).
 	r.RecordReadyWaitEnd("nginx")
 
-	// No observation should have happened.
-	mfs, err := r.Registry().(*prometheus.Registry).Gather()
-	if err != nil {
-		t.Fatalf("Gather: %v", err)
-	}
-	for _, mf := range mfs {
-		if mf.GetName() != "sablier_instance_ready_duration_seconds" {
-			continue
-		}
-		for _, m := range mf.GetMetric() {
-			if labelsMatch(m.GetLabel(), map[string]string{"instance": "nginx"}) {
-				t.Errorf("expected no samples but found %d", m.GetHistogram().GetSampleCount())
-			}
-		}
-	}
+	assertNoHistogramSamples(t, r, "sablier_instance_ready_duration_seconds", map[string]string{"instance": "nginx"})
 
 	// And the entry must be gone — calling Discard again is harmless.
 	r.DiscardReadyWait("nginx")

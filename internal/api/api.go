@@ -27,3 +27,13 @@ type ServeStrategy struct {
 	StrategyConfig config.Strategy
 	SessionsConfig config.Sessions
 }
+
+// recordSessionRequest emits the session-request counter for the given strategy
+// based on whether the request targets named instances or a group.
+func recordSessionRequest(rec metrics.Recorder, strategy, group string) {
+	target := "names"
+	if group != "" {
+		target = "group"
+	}
+	rec.RecordSessionRequest(strategy, target)
+}
