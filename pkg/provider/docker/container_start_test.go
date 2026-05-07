@@ -29,7 +29,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "non existing container start",
+			name: "non-existing container start returns provider error",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
@@ -39,7 +39,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			err:             fmt.Errorf("No such container: non-existent"),
 		},
 		{
-			name: "unlabeled container start",
+			name: "unlabeled container start is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -50,7 +50,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled container start when allowed",
+			name: "unlabeled container start succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -61,7 +61,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "container start as expected",
+			name: "labeled container start succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
@@ -107,7 +107,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 		err  error
 	}{
 		{
-			name: "non existing container unpause",
+			name: "non-existing container unpause returns provider error",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
@@ -116,7 +116,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 			err: fmt.Errorf("No such container: non-existent"),
 		},
 		{
-			name: "container starts because was not paused",
+			name: "labeled stopped container starts when pause strategy cannot unpause",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
@@ -140,7 +140,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "container unpause as expected",
+			name: "labeled paused container unpauses when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})

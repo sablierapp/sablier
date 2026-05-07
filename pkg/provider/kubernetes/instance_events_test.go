@@ -17,7 +17,7 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 	kind := setupKinD(t, ctx)
 	conf := config.NewProviderConfig().Kubernetes
@@ -60,6 +60,18 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 
 		s.Spec.Replicas = 0
 		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		assertNoInstanceStopped(t, waitC)
+	})
+	t.Run("unlabeled deployment delete is ignored", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		assert.NilError(t, err)
+
+		err = p.Client.AppsV1().Deployments(d.Namespace).Delete(ctx, d.Name, metav1.DeleteOptions{})
 		assert.NilError(t, err)
 
 		assertNoInstanceStopped(t, waitC)
@@ -110,6 +122,19 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 
 		s.Spec.Replicas = 0
 		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		assertNoInstanceStopped(t, waitC)
+	})
+
+	t.Run("unlabeled statefulSet delete is ignored", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		assert.NilError(t, err)
+
+		err = p.Client.AppsV1().StatefulSets(ss.Namespace).Delete(ctx, ss.Name, metav1.DeleteOptions{})
 		assert.NilError(t, err)
 
 		assertNoInstanceStopped(t, waitC)

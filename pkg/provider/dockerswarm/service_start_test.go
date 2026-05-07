@@ -31,7 +31,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		wantErr         error
 	}{
 		{
-			name: "unlabeled service start",
+			name: "unlabeled service start is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -51,7 +51,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			wantErr:         fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled service start when allowed",
+			name: "unlabeled service start succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -71,7 +71,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			wantErr:         nil,
 		},
 		{
-			name: "service with 1/1 replicas",
+			name: "labeled service start succeeds from 1/1 replicas when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
@@ -100,7 +100,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 			wantErr:         nil,
 		},
 		{
-			name: "service with 0/1 replicas",
+			name: "labeled service start succeeds from 0/1 replicas when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
@@ -137,7 +137,7 @@ func TestDockerSwarmProvider_Start(t *testing.T) {
 		},
 
 		{
-			name: "service with 0/0 replicas",
+			name: "labeled service start succeeds from 0/0 replicas when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})

@@ -27,7 +27,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "non existing container stop",
+			name: "non-existing container stop returns provider error",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					return "non-existent", nil
@@ -37,7 +37,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 			err:             fmt.Errorf("no such container"),
 		},
 		{
-			name: "unlabeled container stop",
+			name: "unlabeled container stop is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{})
@@ -57,7 +57,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled container stop when allowed",
+			name: "unlabeled container stop succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{})
@@ -77,7 +77,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "container stop as expected",
+			name: "labeled container stop succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})

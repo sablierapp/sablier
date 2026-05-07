@@ -28,7 +28,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "non existing container start",
+			name: "non-existing container start returns provider error",
 			args: args{
 				do: func(dind *pindContainer) (string, error) {
 					return "non-existent", nil
@@ -38,7 +38,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 			err:             fmt.Errorf("no such container"),
 		},
 		{
-			name: "unlabeled container start",
+			name: "unlabeled container start is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *pindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -49,7 +49,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled container start when allowed",
+			name: "unlabeled container start succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(dind *pindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -60,7 +60,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "container start as expected",
+			name: "labeled container start succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *pindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})

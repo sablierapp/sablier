@@ -26,7 +26,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "invalid name",
+			name: "invalid name returns parser error",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					return "invalid-name", nil
@@ -36,7 +36,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             fmt.Errorf("invalid name [invalid-name] should be: kind_namespace_name_replicas"),
 		},
 		{
-			name: "non existing deployment start",
+			name: "non-existing deployment start returns provider error",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					return "deployment_default_my-deployment_1", nil
@@ -46,7 +46,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             fmt.Errorf("\"my-deployment\" not found"),
 		},
 		{
-			name: "unlabeled deployment start",
+			name: "unlabeled deployment start is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
@@ -65,7 +65,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled deployment start when allowed",
+			name: "unlabeled deployment start succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
@@ -84,7 +84,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "deployment start as expected",
+			name: "labeled deployment start succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					d, err := kind.CreateMimicDeployment(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})
@@ -103,7 +103,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "non existing statefulSet start",
+			name: "non-existing statefulSet start returns provider error",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					return "statefulset_default_my-statefulset_1", nil
@@ -113,7 +113,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             fmt.Errorf("statefulsets.apps \"my-statefulset\" not found"),
 		},
 		{
-			name: "unlabeled statefulSet start",
+			name: "unlabeled statefulSet start is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
@@ -132,7 +132,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled statefulSet start when allowed",
+			name: "unlabeled statefulSet start succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
@@ -151,7 +151,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "statefulSet start as expected",
+			name: "labeled statefulSet start succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(kind *kindContainer) (string, error) {
 					ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{Labels: map[string]string{"sablier.enable": "true"}})

@@ -27,7 +27,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "non existing container stop",
+			name: "non-existing container stop returns provider error",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
@@ -37,7 +37,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			err:             fmt.Errorf("No such container: non-existent"),
 		},
 		{
-			name: "unlabeled container stop",
+			name: "unlabeled container stop is rejected when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -57,7 +57,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			err:             fmt.Errorf("is not managed by sablier"),
 		},
 		{
-			name: "unlabeled container stop when allowed",
+			name: "unlabeled container stop succeeds when ignoreUnlabeled is disabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -77,7 +77,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 			err:             nil,
 		},
 		{
-			name: "container stop as expected",
+			name: "labeled container stop succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
@@ -132,7 +132,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 		err  error
 	}{
 		{
-			name: "non existing container pause",
+			name: "non-existing container pause returns provider error",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
@@ -141,7 +141,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 			err: fmt.Errorf("No such container: non-existent"),
 		},
 		{
-			name: "container pause as expected",
+			name: "labeled container pause succeeds when ignoreUnlabeled is enabled",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
