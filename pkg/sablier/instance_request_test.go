@@ -101,8 +101,8 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 
 	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
 
-	// First call: store miss → triggers requestStart
-	// Second call: store returns the not-ready state written by Put → hits status != ready path
+	// First call: store miss -> triggers requestStart
+	// Second call: store returns the not-ready state written by Put -> hits status != ready path
 	gomock.InOrder(
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound),
 		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil),
@@ -115,7 +115,7 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 		return nil
 	}).Times(1)
 
-	// Second call: start is still pending → skips InstanceInspect, returns not-ready
+	// Second call: start is still pending -> skips InstanceInspect, returns not-ready
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).Times(2)
 
 	// First call — starts the goroutine
@@ -144,7 +144,7 @@ func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
 
 	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
 
-	// First call: store miss → requestStart
+	// First call: store miss -> requestStart
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
@@ -200,7 +200,7 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 	}), "expected error to be surfaced")
 	assert.ErrorContains(t, err, "instance start failed: connection refused")
 
-	// 3rd call: entry cleared, store miss again → requestStart retries
+	// 3rd call: entry cleared, store miss again -> requestStart retries
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
 	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
@@ -219,7 +219,7 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
 	ready := sablier.ReadyInstanceState("nginx", 1)
 
-	// 1st call: store miss → requestStart (goroutine succeeds)
+	// 1st call: store miss -> requestStart (goroutine succeeds)
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
