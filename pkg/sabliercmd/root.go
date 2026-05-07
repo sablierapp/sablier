@@ -58,6 +58,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("server.port", startCmd.Flags().Lookup("server.port"))
 	startCmd.Flags().StringVar(&conf.Server.BasePath, "server.base-path", "/", "The base path for the API")
 	_ = viper.BindPFlag("server.base-path", startCmd.Flags().Lookup("server.base-path"))
+	startCmd.Flags().BoolVar(&conf.Server.Metrics.Enabled, "server.metrics.enabled", false, "Enable the Prometheus /metrics endpoint")
+	_ = viper.BindPFlag("server.metrics.enabled", startCmd.Flags().Lookup("server.metrics.enabled"))
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
 	_ = viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))
