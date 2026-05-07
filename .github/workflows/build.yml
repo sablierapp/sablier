@@ -55,7 +55,7 @@ jobs:
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
