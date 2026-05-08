@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
@@ -19,15 +20,18 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "service with 1/1 replicas",
@@ -47,7 +51,9 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 					}
 					service := inspectResult.Service
 
-					<-time.After(5 * time.Second)
+					if err = WaitForServiceRunning(ctx, dind.client, service.Spec.Name, 1); err != nil {
+						return "", err
+					}
 
 					return service.Spec.Name, err
 				},
@@ -90,7 +96,7 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -122,12 +128,53 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "service with sablier labels",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					s, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
+					if err != nil {
+						return "", err
+					}
+					service := inspectResult.Service
+
+					if err = WaitForServiceRunning(ctx, dind.client, service.Spec.Name, 1); err != nil {
+						return "", err
+					}
+
+					return service.Spec.Name, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Group:           "myapp",
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
 			},
 			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -136,14 +183,24 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+			t.Cleanup(func() {
+				_, _ = sharedDinD.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+			})
 
 			tt.want.Name = name
+			tt.want.Provider = "swarm"
+			tt.want.Swarm = &sablier.SwarmServiceInfo{}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreFields(sablier.SwarmServiceInfo{}, "ID", "Image", "Labels"))
+			for k, v := range tt.wantLabels {
+				if got.Swarm.Labels[k] != v {
+					t.Errorf("Swarm.Labels[%q] = %q, want %q", k, got.Swarm.Labels[k], v)
+				}
+			}
 		})
 	}
 }

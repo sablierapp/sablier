@@ -116,7 +116,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 		if v.Error != nil {
 			instances = append(instances, theme.Instance{
 				Name:   name,
-				Status: string(sablier.InstanceStatusUnrecoverable),
+				Status: string(sablier.InstanceStatusError),
 				Error:  v.Error,
 			})
 			continue
@@ -146,5 +146,10 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
 		Error:           err,
+		Provider:        instanceState.Provider,
+		Docker:          instanceState.Docker,
+		Swarm:           instanceState.Swarm,
+		Kubernetes:      instanceState.Kubernetes,
+		Podman:          instanceState.Podman,
 	}
 }

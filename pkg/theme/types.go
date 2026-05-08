@@ -1,6 +1,10 @@
 package theme
 
-import "time"
+import (
+	"time"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+)
 
 // Theme represents an available theme
 type Theme struct {
@@ -15,6 +19,11 @@ type Instance struct {
 	Error           error
 	CurrentReplicas int32
 	DesiredReplicas int32
+	Provider        string
+	Docker          *sablier.DockerContainerInfo
+	Swarm           *sablier.SwarmServiceInfo
+	Kubernetes      *sablier.KubernetesWorkloadInfo
+	Podman          *sablier.PodmanContainerInfo
 }
 
 // Options holds the customizable input to template

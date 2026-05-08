@@ -1,37 +1,36 @@
+// Package podman provides a Sablier provider for Podman by wrapping the Docker provider.
+// Podman exposes a Docker-compatible API, so we simply connect a Docker client to the
+// Podman socket instead of using the heavy podman bindings.
 package podman
 
 import (
 	"context"
 	"fmt"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
-	"github.com/containers/podman/v5/pkg/bindings/system"
+	"github.com/moby/moby/client"
+	"github.com/sablierapp/sablier/pkg/provider/docker"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 // Interface guard
 var _ sablier.Provider = (*Provider)(nil)
 
+// Provider wraps the Docker provider, connecting to a Podman socket that exposes
+// the Docker-compatible REST API.
 type Provider struct {
-	conn            context.Context
-	desiredReplicas int32
-	l               *slog.Logger
+	*docker.Provider
 }
 
-func New(ctx context.Context, logger *slog.Logger) (*Provider, error) {
+// New creates a Podman provider using the given Docker API client (pointing at a Podman
+// socket) and delegates all operations to the Docker provider.
+func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "podman"))
 
-	version, err := system.Version(ctx, nil)
+	inner, err := docker.New(ctx, cli, logger, "stop")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get podman version: %v", err)
+		return nil, fmt.Errorf("cannot connect to podman: %w", err)
 	}
-	logger.InfoContext(ctx, "connection established with podman",
-		slog.String("version", version.Server.Version),
-		slog.String("api_version", version.Server.APIVersion),
-	)
-	return &Provider{
-		conn:            ctx,
-		desiredReplicas: 1,
-		l:               logger,
-	}, nil
+
+	return &Provider{Provider: inner}, nil
 }

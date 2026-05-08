@@ -1,15 +1,18 @@
 package kubernetes_test
 
 import (
+	"context"
+	"sort"
+	"strings"
+	"testing"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"sort"
-	"strings"
-	"testing"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestKubernetesProvider_InstanceList(t *testing.T) {
@@ -18,7 +21,7 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	kind := setupKinD(t, ctx)
+	kind := sharedKinD
 	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
@@ -28,6 +31,9 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().Deployments(d1.Namespace).Delete(context.Background(), d1.Name, metav1.DeleteOptions{})
+	})
 
 	d2, err := kind.CreateMimicDeployment(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -36,6 +42,9 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().Deployments(d2.Namespace).Delete(context.Background(), d2.Name, metav1.DeleteOptions{})
+	})
 
 	ss1, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -43,6 +52,9 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().StatefulSets(ss1.Namespace).Delete(context.Background(), ss1.Name, metav1.DeleteOptions{})
+	})
 
 	ss2, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -51,6 +63,9 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().StatefulSets(ss2.Namespace).Delete(context.Background(), ss2.Name, metav1.DeleteOptions{})
+	})
 
 	got, err := p.InstanceList(ctx, provider.InstanceListOptions{
 		All: true,
@@ -59,20 +74,24 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "default",
+			Name:    kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "my-group",
+			Name:    kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "default",
+			Name:    kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "my-group",
+			Name:    kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 	}
 	// Assert go is equal to want
@@ -92,7 +111,7 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	kind := setupKinD(t, ctx)
+	kind := sharedKinD
 	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
@@ -102,6 +121,9 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().Deployments(d1.Namespace).Delete(context.Background(), d1.Name, metav1.DeleteOptions{})
+	})
 
 	d2, err := kind.CreateMimicDeployment(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -110,6 +132,9 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().Deployments(d2.Namespace).Delete(context.Background(), d2.Name, metav1.DeleteOptions{})
+	})
 
 	ss1, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -117,6 +142,9 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().StatefulSets(ss1.Namespace).Delete(context.Background(), ss1.Name, metav1.DeleteOptions{})
+	})
 
 	ss2, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -125,6 +153,9 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = kind.client.AppsV1().StatefulSets(ss2.Namespace).Delete(context.Background(), ss2.Name, metav1.DeleteOptions{})
+	})
 
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)

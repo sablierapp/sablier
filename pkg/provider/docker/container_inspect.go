@@ -18,34 +18,98 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 
 	p.l.DebugContext(ctx, "container inspected", slog.String("container", name), slog.String("status", string(spec.Container.State.Status)), slog.String("health", healthStatus(spec.Container.State.Health)))
 
+	var info sablier.InstanceInfo
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.Container.State.Status {
-	case "created", "paused", "restarting", "removing":
-		return sablier.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
-	case "running":
+	case container.StateCreated, container.StatePaused, container.StateRestarting, container.StateRemoving:
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStarting,
+		}
+	case container.StateRunning:
 		if spec.Container.State.Health != nil {
-			// // "starting", "healthy" or "unhealthy"
+			// "starting", "healthy" or "unhealthy"
 			switch spec.Container.State.Health.Status {
-			case "healthy":
-				return sablier.ReadyInstanceState(name, p.desiredReplicas), nil
-			case "unhealthy":
-				return sablier.UnrecoverableInstanceState(name, "container is unhealthy", p.desiredReplicas), nil
-			default:
-				return sablier.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
+			case container.Healthy:
+				info = sablier.InstanceInfo{
+					Name:            name,
+					CurrentReplicas: p.desiredReplicas,
+					DesiredReplicas: p.desiredReplicas,
+					Status:          sablier.InstanceStatusReady,
+				}
+			case container.Unhealthy:
+				info = sablier.InstanceInfo{
+					Name:            name,
+					CurrentReplicas: 0,
+					DesiredReplicas: p.desiredReplicas,
+					Status:          sablier.InstanceStatusError,
+					Message:         "container is unhealthy",
+				}
+			default: // container.Starting
+				info = sablier.InstanceInfo{
+					Name:            name,
+					CurrentReplicas: 0,
+					DesiredReplicas: p.desiredReplicas,
+					Status:          sablier.InstanceStatusStarting,
+				}
+			}
+		} else {
+			p.l.WarnContext(ctx, "container running without healthcheck, you should define a healthcheck on your container so that Sablier properly detects when the container is ready to handle requests.", slog.String("container", name))
+			info = sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: p.desiredReplicas,
+				DesiredReplicas: p.desiredReplicas,
+				Status:          sablier.InstanceStatusReady,
 			}
 		}
-		p.l.WarnContext(ctx, "container running without healthcheck, you should define a healthcheck on your container so that Sablier properly detects when the container is ready to handle requests.", slog.String("container", name))
-		return sablier.ReadyInstanceState(name, p.desiredReplicas), nil
-	case "exited":
+	case container.StateExited:
 		if spec.Container.State.ExitCode != 0 {
-			return sablier.UnrecoverableInstanceState(name, fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode), p.desiredReplicas), nil
+			info = sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 0,
+				DesiredReplicas: p.desiredReplicas,
+				Status:          sablier.InstanceStatusError,
+				Message:         fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode),
+			}
+		} else {
+			info = sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 0,
+				DesiredReplicas: p.desiredReplicas,
+				Status:          sablier.InstanceStatusStopped,
+			}
 		}
-		return sablier.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
-	case "dead":
-		return sablier.UnrecoverableInstanceState(name, "container in \"dead\" state cannot be restarted", p.desiredReplicas), nil
+	case container.StateDead:
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusError,
+			Message:         "container in \"dead\" state cannot be restarted",
+		}
 	default:
-		return sablier.UnrecoverableInstanceState(name, fmt.Sprintf("container status \"%s\" not handled", spec.Container.State.Status), p.desiredReplicas), nil
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusError,
+			Message:         fmt.Sprintf("container status \"%s\" not handled", spec.Container.State.Status),
+		}
 	}
+
+	labels := spec.Container.Config.Labels
+	sablier.PopulateEnabledAndGroup(&info, labels)
+
+	info.Provider = sablier.ProviderDocker
+	info.Docker = &sablier.DockerContainerInfo{
+		ID:     spec.Container.ID,
+		Image:  spec.Container.Config.Image,
+		Labels: labels,
+	}
+
+	return info, nil
 }
 
 func healthStatus(health *container.Health) string {

@@ -13,13 +13,14 @@ import (
 type pendingStart struct {
 	done chan struct{}
 	err  error
+	info InstanceInfo // set at creation time; used to return consistent data while starting
 }
 
 // consumePendingError checks whether a pending start exists for the given
 // instance. It returns (pending, error):
-//   - pending=true, err=nil  → start still in progress, caller should skip inspect
-//   - pending=false, err!=nil → start completed with error, entry cleared for retry
-//   - pending=false, err=nil  → no pending entry or already cleaned up
+//   - pending=true, err=nil  -> start still in progress, caller should skip inspect
+//   - pending=false, err!=nil -> start completed with error, entry cleared for retry
+//   - pending=false, err=nil  -> no pending entry or already cleaned up
 func (s *Sablier) consumePendingError(name string) (bool, error) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
@@ -44,9 +45,10 @@ func (s *Sablier) consumePendingError(name string) (bool, error) {
 }
 
 func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, error) {
+	// First critical section: check whether a start is already in progress.
+	// We release the lock before doing the remote inspect to avoid holding a
+	// mutex across a potentially slow network call.
 	s.pendingMu.Lock()
-	defer s.pendingMu.Unlock()
-
 	if ps, exists := s.pendingStarts[name]; exists {
 		select {
 		case <-ps.done:
@@ -54,19 +56,50 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 			if ps.err != nil {
 				err := ps.err
 				delete(s.pendingStarts, name)
+				s.pendingMu.Unlock()
 				return InstanceInfo{}, fmt.Errorf("instance start failed: %w", err)
 			}
-			// Succeeded previously but instance is no longer in store — start a new one
+			// Succeeded previously but instance is no longer in store — fall through to restart
 			delete(s.pendingStarts, name)
 		default:
-			// Still running — don't start another goroutine
+			// Still running — return the cached InstanceInfo to preserve provider fields
 			s.l.DebugContext(ctx, "instance start already in progress", slog.String("instance", name))
-			return NotReadyInstanceState(name, 0, 1), nil
+			info := ps.info
+			s.pendingMu.Unlock()
+			return info, nil
 		}
 	}
+	s.pendingMu.Unlock()
 
-	ps := &pendingStart{done: make(chan struct{})}
+	// Inspect outside the lock: this may be a slow remote network call.
+	// If inspect fails (e.g. first boot), fall back to a minimal struct so
+	// the start still proceeds.
+	info, err := s.provider.InstanceInspect(ctx, name)
+	if err != nil {
+		s.l.DebugContext(ctx, "pre-start inspect failed, using bare info", slog.String("instance", name), slog.Any("error", err))
+		info = InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1}
+	}
+	info.Status = InstanceStatusStarting
+
+	// Second critical section: register the pending entry. Re-check in case
+	// another goroutine raced past the first unlock and registered first.
+	s.pendingMu.Lock()
+	if existing, exists := s.pendingStarts[name]; exists {
+		select {
+		case <-existing.done:
+			// The racing goroutine already finished; proceed with our own entry.
+			delete(s.pendingStarts, name)
+		default:
+			// A concurrent goroutine won the race; return its cached info.
+			s.l.DebugContext(ctx, "instance start already in progress (post-inspect race)", slog.String("instance", name))
+			existingInfo := existing.info
+			s.pendingMu.Unlock()
+			return existingInfo, nil
+		}
+	}
+	ps := &pendingStart{done: make(chan struct{}), info: info}
 	s.pendingStarts[name] = ps
+	s.pendingMu.Unlock()
 
 	// Begin metrics tracking BEFORE dispatching the goroutine.
 	// Idempotent — if a previous Begin was already recorded, it is preserved.
@@ -98,7 +131,7 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 		}
 	}()
 
-	return NotReadyInstanceState(name, 0, 1), nil
+	return info, nil
 }
 
 func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {

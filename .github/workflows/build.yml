@@ -47,7 +47,7 @@ jobs:
           --rerun-fails-max-failures=10 \
           --packages="./..." \
           --post-run-command .github/scripts/test-summary.sh \
-          -- -tags="nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp" -race -covermode atomic -coverprofile=coverage.out ./...
+          -- -tags="nomsgpack" -race -covermode atomic -coverprofile=coverage.out ./...
 
     - name: Generate HTML test report
       if: ${{ !cancelled() }}
@@ -55,7 +55,7 @@ jobs:
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
@@ -75,7 +75,7 @@ jobs:
         retention-days: 2
 
     - name: Find existing test results comment
-      if: github.event_name == 'pull_request' && !cancelled()
+      if: github.event_name == 'pull_request' && !cancelled() && github.event.pull_request.head.repo.full_name == github.repository
       uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
       id: fc
       with:
@@ -84,7 +84,7 @@ jobs:
         body-includes: Test Results
 
     - name: Create or update test results comment
-      if: github.event_name == 'pull_request' && !cancelled()
+      if: github.event_name == 'pull_request' && !cancelled() && github.event.pull_request.head.repo.full_name == github.repository
       uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
       with:
         comment-id: ${{ steps.fc.outputs.comment-id }}

@@ -19,6 +19,8 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
@@ -88,12 +90,12 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -102,6 +104,9 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+			t.Cleanup(func() {
+				_, _ = sharedDinD.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+			})
 
 			tt.want.Name = name
 			err = p.InstanceStop(ctx, name)

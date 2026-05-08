@@ -1,16 +1,16 @@
 package dockerswarm_test
 
 import (
-	"github.com/moby/moby/client"
-	"github.com/sablierapp/sablier/pkg/sablier"
-
+	"context"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
@@ -20,7 +20,7 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -34,6 +34,9 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	i1Result, err := dind.client.ServiceInspect(ctx, s1.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
 	i1 := i1Result.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), i1.ID, client.ServiceRemoveOptions{})
+	})
 
 	s2, err := dind.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -46,6 +49,9 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	i2Result, err := dind.client.ServiceInspect(ctx, s2.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
 	i2 := i2Result.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), i2.ID, client.ServiceRemoveOptions{})
+	})
 
 	got, err := p.InstanceList(ctx, provider.InstanceListOptions{
 		All: true,
@@ -54,12 +60,14 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  i1.Spec.Name,
-			Group: "default",
+			Name:    i1.Spec.Name,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  i2.Spec.Name,
-			Group: "my-group",
+			Name:    i2.Spec.Name,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 	}
 	// Assert go is equal to want
@@ -79,7 +87,7 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
@@ -93,6 +101,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	i1Result, err := dind.client.ServiceInspect(ctx, s1.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
 	i1 := i1Result.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), i1.ID, client.ServiceRemoveOptions{})
+	})
 
 	s2, err := dind.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
@@ -105,6 +116,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	i2Result, err := dind.client.ServiceInspect(ctx, s2.ID, client.ServiceInspectOptions{})
 	assert.NilError(t, err)
 	i2 := i2Result.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), i2.ID, client.ServiceRemoveOptions{})
+	})
 
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)

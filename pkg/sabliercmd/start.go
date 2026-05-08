@@ -12,6 +12,7 @@ import (
 	"github.com/sablierapp/sablier/internal/server"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/metrics"
+	provpkg "github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/version"
@@ -71,13 +72,26 @@ func Start(ctx context.Context, conf config.Config) error {
 	}
 
 	go s.GroupWatch(ctx)
-	instanceStopped := make(chan string)
-	go provider.NotifyInstanceStopped(ctx, instanceStopped)
+	stream := provider.InstanceEvents(ctx, provpkg.InstanceEventsOptions{
+		Types: []provpkg.InstanceEventType{provpkg.InstanceEventStopped},
+	})
 	go func() {
-		for stopped := range instanceStopped {
-			err := s.RemoveInstance(ctx, stopped)
-			if err != nil {
-				logger.Warn("could not remove instance", slog.Any("error", err))
+		for {
+			select {
+			case info, ok := <-stream.Events:
+				if !ok {
+					return
+				}
+				err := s.RemoveInstance(ctx, info.Name)
+				if err != nil {
+					logger.Warn("could not remove instance", slog.Any("error", err))
+				}
+			case err, ok := <-stream.Err:
+				if !ok {
+					return
+				}
+				logger.ErrorContext(ctx, "instance stopped event stream permanently lost", slog.Any("error", err))
+				return
 			}
 		}
 	}()
