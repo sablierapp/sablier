@@ -2,20 +2,27 @@ package dockerswarm_test
 
 import (
 	"context"
+	"flag"
+	"fmt"
+	"log"
+	"os"
 	"testing"
+	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/swarm"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/dind"
-	"gotest.tools/v3/assert"
 )
+
+// sharedDinD is the single Docker-in-Docker Swarm container shared across all tests in this package.
+// It is initialized by TestMain, which avoids the overhead of starting a new DinD per test.
+var sharedDinD *dindContainer
 
 type dindContainer struct {
 	testcontainers.Container
 	client *client.Client
-	t      *testing.T
 }
 
 type MimicOptions struct {
@@ -25,62 +32,114 @@ type MimicOptions struct {
 	Labels        map[string]string
 }
 
-func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (swarm.ServiceCreateResponse, error) {
+func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ServiceCreateResult, error) {
 	if len(opts.Cmd) == 0 {
 		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
 	}
 
-	d.t.Log("Creating mimic service with options", opts)
 	var replicas uint64 = 1
-	return d.client.ServiceCreate(ctx, swarm.ServiceSpec{
-		Mode: swarm.ServiceMode{
-			Replicated: &swarm.ReplicatedService{Replicas: &replicas},
-		},
-		TaskTemplate: swarm.TaskSpec{
-			RestartPolicy: opts.RestartPolicy,
-			ContainerSpec: &swarm.ContainerSpec{
-				Image:       "sablierapp/mimic:v0.3.1",
-				Healthcheck: opts.Healthcheck,
-				Command:     opts.Cmd,
+	return d.client.ServiceCreate(ctx, client.ServiceCreateOptions{
+		Spec: swarm.ServiceSpec{
+			Mode: swarm.ServiceMode{
+				Replicated: &swarm.ReplicatedService{Replicas: &replicas},
+			},
+			TaskTemplate: swarm.TaskSpec{
+				RestartPolicy: opts.RestartPolicy,
+				ContainerSpec: &swarm.ContainerSpec{
+					Image:       "sablierapp/mimic:v0.3.3",
+					Healthcheck: opts.Healthcheck,
+					Command:     opts.Cmd,
+				},
+			},
+			Annotations: swarm.Annotations{
+				Labels: opts.Labels,
 			},
 		},
-		Annotations: swarm.Annotations{
-			Labels: opts.Labels,
-		},
-	}, swarm.ServiceCreateOptions{})
+	})
 }
 
-func setupDinD(t *testing.T) *dindContainer {
-	t.Helper()
-	ctx := t.Context()
+func TestMain(m *testing.M) {
+	// flag.Parse must be called before testing.Short() is usable.
+	flag.Parse()
+
+	// Skip the expensive container setup when running in short mode.
+	if testing.Short() {
+		os.Exit(m.Run())
+	}
+
+	ctx := context.Background()
+
 	c, err := dind.Run(ctx, "docker:28.0.4-dind")
-	assert.NilError(t, err)
-	testcontainers.CleanupContainer(t, c)
+	if err != nil {
+		log.Fatalf("failed to start DinD: %v", err)
+	}
 
 	host, err := c.Host(ctx)
-	assert.NilError(t, err)
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to get DinD host: %v", err)
+	}
 
-	dindCli, err := client.NewClientWithOpts(client.WithHost(host), client.WithAPIVersionNegotiation())
-	assert.NilError(t, err)
+	dindCli, err := client.New(client.WithHost(host))
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to create docker client: %v", err)
+	}
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()
-	assert.NilError(t, err)
+	if err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to get docker provider: %v", err)
+	}
 
-	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
-	assert.NilError(t, err)
+	if err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to pull mimic image: %v", err)
+	}
 
-	_ = c.LoadImage(ctx, "sablierapp/mimic:v0.3.1")
-	// assert.NilError(t, err)
+	//nolint:staticcheck // Ignore "SA9003: Need https://github.com/testcontainers/testcontainers-go/pull/3672 to be released
+	if err = c.LoadImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		// _ = c.Terminate(ctx)
+		// log.Fatalf("failed to load mimic image: %v", err)
+	}
 
 	// Initialize the swarm
-	_, err = dindCli.SwarmInit(ctx, swarm.InitRequest{
-		ListenAddr: "0.0.0.0",
-	})
-	assert.NilError(t, err)
+	if _, err = dindCli.SwarmInit(ctx, client.SwarmInitOptions{ListenAddr: "0.0.0.0"}); err != nil {
+		_ = c.Terminate(ctx)
+		log.Fatalf("failed to initialize swarm: %v", err)
+	}
 
-	return &dindContainer{
+	sharedDinD = &dindContainer{
 		Container: c,
 		client:    dindCli,
-		t:         t,
+	}
+
+	code := m.Run()
+	_ = c.Terminate(ctx)
+	os.Exit(code)
+}
+
+// WaitForServiceRunning polls until the named service has the expected number of running tasks.
+func WaitForServiceRunning(ctx context.Context, cli *client.Client, name string, runningTasks uint64) error {
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while waiting for service %s to have %d running tasks", name, runningTasks)
+		case <-ticker.C:
+			filters := client.Filters{}
+			filters.Add("name", name)
+			services, err := cli.ServiceList(ctx, client.ServiceListOptions{Filters: filters, Status: true})
+			if err != nil {
+				return fmt.Errorf("error listing services: %w", err)
+			}
+			for _, svc := range services.Items {
+				if svc.Spec.Name == name && svc.ServiceStatus != nil && svc.ServiceStatus.RunningTasks >= runningTasks {
+					return nil
+				}
+			}
+		}
 	}
 }

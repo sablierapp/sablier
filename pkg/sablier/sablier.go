@@ -2,10 +2,11 @@ package sablier
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type Sablier struct {
@@ -15,9 +16,16 @@ type Sablier struct {
 	groupsMu sync.RWMutex
 	groups   map[string][]string
 
+	pendingMu     sync.Mutex
+	pendingStarts map[string]*pendingStart
+
 	// BlockingRefreshFrequency is the frequency at which the instances are checked
 	// against the provider. Defaults to 5 seconds.
 	BlockingRefreshFrequency time.Duration
+
+	// InstanceStartTimeout is the maximum time allowed for an async InstanceStart
+	// call before it is cancelled. Defaults to 5 minutes.
+	InstanceStartTimeout time.Duration
 
 	l *slog.Logger
 }
@@ -28,8 +36,10 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                 store,
 		groupsMu:                 sync.RWMutex{},
 		groups:                   map[string][]string{},
+		pendingStarts:            map[string]*pendingStart{},
 		l:                        logger,
 		BlockingRefreshFrequency: 5 * time.Second,
+		InstanceStartTimeout:     5 * time.Minute,
 	}
 }
 

@@ -20,17 +20,33 @@ func TestProxmoxLXCProvider_InstanceInspect(t *testing.T) {
 		{
 			name:      "running container is ready",
 			container: proxmoxlxc.TestContainer{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
-			want:      sablier.ReadyInstanceState("web", 1),
+			want: sablier.InstanceInfo{
+				Name:            "web",
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+			},
 		},
 		{
 			name:      "stopped container is not ready",
 			container: proxmoxlxc.TestContainer{VMID: 101, Name: "db", Status: "stopped", Tags: "sablier", Node: "pve1"},
-			want:      sablier.NotReadyInstanceState("db", 0, 1),
+			want: sablier.InstanceInfo{
+				Name:            "db",
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
+			},
 		},
 		{
 			name:      "unknown status is unrecoverable",
 			container: proxmoxlxc.TestContainer{VMID: 102, Name: "backup", Status: "unknown", Tags: "sablier", Node: "pve1"},
-			want:      sablier.UnrecoverableInstanceState("backup", "container status \"unknown\" not handled", 1),
+			want: sablier.InstanceInfo{
+				Name:            "backup",
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusError,
+				Message:         "container status \"unknown\" not handled",
+			},
 		},
 	}
 
@@ -64,7 +80,12 @@ func TestProxmoxLXCProvider_InstanceInspect_ByVMID(t *testing.T) {
 
 	got, err := p.InstanceInspect(t.Context(), "100")
 	assert.NilError(t, err)
-	assert.DeepEqual(t, got, sablier.ReadyInstanceState("web", 1))
+	assert.DeepEqual(t, got, sablier.InstanceInfo{
+		Name:            "web",
+		CurrentReplicas: 1,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusReady,
+	})
 }
 
 func TestProxmoxLXCProvider_InstanceInspect_ByNodeVMID(t *testing.T) {
@@ -81,7 +102,12 @@ func TestProxmoxLXCProvider_InstanceInspect_ByNodeVMID(t *testing.T) {
 	got, err := p.InstanceInspect(t.Context(), "pve1/100")
 	assert.NilError(t, err)
 	// node/vmid resolves to the hostname via scanContainers.
-	assert.DeepEqual(t, got, sablier.ReadyInstanceState("web", 1))
+	assert.DeepEqual(t, got, sablier.InstanceInfo{
+		Name:            "web",
+		CurrentReplicas: 1,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusReady,
+	})
 }
 
 func TestProxmoxLXCProvider_InstanceInspect_NotFound(t *testing.T) {

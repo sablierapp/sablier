@@ -66,8 +66,8 @@ func New(ctx context.Context, client *proxmox.Client, logger *slog.Logger) (*Pro
 		l:               logger,
 		desiredReplicas: 1,
 		pollInterval:    10 * time.Second,
-		cache:        make(map[string]containerRef),
-		pendingTasks: make(map[string]*pendingTask),
+		cache:           make(map[string]containerRef),
+		pendingTasks:    make(map[string]*pendingTask),
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (p *Provider) resolve(ctx context.Context, name string) (containerRef, erro
 			return containerRef{}, fmt.Errorf("invalid VMID in %q: %w", name, err)
 		}
 		// Try to resolve hostname from cache via VMID so that ref.name matches
-		// the hostname used by stop-event detection in NotifyInstanceStopped.
+		// the hostname used by stop-event detection in InstanceEvents.
 		if ref, ok := p.lookupCache(vmidStr); ok && ref.node == node {
 			return ref, nil
 		}

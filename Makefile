@@ -1,6 +1,8 @@
 .PHONY: run gen build test lint fmt docker docs
 
-export GOFLAGS=-tags=nomsgpack,remote,exclude_graphdriver_btrfs,containers_image_openpgp
+.DEFAULT_GOAL := build
+
+export GOFLAGS=-tags=nomsgpack
 
 run:
 	go run ./cmd/sablier start --storage.file=state.json --logging.level=debug
@@ -8,6 +10,7 @@ run:
 gen:
 	go generate -v ./...
 
+.PHONY: build
 build:
 	goreleaser build --single-target --snapshot --clean --output .
 

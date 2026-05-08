@@ -3,17 +3,20 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
-	"testing"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestKubernetesProvider_InstanceStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -40,7 +43,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 					return "deployment_default_my-deployment_1", nil
 				},
 			},
-			err: fmt.Errorf("deployments/scale.apps \"my-deployment\" not found"),
+			err: fmt.Errorf("deployments.apps \"my-deployment\" not found"),
 		},
 		{
 			name: "deployment start as expected",
@@ -88,7 +91,7 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 			err: nil,
 		},
 	}
-	kind := setupKinD(t, ctx)
+	kind := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -97,6 +100,18 @@ func TestKubernetesProvider_InstanceStart(t *testing.T) {
 
 			name, err := tt.args.do(kind)
 			assert.NilError(t, err)
+
+			// Clean up the workload created by this subtest.
+			if parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"}); parseErr == nil {
+				t.Cleanup(func() {
+					switch parsed.Kind {
+					case "deployment":
+						_ = kind.client.AppsV1().Deployments(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
+					case "statefulset":
+						_ = kind.client.AppsV1().StatefulSets(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
+					}
+				})
+			}
 
 			err = p.InstanceStart(t.Context(), name)
 			if tt.err != nil {

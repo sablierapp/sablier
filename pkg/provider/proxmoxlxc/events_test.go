@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 	"gotest.tools/v3/assert"
 )
 
-func TestProxmoxLXCProvider_NotifyInstanceStopped_ContextCancel(t *testing.T) {
+func TestProxmoxLXCProvider_InstanceEvents_ContextCancel(t *testing.T) {
 	t.Parallel()
 
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
@@ -22,19 +23,27 @@ func TestProxmoxLXCProvider_NotifyInstanceStopped_ContextCancel(t *testing.T) {
 	assert.NilError(t, err)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	stoppedCh := make(chan string, 1)
-	go p.NotifyInstanceStopped(ctx, stoppedCh)
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
+	})
 
-	// Cancel context and verify channel is closed
+	// Cancel context and verify both channels are closed
 	cancel()
-	select {
-	case _, ok := <-stoppedCh:
-		if ok {
-			// Got a value, that's unexpected but not fatal — just wait for close
-			_, ok = <-stoppedCh
+
+	deadline := time.After(3 * time.Second)
+	eventsClosed, errClosed := false, false
+	for !eventsClosed || !errClosed {
+		select {
+		case _, ok := <-stream.Events:
+			if !ok {
+				eventsClosed = true
+			}
+		case _, ok := <-stream.Err:
+			if !ok {
+				errClosed = true
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for stream channels to close")
 		}
-		assert.Assert(t, !ok, "channel should be closed after context cancel")
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for channel close")
 	}
 }

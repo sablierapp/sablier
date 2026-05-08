@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
@@ -55,7 +56,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		// Container should be stopped initially (freshly cloned).
 		info, err := p.InstanceInspect(ctx, env.name)
 		assert.NilError(t, err)
-		assert.Equal(t, string(info.Status), "not-ready")
+		assert.Equal(t, info.Status, sablier.InstanceStatusStopped)
 
 		// Start the container.
 		err = p.InstanceStart(ctx, env.name)
@@ -67,7 +68,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 			info, err = p.InstanceInspect(ctx, env.name)
 			assert.NilError(t, err)
 
-			if info.Status == "ready" {
+			if info.Status == sablier.InstanceStatusReady {
 				ready = true
 				break
 			}
@@ -84,10 +85,10 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 
 		info, err := p.InstanceInspect(ctx, env.name)
 		assert.NilError(t, err)
-		assert.Equal(t, string(info.Status), "not-ready")
+		assert.Equal(t, info.Status, sablier.InstanceStatusStopped)
 	})
 
-	t.Run("NotifyInstanceStopped", func(t *testing.T) {
+	t.Run("InstanceEvents", func(t *testing.T) {
 		// Start the container first.
 		err := p.InstanceStart(ctx, env.name)
 		assert.NilError(t, err)
@@ -96,18 +97,19 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		for i := 0; i < 30; i++ {
 			info, err := p.InstanceInspect(ctx, env.name)
 			assert.NilError(t, err)
-			if info.Status == "ready" {
+			if info.Status == sablier.InstanceStatusReady {
 				break
 			}
 			time.Sleep(2 * time.Second)
 		}
 
-		// Start the notification listener with a cancelable context.
-		notifyCtx, cancel := context.WithCancel(ctx)
+		// Start the event stream with a cancelable context.
+		eventsCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		ch := make(chan string, 1)
-		go p.NotifyInstanceStopped(notifyCtx, ch)
+		stream := p.InstanceEvents(eventsCtx, provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStopped},
+		})
 
 		// Stop the container externally (simulate external stop).
 		err = p.InstanceStop(ctx, env.name)
@@ -115,8 +117,9 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 
 		// Wait for the notification.
 		select {
-		case name := <-ch:
-			assert.Equal(t, name, env.name)
+		case info, ok := <-stream.Events:
+			assert.Assert(t, ok, "events channel closed unexpectedly")
+			assert.Equal(t, info.Name, env.name)
 		case <-time.After(30 * time.Second):
 			t.Fatal("timed out waiting for stop notification")
 		}

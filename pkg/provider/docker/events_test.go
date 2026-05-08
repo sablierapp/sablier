@@ -5,42 +5,50 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
 )
 
-func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
+func TestDockerClassicProvider_InstanceEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	dind := setupDinD(t)
+	dind := sharedDinD
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
 	c, err := dind.CreateMimic(ctx, MimicOptions{})
 	assert.NilError(t, err)
 
-	inspected, err := dind.client.ContainerInspect(ctx, c.ID)
+	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
-	err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+	_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 	assert.NilError(t, err)
 
-	<-time.After(1 * time.Second)
-
-	waitC := make(chan string)
-	go p.NotifyInstanceStopped(ctx, waitC)
-
-	err = dind.client.ContainerStop(ctx, c.ID, container.StopOptions{})
+	err = WaitForContainerRunning(ctx, dind.client, c.ID)
 	assert.NilError(t, err)
 
-	name := <-waitC
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
+	})
 
-	// Docker container name is prefixed with a slash, but we don't use it
-	assert.Equal(t, "/"+name, inspected.Name)
+	_, err = dind.client.ContainerStop(ctx, c.ID, client.ContainerStopOptions{})
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		// Docker container name is prefixed with a slash, but we don't use it
+		assert.Equal(t, "/"+info.Name, inspected.Container.Name)
+		assert.Equal(t, info.Provider, "docker")
+		assert.Assert(t, info.Docker != nil)
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	}
 }

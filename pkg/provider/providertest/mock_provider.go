@@ -42,6 +42,20 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
+// InstanceEvents mocks base method.
+func (m *MockProvider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceEvents", ctx, opts)
+	ret0, _ := ret[0].(sablier.InstanceEventStream)
+	return ret0
+}
+
+// InstanceEvents indicates an expected call of InstanceEvents.
+func (mr *MockProviderMockRecorder) InstanceEvents(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceEvents", reflect.TypeOf((*MockProvider)(nil).InstanceEvents), ctx, opts)
+}
+
 // InstanceGroups mocks base method.
 func (m *MockProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	m.ctrl.T.Helper()
@@ -113,16 +127,4 @@ func (m *MockProvider) InstanceStop(ctx context.Context, name string) error {
 func (mr *MockProviderMockRecorder) InstanceStop(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceStop", reflect.TypeOf((*MockProvider)(nil).InstanceStop), ctx, name)
-}
-
-// NotifyInstanceStopped mocks base method.
-func (m *MockProvider) NotifyInstanceStopped(ctx context.Context, instance chan<- string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyInstanceStopped", ctx, instance)
-}
-
-// NotifyInstanceStopped indicates an expected call of NotifyInstanceStopped.
-func (mr *MockProviderMockRecorder) NotifyInstanceStopped(ctx, instance any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyInstanceStopped", reflect.TypeOf((*MockProvider)(nil).NotifyInstanceStopped), ctx, instance)
 }

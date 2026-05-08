@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/swarm"
 	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -18,6 +18,8 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -41,10 +43,11 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, err
 				},
@@ -75,10 +78,11 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, nil
 				},
@@ -86,12 +90,12 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -100,6 +104,9 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+			t.Cleanup(func() {
+				_, _ = sharedDinD.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+			})
 
 			tt.want.Name = name
 			err = p.InstanceStop(ctx, name)
@@ -108,9 +115,9 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 				return
 			}
 
-			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
+			service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{})
 			assert.NilError(t, err)
-			assert.Equal(t, *service.Spec.Mode.Replicated.Replicas, uint64(0))
+			assert.Equal(t, *service.Service.Spec.Mode.Replicated.Replicas, uint64(0))
 		})
 	}
 }

@@ -6,29 +6,29 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
-	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", options.All), slog.Any("filters", args)))
-	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
+	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", options.All), slog.Any("filters", filters)))
+	containers, err := p.Client.ContainerList(ctx, client.ContainerListOptions{
 		All:     options.All,
-		Filters: args,
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot list containers: %w", err)
 	}
 
-	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(containers)))
+	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(containers.Items)))
 
-	instances := make([]sablier.InstanceConfiguration, 0, len(containers))
-	for _, c := range containers {
+	instances := make([]sablier.InstanceConfiguration, 0, len(containers.Items))
+	for _, c := range containers.Items {
 		instance := containerToInstance(c)
 		instances = append(instances, instance)
 	}
@@ -39,7 +39,8 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := c.Labels["sablier.enable"]; ok {
+	enabled := c.Labels["sablier.enable"]
+	if enabled == "true" {
 		if g, ok := c.Labels["sablier.group"]; ok {
 			group = g
 		} else {
@@ -48,29 +49,30 @@ func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:  strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Group: group,
+		Name:    strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
+		Group:   group,
+		Enabled: enabled,
 	}
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
-	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 
-	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", true), slog.Any("filters", args)))
-	containers, err := p.Client.ContainerList(ctx, container.ListOptions{
+	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", true), slog.Any("filters", filters)))
+	containers, err := p.Client.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
-		Filters: args,
+		Filters: filters,
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot list containers: %w", err)
 	}
 
-	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(containers)))
+	p.l.DebugContext(ctx, "containers listed", slog.Int("count", len(containers.Items)))
 
 	groups := make(map[string][]string)
-	for _, c := range containers {
+	for _, c := range containers.Items {
 		groupName := c.Labels["sablier.group"]
 		if len(groupName) == 0 {
 			groupName = "default"

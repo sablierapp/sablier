@@ -16,10 +16,48 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
+	var info sablier.InstanceInfo
 	// TODO: Should add option to set ready as soon as one replica is ready
 	if *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas {
-		return sablier.ReadyInstanceState(config.Original, config.Replicas), nil
+		info = sablier.InstanceInfo{
+			Name:            config.Original,
+			CurrentReplicas: config.Replicas,
+			DesiredReplicas: config.Replicas,
+			Status:          sablier.InstanceStatusReady,
+		}
+	} else if *d.Spec.Replicas == 0 {
+		info = sablier.InstanceInfo{
+			Name:            config.Original,
+			CurrentReplicas: d.Status.ReadyReplicas,
+			DesiredReplicas: config.Replicas,
+			Status:          sablier.InstanceStatusStopped,
+		}
+	} else {
+		info = sablier.InstanceInfo{
+			Name:            config.Original,
+			CurrentReplicas: d.Status.ReadyReplicas,
+			DesiredReplicas: config.Replicas,
+			Status:          sablier.InstanceStatusStarting,
+		}
 	}
 
-	return sablier.NotReadyInstanceState(config.Original, d.Status.ReadyReplicas, config.Replicas), nil
+	sablier.PopulateEnabledAndGroup(&info, d.Labels)
+
+	var image string
+	if len(d.Spec.Template.Spec.Containers) > 0 {
+		image = d.Spec.Template.Spec.Containers[0].Image
+	}
+	info.Provider = sablier.ProviderKubernetes
+	labels := d.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
+		Namespace: config.Namespace,
+		Kind:      "deployment",
+		Image:     image,
+		Labels:    labels,
+	}
+
+	return info, nil
 }

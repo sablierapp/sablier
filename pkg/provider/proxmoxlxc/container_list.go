@@ -23,8 +23,9 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 			continue
 		}
 		instances = append(instances, sablier.InstanceConfiguration{
-			Name:  d.ref.name,
-			Group: extractGroup(d.tags),
+			Name:    d.ref.name,
+			Group:   extractGroup(d.tags),
+			Enabled: "true",
 		})
 	}
 

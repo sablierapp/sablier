@@ -5,30 +5,30 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/swarm"
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
-	args.Add("mode", "replicated")
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	filters.Add("mode", "replicated")
 
-	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", args)))
-	services, err := p.Client.ServiceList(ctx, swarm.ServiceListOptions{
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
+	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
 		Status:  true,
-		Filters: args,
+		Filters: filters,
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
-	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services)), slog.Any("services", services))
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services.Items)), slog.Any("services", services))
 
-	instances := make([]sablier.InstanceConfiguration, 0, len(services))
-	for _, s := range services {
+	instances := make([]sablier.InstanceConfiguration, 0, len(services.Items))
+	for _, s := range services.Items {
 		instance := p.serviceToInstance(s)
 		instances = append(instances, instance)
 	}
@@ -39,7 +39,8 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	var group string
 
-	if _, ok := s.Spec.Labels["sablier.enable"]; ok {
+	enabled := s.Spec.Labels["sablier.enable"]
+	if enabled == "true" {
 		if g, ok := s.Spec.Labels["sablier.group"]; ok {
 			group = g
 		} else {
@@ -48,29 +49,29 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:  s.Spec.Name,
-		Group: group,
+		Name:    s.Spec.Name,
+		Group:   group,
+		Enabled: enabled,
 	}
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
-	f := filters.NewArgs()
-	f.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
-
-	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", f)))
-	services, err := p.Client.ServiceList(ctx, swarm.ServiceListOptions{
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
+	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
 		Status:  true,
-		Filters: f,
+		Filters: filters,
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
 
-	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services)))
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services.Items)))
 
 	groups := make(map[string][]string)
-	for _, service := range services {
+	for _, service := range services.Items {
 		groupName := service.Spec.Labels["sablier.group"]
 		if len(groupName) == 0 {
 			groupName = "default"

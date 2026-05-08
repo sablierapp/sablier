@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/swarm"
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -21,32 +21,68 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
-	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return sablier.NotReadyInstanceState(service.Spec.Name, 0, p.desiredReplicas), nil
+	var info sablier.InstanceInfo
+	if service.ServiceStatus.DesiredTasks == 0 {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStopped,
+		}
+	} else if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: int32(service.ServiceStatus.RunningTasks),
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStarting,
+		}
+	} else {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: p.desiredReplicas,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusReady,
+		}
 	}
 
-	return sablier.ReadyInstanceState(service.Spec.Name, p.desiredReplicas), nil
+	labels := service.Spec.Labels
+	sablier.PopulateEnabledAndGroup(&info, labels)
+
+	var image string
+	if service.Spec.TaskTemplate.ContainerSpec != nil {
+		image = service.Spec.TaskTemplate.ContainerSpec.Image
+	}
+	info.Provider = sablier.ProviderSwarm
+	info.Swarm = &sablier.SwarmServiceInfo{
+		ID:     service.ID,
+		Image:  image,
+		Labels: labels,
+	}
+
+	return info, nil
 }
 
 func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
-	opts := swarm.ServiceListOptions{
-		Filters: filters.NewArgs(),
+	filters := client.Filters{}
+	filters.Add("name", name)
+
+	opts := client.ServiceListOptions{
+		Filters: filters,
 		// If set to true, the list will include the swarm.ServiceStatus field to all returned services.
 		Status: true,
 	}
-	opts.Filters.Add("name", name)
 
 	services, err := p.Client.ServiceList(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error listing services: %w", err)
 	}
 
-	if len(services) == 0 {
+	if len(services.Items) == 0 {
 		return nil, fmt.Errorf("service with name %s was not found", name)
 	}
 
 	var svc *swarm.Service = nil
-	for _, service := range services {
+	for _, service := range services.Items {
 		// Exact match
 		if service.Spec.Name == name {
 			svc = &service

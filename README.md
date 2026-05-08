@@ -144,7 +144,7 @@ Run your container with Sablier labels:
 docker run -d --health-cmd "/mimic healthcheck" -p 8080:80 --name mimic \
   --label sablier.enable=true \
   --label sablier.group=demo \
-  sablierapp/mimic:v0.3.2 \
+  sablierapp/mimic:v0.3.3 \
   -running -running-after=5s \
   -healthy=true -healthy-after=5s
 ```

@@ -26,7 +26,7 @@ func TestProxmoxLXCProvider_InstanceStart(t *testing.T) {
 	// Verify via InstanceInspect that the start was accepted.
 	got, err := p.InstanceInspect(t.Context(), "web")
 	assert.NilError(t, err)
-	assert.Equal(t, string(got.Status), "not-ready")
+	assert.Equal(t, string(got.Status), "stopped")
 }
 
 func TestProxmoxLXCProvider_InstanceStart_ByVMID(t *testing.T) {
@@ -109,10 +109,10 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailure(t *testing.T) {
 	err = p.InstanceStart(t.Context(), "broken")
 	assert.NilError(t, err)
 
-	// InstanceInspect should detect the failed task via Ping() and report unrecoverable state.
+	// InstanceInspect should detect the failed task via Ping() and report error state.
 	got, err := p.InstanceInspect(t.Context(), "broken")
 	assert.NilError(t, err)
-	assert.Equal(t, string(got.Status), "unrecoverable")
+	assert.Equal(t, string(got.Status), "error")
 	assert.Assert(t, got.Message != "", "expected a non-empty error message")
 }
 
@@ -136,10 +136,10 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailureTTLExpiry(t *testing.T) {
 
 	// First InstanceInspect triggers Ping which discovers the failure.
 	// Since EndTime is >30s ago, the failed entry should be cleared and
-	// the provider should fall through to the normal container status check.
+	// a fresh InstanceStart is attempted, leaving the instance in starting state.
 	got, err := p.InstanceInspect(t.Context(), "broken")
 	assert.NilError(t, err)
-	assert.Equal(t, string(got.Status), "not-ready", "expected not-ready after TTL expiry, got %s", got.Status)
+	assert.Equal(t, string(got.Status), "starting", "expected starting after TTL expiry retry, got %s", got.Status)
 }
 
 func TestProxmoxLXCProvider_InstanceStart_TaskInProgress(t *testing.T) {
@@ -157,8 +157,8 @@ func TestProxmoxLXCProvider_InstanceStart_TaskInProgress(t *testing.T) {
 	err = p.InstanceStart(t.Context(), "slow")
 	assert.NilError(t, err)
 
-	// InstanceInspect should report not-ready while the task is still running.
+	// InstanceInspect should report starting while the task is still running.
 	got, err := p.InstanceInspect(t.Context(), "slow")
 	assert.NilError(t, err)
-	assert.Equal(t, string(got.Status), "not-ready")
+	assert.Equal(t, string(got.Status), "starting")
 }

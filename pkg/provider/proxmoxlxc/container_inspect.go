@@ -36,7 +36,12 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 					slog.Any("error", err),
 				)
 			} else {
-				return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), nil
+				return sablier.InstanceInfo{
+					Name:            ref.name,
+					CurrentReplicas: 0,
+					DesiredReplicas: p.desiredReplicas,
+					Status:          sablier.InstanceStatusStarting,
+				}, nil
 			}
 		}
 		// Task completed successfully — fall through to normal status check.
@@ -66,21 +71,47 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				slog.String("name", ref.name),
 				slog.Any("error", err),
 			)
-			return sablier.ReadyInstanceState(ref.name, p.desiredReplicas), nil
+			return sablier.InstanceInfo{
+				Name:            ref.name,
+				CurrentReplicas: p.desiredReplicas,
+				DesiredReplicas: p.desiredReplicas,
+				Status:          sablier.InstanceStatusReady,
+			}, nil
 		}
 
 		if !hasNonLoopbackIP(ifaces) {
 			p.l.DebugContext(ctx, "container running but no network interface has an IP yet",
 				slog.String("name", ref.name),
 			)
-			return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), nil
+			return sablier.InstanceInfo{
+				Name:            ref.name,
+				CurrentReplicas: 0,
+				DesiredReplicas: p.desiredReplicas,
+				Status:          sablier.InstanceStatusStarting,
+			}, nil
 		}
 
-		return sablier.ReadyInstanceState(ref.name, p.desiredReplicas), nil
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: p.desiredReplicas,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusReady,
+		}, nil
 	case "stopped":
-		return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), nil
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStopped,
+		}, nil
 	default:
-		return sablier.UnrecoverableInstanceState(ref.name, fmt.Sprintf("container status %q not handled", ct.Status), p.desiredReplicas), nil
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusError,
+			Message:         fmt.Sprintf("container status %q not handled", ct.Status),
+		}, nil
 	}
 }
 
@@ -93,7 +124,12 @@ func (p *Provider) checkPendingTask(ctx context.Context, name string, ref contai
 			slog.String("name", ref.name),
 			slog.Any("error", err),
 		)
-		return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), false
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStarting,
+		}, false
 	}
 
 	if pt.task.IsRunning {
@@ -101,7 +137,12 @@ func (p *Provider) checkPendingTask(ctx context.Context, name string, ref contai
 			slog.String("name", ref.name),
 			slog.String("upid", string(pt.task.UPID)),
 		)
-		return sablier.NotReadyInstanceState(ref.name, 0, p.desiredReplicas), false
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStarting,
+		}, false
 	}
 
 	if pt.task.IsFailed {
@@ -116,7 +157,7 @@ func (p *Provider) checkPendingTask(ctx context.Context, name string, ref contai
 			}
 		}
 
-		// Keep returning Unrecoverable until failedTaskTTL after the task finished.
+		// Keep returning Error until failedTaskTTL after the task finished.
 		// This gives the user time to see the error while polling, and automatically
 		// clears the entry so a fresh InstanceStart can be attempted later.
 		if time.Since(pt.failedAt) > failedTaskTTL {
@@ -131,7 +172,13 @@ func (p *Provider) checkPendingTask(ctx context.Context, name string, ref contai
 		}
 		msg := fmt.Sprintf("start task failed for container %q (VMID %d): %s", ref.name, ref.vmid, pt.task.ExitStatus)
 		p.l.WarnContext(ctx, msg)
-		return sablier.UnrecoverableInstanceState(ref.name, msg, p.desiredReplicas), false
+		return sablier.InstanceInfo{
+			Name:            ref.name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusError,
+			Message:         msg,
+		}, false
 	}
 
 	// Task completed successfully — remove from pending.
