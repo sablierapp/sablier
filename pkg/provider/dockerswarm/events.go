@@ -26,13 +26,31 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
 	// InstanceEventStopped maps to: replicas scaled to 0, or service removed.
-	extract := func(msg events.Message) string {
-		if wantStopped && (msg.Actor.Attributes["replicas.new"] == "0" || msg.Action == "remove") {
-			return msg.Actor.Attributes["name"]
+	// When scaled to 0 the service still exists and we can inspect it for full info.
+	// When removed the service is gone; emit a bare stopped InstanceInfo instead.
+	build := func(ctx context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
+		if !wantStopped {
+			return sablier.InstanceInfo{}, false
 		}
-		return ""
+		name := msg.Actor.Attributes["name"]
+		if name == "" {
+			return sablier.InstanceInfo{}, false
+		}
+		if msg.Action == "remove" {
+			// Service is gone; inspect would fail.
+			return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
+		}
+		if msg.Actor.Attributes["replicas.new"] == "0" {
+			info, err := p.InstanceInspect(ctx, name)
+			if err != nil {
+				p.l.WarnContext(ctx, "inspect after scale-to-0 event failed, using bare info", "service", name, "error", err)
+				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
+			}
+			return info, true
+		}
+		return sablier.InstanceInfo{}, false
 	}
-	return streamEvents(ctx, p.l, dial, extract, linearBackoff)
+	return streamEvents(ctx, p.l, dial, build, linearBackoff)
 }
 
 func linearBackoff(attempt int) time.Duration {
@@ -45,7 +63,7 @@ func streamEvents(
 	ctx context.Context,
 	l *slog.Logger,
 	dial func(ctx context.Context) client.EventsResult,
-	extract func(events.Message) string,
+	build func(context.Context, events.Message) (sablier.InstanceInfo, bool),
 	backoff func(attempt int) time.Duration,
 ) sablier.InstanceEventStream {
 	eventsC := make(chan sablier.InstanceInfo)
@@ -64,7 +82,7 @@ func streamEvents(
 				}
 			}
 
-			if reconnect := consumeEvents(ctx, l, eventsC, dial(ctx), extract); !reconnect {
+			if reconnect := consumeEvents(ctx, l, eventsC, dial(ctx), build); !reconnect {
 				return
 			}
 		}
@@ -81,7 +99,7 @@ func consumeEvents(
 	l *slog.Logger,
 	instance chan<- sablier.InstanceInfo,
 	result client.EventsResult,
-	extract func(events.Message) string,
+	build func(context.Context, events.Message) (sablier.InstanceInfo, bool),
 ) (reconnect bool) {
 	for {
 		select {
@@ -91,8 +109,8 @@ func consumeEvents(
 				return true
 			}
 			l.DebugContext(ctx, "event received", "event", msg)
-			if name := extract(msg); name != "" {
-				instance <- sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusNotReady}
+			if info, ok := build(ctx, msg); ok {
+				instance <- info
 			}
 		case err, ok := <-result.Err:
 			if !ok || errors.Is(err, io.EOF) {

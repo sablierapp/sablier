@@ -24,8 +24,12 @@ func makeResult(msgs chan events.Message, errs chan error) client.EventsResult {
 	return client.EventsResult{Messages: msgs, Err: errs}
 }
 
-func extract(msg events.Message) string {
-	return strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
+func build(_ context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
+	name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
+	if name == "" {
+		return sablier.InstanceInfo{}, false
+	}
+	return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped}, true
 }
 
 // TestStreamEvents_Reconnect verifies that when the first connection drops
@@ -60,13 +64,13 @@ func TestStreamEvents_Reconnect(t *testing.T) {
 		return makeResult(msgs, errs)
 	}
 
-	stream := streamEvents(ctx, slogt.New(t), dial, extract, zeroBackoff)
+	stream := streamEvents(ctx, slogt.New(t), dial, build, zeroBackoff)
 
 	select {
 	case info, ok := <-stream.Events:
 		assert.Assert(t, ok, "events channel closed unexpectedly")
 		assert.Equal(t, info.Name, "web")
-		assert.Equal(t, string(info.Status), string(sablier.InstanceStatusNotReady))
+		assert.Equal(t, string(info.Status), string(sablier.InstanceStatusStopped))
 		// Clean up: cancel the context so the goroutine exits.
 		cancel()
 	case err := <-stream.Err:
@@ -77,5 +81,3 @@ func TestStreamEvents_Reconnect(t *testing.T) {
 
 	assert.Equal(t, attempt, 2, "expected exactly one reconnect (2 dial calls)")
 }
-
-

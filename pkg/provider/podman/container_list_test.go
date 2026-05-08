@@ -58,12 +58,14 @@ func TestPodmanProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  strings.TrimPrefix(i1.Container.Name, "/"),
-			Group: "default",
+			Name:    strings.TrimPrefix(i1.Container.Name, "/"),
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  strings.TrimPrefix(i2.Container.Name, "/"),
-			Group: "my-group",
+			Name:    strings.TrimPrefix(i2.Container.Name, "/"),
+			Group:   "my-group",
+			Enabled: "true",
 		},
 	}
 	// Sort both slices to ensure order-independent comparison

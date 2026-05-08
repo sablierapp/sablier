@@ -27,10 +27,11 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 		do func(dind *kindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "deployment with 1/1 replicas",
@@ -76,7 +77,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -111,7 +112,42 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "deployment with sablier labels",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Group:           "myapp",
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
 			},
 			wantErr: nil,
 		},
@@ -134,6 +170,17 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			}
 
 			tt.want.Name = name
+			tt.want.Provider = "kubernetes"
+			labels := tt.wantLabels
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			tt.want.Kubernetes = &sablier.KubernetesWorkloadInfo{
+				Namespace: "default",
+				Kind:      "deployment",
+				Image:     "sablierapp/mimic:v0.3.3",
+				Labels:    labels,
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)

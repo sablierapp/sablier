@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,7 +12,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) watchStatefulSets(instance chan<- sablier.InstanceInfo) cache.SharedIndexInformer {
+func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablier.InstanceInfo) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newStatefulSet := new.(*appsv1.StatefulSet)
@@ -27,13 +28,37 @@ func (p *Provider) watchStatefulSets(instance chan<- sablier.InstanceInfo) cache
 
 			if *newStatefulSet.Spec.Replicas == 0 {
 				parsed := StatefulSetName(newStatefulSet, ParseOptions{Delimiter: p.delimiter})
-				instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusNotReady}
+				// StatefulSet still exists (scaled to 0); inspect for full info.
+				info, err := p.InstanceInspect(ctx, parsed.Original)
+				if err != nil {
+					p.l.WarnContext(ctx, "inspect after scale-to-0 event failed, using bare info", "statefulset", parsed.Original, "error", err)
+					instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderKubernetes}
+					return
+				}
+				instance <- info
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			deletedStatefulSet := obj.(*appsv1.StatefulSet)
-			parsed := StatefulSetName(deletedStatefulSet, ParseOptions{Delimiter: p.delimiter})
-			instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusNotReady}
+			ss := obj.(*appsv1.StatefulSet)
+			parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
+			// StatefulSet is gone; build InstanceInfo from the deleted object directly.
+			var image string
+			if len(ss.Spec.Template.Spec.Containers) > 0 {
+				image = ss.Spec.Template.Spec.Containers[0].Image
+			}
+			info := sablier.InstanceInfo{
+				Name:     parsed.Original,
+				Status:   sablier.InstanceStatusStopped,
+				Provider: sablier.ProviderKubernetes,
+				Kubernetes: &sablier.KubernetesWorkloadInfo{
+					Namespace: ss.Namespace,
+					Kind:      "statefulset",
+					Image:     image,
+					Labels:    ss.Labels,
+				},
+			}
+			sablier.PopulateEnabledAndGroup(&info, ss.Labels)
+			instance <- info
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))

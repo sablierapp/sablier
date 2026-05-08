@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
@@ -25,10 +26,11 @@ func TestPodmanProvider_GetState(t *testing.T) {
 		do func(pind *pindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "created container",
@@ -44,7 +46,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -98,7 +100,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -135,7 +137,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
+				Status:          sablier.InstanceStatusError,
 				Message:         "container is unhealthy",
 			},
 			wantErr: nil,
@@ -207,7 +209,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},
@@ -241,8 +243,39 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
+				Status:          sablier.InstanceStatusError,
 				Message:         "container exited with code \"137\"",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "running container with sablier labels",
+			args: args{
+				do: func(pind *pindContainer) (string, error) {
+					c, err := pind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Group:           "myapp",
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
 			},
 			wantErr: nil,
 		},
@@ -258,12 +291,22 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			assert.NilError(t, err)
 
 			tt.want.Name = name
+			tt.want.Provider = "podman"
+			tt.want.Podman = &sablier.PodmanContainerInfo{
+				ID:    name,
+				Image: "sablierapp/mimic:v0.3.3",
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("PodmanProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreFields(sablier.PodmanContainerInfo{}, "Labels"))
+			for k, v := range tt.wantLabels {
+				if got.Podman.Labels[k] != v {
+					t.Errorf("Podman.Labels[%q] = %q, want %q", k, got.Podman.Labels[k], v)
+				}
+			}
 		})
 	}
 }

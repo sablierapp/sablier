@@ -26,10 +26,21 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		}
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
-	extract := func(msg events.Message) string {
-		return strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
+	// "die" events fire while the container still exists (exited state), so we
+	// can inspect to get the full InstanceInfo including Docker-specific fields.
+	build := func(ctx context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
+		name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
+		if name == "" {
+			return sablier.InstanceInfo{}, false
+		}
+		info, err := p.InstanceInspect(ctx, name)
+		if err != nil {
+			p.l.WarnContext(ctx, "inspect after die event failed, using bare info", "container", name, "error", err)
+			return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderDocker}, true
+		}
+		return info, true
 	}
-	return streamEvents(ctx, p.l, dial, extract, linearBackoff)
+	return streamEvents(ctx, p.l, dial, build, linearBackoff)
 }
 
 func linearBackoff(attempt int) time.Duration {
@@ -42,7 +53,7 @@ func streamEvents(
 	ctx context.Context,
 	l *slog.Logger,
 	dial func(ctx context.Context) client.EventsResult,
-	extract func(events.Message) string,
+	build func(context.Context, events.Message) (sablier.InstanceInfo, bool),
 	backoff func(attempt int) time.Duration,
 ) sablier.InstanceEventStream {
 	eventsC := make(chan sablier.InstanceInfo)
@@ -61,7 +72,7 @@ func streamEvents(
 				}
 			}
 
-			if reconnect := consumeEvents(ctx, l, eventsC, dial(ctx), extract); !reconnect {
+			if reconnect := consumeEvents(ctx, l, eventsC, dial(ctx), build); !reconnect {
 				return
 			}
 		}
@@ -69,15 +80,15 @@ func streamEvents(
 	return sablier.InstanceEventStream{Events: eventsC, Err: errC}
 }
 
-// consumeEvents drains an EventsResult, forwarding instance info via the extract
-// function. Returns true when the stream ended and the caller should reconnect,
-// or false when the context was cancelled and the caller should stop.
+// consumeEvents drains an EventsResult, forwarding instance info built by the
+// build function. Returns true when the stream ended and the caller should
+// reconnect, or false when the context was cancelled and the caller should stop.
 func consumeEvents(
 	ctx context.Context,
 	l *slog.Logger,
 	instance chan<- sablier.InstanceInfo,
 	result client.EventsResult,
-	extract func(events.Message) string,
+	build func(context.Context, events.Message) (sablier.InstanceInfo, bool),
 ) (reconnect bool) {
 	for {
 		select {
@@ -87,8 +98,8 @@ func consumeEvents(
 				return true
 			}
 			l.DebugContext(ctx, "event received", "event", msg)
-			if name := extract(msg); name != "" {
-				instance <- sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusNotReady}
+			if info, ok := build(ctx, msg); ok {
+				instance <- info
 			}
 		case err, ok := <-result.Err:
 			if !ok || errors.Is(err, io.EOF) {
