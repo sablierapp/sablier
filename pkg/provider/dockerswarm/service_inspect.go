@@ -21,11 +21,45 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
-	if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks || service.ServiceStatus.DesiredTasks == 0 {
-		return sablier.NotReadyInstanceState(service.Spec.Name, 0, p.desiredReplicas), nil
+	var info sablier.InstanceInfo
+	if service.ServiceStatus.DesiredTasks == 0 {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: 0,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStopped,
+		}
+	} else if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: int32(service.ServiceStatus.RunningTasks),
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusStarting,
+		}
+	} else {
+		info = sablier.InstanceInfo{
+			Name:            service.Spec.Name,
+			CurrentReplicas: p.desiredReplicas,
+			DesiredReplicas: p.desiredReplicas,
+			Status:          sablier.InstanceStatusReady,
+		}
 	}
 
-	return sablier.ReadyInstanceState(service.Spec.Name, p.desiredReplicas), nil
+	labels := service.Spec.Labels
+	sablier.PopulateEnabledAndGroup(&info, labels)
+
+	var image string
+	if service.Spec.TaskTemplate.ContainerSpec != nil {
+		image = service.Spec.TaskTemplate.ContainerSpec.Image
+	}
+	info.Provider = sablier.ProviderSwarm
+	info.Swarm = &sablier.SwarmServiceInfo{
+		ID:     service.ID,
+		Image:  image,
+		Labels: labels,
+	}
+
+	return info, nil
 }
 
 func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {

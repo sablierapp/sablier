@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +34,8 @@ func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfig
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := d.Labels["sablier.enable"]; ok {
+	enabled := d.Labels["sablier.enable"]
+	if enabled == "true" {
 		if g, ok := d.Labels["sablier.group"]; ok {
 			group = g
 		} else {
@@ -44,8 +46,9 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:  parsed.Original,
-		Group: group,
+		Name:    parsed.Original,
+		Group:   group,
+		Enabled: enabled,
 	}
 }
 

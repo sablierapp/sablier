@@ -41,18 +41,26 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 
 	startCalled := make(chan struct{})
 
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 
 	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
 		close(startCalled)
 		return nil
 	})
 
-	sessions.EXPECT().Put(ctx, sablier.NotReadyInstanceState("nginx", 0, 1), time.Minute).Return(nil)
+	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 	assert.Equal(t, info.Name, "nginx")
 
 	select {
@@ -69,7 +77,15 @@ func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
 	startBlocking := make(chan struct{})
 	startCalled := make(chan struct{})
 
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 
 	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
 		close(startCalled)
@@ -77,11 +93,11 @@ func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
 		return nil
 	})
 
-	sessions.EXPECT().Put(ctx, sablier.NotReadyInstanceState("nginx", 0, 1), time.Minute).Return(nil)
+	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	select {
 	case <-startCalled:
@@ -99,7 +115,12 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 	startBlocking := make(chan struct{})
 	startCalled := make(chan struct{})
 
-	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
 
 	// First call: store miss -> triggers requestStart
 	// Second call: store returns the not-ready state written by Put -> hits status != ready path
@@ -107,6 +128,9 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound),
 		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil),
 	)
+
+	// InstanceInspect: exactly once during requestStart (second call must not trigger another)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil).Times(1)
 
 	// InstanceStart: exactly once (second call must not trigger another)
 	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
@@ -121,7 +145,7 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 	// First call — starts the goroutine
 	info1, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	// Wait for the goroutine to enter InstanceStart
 	select {
@@ -133,7 +157,7 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 	// Second call — start still pending, skips inspect, no duplicate InstanceStart
 	info2, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	close(startBlocking)
 }
@@ -142,10 +166,16 @@ func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
 	ctx := t.Context()
 
-	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
 
 	// First call: store miss -> requestStart
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	// Goroutine fails immediately
@@ -153,7 +183,7 @@ func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	// Subsequent calls: store returns the stored not-ready state (realistic behavior).
 	// While goroutine is still running, polling returns not-ready with Put.
@@ -172,12 +202,18 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
 	ctx := t.Context()
 
-	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
 	secondDone := make(chan struct{})
 
-	// All Get/Put calls use AnyTimes since polling may hit them multiple times
+	// All Get/Put/Inspect calls use AnyTimes since polling may hit them multiple times
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).AnyTimes()
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil).AnyTimes()
 
 	gomock.InOrder(
 		// First attempt — fails immediately
@@ -203,7 +239,7 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 	// 3rd call: entry cleared, store miss again -> requestStart retries
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	select {
 	case <-secondDone:
@@ -216,14 +252,23 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
 	ctx := t.Context()
 
-	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
-	ready := sablier.ReadyInstanceState("nginx", 1)
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+	ready := sablier.InstanceInfo{Name: "nginx", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
 
 	// 1st call: store miss -> requestStart (goroutine succeeds)
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	startDone := make(chan struct{})
+	gomock.InOrder(
+		provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil), // pre-start inspect
+		provider.EXPECT().InstanceInspect(ctx, "nginx").Return(ready, nil),       // post-start inspect in not-ready path
+	)
 	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
 		close(startDone)
 		return nil
@@ -231,7 +276,7 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	// Wait for goroutine to finish and self-clean
 	select {
@@ -244,7 +289,6 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 
 	// 2nd call: store returns not-ready, no pending entry exists, goes straight to inspect
 	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
-	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(ready, nil)
 	sessions.EXPECT().Put(ctx, ready, time.Minute).Return(nil)
 
 	info, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
@@ -257,9 +301,15 @@ func TestInstanceRequest_StartTimeoutSurfacesError(t *testing.T) {
 	manager.InstanceStartTimeout = 100 * time.Millisecond
 	ctx := t.Context()
 
-	notReady := sablier.NotReadyInstanceState("nginx", 0, 1)
+	stoppedInfo := sablier.InstanceInfo{
+		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	// InstanceStart blocks until context is cancelled
@@ -270,7 +320,7 @@ func TestInstanceRequest_StartTimeoutSurfacesError(t *testing.T) {
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusNotReady))
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
 	// Subsequent calls: store returns not-ready; polling may get not-ready while
 	// the goroutine is still in progress, or the timeout error once it completes.
@@ -290,7 +340,7 @@ func TestInstanceRequest_ExistingNotReady_InspectsProvider(t *testing.T) {
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{
 		Name:   "nginx",
-		Status: sablier.InstanceStatusNotReady,
+		Status: sablier.InstanceStatusStarting,
 	}, nil)
 
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(sablier.InstanceInfo{

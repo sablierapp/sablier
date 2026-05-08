@@ -60,12 +60,14 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  i1.Spec.Name,
-			Group: "default",
+			Name:    i1.Spec.Name,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  i2.Spec.Name,
-			Group: "my-group",
+			Name:    i2.Spec.Name,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 	}
 	// Assert go is equal to want

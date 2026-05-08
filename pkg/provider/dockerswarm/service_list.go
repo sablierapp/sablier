@@ -39,7 +39,8 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	var group string
 
-	if _, ok := s.Spec.Labels["sablier.enable"]; ok {
+	enabled := s.Spec.Labels["sablier.enable"]
+	if enabled == "true" {
 		if g, ok := s.Spec.Labels["sablier.group"]; ok {
 			group = g
 		} else {
@@ -48,8 +49,9 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:  s.Spec.Name,
-		Group: group,
+		Name:    s.Spec.Name,
+		Group:   group,
+		Enabled: enabled,
 	}
 }
 

@@ -74,20 +74,24 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 
 	want := []sablier.InstanceConfiguration{
 		{
-			Name:  kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "default",
+			Name:    kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "my-group",
+			Name:    kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "default",
+			Name:    kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "default",
+			Enabled: "true",
 		},
 		{
-			Name:  kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group: "my-group",
+			Name:    kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			Group:   "my-group",
+			Enabled: "true",
 		},
 	}
 	// Assert go is equal to want

@@ -48,6 +48,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Provider, "kubernetes")
+			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -65,6 +67,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Provider, "kubernetes")
+			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -86,6 +90,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Provider, "kubernetes")
+			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -104,6 +110,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Provider, "kubernetes")
+			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}

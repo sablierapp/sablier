@@ -39,7 +39,8 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 	var group string
 
-	if _, ok := c.Labels["sablier.enable"]; ok {
+	enabled := c.Labels["sablier.enable"]
+	if enabled == "true" {
 		if g, ok := c.Labels["sablier.group"]; ok {
 			group = g
 		} else {
@@ -48,8 +49,9 @@ func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:  strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Group: group,
+		Name:    strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
+		Group:   group,
+		Enabled: enabled,
 	}
 }
 

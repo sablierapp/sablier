@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
@@ -26,10 +27,11 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "created container",
@@ -45,7 +47,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -99,7 +101,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -137,7 +139,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
+				Status:          sablier.InstanceStatusError,
 				Message:         "container is unhealthy",
 			},
 			wantErr: nil,
@@ -205,7 +207,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -238,7 +240,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},
@@ -271,8 +273,39 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
+				Status:          sablier.InstanceStatusError,
 				Message:         "container exited with code \"137\"",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "running container with sablier labels",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Group:           "myapp",
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
 			},
 			wantErr: nil,
 		},
@@ -288,12 +321,22 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			assert.NilError(t, err)
 
 			tt.want.Name = name
+			tt.want.Provider = "docker"
+			tt.want.Docker = &sablier.DockerContainerInfo{
+				ID:    name,
+				Image: "sablierapp/mimic:v0.3.3",
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("DockerClassicProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreFields(sablier.DockerContainerInfo{}, "Labels"))
+			for k, v := range tt.wantLabels {
+				if got.Docker.Labels[k] != v {
+					t.Errorf("Docker.Labels[%q] = %q, want %q", k, got.Docker.Labels[k], v)
+				}
+			}
 		})
 	}
 }
