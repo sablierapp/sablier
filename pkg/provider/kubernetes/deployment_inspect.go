@@ -48,11 +48,15 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 		image = d.Spec.Template.Spec.Containers[0].Image
 	}
 	info.Provider = sablier.ProviderKubernetes
+	labels := d.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      "deployment",
 		Image:     image,
-		Labels:    d.Labels,
+		Labels:    labels,
 	}
 
 	return info, nil

@@ -44,11 +44,15 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		image = ss.Spec.Template.Spec.Containers[0].Image
 	}
 	info.Provider = sablier.ProviderKubernetes
+	labels := ss.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      "statefulset",
 		Image:     image,
-		Labels:    ss.Labels,
+		Labels:    labels,
 	}
 
 	return info, nil

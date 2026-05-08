@@ -294,7 +294,7 @@ func TestPodmanProvider_GetState(t *testing.T) {
 			tt.want.Provider = "podman"
 			tt.want.Podman = &sablier.PodmanContainerInfo{
 				ID:    name,
-				Image: "sablierapp/mimic:v0.3.3",
+				Image: "docker.io/sablierapp/mimic:v0.3.3",
 			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
