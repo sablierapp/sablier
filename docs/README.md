@@ -17,7 +17,7 @@ This allows you to start your containers on demand and shut them down automatica
 Throughout this documentation, we use these terms to remain provider-agnostic:
 
 - **Session**: A session is a set of **instances**
-- **Instance**: An instance is either a Docker container, Docker Swarm service, Kubernetes deployment, or Kubernetes StatefulSet
+- **Instance**: An instance is either a Docker container, Docker Swarm service, Kubernetes deployment, Kubernetes StatefulSet, or Proxmox LXC container
 
 ## Credits
 

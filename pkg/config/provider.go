@@ -7,12 +7,13 @@ import (
 // Provider holds the provider configurations
 type Provider struct {
 	// The provider name to use
-	// It can be either docker, swarm or kubernetes. Defaults to "docker"
+	// It can be either docker, swarm, kubernetes, podman or proxmox_lxc. Defaults to "docker"
 	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	Kubernetes        Kubernetes
 	Podman            Podman
 	Docker            Docker
+	ProxmoxLXC        ProxmoxLXC `mapstructure:"PROXMOX_LXC" yaml:"proxmox-lxc,omitempty"`
 }
 
 type Kubernetes struct {
@@ -39,7 +40,19 @@ type Docker struct {
 	Strategy string `mapstructure:"STRATEGY" yaml:"strategy,omitempty" default:"stop"`
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman"}
+// ProxmoxLXC holds the Proxmox VE LXC provider configuration
+type ProxmoxLXC struct {
+	// URL is the Proxmox VE API endpoint (e.g. "https://proxmox:8006/api2/json")
+	URL string `mapstructure:"URL" yaml:"url,omitempty"`
+	// TokenID is the API token identifier (e.g. "root@pam!sablier")
+	TokenID string `mapstructure:"TOKEN_ID" yaml:"token-id,omitempty"`
+	// TokenSecret is the API token secret UUID
+	TokenSecret string `mapstructure:"TOKEN_SECRET" yaml:"token-secret,omitempty"`
+	// TLSInsecure skips TLS certificate verification (useful for self-signed certificates)
+	TLSInsecure bool `mapstructure:"TLS_INSECURE" yaml:"tls-insecure,omitempty" default:"false"`
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc"}
 var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
@@ -57,6 +70,7 @@ func NewProviderConfig() Provider {
 		Docker: Docker{
 			Strategy: "stop",
 		},
+		ProxmoxLXC: ProxmoxLXC{},
 	}
 }
 
@@ -66,6 +80,12 @@ func (provider Provider) IsValid() error {
 			// Validate Docker-specific settings when using Docker provider
 			if p == "docker" {
 				if err := provider.Docker.IsValid(); err != nil {
+					return err
+				}
+			}
+			// Validate Proxmox LXC-specific settings
+			if p == "proxmox_lxc" {
+				if err := provider.ProxmoxLXC.IsValid(); err != nil {
 					return err
 				}
 			}
@@ -82,6 +102,19 @@ func (docker Docker) IsValid() error {
 		}
 	}
 	return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
+}
+
+func (p ProxmoxLXC) IsValid() error {
+	if p.URL == "" {
+		return fmt.Errorf("proxmox_lxc provider requires a URL")
+	}
+	if p.TokenID == "" {
+		return fmt.Errorf("proxmox_lxc provider requires a token ID")
+	}
+	if p.TokenSecret == "" {
+		return fmt.Errorf("proxmox_lxc provider requires a token secret")
+	}
+	return nil
 }
 
 func GetProviders() []string {
