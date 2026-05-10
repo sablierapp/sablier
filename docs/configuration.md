@@ -29,6 +29,8 @@ sablier --configFile=path/to/myconfigfile.yml
 provider:
   # Provider to use to manage containers (docker, swarm, kubernetes)
   name: docker
+  # Ignore instances without sablier.enable=true during start, stop, and event operations
+  ignore-unlabeled: false
   docker:
     # Strategy to use for stopping Docker containers: stop or pause (default: stop)
     strategy: stop

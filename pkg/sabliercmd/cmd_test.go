@@ -70,6 +70,25 @@ func TestPrecedence(t *testing.T) {
 		assert.Equal(t, string(wantConfig), gotOutput)
 	})
 
+	t.Run("config file sets ignore unlabeled", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "sablier.yml")
+		err := os.WriteFile(configPath, []byte("provider:\n  ignore-unlabeled: true\n"), 0o600)
+		require.NoError(t, err, "error writing test config file")
+
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{
+			"--configFile", configPath,
+			"start",
+		})
+		err = cmd.Execute()
+		require.NoError(t, err)
+
+		assert.Assert(t, strings.Contains(output.String(), "\"IgnoreUnlabeled\": true"))
+	})
+
 	t.Run("legacy env var", func(t *testing.T) {
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
