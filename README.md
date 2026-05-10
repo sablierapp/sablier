@@ -27,6 +27,7 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Docker Swarm](#docker-swarm)
   - [Podman](#podman)
   - [Kubernetes](#kubernetes)
+  - [Proxmox LXC](#proxmox-lxc)
 - [Usage with Reverse Proxies](#usage-with-reverse-proxies)
   - [Apache APISIX](#apache-apisix)
   - [Caddy](#caddy)
@@ -247,8 +248,8 @@ sablier --configFile=path/to/myconfigfile.yml
 
 ```yaml
 provider:
-  # Provider to use to manage containers (docker, swarm, kubernetes)
-  name: docker 
+  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc)
+  name: docker
 server:
   # The server port to use
   port: 10000 
@@ -389,6 +390,21 @@ Sablier provides native Kubernetes support for managing deployments, scaling wor
 - Supports in-cluster and out-of-cluster configuration
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/kubernetes)**
+
+---
+
+### Proxmox LXC
+
+<img src="./docs/assets/img/proxmox.png" alt="Proxmox" width="100" align="right" />
+
+Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmox API.
+
+**Features:**
+- Connects to the Proxmox VE API with token authentication
+- Starts/Stops LXC containers
+- Discovers containers by `sablier` tag
+
+📚 **[Full Documentation](https://sablierapp.dev/#/providers/proxmox_lxc)**
 
 ## Usage with Reverse Proxies
 

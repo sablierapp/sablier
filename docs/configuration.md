@@ -27,7 +27,7 @@ sablier --configFile=path/to/myconfigfile.yml
 
 ```yaml
 provider:
-  # Provider to use to manage containers (docker, swarm, kubernetes)
+  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc)
   name: docker
   docker:
     # Strategy to use for stopping Docker containers: stop or pause (default: stop)
@@ -145,7 +145,7 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
 ```
   -h, --help                                                  help for start
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
-      --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes] (default "docker")
+      --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
       --server.base-path string                               The base path for the API (default "/")
       --server.metrics.enabled                                Enable the Prometheus /metrics endpoint (default false)
       --server.port int                                       The server port to use (default 10000)
