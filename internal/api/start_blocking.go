@@ -37,6 +37,8 @@ func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
+		recordSessionRequest(s.Metrics, "blocking", request.Group)
+
 		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {

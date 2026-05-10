@@ -101,6 +101,11 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 	s.pendingStarts[name] = ps
 	s.pendingMu.Unlock()
 
+	// Begin metrics tracking BEFORE dispatching the goroutine.
+	// Idempotent — if a previous Begin was already recorded, it is preserved.
+	s.metrics.RecordReadyWaitBegin(name)
+	s.metrics.RecordActiveInstance(name)
+
 	// Detach from the request context to avoid retaining HTTP request values,
 	// but use a bounded timeout to prevent goroutine leaks.
 	startCtx, cancel := context.WithTimeout(context.Background(), s.InstanceStartTimeout)
@@ -108,10 +113,13 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 	go func() {
 		defer cancel()
 		defer close(ps.done)
+		startedAt := time.Now()
 		if err := s.provider.InstanceStart(startCtx, name); err != nil {
 			ps.err = err
+			s.metrics.RecordInstanceStartFailure(name)
 			s.l.Error("async instance start failed", slog.String("instance", name), slog.Any("error", err))
 		} else {
+			s.metrics.RecordInstanceStartEnd(name, time.Since(startedAt))
 			s.l.InfoContext(ctx, "instance is ready", slog.String("instance", name))
 			// Success — clean up immediately so the entry doesn't linger
 			s.pendingMu.Lock()
@@ -159,6 +167,9 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 			state, err = s.provider.InstanceInspect(ctx, name)
 			if err != nil {
 				return InstanceInfo{}, err
+			}
+			if state.Status == InstanceStatusReady {
+				s.metrics.RecordReadyWaitEnd(name)
 			}
 			s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", string(state.Status)))
 		}

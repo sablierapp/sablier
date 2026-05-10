@@ -49,6 +49,8 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
+		recordSessionRequest(s.Metrics, "dynamic", request.Group)
+
 		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
