@@ -93,6 +93,57 @@ func TestDockerSwarmProvider_NotifyInstanceStopped(t *testing.T) {
 	})
 }
 
+func TestDockerSwarmProvider_NotifyInstanceStopped_UnlabeledWhenIgnoreDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	dind := setupDinD(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t), false)
+	assert.NilError(t, err)
+
+	waitC := make(chan string)
+	p.NotifyInstanceStopped(ctx, waitC)
+	<-time.After(time.Second)
+
+	t.Run("unlabeled service scale to zero sends notification", func(t *testing.T) {
+		unlabeled, err := dind.CreateMimic(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		service, _, err := dind.client.ServiceInspectWithRaw(ctx, unlabeled.ID, swarm.ServiceInspectOptions{})
+		assert.NilError(t, err)
+
+		replicas := uint64(0)
+		service.Spec.Mode.Replicated.Replicas = &replicas
+
+		_, err = p.Client.ServiceUpdate(ctx, service.ID, service.Version, service.Spec, swarm.ServiceUpdateOptions{})
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, service.Spec.Name)
+	})
+
+	t.Run("unlabeled service remove sends notification", func(t *testing.T) {
+		unlabeled, err := dind.CreateMimic(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		service, _, err := dind.client.ServiceInspectWithRaw(ctx, unlabeled.ID, swarm.ServiceInspectOptions{})
+		assert.NilError(t, err)
+
+		err = p.Client.ServiceRemove(ctx, service.ID)
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, service.Spec.Name)
+	})
+}
+
 func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
 	t.Helper()
 

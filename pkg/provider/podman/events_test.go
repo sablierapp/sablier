@@ -54,6 +54,39 @@ func TestPodmanProvider_NotifyInstanceStopped(t *testing.T) {
 	assertNoInstanceStopped(t, waitC)
 }
 
+func TestPodmanProvider_NotifyInstanceStopped_UnlabeledWhenIgnoreDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	pind := setupPinD(t)
+	p, err := podman.New(pind.connText, slogt.New(t), false)
+	assert.NilError(t, err)
+
+	c, err := pind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	inspected, err := containers.Inspect(pind.connText, c.ID, nil)
+	assert.NilError(t, err)
+
+	err = containers.Start(pind.connText, c.ID, nil)
+	assert.NilError(t, err)
+
+	<-time.After(1 * time.Second)
+
+	waitC := make(chan string)
+	go p.NotifyInstanceStopped(ctx, waitC)
+
+	err = containers.Stop(pind.connText, c.ID, nil)
+	assert.NilError(t, err)
+
+	name := waitForInstanceStopped(t, waitC)
+
+	assert.Equal(t, name, inspected.Name)
+}
+
 func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
 	t.Helper()
 

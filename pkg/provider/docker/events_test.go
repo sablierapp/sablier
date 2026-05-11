@@ -56,6 +56,39 @@ func TestDockerClassicProvider_NotifyInstanceStopped(t *testing.T) {
 	assertNoInstanceStopped(t, waitC)
 }
 
+func TestDockerClassicProvider_NotifyInstanceStopped_UnlabeledWhenIgnoreDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := setupDinD(t)
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop", false)
+	assert.NilError(t, err)
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	inspected, err := dind.client.ContainerInspect(ctx, c.ID)
+	assert.NilError(t, err)
+
+	err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+	assert.NilError(t, err)
+
+	<-time.After(1 * time.Second)
+
+	waitC := make(chan string)
+	go p.NotifyInstanceStopped(ctx, waitC)
+
+	err = dind.client.ContainerStop(ctx, c.ID, container.StopOptions{})
+	assert.NilError(t, err)
+
+	name := waitForInstanceStopped(t, waitC)
+
+	assert.Equal(t, "/"+name, inspected.Name)
+}
+
 func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
 	t.Helper()
 

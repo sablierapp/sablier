@@ -157,6 +157,92 @@ func TestKubernetesProvider_NotifyInstanceStopped(t *testing.T) {
 	})
 }
 
+func TestKubernetesProvider_NotifyInstanceStopped_UnlabeledWhenIgnoreDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	defer cancel()
+	kind := setupKinD(t, ctx)
+	conf := config.NewProviderConfig().Kubernetes
+	conf.QPS = 100
+	conf.Burst = 100
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf, false)
+	assert.NilError(t, err)
+
+	waitC := make(chan string)
+	go p.NotifyInstanceStopped(ctx, waitC)
+
+	t.Run("unlabeled deployment scale to zero sends notification", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		assert.NilError(t, err)
+
+		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(ctx, d.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+
+	t.Run("unlabeled deployment delete sends notification", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		assert.NilError(t, err)
+
+		err = p.Client.AppsV1().Deployments(d.Namespace).Delete(ctx, d.Name, metav1.DeleteOptions{})
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+
+	t.Run("unlabeled statefulSet scale to zero sends notification", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		assert.NilError(t, err)
+
+		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(ctx, ss.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+
+	t.Run("unlabeled statefulSet delete sends notification", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		assert.NilError(t, err)
+
+		err = p.Client.AppsV1().StatefulSets(ss.Namespace).Delete(ctx, ss.Name, metav1.DeleteOptions{})
+		assert.NilError(t, err)
+
+		name := waitForInstanceStopped(t, waitC)
+
+		assert.Equal(t, name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+	})
+}
+
 func waitForInstanceStopped(t *testing.T, waitC <-chan string) string {
 	t.Helper()
 
