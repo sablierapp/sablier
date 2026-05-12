@@ -22,23 +22,21 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name            string
-		args            args
-		ignoreUnlabeled bool
-		err             error
+		name string
+		args args
+		err  error
 	}{
 		{
-			name: "non-existing container stop returns provider error",
+			name: "non existing container stop",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("No such container: non-existent"),
+			err: fmt.Errorf("cannot stop container non-existent: Error response from daemon: No such container: non-existent"),
 		},
 		{
-			name: "unlabeled container stop is rejected when ignoreUnlabeled is enabled",
+			name: "container stop as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{})
@@ -54,55 +52,14 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("is not managed by sablier"),
-		},
-		{
-			name: "unlabeled container stop succeeds when ignoreUnlabeled is disabled",
-			args: args{
-				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					return c.ID, nil
-				},
-			},
-			ignoreUnlabeled: false,
-			err:             nil,
-		},
-		{
-			name: "labeled container stop succeeds when ignoreUnlabeled is enabled",
-			args: args{
-				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
-					if err != nil {
-						return "", err
-					}
-
-					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					return c.ID, nil
-				},
-			},
-			ignoreUnlabeled: true,
-			err:             nil,
+			err: nil,
 		},
 	}
 	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := docker.New(ctx, c.client, slogt.New(t), "stop", tt.ignoreUnlabeled)
+			p, err := docker.New(ctx, c.client, slogt.New(t), "stop", false)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
@@ -110,7 +67,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 
 			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
-				assert.ErrorContains(t, err, tt.err.Error())
+				assert.Error(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}
@@ -134,19 +91,19 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 		err  error
 	}{
 		{
-			name: "non-existing container pause returns provider error",
+			name: "non existing container pause",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("No such container: non-existent"),
+			err: fmt.Errorf("cannot pause container non-existent: Error response from daemon: No such container: non-existent"),
 		},
 		{
-			name: "labeled container pause succeeds when ignoreUnlabeled is enabled",
+			name: "container pause as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -166,7 +123,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := docker.New(ctx, c.client, slogt.New(t), "pause", true)
+			p, err := docker.New(ctx, c.client, slogt.New(t), "pause", false)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
@@ -174,7 +131,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 
 			err = p.InstanceStop(t.Context(), name)
 			if tt.err != nil {
-				assert.ErrorContains(t, err, tt.err.Error())
+				assert.Error(t, err, tt.err.Error())
 			} else {
 				assert.NilError(t, err)
 			}

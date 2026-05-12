@@ -70,25 +70,6 @@ func TestPrecedence(t *testing.T) {
 		assert.Equal(t, string(wantConfig), gotOutput)
 	})
 
-	t.Run("config file sets ignore unlabeled", func(t *testing.T) {
-		configPath := filepath.Join(t.TempDir(), "sablier.yml")
-		err := os.WriteFile(configPath, []byte("provider:\n  ignore-unlabeled: true\n"), 0o600)
-		require.NoError(t, err, "error writing test config file")
-
-		sabliercmd.ResetConfig()
-		cmd := sabliercmd.NewRootCommand()
-		output := &bytes.Buffer{}
-		cmd.SetOut(output)
-		cmd.SetArgs([]string{
-			"--configFile", configPath,
-			"start",
-		})
-		err = cmd.Execute()
-		require.NoError(t, err)
-
-		assert.Assert(t, strings.Contains(output.String(), "\"IgnoreUnlabeled\": true"))
-	})
-
 	t.Run("legacy env var", func(t *testing.T) {
 		setEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
 		defer unsetEnvsFromFile(filepath.Join(testDir, "testdata", "config.legacy.env"))
@@ -148,7 +129,6 @@ func TestPrecedence(t *testing.T) {
 			"--configFile", filepath.Join(testDir, "testdata", "config.yml"),
 			"start",
 			"--provider.name", "cli",
-			"--provider.ignore-unlabeled",
 			"--provider.kubernetes.qps", "256",
 			"--provider.kubernetes.burst", "512",
 			"--provider.kubernetes.delimiter", "_",
@@ -173,6 +153,39 @@ func TestPrecedence(t *testing.T) {
 		gotOutput := output.String()
 
 		assert.Equal(t, string(wantConfig), gotOutput)
+	})
+}
+
+func TestIgnoreUnlabeledConfig(t *testing.T) {
+	sabliercmd.SetStartCommand(mockStartCommand)
+	defer sabliercmd.ResetStartCommand()
+
+	t.Run("config file", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "config.yml")
+		err := os.WriteFile(configPath, []byte("provider:\n  ignore-unlabeled: true\n"), 0o600)
+		require.NoError(t, err)
+
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{"--configFile", configPath, "start"})
+
+		_ = cmd.Execute()
+
+		assert.Assert(t, strings.Contains(output.String(), "\"IgnoreUnlabeled\": true"))
+	})
+
+	t.Run("flag", func(t *testing.T) {
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{"start", "--provider.ignore-unlabeled"})
+
+		_ = cmd.Execute()
+
+		assert.Assert(t, strings.Contains(output.String(), "\"IgnoreUnlabeled\": true"))
 	})
 }
 
