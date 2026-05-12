@@ -11,8 +11,8 @@ import (
 )
 
 func session() *sablier.SessionState {
-	state := sablier.ReadyInstanceState("test", 1)
-	state2 := sablier.ReadyInstanceState("test2", 1)
+	state := sablier.InstanceInfo{Name: "test", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+	state2 := sablier.InstanceInfo{Name: "test2", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
 	return &sablier.SessionState{
 		Instances: map[string]sablier.InstanceInfoWithError{
 			"test": {

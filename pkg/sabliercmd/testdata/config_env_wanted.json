@@ -1,7 +1,10 @@
 {
   "Server": {
     "Port": 2222,
-    "BasePath": "/envvar/"
+    "BasePath": "/envvar/",
+    "Metrics": {
+      "Enabled": false
+    }
   },
   "Storage": {
     "File": "/tmp/envvar.json"
@@ -20,6 +23,12 @@
     },
     "Docker": {
       "Strategy": "pause"
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
     }
   },
   "Sessions": {

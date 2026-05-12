@@ -1,7 +1,10 @@
 {
   "Server": {
     "Port": 1111,
-    "BasePath": "/configfile/"
+    "BasePath": "/configfile/",
+    "Metrics": {
+      "Enabled": false
+    }
   },
   "Storage": {
     "File": "/tmp/configfile.json"
@@ -20,6 +23,12 @@
     },
     "Docker": {
       "Strategy": "pause"
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
     }
   },
   "Sessions": {

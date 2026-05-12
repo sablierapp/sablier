@@ -20,16 +20,18 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
 		do func(dind *kindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "deployment with 1/1 replicas",
@@ -75,7 +77,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -110,12 +112,47 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "deployment with sablier labels",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Group:           "myapp",
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
 			},
 			wantErr: nil,
 		},
 	}
-	c := setupKinD(t, ctx)
+	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -125,7 +162,25 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
+			// Clean up the deployment created by this subtest.
+			if parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"}); parseErr == nil {
+				t.Cleanup(func() {
+					_ = c.client.AppsV1().Deployments(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
+				})
+			}
+
 			tt.want.Name = name
+			tt.want.Provider = "kubernetes"
+			labels := tt.wantLabels
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			tt.want.Kubernetes = &sablier.KubernetesWorkloadInfo{
+				Namespace: "default",
+				Kind:      "deployment",
+				Image:     "sablierapp/mimic:v0.3.3",
+				Labels:    labels,
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)

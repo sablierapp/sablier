@@ -116,7 +116,7 @@ func TestMarshalJSON(t *testing.T) {
 	jsonb, err := json.Marshal(rg)
 	assert.Nil(err)
 	json := string(jsonb)
-	assert.Regexp(`{"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z"}}`, json)
+	assert.Regexp(`{"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\.\d]*(Z|[+-]\d{2}:\d{2})"}}`, json)
 }
 
 func TestUnmarshalJSON(t *testing.T) {

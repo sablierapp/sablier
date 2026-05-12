@@ -2,10 +2,11 @@ package sablier_test
 
 import (
 	"context"
-	"github.com/sablierapp/sablier/pkg/sablier"
-	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+	"go.uber.org/mock/gomock"
 
 	"gotest.tools/v3/assert"
 )
@@ -35,7 +36,7 @@ func TestSessionState_IsReady(t *testing.T) {
 			fields: fields{
 				Instances: createMap([]sablier.InstanceInfo{
 					{Name: "nginx", Status: sablier.InstanceStatusReady},
-					{Name: "apache", Status: sablier.InstanceStatusNotReady},
+					{Name: "apache", Status: sablier.InstanceStatusStarting},
 				}),
 			},
 			want: false,
@@ -51,7 +52,7 @@ func TestSessionState_IsReady(t *testing.T) {
 			name: "one instance has an error",
 			fields: fields{
 				Instances: createMap([]sablier.InstanceInfo{
-					{Name: "nginx-error", Status: sablier.InstanceStatusUnrecoverable, Message: "connection timeout"},
+					{Name: "nginx-error", Status: sablier.InstanceStatusError, Message: "connection timeout"},
 					{Name: "apache", Status: sablier.InstanceStatusReady},
 				}),
 			},
@@ -96,10 +97,10 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		manager, store, provider := setupSablier(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil)
+		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -118,10 +119,10 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 
 	t.Run("request ready session is cancelled by timeout", func(t *testing.T) {
 		manager, store, provider := setupSablier(t)
-		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil).AnyTimes()
+		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusNotReady}, nil)
+		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
 
 		errchan := make(chan error)
 		go func() {

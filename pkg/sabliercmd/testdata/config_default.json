@@ -1,7 +1,10 @@
 {
   "Server": {
     "Port": 10000,
-    "BasePath": "/"
+    "BasePath": "/",
+    "Metrics": {
+      "Enabled": false
+    }
   },
   "Storage": {
     "File": ""
@@ -20,6 +23,12 @@
     },
     "Docker": {
       "Strategy": "stop"
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
     }
   },
   "Sessions": {

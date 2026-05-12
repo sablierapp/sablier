@@ -2,12 +2,12 @@ package dockerswarm_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/swarm"
+	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -19,74 +19,35 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name            string
-		args            args
-		ignoreUnlabeled bool
-		want            sablier.InstanceInfo
-		wantErr         error
+		name    string
+		args    args
+		want    sablier.InstanceInfo
+		wantErr error
 	}{
 		{
-			name: "unlabeled service stop is rejected when ignoreUnlabeled is enabled",
-			args: args{
-				do: func(dind *dindContainer) (string, error) {
-					s, err := dind.CreateMimic(ctx, MimicOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					return service.Spec.Name, nil
-				},
-			},
-			ignoreUnlabeled: true,
-			wantErr:         fmt.Errorf("is not managed by sablier"),
-		},
-		{
-			name: "unlabeled service stop succeeds when ignoreUnlabeled is disabled",
-			args: args{
-				do: func(dind *dindContainer) (string, error) {
-					s, err := dind.CreateMimic(ctx, MimicOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					return service.Spec.Name, nil
-				},
-			},
-			ignoreUnlabeled: false,
-			wantErr:         nil,
-		},
-		{
-			name: "labeled service stop succeeds from 1/1 replicas when ignoreUnlabeled is enabled",
+			name: "service with 1/1 replicas",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
 						Cmd:         []string{"/mimic"},
 						Healthcheck: nil,
-						Labels:      map[string]string{"sablier.enable": "true"},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, err
 				},
@@ -96,11 +57,10 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
 			},
-			ignoreUnlabeled: true,
-			wantErr:         nil,
+			wantErr: nil,
 		},
 		{
-			name: "labeled service stop succeeds from 0/1 replicas when ignoreUnlabeled is enabled",
+			name: "service with 0/1 replicas",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
@@ -113,16 +73,16 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 							StartInterval: time.Second,
 							Retries:       10,
 						},
-						Labels: map[string]string{"sablier.enable": "true"},
 					})
 					if err != nil {
 						return "", err
 					}
 
-					service, _, err := dind.client.ServiceInspectWithRaw(ctx, s.ID, swarm.ServiceInspectOptions{})
+					inspectResult, err := dind.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
 					if err != nil {
 						return "", err
 					}
+					service := inspectResult.Service
 
 					return service.Spec.Name, nil
 				},
@@ -130,33 +90,34 @@ func TestDockerSwarmProvider_Stop(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
-			ignoreUnlabeled: true,
-			wantErr:         nil,
+			wantErr: nil,
 		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := dockerswarm.New(ctx, c.client, slogt.New(t), tt.ignoreUnlabeled)
+			p, err := dockerswarm.New(ctx, c.client, slogt.New(t), false)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
+			t.Cleanup(func() {
+				_, _ = sharedDinD.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+			})
 
 			tt.want.Name = name
 			err = p.InstanceStop(ctx, name)
-			if tt.wantErr != nil {
-				assert.ErrorContains(t, err, tt.wantErr.Error())
+			if !cmp.Equal(err, tt.wantErr) {
+				t.Errorf("Provider.InstanceStop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.NilError(t, err)
 
-			service, _, err := c.client.ServiceInspectWithRaw(ctx, name, swarm.ServiceInspectOptions{})
+			service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{})
 			assert.NilError(t, err)
-			assert.Equal(t, *service.Spec.Mode.Replicated.Replicas, uint64(0))
+			assert.Equal(t, *service.Service.Spec.Mode.Replicated.Replicas, uint64(0))
 		})
 	}
 }

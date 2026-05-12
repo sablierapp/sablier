@@ -49,6 +49,8 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
+		recordSessionRequest(s.Metrics, "dynamic", request.Group)
+
 		var sessionState *sablier.SessionState
 		var err error
 		if len(request.Names) > 0 {
@@ -114,7 +116,7 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 		if v.Error != nil {
 			instances = append(instances, theme.Instance{
 				Name:   name,
-				Status: string(sablier.InstanceStatusUnrecoverable),
+				Status: string(sablier.InstanceStatusError),
 				Error:  v.Error,
 			})
 			continue
@@ -144,5 +146,10 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
 		Error:           err,
+		Provider:        instanceState.Provider,
+		Docker:          instanceState.Docker,
+		Swarm:           instanceState.Swarm,
+		Kubernetes:      instanceState.Kubernetes,
+		Podman:          instanceState.Podman,
 	}
 }

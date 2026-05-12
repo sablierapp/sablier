@@ -4,9 +4,16 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+
+	"github.com/sablierapp/sablier/pkg/metrics"
 )
 
-func OnInstanceExpired(ctx context.Context, provider Provider, logger *slog.Logger) func(string) {
+// OnInstanceExpired returns a store-expiration callback that stops the
+// instance via the provider and records the corresponding metrics.
+//
+// recorder may be metrics.Noop{} when metrics are disabled — call sites
+// must always pass a non-nil recorder.
+func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.Recorder, logger *slog.Logger) func(string) {
 	return func(_key string) {
 		go func(key string) {
 			logger.InfoContext(ctx, "instance expired", slog.String("instance", key))
@@ -18,6 +25,9 @@ func OnInstanceExpired(ctx context.Context, provider Provider, logger *slog.Logg
 				}
 				logger.ErrorContext(ctx, "instance expired could not be stopped from provider", slog.String("instance", key), slog.Any("error", err))
 			}
+			recorder.RecordInstanceStop(key, "expired")
+			recorder.RecordInactiveInstance(key)
+			recorder.DiscardReadyWait(key)
 		}(_key)
 	}
 }

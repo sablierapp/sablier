@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Container represents the Podman in Docker container type used in the module
@@ -24,9 +25,6 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 		ExposedPorts: []string{
 			"34451/tcp",
 		},
-		ConfigModifier: func(config *container.Config) {
-			// config.User = "podman"
-		},
 		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.Privileged = true
 			// Disable cgroup v2 for the container
@@ -34,7 +32,30 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 			hc.SecurityOpt = []string{"label=disable", "seccomp=unconfined", "apparmor=unconfined"}
 		},
 		Cmd: []string{
-			"bash", "-c", "rm -rf /etc/containers/storage.conf && podman system reset -f && podman --log-level trace system service tcp://0.0.0.0:34451 -t 0",
+			"bash", "-c", `
+set -u
+rm -rf /etc/containers/storage.conf
+podman system reset -f >/dev/null 2>&1 || true
+
+# Podman normally schedules healthchecks via per-container systemd timers
+# (podman-healthcheck@.timer). Inside this PinD container systemd is not PID 1,
+# so those timers never fire. This background poller mimics that behavior:
+# every second it invokes "podman healthcheck run" on each running container.
+# Containers without a healthcheck simply error out (suppressed). Each
+# healthcheck is dispatched concurrently so a slow container can't starve the
+# others when many tests run in parallel.
+healthcheck_poller() {
+    while true; do
+        for cid in $(podman ps -q 2>/dev/null); do
+            podman healthcheck run "$cid" >/dev/null 2>&1 &
+        done
+        wait
+        sleep 0.25
+    done
+}
+healthcheck_poller &
+
+exec podman --log-level info system service tcp://0.0.0.0:34451 -t 0`,
 		},
 		WaitingFor: wait.ForListeningPort("34451/tcp"),
 	}
@@ -78,6 +99,9 @@ func (c *Container) LoadImage(ctx context.Context, image string) (err error) {
 	imagesTar, err := os.CreateTemp(os.TempDir(), "image*.tar")
 	if err != nil {
 		return fmt.Errorf("create temporary images file: %w", err)
+	}
+	if err = imagesTar.Close(); err != nil {
+		return fmt.Errorf("close temporary images file: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, os.Remove(imagesTar.Name()))

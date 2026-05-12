@@ -15,6 +15,7 @@ func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -40,7 +41,7 @@ func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 			want: fmt.Errorf("unsupported kind \"service\" must be one of \"deployment\", \"statefulset\""),
 		},
 	}
-	c := setupKinD(t, ctx)
+	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

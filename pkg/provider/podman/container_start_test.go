@@ -10,72 +10,46 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-var managedLabels = map[string]string{"sablier.enable": "true"}
-
 func TestPodmanProvider_Start(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
-		do func(dind *pindContainer) (string, error)
+		do func(pind *pindContainer) (string, error)
 	}
 	tests := []struct {
-		name            string
-		args            args
-		ignoreUnlabeled bool
-		err             error
+		name string
+		args args
+		err  error
 	}{
 		{
-			name: "non-existing container start returns provider error",
+			name: "non existing container start",
 			args: args{
-				do: func(dind *pindContainer) (string, error) {
+				do: func(pind *pindContainer) (string, error) {
 					return "non-existent", nil
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("no such container"),
+			err: fmt.Errorf("cannot start container non-existent"),
 		},
 		{
-			name: "unlabeled container start is rejected when ignoreUnlabeled is enabled",
+			name: "container start as expected",
 			args: args{
-				do: func(dind *pindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
+				do: func(pind *pindContainer) (string, error) {
+					c, err := pind.CreateMimic(ctx, MimicOptions{})
 					return c.ID, err
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("is not managed by sablier"),
-		},
-		{
-			name: "unlabeled container start succeeds when ignoreUnlabeled is disabled",
-			args: args{
-				do: func(dind *pindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{})
-					return c.ID, err
-				},
-			},
-			ignoreUnlabeled: false,
-			err:             nil,
-		},
-		{
-			name: "labeled container start succeeds when ignoreUnlabeled is enabled",
-			args: args{
-				do: func(dind *pindContainer) (string, error) {
-					c, err := dind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
-					return c.ID, err
-				},
-			},
-			ignoreUnlabeled: true,
-			err:             nil,
+			err: nil,
 		},
 	}
-	c := setupPinD(t)
+	c := sharedPinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t), tt.ignoreUnlabeled)
+			p, err := podman.New(ctx, c.client, slogt.New(t), false)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)

@@ -72,11 +72,52 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid proxmox_lxc provider",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL:         "https://proxmox:8006/api2/json",
+					TokenID:     "root@pam!sablier",
+					TokenSecret: "secret",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "proxmox_lxc provider missing url",
+			provider: Provider{
+				Name:       "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a URL"),
+		},
+		{
+			name: "proxmox_lxc provider missing token id",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL: "https://proxmox:8006/api2/json",
+				},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a token ID"),
+		},
+		{
+			name: "proxmox_lxc provider missing token secret",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL:     "https://proxmox:8006/api2/json",
+					TokenID: "root@pam!sablier",
+				},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a token secret"),
+		},
+		{
 			name: "invalid provider name",
 			provider: Provider{
 				Name: "invalid",
 			},
-			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman]"),
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc]"),
 		},
 	}
 

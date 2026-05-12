@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/containers/podman/v5/pkg/bindings/containers"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"gotest.tools/v3/assert"
@@ -15,29 +15,28 @@ func TestPodmanProvider_Stop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
 		do func(pind *pindContainer) (string, error)
 	}
 	tests := []struct {
-		name            string
-		args            args
-		ignoreUnlabeled bool
-		err             error
+		name string
+		args args
+		err  error
 	}{
 		{
-			name: "non-existing container stop returns provider error",
+			name: "non existing container stop",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					return "non-existent", nil
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("no such container"),
+			err: fmt.Errorf("cannot stop container non-existent"),
 		},
 		{
-			name: "unlabeled container stop is rejected when ignoreUnlabeled is enabled",
+			name: "container stop as expected",
 			args: args{
 				do: func(pind *pindContainer) (string, error) {
 					c, err := pind.CreateMimic(ctx, MimicOptions{})
@@ -45,7 +44,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					err = containers.Start(pind.connText, c.ID, nil)
+					_, err = pind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -53,55 +52,14 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			ignoreUnlabeled: true,
-			err:             fmt.Errorf("is not managed by sablier"),
-		},
-		{
-			name: "unlabeled container stop succeeds when ignoreUnlabeled is disabled",
-			args: args{
-				do: func(pind *pindContainer) (string, error) {
-					c, err := pind.CreateMimic(ctx, MimicOptions{})
-					if err != nil {
-						return "", err
-					}
-
-					err = containers.Start(pind.connText, c.ID, nil)
-					if err != nil {
-						return "", err
-					}
-
-					return c.ID, nil
-				},
-			},
-			ignoreUnlabeled: false,
-			err:             nil,
-		},
-		{
-			name: "labeled container stop succeeds when ignoreUnlabeled is enabled",
-			args: args{
-				do: func(pind *pindContainer) (string, error) {
-					c, err := pind.CreateMimic(ctx, MimicOptions{Labels: managedLabels})
-					if err != nil {
-						return "", err
-					}
-
-					err = containers.Start(pind.connText, c.ID, nil)
-					if err != nil {
-						return "", err
-					}
-
-					return c.ID, nil
-				},
-			},
-			ignoreUnlabeled: true,
-			err:             nil,
+			err: nil,
 		},
 	}
-	c := setupPinD(t)
+	c := sharedPinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := podman.New(c.connText, slogt.New(t), tt.ignoreUnlabeled)
+			p, err := podman.New(ctx, c.client, slogt.New(t), false)
 			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
