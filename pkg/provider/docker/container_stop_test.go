@@ -66,7 +66,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -86,7 +86,7 @@ func TestDockerClassicProvider_Stop(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}

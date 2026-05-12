@@ -40,3 +40,7 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		ignoreUnlabeled: ignoreUnlabeled,
 	}, nil
 }
+
+func (p *Provider) IgnoreUnlabeled() bool {
+	return p.ignoreUnlabeled
+}

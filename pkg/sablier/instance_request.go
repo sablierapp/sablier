@@ -16,6 +16,10 @@ type pendingStart struct {
 	info InstanceInfo // set at creation time; used to return consistent data while starting
 }
 
+type ignoreUnlabeledProvider interface {
+	IgnoreUnlabeled() bool
+}
+
 // consumePendingError checks whether a pending start exists for the given
 // instance. It returns (pending, error):
 //   - pending=true, err=nil  -> start still in progress, caller should skip inspect
@@ -78,6 +82,9 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 	if err != nil {
 		s.l.DebugContext(ctx, "pre-start inspect failed, using bare info", slog.String("instance", name), slog.Any("error", err))
 		info = InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1}
+	}
+	if p, ok := s.provider.(ignoreUnlabeledProvider); ok && p.IgnoreUnlabeled() && info.Enabled != "true" && !info.IsReady() {
+		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
 	}
 	info.Status = InstanceStatusStarting
 

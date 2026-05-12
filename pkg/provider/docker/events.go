@@ -24,6 +24,9 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		if len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped) {
 			filters.Add("event", "die")
 		}
+		if p.ignoreUnlabeled {
+			filters.Add("label", "sablier.enable=true")
+		}
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
 	// "die" events fire while the container still exists (exited state), so we

@@ -44,6 +44,10 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, ignoreUnl
 
 }
 
+func (p *Provider) IgnoreUnlabeled() bool {
+	return p.ignoreUnlabeled
+}
+
 func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {

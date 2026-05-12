@@ -5,8 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
@@ -68,6 +71,39 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("InstanceStart was never called asynchronously")
 	}
+}
+
+type ignoreUnlabeledMockProvider struct {
+	*providertest.MockProvider
+	ignore bool
+}
+
+func (p ignoreUnlabeledMockProvider) IgnoreUnlabeled() bool {
+	return p.ignore
+}
+
+func TestInstanceRequest_NewUnlabeledNotReadyRejectedWhenIgnoreEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := ignoreUnlabeledMockProvider{
+		MockProvider: providertest.NewMockProvider(ctrl),
+		ignore:       true,
+	}
+	sessions := storetest.NewMockStore(ctrl)
+	manager := sablier.New(slogt.New(t), sessions, provider)
+	ctx := t.Context()
+
+	stoppedInfo := sablier.InstanceInfo{
+		Name:            "nginx",
+		CurrentReplicas: 0,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusStopped,
+	}
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+
+	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.ErrorContains(t, err, "instance nginx is not managed by sablier")
 }
 
 func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {

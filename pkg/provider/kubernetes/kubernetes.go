@@ -41,3 +41,7 @@ func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger,
 	}, nil
 
 }
+
+func (p *Provider) IgnoreUnlabeled() bool {
+	return p.ignoreUnlabeled
+}

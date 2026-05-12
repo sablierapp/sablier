@@ -19,6 +19,15 @@ const maxReconnectAttempts = 10
 
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
+	managedServices := map[string]struct{}{}
+	if p.ignoreUnlabeled {
+		services, err := p.managedServices(ctx)
+		if err != nil {
+			p.l.ErrorContext(ctx, "cannot list managed services", slog.Any("error", err))
+		} else {
+			managedServices = services
+		}
+	}
 	dial := func(ctx context.Context) client.EventsResult {
 		filters := client.Filters{}
 		filters.Add("scope", "swarm")
@@ -36,7 +45,12 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		if name == "" {
 			return sablier.InstanceInfo{}, false
 		}
+		if p.ignoreUnlabeled && !p.isManagedServiceEvent(ctx, managedServices, msg) {
+			return sablier.InstanceInfo{}, false
+		}
 		if msg.Action == "remove" {
+			delete(managedServices, msg.Actor.ID)
+			delete(managedServices, name)
 			// Service is gone; inspect would fail.
 			return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
 		}
@@ -123,4 +137,54 @@ func consumeEvents(
 			return false
 		}
 	}
+}
+
+func (p *Provider) managedServices(ctx context.Context) (map[string]struct{}, error) {
+	filters := client.Filters{}
+	filters.Add("label", "sablier.enable=true")
+
+	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{Filters: filters})
+	if err != nil {
+		return nil, fmt.Errorf("cannot list services: %w", err)
+	}
+
+	managed := make(map[string]struct{}, len(services.Items)*2)
+	for _, service := range services.Items {
+		managed[service.ID] = struct{}{}
+		managed[service.Spec.Name] = struct{}{}
+	}
+	return managed, nil
+}
+
+func (p *Provider) isManagedServiceEvent(ctx context.Context, managed map[string]struct{}, msg events.Message) bool {
+	if msg.Action == "remove" {
+		return isKnownManagedService(managed, msg)
+	}
+
+	result, err := p.Client.ServiceInspect(ctx, msg.Actor.ID, client.ServiceInspectOptions{})
+	if err != nil {
+		p.l.DebugContext(ctx, "cannot inspect service for label check", slog.String("service", msg.Actor.ID), slog.Any("error", err))
+		return isKnownManagedService(managed, msg)
+	}
+
+	service := result.Service
+	if service.Spec.Labels["sablier.enable"] == "true" {
+		managed[service.ID] = struct{}{}
+		managed[service.Spec.Name] = struct{}{}
+		return true
+	}
+
+	delete(managed, service.ID)
+	delete(managed, service.Spec.Name)
+	return false
+}
+
+func isKnownManagedService(managed map[string]struct{}, msg events.Message) bool {
+	if _, ok := managed[msg.Actor.ID]; ok {
+		return true
+	}
+	if _, ok := managed[msg.Actor.Attributes["name"]]; ok {
+		return true
+	}
+	return false
 }
