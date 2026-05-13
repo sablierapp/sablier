@@ -1,5 +1,6 @@
 provider:
   name: docker
+  ignore-unlabeled: false
   docker:
     strategy: stop
 server:

@@ -294,6 +294,7 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
       --provider.auto-stop-on-startup                         Stop all sablier.enable=true instances running at startup that were not started by Sablier (default true)
   --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
+      --provider.ignore-unlabeled                             Reject new requests and skip expiration stops for instances without sablier.enable=true (default false)
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
       --server.base-path string                               The base path for the API (default "/")
       --server.metrics.enabled                                Enable the Prometheus /metrics endpoint (default false)
