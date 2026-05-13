@@ -70,6 +70,67 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 	}
 }
 
+func TestInstanceRequest_NewUnlabeledRejectedWhenIgnoreUnlabeledEnabled(t *testing.T) {
+	for _, enabled := range []string{"", "false"} {
+		t.Run("enabled="+enabled, func(t *testing.T) {
+			manager, sessions, provider := setupSablier(t)
+			manager.WithIgnoreUnlabeled(true)
+			ctx := t.Context()
+
+			stoppedInfo := sablier.InstanceInfo{
+				Name:            "nginx",
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
+				Enabled:         enabled,
+			}
+
+			sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+			provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+
+			_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+			var notManaged sablier.ErrInstanceNotManaged
+			assert.Assert(t, errors.As(err, &notManaged))
+			assert.Equal(t, notManaged.Name, "nginx")
+		})
+	}
+}
+
+func TestInstanceRequest_NewLabeledInstanceStartsWhenIgnoreUnlabeledEnabled(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	manager.WithIgnoreUnlabeled(true)
+	ctx := t.Context()
+	startCalled := make(chan struct{})
+
+	stoppedInfo := sablier.InstanceInfo{
+		Name:            "nginx",
+		CurrentReplicas: 0,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusStopped,
+		Enabled:         "true",
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+		close(startCalled)
+		return nil
+	})
+	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+	select {
+	case <-startCalled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceStart was never called asynchronously")
+	}
+}
+
 func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
 	ctx := t.Context()

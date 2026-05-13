@@ -57,6 +57,12 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 	}
 }
 
+// WithIgnoreUnlabeled makes Sablier reject and skip instances that are not
+// explicitly labeled with sablier.enable=true.
+func (s *Sablier) WithIgnoreUnlabeled(ignore bool) {
+	s.ignoreUnlabeled = ignore
+}
+
 // WithMetrics installs a Recorder. Defaults to metrics.Noop until called.
 func (s *Sablier) WithMetrics(r metrics.Recorder) {
 	if r == nil {
