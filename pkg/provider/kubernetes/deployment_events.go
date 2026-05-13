@@ -6,7 +6,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -18,6 +17,10 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)
 			oldDeployment := old.(*appsv1.Deployment)
+
+			if p.ignoreDeploymentEvent(newDeployment) {
+				return
+			}
 
 			if newDeployment.ResourceVersion == oldDeployment.ResourceVersion {
 				return
@@ -41,6 +44,9 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 		},
 		DeleteFunc: func(obj interface{}) {
 			d := obj.(*appsv1.Deployment)
+			if p.ignoreDeploymentEvent(d) {
+				return
+			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 			// Deployment is gone; build InstanceInfo from the deleted object directly.
 			var image string
@@ -65,14 +71,13 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 	opts := []informers.SharedInformerOption{
 		informers.WithNamespace(corev1.NamespaceAll),
 	}
-	if p.ignoreUnlabeled {
-		opts = append(opts, informers.WithTweakListOptions(func(o *metav1.ListOptions) {
-			o.LabelSelector = "sablier.enable=true"
-		}))
-	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, opts...)
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	_, _ = informer.AddEventHandler(handler)
 	return informer
+}
+
+func (p *Provider) ignoreDeploymentEvent(d *appsv1.Deployment) bool {
+	return p.ignoreUnlabeled && d.Labels["sablier.enable"] != "true"
 }

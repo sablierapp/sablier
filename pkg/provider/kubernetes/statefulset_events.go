@@ -6,7 +6,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -18,6 +17,10 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 		UpdateFunc: func(old, new interface{}) {
 			newStatefulSet := new.(*appsv1.StatefulSet)
 			oldStatefulSet := old.(*appsv1.StatefulSet)
+
+			if p.ignoreStatefulSetEvent(newStatefulSet) {
+				return
+			}
 
 			if newStatefulSet.ResourceVersion == oldStatefulSet.ResourceVersion {
 				return
@@ -41,6 +44,9 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 		},
 		DeleteFunc: func(obj interface{}) {
 			ss := obj.(*appsv1.StatefulSet)
+			if p.ignoreStatefulSetEvent(ss) {
+				return
+			}
 			parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 			// StatefulSet is gone; build InstanceInfo from the deleted object directly.
 			var image string
@@ -65,14 +71,13 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 	opts := []informers.SharedInformerOption{
 		informers.WithNamespace(core_v1.NamespaceAll),
 	}
-	if p.ignoreUnlabeled {
-		opts = append(opts, informers.WithTweakListOptions(func(o *metav1.ListOptions) {
-			o.LabelSelector = "sablier.enable=true"
-		}))
-	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, opts...)
 	informer := factory.Apps().V1().StatefulSets().Informer()
 
 	_, _ = informer.AddEventHandler(handler)
 	return informer
+}
+
+func (p *Provider) ignoreStatefulSetEvent(ss *appsv1.StatefulSet) bool {
+	return p.ignoreUnlabeled && ss.Labels["sablier.enable"] != "true"
 }
