@@ -79,11 +79,18 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 	// If inspect fails (e.g. first boot), fall back to a minimal struct so
 	// the start still proceeds.
 	info, err := s.provider.InstanceInspect(ctx, name)
+	ignoreUnlabeled := false
+	if p, ok := s.provider.(ignoreUnlabeledProvider); ok {
+		ignoreUnlabeled = p.IgnoreUnlabeled()
+	}
 	if err != nil {
+		if ignoreUnlabeled {
+			return InstanceInfo{}, err
+		}
 		s.l.DebugContext(ctx, "pre-start inspect failed, using bare info", slog.String("instance", name), slog.Any("error", err))
 		info = InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1}
 	}
-	if p, ok := s.provider.(ignoreUnlabeledProvider); ok && p.IgnoreUnlabeled() && info.Enabled != "true" && !info.IsReady() {
+	if ignoreUnlabeled && info.Enabled != "true" {
 		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
 	}
 	info.Status = InstanceStatusStarting
