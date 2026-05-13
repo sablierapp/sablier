@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.12.0](https://github.com/sablierapp/sablier/compare/v1.11.2...v1.12.0) (2026-05-13)
+
+
+### Features
+
+* add Prometheus /metrics endpoint ([#884](https://github.com/sablierapp/sablier/issues/884)) ([b0a0237](https://github.com/sablierapp/sablier/commit/b0a023707d28859dd33dcf84635dbcef8d777cb4))
+* add raw instance data in InstanceInfo ([#892](https://github.com/sablierapp/sablier/issues/892)) ([d09b56c](https://github.com/sablierapp/sablier/commit/d09b56c10f51bf684e3395276dc32d38d3aca696))
+* **docker:** add event stream reconnection ([#891](https://github.com/sablierapp/sablier/issues/891)) ([0510380](https://github.com/sablierapp/sablier/commit/0510380bfe9d4cf71817e63fa91bf54f85cb80a1)), closes [#535](https://github.com/sablierapp/sablier/issues/535)
+* Proxmox VE LXC provider ([#868](https://github.com/sablierapp/sablier/issues/868)) ([4692a09](https://github.com/sablierapp/sablier/commit/4692a09e463ff8355e75eac4c48eb6198557d6fe))
+
+
+### Bug Fixes
+
+* async InstanceStart calls ([#869](https://github.com/sablierapp/sablier/issues/869)) ([3c1430f](https://github.com/sablierapp/sablier/commit/3c1430f18d2573f326b9eb6f7c6565a4e51ad9ac))
+* **log:** add INFO logs for started instances ([#871](https://github.com/sablierapp/sablier/issues/871)) ([4d1ea62](https://github.com/sablierapp/sablier/commit/4d1ea622a2ca436cee4408aa71d8e6231660ea98))
+* remove volume declaration from Dockerfile ([#899](https://github.com/sablierapp/sablier/issues/899)) ([9ed4d11](https://github.com/sablierapp/sablier/commit/9ed4d11f49ece5c26d22e30855338c7ada63f40c))
+* use moby/moby/client ([#753](https://github.com/sablierapp/sablier/issues/753)) ([a5babb9](https://github.com/sablierapp/sablier/commit/a5babb9678d2f3a079e3d4283eaed2709da9deb7))
+
+
+### Code Refactoring
+
+* **podman:** use moby/moby/client instead of podman bindings ([#885](https://github.com/sablierapp/sablier/issues/885)) ([858f12a](https://github.com/sablierapp/sablier/commit/858f12a6e4d56c5b7895883d3524ab51e1ed752b))
+
+
+### Tests
+
+* **kubernetes:** run all tests in a single cluster ([#889](https://github.com/sablierapp/sablier/issues/889)) ([aaf20b4](https://github.com/sablierapp/sablier/commit/aaf20b4e1130b6c1486d19809e67d6004fe37d6c))
+* **sonar:** remove generated code from coverage ([2c25b04](https://github.com/sablierapp/sablier/commit/2c25b0468adfb710f2118fbb9eb3e8814fcfb26d))
+
 ## [1.11.2](https://github.com/sablierapp/sablier/compare/v1.11.1...v1.11.2) (2026-04-03)
 
 
