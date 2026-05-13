@@ -13,6 +13,7 @@
     "Name": "docker",
     "AutoStopOnStartup": true,
     "AutoStopExternallyStarted": false,
+    "IgnoreUnlabeled": false,
     "Kubernetes": {
       "QPS": 5,
       "Burst": 10,
