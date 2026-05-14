@@ -21,26 +21,29 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, errors.New("swarm service is not in \"replicated\" mode")
 	}
 
+	sc := sablier.ScaleConfigFromLabels(service.Spec.Labels)
+	desired := sc.Active.Replicas
+
 	var info sablier.InstanceInfo
 	if service.ServiceStatus.DesiredTasks == 0 {
 		info = sablier.InstanceInfo{
 			Name:            service.Spec.Name,
 			CurrentReplicas: 0,
-			DesiredReplicas: p.desiredReplicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStopped,
 		}
 	} else if service.ServiceStatus.DesiredTasks != service.ServiceStatus.RunningTasks {
 		info = sablier.InstanceInfo{
 			Name:            service.Spec.Name,
 			CurrentReplicas: int32(service.ServiceStatus.RunningTasks),
-			DesiredReplicas: p.desiredReplicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStarting,
 		}
 	} else {
 		info = sablier.InstanceInfo{
 			Name:            service.Spec.Name,
-			CurrentReplicas: p.desiredReplicas,
-			DesiredReplicas: p.desiredReplicas,
+			CurrentReplicas: int32(service.ServiceStatus.RunningTasks),
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusReady,
 		}
 	}

@@ -19,14 +19,21 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(labels)
-	if sc != nil && (sc.Active.CPU != "" || sc.Active.Memory != "") {
+	if sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
 		p.l.DebugContext(ctx, "applying active resources (scale mode)",
 			slog.String("name", name),
+			slog.Int("replicas", int(sc.Active.Replicas)),
 			slog.String("cpu", sc.Active.CPU),
 			slog.String("memory", sc.Active.Memory),
 		)
-		return p.scaleResources(ctx, parsed, sc.Active.CPU, sc.Active.Memory)
+		if err := p.scale(ctx, parsed, sc.Active.Replicas); err != nil {
+			return err
+		}
+		if sc.Active.CPU != "" || sc.Active.Memory != "" {
+			return p.scaleResources(ctx, parsed, sc.Active.CPU, sc.Active.Memory)
+		}
+		return nil
 	}
 
-	return p.scale(ctx, parsed, parsed.Replicas)
+	return p.scale(ctx, parsed, sc.Active.Replicas)
 }
