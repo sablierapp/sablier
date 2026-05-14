@@ -14,8 +14,9 @@ type Sablier struct {
 	provider Provider
 	sessions Store
 
-	groupsMu sync.RWMutex
-	groups   map[string][]string
+	groupsMu        sync.RWMutex
+	groups          map[string][]string
+	instanceToGroup map[string]string // reverse map: instance → group
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
@@ -47,6 +48,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                      store,
 		groupsMu:                      sync.RWMutex{},
 		groups:                        map[string][]string{},
+		instanceToGroup:               map[string]string{},
 		pendingStarts:                 map[string]*pendingStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
@@ -86,9 +88,71 @@ func (s *Sablier) SetGroups(groups map[string][]string) {
 		groups = map[string][]string{}
 	}
 	if diff := cmp.Diff(s.groups, groups); diff != "" {
-		// TODO: Change this log for a friendly logging, groups rarely change, so we can put some effort on displaying what changed
 		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
 		s.groups = groups
+		// Rebuild reverse map.
+		s.instanceToGroup = make(map[string]string, len(groups))
+		for group, instances := range groups {
+			for _, inst := range instances {
+				s.instanceToGroup[inst] = group
+			}
+		}
+	}
+}
+
+// GroupForInstance returns the group the instance currently belongs to, or empty string.
+func (s *Sablier) GroupForInstance(name string) string {
+	s.groupsMu.RLock()
+	defer s.groupsMu.RUnlock()
+	return s.instanceToGroup[name]
+}
+
+// AddInstanceToGroup adds instance to the given group, removing it from any previous group.
+// Returns the previous group (empty if none) so the caller can log the transition.
+func (s *Sablier) AddInstanceToGroup(instance, group string) (previous string) {
+	s.groupsMu.Lock()
+	defer s.groupsMu.Unlock()
+	previous = s.instanceToGroup[instance]
+	if previous == group {
+		return previous
+	}
+	// Remove from previous group.
+	if previous != "" {
+		s.removeFromGroup(instance, previous)
+	}
+	// Add to new group.
+	s.instanceToGroup[instance] = group
+	s.groups[group] = append(s.groups[group], instance)
+	return previous
+}
+
+// RemoveInstanceFromGroup removes instance from whichever group it belongs to.
+// Returns the group it was removed from (empty if it wasn't in any group).
+func (s *Sablier) RemoveInstanceFromGroup(instance string) (group string) {
+	s.groupsMu.Lock()
+	defer s.groupsMu.Unlock()
+	group = s.instanceToGroup[instance]
+	if group == "" {
+		return ""
+	}
+	s.removeFromGroup(instance, group)
+	delete(s.instanceToGroup, instance)
+	return group
+}
+
+// removeFromGroup removes instance from the groups slice. Must be called with groupsMu held.
+func (s *Sablier) removeFromGroup(instance, group string) {
+	members := s.groups[group]
+	filtered := members[:0]
+	for _, m := range members {
+		if m != instance {
+			filtered = append(filtered, m)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(s.groups, group)
+	} else {
+		s.groups[group] = filtered
 	}
 }
 

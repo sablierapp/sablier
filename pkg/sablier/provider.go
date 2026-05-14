@@ -8,12 +8,18 @@ import (
 
 //go:generate go tool -modfile=../../tools.mod mockgen -package providertest -source=provider.go -destination=../provider/providertest/mock_provider.go *
 
+// InstanceEvent wraps an instance state change with the event type that triggered it.
+type InstanceEvent struct {
+	Type provider.InstanceEventType
+	Info InstanceInfo
+}
+
 // InstanceEventStream is returned by InstanceEvents.
-// Events carries instance state change notifications.
+// Events carries typed instance lifecycle notifications.
 // Err carries a terminal error when the stream cannot be recovered;
 // after an error is sent both channels are closed.
 type InstanceEventStream struct {
-	Events <-chan InstanceInfo
+	Events <-chan InstanceEvent
 	Err    <-chan error
 }
 

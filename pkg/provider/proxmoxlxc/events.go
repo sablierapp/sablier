@@ -18,7 +18,7 @@ const maxConsecutivePollErrors = 5
 // instances transition from running to stopped (or vice versa). Proxmox VE
 // does not provide a real-time event stream, so polling is used.
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
-	eventsC := make(chan sablier.InstanceInfo)
+	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
 
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
@@ -88,11 +88,14 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 						if !currentRunning[name] {
 							p.l.DebugContext(ctx, "container stopped detected", slog.String("name", name))
 							select {
-							case eventsC <- sablier.InstanceInfo{
-								Name:            name,
-								CurrentReplicas: 0,
-								DesiredReplicas: p.desiredReplicas,
-								Status:          sablier.InstanceStatusStopped,
+							case eventsC <- sablier.InstanceEvent{
+								Type: provider.InstanceEventStopped,
+								Info: sablier.InstanceInfo{
+									Name:            name,
+									CurrentReplicas: 0,
+									DesiredReplicas: p.desiredReplicas,
+									Status:          sablier.InstanceStatusStopped,
+								},
 							}:
 							case <-ctx.Done():
 								return
@@ -107,11 +110,14 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 						if !running[name] {
 							p.l.DebugContext(ctx, "container started detected", slog.String("name", name))
 							select {
-							case eventsC <- sablier.InstanceInfo{
-								Name:            name,
-								CurrentReplicas: p.desiredReplicas,
-								DesiredReplicas: p.desiredReplicas,
-								Status:          sablier.InstanceStatusStarting,
+							case eventsC <- sablier.InstanceEvent{
+								Type: provider.InstanceEventStarted,
+								Info: sablier.InstanceInfo{
+									Name:            name,
+									CurrentReplicas: p.desiredReplicas,
+									DesiredReplicas: p.desiredReplicas,
+									Status:          sablier.InstanceStatusStarting,
+								},
 							}:
 							case <-ctx.Done():
 								return

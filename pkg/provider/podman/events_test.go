@@ -46,7 +46,7 @@ func TestPodmanProvider_InstanceEvents(t *testing.T) {
 	select {
 	case info := <-stream.Events:
 		// Podman may or may not prefix container names with "/" — compare without the slash.
-		assert.Equal(t, info.Name, strings.TrimPrefix(inspected.Container.Name, "/"))
+		assert.Equal(t, info.Info.Name, strings.TrimPrefix(inspected.Container.Name, "/"))
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestPodmanProvider_InstanceEvents_Started(t *testing.T) {
 
 	select {
 	case info := <-stream.Events:
-		assert.Equal(t, info.Name, strings.TrimPrefix(inspected.Container.Name, "/"))
+		assert.Equal(t, info.Info.Name, strings.TrimPrefix(inspected.Container.Name, "/"))
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}

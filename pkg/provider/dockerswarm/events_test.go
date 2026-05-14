@@ -43,9 +43,9 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, service.Spec.Name)
-			assert.Equal(t, info.Provider, "swarm")
-			assert.Assert(t, info.Swarm != nil)
+			assert.Equal(t, info.Info.Name, service.Spec.Name)
+			assert.Equal(t, info.Info.Provider, "swarm")
+			assert.Assert(t, info.Info.Swarm != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,8 +61,8 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, service.Spec.Name) // Service is removed; provider is still set.
-			assert.Equal(t, info.Provider, "swarm")
+			assert.Equal(t, info.Info.Name, service.Spec.Name) // Service is removed; provider is still set.
+			assert.Equal(t, info.Info.Provider, "swarm")
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -109,9 +109,9 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 
 	select {
 	case info := <-stream.Events:
-		assert.Equal(t, info.Name, service.Spec.Name)
-		assert.Equal(t, info.Provider, "swarm")
-		assert.Assert(t, info.Swarm != nil)
+		assert.Equal(t, info.Info.Name, service.Spec.Name)
+		assert.Equal(t, info.Info.Provider, "swarm")
+		assert.Assert(t, info.Info.Swarm != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}

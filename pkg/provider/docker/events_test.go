@@ -45,9 +45,9 @@ func TestDockerClassicProvider_InstanceEvents(t *testing.T) {
 	select {
 	case info := <-stream.Events:
 		// Docker container name is prefixed with a slash, but we don't use it
-		assert.Equal(t, "/"+info.Name, inspected.Container.Name)
-		assert.Equal(t, info.Provider, "docker")
-		assert.Assert(t, info.Docker != nil)
+		assert.Equal(t, "/"+info.Info.Name, inspected.Container.Name)
+		assert.Equal(t, info.Info.Provider, "docker")
+		assert.Assert(t, info.Info.Docker != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,9 +82,9 @@ func TestDockerClassicProvider_InstanceEvents_Started(t *testing.T) {
 
 	select {
 	case info := <-stream.Events:
-		assert.Equal(t, "/"+info.Name, inspected.Container.Name)
-		assert.Equal(t, info.Provider, "docker")
-		assert.Assert(t, info.Docker != nil)
+		assert.Equal(t, "/"+info.Info.Name, inspected.Container.Name)
+		assert.Equal(t, info.Info.Provider, "docker")
+		assert.Assert(t, info.Info.Docker != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}
