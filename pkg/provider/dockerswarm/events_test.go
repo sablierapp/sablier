@@ -68,3 +68,51 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 		}
 	})
 }
+
+func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	inspectResult, err := dind.client.ServiceInspect(ctx, c.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	service := inspectResult.Service
+
+	replicas := uint64(0)
+	service.Spec.Mode.Replicated.Replicas = &replicas
+	_, err = p.Client.ServiceUpdate(ctx, service.ID, client.ServiceUpdateOptions{Version: service.Version, Spec: service.Spec})
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+	})
+
+	inspectResult, err = dind.client.ServiceInspect(ctx, c.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	service = inspectResult.Service
+	replicas = uint64(1)
+	service.Spec.Mode.Replicated.Replicas = &replicas
+	_, err = p.Client.ServiceUpdate(ctx, service.ID, client.ServiceUpdateOptions{Version: service.Version, Spec: service.Spec})
+	assert.NilError(t, err)
+
+	err = WaitForServiceRunning(ctx, dind.client, service.Spec.Name, 1)
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		assert.Equal(t, info.Name, service.Spec.Name)
+		assert.Equal(t, info.Provider, "swarm")
+		assert.Assert(t, info.Swarm != nil)
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
