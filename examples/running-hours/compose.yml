@@ -1,0 +1,27 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=10s
+    environment:
+      # Running-hours are evaluated in this timezone.
+      - TZ=${TZ:-UTC}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # office-app is managed by Sablier and configured to stay warm during
+  # sablier.running-hours. Outside this window, normal session expiration applies.
+  office-app:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=office-app"
+      - "sablier.running-hours=${RUNNING_HOURS:-09:00-18:00}"
+    ports:
+      - "8080:80"

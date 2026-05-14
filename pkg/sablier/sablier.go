@@ -32,6 +32,10 @@ type Sablier struct {
 	// full reconciliation scan. Defaults to 30 seconds.
 	ExternallyStartedScanInterval time.Duration
 
+	// RunningHoursRefreshFrequency is how often running-hours windows are
+	// reconciled. Defaults to 30 seconds.
+	RunningHoursRefreshFrequency time.Duration
+
 	metrics metrics.Recorder
 
 	l *slog.Logger
@@ -49,6 +53,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		BlockingRefreshFrequency:      5 * time.Second,
 		InstanceStartTimeout:          5 * time.Minute,
 		ExternallyStartedScanInterval: 30 * time.Second,
+		RunningHoursRefreshFrequency:  30 * time.Second,
 	}
 }
 

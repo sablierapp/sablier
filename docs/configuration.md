@@ -19,6 +19,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.enable` | Yes | `"true"` | Opt the instance into Sablier management. Any value other than `"true"` is ignored. |
 | `sablier.group` | No | `"myapp"` | Assign the instance to a named group. Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
+| `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
 
 ### `sablier.ready-after`
 
@@ -49,7 +50,39 @@ If the label is absent or set to an unparseable value, no extra wait is applied.
 
 !> The `sablier.ready-after` grace period counts from when the instance **first** becomes ready in a given session. It does not reset on subsequent requests.
 
+### `sablier.running-hours`
 
+Use `sablier.running-hours` when an instance must stay available during specific daily hours.
+
+Behavior:
+
+- At the beginning of the configured period, Sablier proactively starts the instance.
+- During the running-hours period, request-triggered sessions are extended to the period end so the instance is not stopped in the middle of the window.
+- After the period ends, normal session expiration resumes.
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
+      - "sablier.running-hours=09:00-18:00"
+```
+
+Format rules:
+
+- Use 24-hour format `HH:MM-HH:MM`.
+- If start is later than end (for example `22:00-06:00`), the window spans midnight.
+- If the label cannot be parsed, Sablier ignores it.
+
+### Timezone (`TZ`)
+
+Running-hours are evaluated in the process local timezone.
+
+- In the official Docker image, the binary embeds timezone database data and supports `TZ` out of the box.
+- The container defaults to `TZ=UTC`.
+- Override timezone with environment variables, for example `-e TZ=Europe/Paris`.
 
 ## Configuration File
 
