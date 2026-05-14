@@ -11,6 +11,8 @@ type Provider struct {
 	Name                      string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
 	AutoStopOnStartup         bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
 	AutoStopExternallyStarted bool   `yaml:"auto-stop-externally-started,omitempty" default:"false"`
+	RejectUnlabeledRequests   bool   `yaml:"reject-unlabeled-requests,omitempty" default:"false"`
+	VerifyEnabledOnExpiration bool   `yaml:"verify-enabled-on-expiration,omitempty" default:"false"`
 	Kubernetes                Kubernetes
 	Podman                    Podman
 	Docker                    Docker

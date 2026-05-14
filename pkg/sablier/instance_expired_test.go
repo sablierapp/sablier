@@ -9,9 +9,9 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestSablierOnInstanceExpired_IgnoreUnlabeledEnabledStopsLabeledInstance(t *testing.T) {
+func TestSablierOnInstanceExpired_VerifyEnabledOnExpirationStopsLabeledInstance(t *testing.T) {
 	manager, _, provider, rec := setupSablierWithMetrics(t)
-	manager.WithIgnoreUnlabeled(true)
+	manager.WithVerifyEnabledOnExpiration(true)
 	ctx := t.Context()
 
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(sablier.InstanceInfo{
@@ -30,9 +30,9 @@ func TestSablierOnInstanceExpired_IgnoreUnlabeledEnabledStopsLabeledInstance(t *
 	}), "expected expiration metrics")
 }
 
-func TestSablierOnInstanceExpired_IgnoreUnlabeledEnabledSkipsUnlabeledInstance(t *testing.T) {
+func TestSablierOnInstanceExpired_VerifyEnabledOnExpirationSkipsUnlabeledInstance(t *testing.T) {
 	manager, _, provider, rec := setupSablierWithMetrics(t)
-	manager.WithIgnoreUnlabeled(true)
+	manager.WithVerifyEnabledOnExpiration(true)
 	ctx := t.Context()
 	inspected := make(chan struct{})
 

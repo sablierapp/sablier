@@ -17,14 +17,14 @@ func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 }
 
 func (s *Sablier) OnInstanceExpired(ctx context.Context) func(string) {
-	return onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.ignoreUnlabeled)
+	return onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.verifyEnabledOnExpiration)
 }
 
-func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.Recorder, logger *slog.Logger, ignoreUnlabeled bool) func(string) {
+func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.Recorder, logger *slog.Logger, verifyEnabled bool) func(string) {
 	return func(_key string) {
 		go func(key string) {
 			logger.InfoContext(ctx, "instance expired", slog.String("instance", key))
-			if ignoreUnlabeled {
+			if verifyEnabled {
 				info, err := provider.InstanceInspect(ctx, key)
 				if err != nil {
 					logger.ErrorContext(ctx, "instance expired could not be inspected before stop", slog.String("instance", key), slog.Any("error", err))

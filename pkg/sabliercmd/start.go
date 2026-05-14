@@ -52,7 +52,8 @@ func Start(ctx context.Context, conf config.Config) error {
 	store := inmemory.NewInMemory()
 	s := sablier.New(logger, store, provider)
 	s.WithMetrics(rec)
-	s.WithIgnoreUnlabeled(conf.Provider.IgnoreUnlabeled)
+	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
+	s.WithVerifyEnabledOnExpiration(conf.Provider.VerifyEnabledOnExpiration)
 	err = store.OnExpire(ctx, s.OnInstanceExpired(ctx))
 	if err != nil {
 		return err

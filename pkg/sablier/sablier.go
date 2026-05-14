@@ -36,7 +36,13 @@ type Sablier struct {
 	// reconciled. Defaults to 30 seconds.
 	RunningHoursRefreshFrequency time.Duration
 
-	metrics metrics.Recorder
+	// rejectUnlabeledRequests blocks direct named requests unless sablier.enable=true.
+	rejectUnlabeledRequests bool
+	
+	// verifyEnabledOnExpiration re-checks sablier.enable before stopping expired instances.
+	verifyEnabledOnExpiration bool
+	
+	metrics                   metrics.Recorder
 
 	l *slog.Logger
 }
@@ -57,10 +63,14 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 	}
 }
 
-// WithIgnoreUnlabeled makes Sablier reject and skip instances that are not
-// explicitly labeled with sablier.enable=true.
-func (s *Sablier) WithIgnoreUnlabeled(ignore bool) {
-	s.ignoreUnlabeled = ignore
+// WithRejectUnlabeledRequests makes direct named requests require sablier.enable=true.
+func (s *Sablier) WithRejectUnlabeledRequests(reject bool) {
+	s.rejectUnlabeledRequests = reject
+}
+
+// WithVerifyEnabledOnExpiration makes Sablier re-check sablier.enable before stopping expired instances.
+func (s *Sablier) WithVerifyEnabledOnExpiration(verify bool) {
+	s.verifyEnabledOnExpiration = verify
 }
 
 // WithMetrics installs a Recorder. Defaults to metrics.Noop until called.

@@ -176,6 +176,10 @@ provider:
   # Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default: false)
   # Uses both event-driven detection and a periodic reconciliation scan (every 30 seconds) as a safety net.
   auto-stop-externally-started: false
+  # Reject direct named requests for instances without sablier.enable=true
+  reject-unlabeled-requests: false
+  # Verify sablier.enable=true before stopping expired instances
+  verify-enabled-on-expiration: false
   docker:
     # Strategy to use for stopping Docker containers: stop or pause (default: stop)
     strategy: stop
@@ -294,8 +298,9 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
       --provider.auto-stop-on-startup                         Stop all sablier.enable=true instances running at startup that were not started by Sablier (default true)
   --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
-      --provider.ignore-unlabeled                             Reject new requests and skip expiration stops for instances without sablier.enable=true (default false)
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
+      --provider.reject-unlabeled-requests                    Reject requests for instances without sablier.enable=true (default false)
+      --provider.verify-enabled-on-expiration                 Verify sablier.enable=true before stopping expired instances (default false)
       --server.base-path string                               The base path for the API (default "/")
       --server.metrics.enabled                                Enable the Prometheus /metrics endpoint (default false)
       --server.port int                                       The server port to use (default 10000)

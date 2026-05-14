@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store"
 	"go.uber.org/mock/gomock"
 
 	"gotest.tools/v3/assert"
@@ -125,6 +126,41 @@ func TestSessionsManager(t *testing.T) {
 		err := manager.RemoveInstance(t.Context(), "test")
 		assert.NilError(t, err)
 	})
+}
+
+func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	manager.WithRejectUnlabeledRequests(true)
+	manager.SetGroups(map[string][]string{"default": {"nginx"}})
+	ctx := t.Context()
+	startCalled := make(chan struct{})
+
+	stoppedInfo := sablier.InstanceInfo{
+		Name:            "nginx",
+		CurrentReplicas: 0,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusStopped,
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+		close(startCalled)
+		return nil
+	})
+	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+	session, err := manager.RequestSessionGroup(ctx, "default", time.Minute)
+	assert.NilError(t, err)
+	assert.NilError(t, session.Instances["nginx"].Error)
+
+	select {
+	case <-startCalled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceStart was never called asynchronously")
+	}
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {

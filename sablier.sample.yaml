@@ -1,6 +1,7 @@
 provider:
   name: docker
-  ignore-unlabeled: false
+  reject-unlabeled-requests: false
+  verify-enabled-on-expiration: false
   docker:
     strategy: stop
 server:

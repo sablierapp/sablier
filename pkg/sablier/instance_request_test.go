@@ -70,11 +70,11 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 	}
 }
 
-func TestInstanceRequest_NewUnlabeledRejectedWhenIgnoreUnlabeledEnabled(t *testing.T) {
+func TestRequestSession_NewUnlabeledRejectedWhenRejectUnlabeledRequestsEnabled(t *testing.T) {
 	for _, enabled := range []string{"", "false"} {
 		t.Run("enabled="+enabled, func(t *testing.T) {
 			manager, sessions, provider := setupSablier(t)
-			manager.WithIgnoreUnlabeled(true)
+			manager.WithRejectUnlabeledRequests(true)
 			ctx := t.Context()
 
 			stoppedInfo := sablier.InstanceInfo{
@@ -88,17 +88,19 @@ func TestInstanceRequest_NewUnlabeledRejectedWhenIgnoreUnlabeledEnabled(t *testi
 			sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 			provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 
-			_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+			session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
+			assert.NilError(t, err)
+
 			var notManaged sablier.ErrInstanceNotManaged
-			assert.Assert(t, errors.As(err, &notManaged))
+			assert.Assert(t, errors.As(session.Instances["nginx"].Error, &notManaged))
 			assert.Equal(t, notManaged.Name, "nginx")
 		})
 	}
 }
 
-func TestInstanceRequest_NewLabeledInstanceStartsWhenIgnoreUnlabeledEnabled(t *testing.T) {
+func TestRequestSession_NewLabeledInstanceStartsWhenRejectUnlabeledRequestsEnabled(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
-	manager.WithIgnoreUnlabeled(true)
+	manager.WithRejectUnlabeledRequests(true)
 	ctx := t.Context()
 	startCalled := make(chan struct{})
 
@@ -120,9 +122,10 @@ func TestInstanceRequest_NewLabeledInstanceStartsWhenIgnoreUnlabeledEnabled(t *t
 	})
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
 	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+	assert.Equal(t, session.Instances["nginx"].Instance.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+	assert.NilError(t, session.Instances["nginx"].Error)
 
 	select {
 	case <-startCalled:

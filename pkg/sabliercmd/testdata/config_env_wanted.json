@@ -13,7 +13,8 @@
     "Name": "envvar",
     "AutoStopOnStartup": false,
     "AutoStopExternallyStarted": false,
-    "IgnoreUnlabeled": false,
+    "RejectUnlabeledRequests": false,
+    "VerifyEnabledOnExpiration": false,
     "Kubernetes": {
       "QPS": 16,
       "Burst": 32,
