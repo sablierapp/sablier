@@ -1,13 +1,16 @@
 package kubernetes
 
-// Unit tests for buildResourcePatch.
+// Unit tests for buildResourcePatch and resource scaling helpers.
 // These run without a real Kubernetes cluster.
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"testing"
 
 	"gotest.tools/v3/assert"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestBuildResourcePatch_CPUAndMemory(t *testing.T) {
@@ -62,4 +65,24 @@ func TestBuildResourcePatch_InvalidCPU(t *testing.T) {
 func TestBuildResourcePatch_InvalidMemory(t *testing.T) {
 	_, err := buildResourcePatch("app", "", "bad-memory")
 	assert.Assert(t, err != nil, "expected error for invalid memory")
+}
+
+func newFakeProvider() *Provider {
+	return &Provider{
+		Client:    fake.NewSimpleClientset(),
+		delimiter: "_",
+		l:         slog.Default(),
+	}
+}
+
+func TestScaleResources_UnsupportedKind(t *testing.T) {
+	p := newFakeProvider()
+	err := p.scaleResources(context.Background(), ParsedName{Kind: "daemonset"}, "100m", "")
+	assert.ErrorContains(t, err, "unsupported kind")
+}
+
+func TestGetWorkloadLabels_UnsupportedKind(t *testing.T) {
+	p := newFakeProvider()
+	_, err := p.getWorkloadLabels(context.Background(), ParsedName{Kind: "daemonset"})
+	assert.ErrorContains(t, err, "unsupported kind")
 }
