@@ -1,6 +1,6 @@
 services:
   sablier:
-    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:SNAPSHOT-78e36e65fa2a4005bf1a1e9b96e6d0f9b65ea384-amd64}
     command:
       - start
       - --provider.name=docker
@@ -15,21 +15,25 @@ services:
     depends_on:
       - slow-starter
 
-  # Simulates a service that passes its health check only after a deliberate
-  # delay, then needs an extra settling period before it can serve traffic.
-  # The health check passes after ~5 s (start_period), but sablier.ready-after
-  # tells Sablier to wait an additional 15 s before unblocking requests.
+  # mimic is a configurable web-server used for testing purposes.
+  # It becomes healthy after 5 s (-healthy-after=5s), but sablier.ready-after
+  # adds a further 15 s settling period before Sablier unblocks requests,
+  # demonstrating a service that passes its health check before it can fully
+  # serve traffic.
   slow-starter:
-    image: nginx:alpine
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=5s
+      - -healthy=true
+      - -healthy-after=5s
     labels:
       - "sablier.enable=true"
       - "sablier.group=slow-starter"
       - "sablier.ready-after=15s"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      test: ["CMD", "/mimic", "healthcheck"]
       interval: 2s
       timeout: 3s
-      retries: 5
-      start_period: 5s
+      retries: 10
     ports:
       - "8080:80"

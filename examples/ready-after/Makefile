@@ -16,4 +16,4 @@ logs:
 # Ask Sablier to start the slow-starter group (blocking — waits until ready-after elapses)
 start:
 	@echo ">>> Requesting slow-starter group (blocking, up to 2m timeout)..."
-	curl -sf "http://localhost:10000/api/strategies/blocking?names=slow-starter&session_duration=2m&timeout=2m" | jq .
+	curl -sf "http://localhost:10000/api/strategies/blocking?group=slow-starter&session_duration=2m&timeout=2m" | jq .
