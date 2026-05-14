@@ -1,0 +1,17 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablier:local}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=5s
+      - --provider.reject-unlabeled-requests=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  unmanaged:
+    image: acouvreur/whoami:v1.10.2
+    container_name: sablier-reject-unlabeled-unmanaged

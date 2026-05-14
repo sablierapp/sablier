@@ -1,0 +1,18 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablier:local}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=3s
+      - --sessions.expiration-interval=1s
+      - --provider.verify-enabled-on-expiration=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  unlabeled:
+    image: acouvreur/whoami:v1.10.2
+    container_name: sablier-verify-expiration-unlabeled
