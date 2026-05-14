@@ -79,11 +79,11 @@ func Start(ctx context.Context, conf config.Config) error {
 	go func() {
 		for {
 			select {
-			case info, ok := <-stream.Events:
+			case event, ok := <-stream.Events:
 				if !ok {
 					return
 				}
-				err := s.RemoveInstance(ctx, info.Name)
+				err := s.RemoveInstance(ctx, event.Info.Name)
 				if err != nil {
 					logger.Warn("could not remove instance", slog.Any("error", err))
 				}

@@ -293,7 +293,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
-					return c.ID, err
+					if err != nil {
+						return c.ID, err
+					}
+					return c.ID, WaitForContainerRunning(ctx, dind.client, c.ID)
 				},
 			},
 			want: sablier.InstanceInfo{

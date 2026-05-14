@@ -119,7 +119,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		select {
 		case info, ok := <-stream.Events:
 			assert.Assert(t, ok, "events channel closed unexpectedly")
-			assert.Equal(t, info.Name, env.name)
+			assert.Equal(t, info.Info.Name, env.name)
 		case <-time.After(30 * time.Second):
 			t.Fatal("timed out waiting for stop notification")
 		}
