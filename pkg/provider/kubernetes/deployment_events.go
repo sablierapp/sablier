@@ -62,7 +62,7 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			if !wantRemoved {
+			if !wantRemoved && !wantStopped {
 				return
 			}
 			d := obj.(*appsv1.Deployment)
@@ -84,7 +84,12 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 				},
 			}
 			sablier.PopulateEnabledAndGroup(&info, d.Labels)
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
+			if wantRemoved {
+				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
+			}
+			if wantStopped {
+				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info}
+			}
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))

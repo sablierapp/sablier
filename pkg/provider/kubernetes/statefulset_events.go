@@ -63,7 +63,7 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			if !wantRemoved {
+			if !wantRemoved && !wantStopped {
 				return
 			}
 			ss := obj.(*appsv1.StatefulSet)
@@ -85,7 +85,12 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 				},
 			}
 			sablier.PopulateEnabledAndGroup(&info, ss.Labels)
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
+			if wantRemoved {
+				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
+			}
+			if wantStopped {
+				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info}
+			}
 		},
 	}
 	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))

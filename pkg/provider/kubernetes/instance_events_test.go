@@ -52,6 +52,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 	t.Run("deployment is removed", func(t *testing.T) {
@@ -71,6 +73,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 	t.Run("statefulSet is scaled to 0 replicas", func(t *testing.T) {
@@ -94,6 +98,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 
@@ -114,6 +120,8 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 }

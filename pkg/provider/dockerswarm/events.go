@@ -34,7 +34,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 			return sablier.InstanceEvent{}, false
 		}
 		switch msg.Action {
-		case "create":
+		case events.ActionCreate:
 			if !wantCreated {
 				return sablier.InstanceEvent{}, false
 			}
@@ -44,12 +44,16 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 				return sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSwarm}}, true
 			}
 			return sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}, true
-		case "remove":
-			if !wantRemoved {
-				return sablier.InstanceEvent{}, false
-			}
+		case events.ActionRemove:
 			// Service is already gone; only the name is available.
-			return sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSwarm}}, true
+			if wantRemoved {
+				return sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSwarm}}, true
+			}
+			// Removal implies the instance is stopped — emit a stopped event for subscribers that care.
+			if wantStopped {
+				return sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}}, true
+			}
+			return sablier.InstanceEvent{}, false
 		default:
 			// "update" action — check replicas attributes for scale events.
 			replicasNew := msg.Actor.Attributes["replicas.new"]

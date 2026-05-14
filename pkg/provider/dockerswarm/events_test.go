@@ -114,5 +114,7 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 		assert.Assert(t, info.Info.Swarm != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for service started event: %v", ctx.Err())
 	}
 }
