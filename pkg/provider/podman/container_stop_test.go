@@ -33,7 +33,7 @@ func TestPodmanProvider_Stop(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot stop container non-existent"),
+			err: fmt.Errorf("cannot inspect container"),
 		},
 		{
 			name: "container stop as expected",

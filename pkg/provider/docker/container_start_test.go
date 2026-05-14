@@ -33,7 +33,7 @@ func TestDockerClassicProvider_Start(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("cannot inspect container: Error response from daemon: No such container: non-existent"),
 		},
 		{
 			name: "container start as expected",
@@ -88,7 +88,7 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot inspect container non-existent before unpausing: Error response from daemon: No such container: non-existent"),
+			err: fmt.Errorf("cannot inspect container: Error response from daemon: No such container: non-existent"),
 		},
 		{
 			name: "container starts because was not paused",

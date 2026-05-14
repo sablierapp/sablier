@@ -6,9 +6,25 @@ import (
 	"log/slog"
 
 	"github.com/moby/moby/client"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) error {
+	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot inspect container: %w", err)
+	}
+
+	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
+	if sc != nil && (sc.Active.CPU != "" || sc.Active.Memory != "") {
+		p.l.DebugContext(ctx, "applying active resources (scale mode)",
+			slog.String("name", name),
+			slog.String("cpu", sc.Active.CPU),
+			slog.String("memory", sc.Active.Memory),
+		)
+		return p.applyResources(ctx, name, sc.Active.CPU, sc.Active.Memory)
+	}
+
 	if p.strategy == "pause" {
 		return p.dockerUnpause(ctx, name)
 	}

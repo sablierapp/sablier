@@ -20,6 +20,10 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.group` | No | `"myapp"` | Assign the instance to a named group. Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
+| `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Container keeps running with throttled CPU. |
+| `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). |
+| `sablier.active.cpu` | No | `"2.0"` | CPU limit restored when a new session is requested (scale mode). |
+| `sablier.active.memory` | No | `"512m"` | Memory limit restored when a new session is requested (scale mode). |
 
 ### `sablier.ready-after`
 
@@ -83,6 +87,70 @@ Running-hours are evaluated in the process local timezone.
 - In the official Docker image, the binary embeds timezone database data and supports `TZ` out of the box.
 - The container defaults to `TZ=UTC`.
 - Override timezone with environment variables, for example `-e TZ=Europe/Paris`.
+
+### Scale Mode
+
+Scale mode is an alternative to stopping containers. Instead of shutting down and restarting the container, Sablier **throttles its CPU and memory** when the session expires and **restores them** when a new session is requested. The container keeps running the entire time, which eliminates cold-start latency.
+
+| Label | Format | Example |
+|-------|--------|---------|
+| `sablier.idle.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | `"0.1"`, `"500m"` |
+| `sablier.idle.memory` | Docker units or Kubernetes quantity | `"64m"`, `"128Mi"` |
+| `sablier.active.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | `"2.0"`, `"2000m"` |
+| `sablier.active.memory` | Docker units or Kubernetes quantity | `"512m"`, `"1Gi"` |
+
+You can set any combination of the four labels. Labels not set default to 0 (no limit).
+
+**Supported providers:** Docker, Docker Swarm, Kubernetes (Deployments and StatefulSets), Podman.
+
+> Proxmox LXC does not support scale mode because it uses tag-based configuration rather than key-value labels.
+
+#### Docker / Podman
+
+CPU values are decimal fractions of one core (`"0.5"` = half a core). Memory values use Docker-style suffixes (`b`, `k`, `m`, `g`).
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
+      - "sablier.idle.cpu=0.1"
+      - "sablier.idle.memory=64m"
+      - "sablier.active.cpu=2.0"
+      - "sablier.active.memory=512m"
+```
+
+When the session expires, Sablier runs the equivalent of `docker update --cpus=0.1 --memory=64m myapp`. When a new session is requested, it restores `--cpus=2.0 --memory=512m`. The container is never stopped.
+
+> **Note:** Docker requires the memory swap limit to be updated in the same call as the memory limit. Sablier sets `MemorySwap` equal to `Memory` automatically, which satisfies the constraint and disables swap for the container.
+
+#### Docker Swarm
+
+Same format as Docker. Resource constraints are applied to the service's task template, triggering a Swarm service update (tasks are re-scheduled with the new limits).
+
+#### Kubernetes
+
+CPU and memory values use the standard [Kubernetes resource quantity](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) format (`"500m"`, `"2"`, `"128Mi"`, `"1Gi"`).
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  labels:
+    sablier.enable: "true"
+    sablier.group: myapp
+    sablier.idle.cpu: "100m"
+    sablier.idle.memory: "64Mi"
+    sablier.active.cpu: "2000m"
+    sablier.active.memory: "512Mi"
+```
+
+> **Note:** Kubernetes resource limit changes trigger a **rolling restart** of the pods. The service remains available during the transition (old pods are replaced with new ones), but there will be brief overlap between old and new pods.
+
+!> Scale mode changes resource **limits**, not requests. Ensure your nodes have sufficient allocatable capacity for the active limits.
 
 ## Configuration File
 

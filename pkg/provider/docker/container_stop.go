@@ -7,9 +7,25 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
+	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot inspect container: %w", err)
+	}
+
+	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
+	if sc != nil && (sc.Idle.CPU != "" || sc.Idle.Memory != "") {
+		p.l.DebugContext(ctx, "applying idle resources (scale mode)",
+			slog.String("name", name),
+			slog.String("cpu", sc.Idle.CPU),
+			slog.String("memory", sc.Idle.Memory),
+		)
+		return p.applyResources(ctx, name, sc.Idle.CPU, sc.Idle.Memory)
+	}
+
 	if p.strategy == "pause" {
 		return p.dockerPause(ctx, name)
 	}

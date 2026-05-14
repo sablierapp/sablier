@@ -9,8 +9,92 @@ import (
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestKubernetesProvider_InstanceStop_ScaleMode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	kind := sharedKinD
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	assert.NilError(t, err)
+
+	t.Run("deployment scale mode idle resources applied", func(t *testing.T) {
+		t.Parallel()
+
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{
+			Labels: map[string]string{
+				"sablier.idle.cpu":    "100m",
+				"sablier.idle.memory": "64Mi",
+			},
+		})
+		assert.NilError(t, err)
+		t.Cleanup(func() {
+			_ = kind.client.AppsV1().Deployments(d.Namespace).Delete(context.Background(), d.Name, metav1.DeleteOptions{})
+		})
+
+		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		assert.NilError(t, err)
+
+		name := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		err = p.InstanceStop(ctx, name)
+		assert.NilError(t, err)
+
+		updated, err := kind.client.AppsV1().Deployments(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		limits := updated.Spec.Template.Spec.Containers[0].Resources.Limits
+		expectedCPU := resource.MustParse("100m")
+		expectedMem := resource.MustParse("64Mi")
+		cpuLimit := limits[corev1.ResourceCPU]
+		memLimit := limits[corev1.ResourceMemory]
+		assert.Assert(t, cpuLimit.Cmp(expectedCPU) == 0,
+			"expected CPU limit 100m, got %s", cpuLimit.String())
+		assert.Assert(t, memLimit.Cmp(expectedMem) == 0,
+			"expected memory limit 64Mi, got %s", memLimit.String())
+	})
+
+	t.Run("statefulset scale mode idle resources applied", func(t *testing.T) {
+		t.Parallel()
+
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{
+			Labels: map[string]string{
+				"sablier.idle.cpu":    "100m",
+				"sablier.idle.memory": "64Mi",
+			},
+		})
+		assert.NilError(t, err)
+		t.Cleanup(func() {
+			_ = kind.client.AppsV1().StatefulSets(ss.Namespace).Delete(context.Background(), ss.Name, metav1.DeleteOptions{})
+		})
+
+		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		assert.NilError(t, err)
+
+		name := kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		err = p.InstanceStop(ctx, name)
+		assert.NilError(t, err)
+
+		updated, err := kind.client.AppsV1().StatefulSets(ss.Namespace).Get(ctx, ss.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		limits := updated.Spec.Template.Spec.Containers[0].Resources.Limits
+		expectedCPU := resource.MustParse("100m")
+		expectedMem := resource.MustParse("64Mi")
+		cpuLimit := limits[corev1.ResourceCPU]
+		memLimit := limits[corev1.ResourceMemory]
+		assert.Assert(t, cpuLimit.Cmp(expectedCPU) == 0,
+			"expected CPU limit 100m, got %s", cpuLimit.String())
+		assert.Assert(t, memLimit.Cmp(expectedMem) == 0,
+			"expected memory limit 64Mi, got %s", memLimit.String())
+	})
+}
 
 func TestKubernetesProvider_InstanceStop(t *testing.T) {
 	if testing.Short() {

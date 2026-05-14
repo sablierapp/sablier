@@ -1,7 +1,28 @@
 package dockerswarm
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"log/slog"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+)
 
 func (p *Provider) InstanceStop(ctx context.Context, name string) error {
+	service, err := p.getServiceByName(name, ctx)
+	if err != nil {
+		return fmt.Errorf("cannot get service: %w", err)
+	}
+
+	sc := sablier.ScaleConfigFromLabels(service.Spec.Labels)
+	if sc != nil && (sc.Idle.CPU != "" || sc.Idle.Memory != "") {
+		p.l.DebugContext(ctx, "applying idle resources (scale mode)",
+			slog.String("name", name),
+			slog.String("cpu", sc.Idle.CPU),
+			slog.String("memory", sc.Idle.Memory),
+		)
+		return p.ServiceUpdateResources(ctx, name, sc.Idle.CPU, sc.Idle.Memory)
+	}
+
 	return p.ServiceUpdateReplicas(ctx, name, 0)
 }

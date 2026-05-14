@@ -32,7 +32,7 @@ func TestPodmanProvider_Start(t *testing.T) {
 					return "non-existent", nil
 				},
 			},
-			err: fmt.Errorf("cannot start container non-existent"),
+			err: fmt.Errorf("cannot inspect container"),
 		},
 		{
 			name: "container start as expected",

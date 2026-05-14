@@ -14,6 +14,46 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+func TestDockerSwarmProvider_Start_ScaleMode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+	p, err := dockerswarm.New(ctx, c.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	s, err := c.CreateMimic(ctx, MimicOptions{
+		Cmd: []string{"/mimic"},
+		Labels: map[string]string{
+			"sablier.active.cpu":    "2.0",
+			"sablier.active.memory": "128m",
+		},
+	})
+	assert.NilError(t, err)
+
+	inspectResult, err := c.client.ServiceInspect(ctx, s.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	name := inspectResult.Service.Spec.Name
+	t.Cleanup(func() {
+		_, _ = c.client.ServiceRemove(context.Background(), name, client.ServiceRemoveOptions{})
+	})
+
+	err = p.InstanceStart(ctx, name)
+	assert.NilError(t, err)
+
+	service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	// Scale mode: replicas must remain at 1.
+	assert.Equal(t, *service.Service.Spec.Mode.Replicated.Replicas, uint64(1))
+	// CPU limit must be set to 2.0 cores (2 000 000 000 nanocores).
+	assert.Equal(t, service.Service.Spec.TaskTemplate.Resources.Limits.NanoCPUs, int64(2_000_000_000))
+	// Memory limit must be set to 128 MiB.
+	assert.Equal(t, service.Service.Spec.TaskTemplate.Resources.Limits.MemoryBytes, int64(128*1024*1024))
+}
+
 func TestDockerSwarmProvider_Start(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
