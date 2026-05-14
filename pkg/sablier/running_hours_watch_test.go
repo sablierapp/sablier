@@ -29,6 +29,25 @@ func outsideWindowSpec() string {
 	return fmt.Sprintf("%02d:%02d-%02d:%02d", base.Hour(), base.Minute(), end.Hour(), end.Minute())
 }
 
+// startWatcher launches WatchRunningHours in a goroutine and registers a
+// t.Cleanup that cancels the context and waits for the goroutine to exit.
+// This prevents "log after test completed" panics caused by the slogt logger.
+func startWatcher(t *testing.T, s *sablier.Sablier, ctx context.Context, cancel context.CancelFunc) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		s.WatchRunningHours(ctx)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	})
+}
+
 // TestWatchRunningHours_StartsInstanceInsideWindow verifies that when an
 // instance's running-hours window is currently active, the watcher triggers
 // an InstanceRequest which extends/creates the session.
@@ -38,7 +57,6 @@ func TestWatchRunningHours_StartsInstanceInsideWindow(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	spec := insideWindowSpec()
 
@@ -59,7 +77,7 @@ func TestWatchRunningHours_StartsInstanceInsideWindow(t *testing.T) {
 			return nil
 		})
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case ttl := <-put:
@@ -78,7 +96,6 @@ func TestWatchRunningHours_SkipsInstanceOutsideWindow(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	spec := outsideWindowSpec()
 
@@ -94,7 +111,7 @@ func TestWatchRunningHours_SkipsInstanceOutsideWindow(t *testing.T) {
 
 	// sessions.Get and sessions.Put must NOT be called (gomock strict mode enforces this).
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-inspected:
@@ -111,7 +128,6 @@ func TestWatchRunningHours_SkipsNonEnabledInstance(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	listed := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
@@ -122,7 +138,7 @@ func TestWatchRunningHours_SkipsNonEnabledInstance(t *testing.T) {
 
 	// InstanceInspect must NOT be called (gomock strict mode enforces this).
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-listed:
@@ -138,7 +154,6 @@ func TestWatchRunningHours_SkipsInstanceWithoutRunningHoursLabel(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
@@ -152,7 +167,7 @@ func TestWatchRunningHours_SkipsInstanceWithoutRunningHoursLabel(t *testing.T) {
 
 	// sessions.Get and sessions.Put must NOT be called.
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-inspected:
@@ -168,7 +183,6 @@ func TestWatchRunningHours_HandlesInstanceListError(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	listed := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
@@ -177,7 +191,7 @@ func TestWatchRunningHours_HandlesInstanceListError(t *testing.T) {
 			return nil, errors.New("provider unavailable")
 		})
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-listed:
@@ -193,7 +207,6 @@ func TestWatchRunningHours_HandlesInstanceInspectError(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
@@ -207,7 +220,7 @@ func TestWatchRunningHours_HandlesInstanceInspectError(t *testing.T) {
 
 	// sessions.Get and sessions.Put must NOT be called.
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-inspected:
@@ -223,7 +236,6 @@ func TestWatchRunningHours_HandlesInvalidRunningHoursLabel(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
@@ -237,7 +249,7 @@ func TestWatchRunningHours_HandlesInvalidRunningHoursLabel(t *testing.T) {
 
 	// sessions.Get and sessions.Put must NOT be called.
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-inspected:
@@ -253,7 +265,6 @@ func TestWatchRunningHours_TickerTriggersReconciliation(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 20 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	spec := insideWindowSpec()
 
@@ -277,7 +288,7 @@ func TestWatchRunningHours_TickerTriggersReconciliation(t *testing.T) {
 
 	sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-second:
@@ -332,7 +343,6 @@ func TestWatchRunningHours_MultipleInstances_MixedWindow(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	inSpec := insideWindowSpec()
 	outSpec := outsideWindowSpec()
@@ -362,7 +372,7 @@ func TestWatchRunningHours_MultipleInstances_MixedWindow(t *testing.T) {
 
 	// sessions.Get for inactive-app must NOT be called.
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-put:
@@ -380,7 +390,6 @@ func TestWatchRunningHours_InstanceRequestError(t *testing.T) {
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	spec := insideWindowSpec()
 
@@ -401,7 +410,7 @@ func TestWatchRunningHours_InstanceRequestError(t *testing.T) {
 
 	// sessions.Put and InstanceStart must NOT be called.
 
-	go s.WatchRunningHours(ctx)
+	startWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-storeErr:
