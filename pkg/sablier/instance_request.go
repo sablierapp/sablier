@@ -178,9 +178,20 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 		}
 	}
 
-	s.l.DebugContext(ctx, "set expiration for instance", slog.String("instance", name), slog.Duration("expiration", duration))
+	effectiveDuration := duration
+	if state.RunningHours != "" {
+		remaining, inWindow, runningHoursErr := runningHoursRemaining(state.RunningHours, time.Now())
+		if runningHoursErr != nil {
+			s.l.WarnContext(ctx, "invalid running-hours value in state, ignoring", slog.String("instance", name), slog.String("value", state.RunningHours), slog.Any("error", runningHoursErr))
+		} else if inWindow && remaining > effectiveDuration {
+			effectiveDuration = remaining
+			s.l.DebugContext(ctx, "running-hours window active, extending expiration", slog.String("instance", name), slog.Duration("expiration", effectiveDuration), slog.Duration("window_remaining", remaining))
+		}
+	}
 
-	err = s.sessions.Put(ctx, state, duration)
+	s.l.DebugContext(ctx, "set expiration for instance", slog.String("instance", name), slog.Duration("expiration", effectiveDuration))
+
+	err = s.sessions.Put(ctx, state, effectiveDuration)
 	if err != nil {
 		s.l.ErrorContext(ctx, "could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))
 		return InstanceInfo{}, fmt.Errorf("could not put instance to store: %w", err)

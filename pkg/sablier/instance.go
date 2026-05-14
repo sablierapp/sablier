@@ -45,6 +45,10 @@ type InstanceInfo struct {
 	// ReadyAt records when the instance first transitioned to InstanceStatusReady.
 	// It is set internally by Sablier and is never populated by a provider.
 	ReadyAt *time.Time `json:"readyAt,omitempty"`
+
+	// RunningHours is a daily keep-warm window in local time, parsed from
+	// the sablier.running-hours label (format: HH:MM-HH:MM).
+	RunningHours string `json:"runningHours,omitempty"`
 }
 
 type InstanceConfiguration struct {
@@ -80,6 +84,17 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			info.ReadyAfter = d
 		} else {
 			slog.Warn("invalid sablier.ready-after label value, ignoring",
+				slog.String("instance", info.Name),
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		}
+	}
+	if v := labels["sablier.running-hours"]; v != "" {
+		if _, err := ParseRunningHours(v); err == nil {
+			info.RunningHours = v
+		} else {
+			slog.Warn("invalid sablier.running-hours label value, ignoring",
 				slog.String("instance", info.Name),
 				slog.String("value", v),
 				slog.Any("error", err),

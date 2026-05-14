@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	_ "time/tzdata"
 
 	"github.com/sablierapp/sablier/pkg/sabliercmd"
 )

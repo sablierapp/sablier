@@ -62,6 +62,7 @@ func TestPopulateEnabledAndGroup_ReadyAfter(t *testing.T) {
 		labels    map[string]string
 		wantAfter time.Duration
 	}{
+
 		{
 			name:      "label absent",
 			labels:    map[string]string{"sablier.enable": "true"},
@@ -88,6 +89,38 @@ func TestPopulateEnabledAndGroup_ReadyAfter(t *testing.T) {
 			var info sablier.InstanceInfo
 			sablier.PopulateEnabledAndGroup(&info, tt.labels)
 			assert.Equal(t, info.ReadyAfter, tt.wantAfter)
+		})
+	}
+}
+
+func TestPopulateEnabledAndGroup_RunningHours(t *testing.T) {
+	tests := []struct {
+		name     string
+		labels   map[string]string
+		expected string
+	}{
+		{
+			name:     "label absent",
+			labels:   map[string]string{"sablier.enable": "true"},
+			expected: "",
+		},
+		{
+			name:     "valid running-hours",
+			labels:   map[string]string{"sablier.enable": "true", "sablier.running-hours": "09:00-17:00"},
+			expected: "09:00-17:00",
+		},
+		{
+			name:     "invalid running-hours is ignored",
+			labels:   map[string]string{"sablier.enable": "true", "sablier.running-hours": "invalid"},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var info sablier.InstanceInfo
+			sablier.PopulateEnabledAndGroup(&info, tt.labels)
+			assert.Equal(t, info.RunningHours, tt.expected)
 		})
 	}
 }
