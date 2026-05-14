@@ -26,7 +26,7 @@ test: up wait-sablier
 	@echo "==> Stopping unlabeled container before requesting a session"
 	docker compose stop unlabeled
 	@echo "==> Requesting unlabeled container by names"
-	curl -fsS '$(SABLIER_URL)/api/strategies/blocking?names=$(UNLABELED_NAME)&session_duration=3s&timeout=10s' > "$(RESPONSE_FILE)"
+	curl -fsS '$(SABLIER_URL)/api/strategies/dynamic?names=$(UNLABELED_NAME)&session_duration=3s' > "$(RESPONSE_FILE)"
 	@echo "==> Waiting for the session to expire"
 	sleep 6
 	@status=$$(docker inspect -f '{{.State.Status}}' "$(UNLABELED_NAME)"); \
