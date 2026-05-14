@@ -224,3 +224,66 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		}
 	})
 }
+
+func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	kind := sharedKinD
+	conf := config.NewProviderConfig().Kubernetes
+	conf.QPS = 100
+	conf.Burst = 100
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
+	})
+
+	t.Run("deployment is created", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		expectedName := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		for {
+			select {
+			case info := <-stream.Events:
+				if info.Info.Name != expectedName {
+					continue
+				}
+				assert.Equal(t, info.Info.Provider, "kubernetes")
+				assert.Assert(t, info.Info.Kubernetes != nil)
+				return
+			case err := <-stream.Err:
+				t.Fatalf("unexpected error: %v", err)
+			case <-ctx.Done():
+				t.Fatalf("timed out waiting for deployment created event: %v", ctx.Err())
+			}
+		}
+	})
+
+	t.Run("statefulSet is created", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		expectedName := kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		for {
+			select {
+			case info := <-stream.Events:
+				if info.Info.Name != expectedName {
+					continue
+				}
+				assert.Equal(t, info.Info.Provider, "kubernetes")
+				assert.Assert(t, info.Info.Kubernetes != nil)
+				return
+			case err := <-stream.Err:
+				t.Fatalf("unexpected error: %v", err)
+			case <-ctx.Done():
+				t.Fatalf("timed out waiting for statefulset created event: %v", ctx.Err())
+			}
+		}
+	})
+}

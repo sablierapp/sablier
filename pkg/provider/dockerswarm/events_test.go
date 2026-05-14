@@ -118,3 +118,40 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 		t.Fatalf("timed out waiting for service started event: %v", ctx.Err())
 	}
 }
+
+func TestDockerSwarmProvider_InstanceEvents_Created(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
+	})
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	t.Cleanup(func() {
+		_, _ = dind.client.ServiceRemove(context.Background(), c.ID, client.ServiceRemoveOptions{})
+	})
+
+	inspectResult, err := dind.client.ServiceInspect(ctx, c.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		assert.Equal(t, info.Info.Name, inspectResult.Service.Spec.Name)
+		assert.Equal(t, info.Info.Provider, "swarm")
+		assert.Assert(t, info.Info.Swarm != nil)
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for service created event: %v", ctx.Err())
+	}
+}
