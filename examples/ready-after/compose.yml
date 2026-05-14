@@ -1,6 +1,6 @@
 services:
   sablier:
-    image: ${SABLIER_IMAGE:-sablierapp/sablier:SNAPSHOT-78e36e65fa2a4005bf1a1e9b96e6d0f9b65ea384-amd64}
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
       - --provider.name=docker
