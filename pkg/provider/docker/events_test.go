@@ -52,3 +52,40 @@ func TestDockerClassicProvider_InstanceEvents(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestDockerClassicProvider_InstanceEvents_Started(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+	})
+
+	_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+
+	err = WaitForContainerRunning(ctx, dind.client, c.ID)
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		assert.Equal(t, "/"+info.Name, inspected.Container.Name)
+		assert.Equal(t, info.Provider, "docker")
+		assert.Assert(t, info.Docker != nil)
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

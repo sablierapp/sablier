@@ -16,29 +16,49 @@ import (
 )
 
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
+	wantStarted := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStarted)
+
 	dial := func(ctx context.Context) client.EventsResult {
 		filters := client.Filters{}
 		filters.Add("type", string(events.ContainerEventType))
-		// Map InstanceEventStopped -> docker "die" event.
-		// An empty Types slice means all event types.
-		if len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped) {
+		if wantStopped {
 			filters.Add("event", "die")
+		}
+		if wantStarted {
+			filters.Add("event", "start")
 		}
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
-	// "die" events fire while the container still exists (exited state), so we
-	// can inspect to get the full InstanceInfo including Docker-specific fields.
 	build := func(ctx context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
 		name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 		if name == "" {
 			return sablier.InstanceInfo{}, false
 		}
-		info, err := p.InstanceInspect(ctx, name)
-		if err != nil {
-			p.l.WarnContext(ctx, "inspect after die event failed, using bare info", "container", name, "error", err)
-			return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderDocker}, true
+		switch msg.Action {
+		case "die":
+			if !wantStopped {
+				return sablier.InstanceInfo{}, false
+			}
+			info, err := p.InstanceInspect(ctx, name)
+			if err != nil {
+				p.l.WarnContext(ctx, "inspect after die event failed, using bare info", "container", name, "error", err)
+				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderDocker}, true
+			}
+			return info, true
+		case "start":
+			if !wantStarted {
+				return sablier.InstanceInfo{}, false
+			}
+			info, err := p.InstanceInspect(ctx, name)
+			if err != nil {
+				p.l.WarnContext(ctx, "inspect after start event failed, using bare info", "container", name, "error", err)
+				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderDocker}, true
+			}
+			return info, true
+		default:
+			return sablier.InstanceInfo{}, false
 		}
-		return info, true
 	}
 	return streamEvents(ctx, p.l, dial, build, linearBackoff)
 }

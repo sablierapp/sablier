@@ -103,6 +103,10 @@ func Start(ctx context.Context, conf config.Config) error {
 		}
 	}
 
+	if conf.Provider.AutoStopExternallyStarted {
+		go s.WatchAndStopExternallyStarted(ctx)
+	}
+
 	t, err := setupTheme(ctx, conf, logger)
 	if err != nil {
 		return fmt.Errorf("cannot setup theme: %w", err)

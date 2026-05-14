@@ -19,6 +19,7 @@ const maxReconnectAttempts = 10
 
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
+	wantStarted := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStarted)
 	dial := func(ctx context.Context) client.EventsResult {
 		filters := client.Filters{}
 		filters.Add("scope", "swarm")
@@ -26,25 +27,33 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
 	// InstanceEventStopped maps to: replicas scaled to 0, or service removed.
-	// When scaled to 0 the service still exists and we can inspect it for full info.
-	// When removed the service is gone; emit a bare stopped InstanceInfo instead.
+	// InstanceEventStarted maps to: replicas scaled from 0 to >0.
 	build := func(ctx context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
-		if !wantStopped {
-			return sablier.InstanceInfo{}, false
-		}
 		name := msg.Actor.Attributes["name"]
 		if name == "" {
 			return sablier.InstanceInfo{}, false
 		}
 		if msg.Action == "remove" {
-			// Service is gone; inspect would fail.
-			return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
+			if wantStopped {
+				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
+			}
+			return sablier.InstanceInfo{}, false
 		}
-		if msg.Actor.Attributes["replicas.new"] == "0" {
+		replicasNew := msg.Actor.Attributes["replicas.new"]
+		replicasOld := msg.Actor.Attributes["replicas.old"]
+		if replicasNew == "0" && wantStopped {
 			info, err := p.InstanceInspect(ctx, name)
 			if err != nil {
 				p.l.WarnContext(ctx, "inspect after scale-to-0 event failed, using bare info", "service", name, "error", err)
 				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderSwarm}, true
+			}
+			return info, true
+		}
+		if replicasOld == "0" && replicasNew != "" && replicasNew != "0" && wantStarted {
+			info, err := p.InstanceInspect(ctx, name)
+			if err != nil {
+				p.l.WarnContext(ctx, "inspect after scale-from-0 event failed, using bare info", "service", name, "error", err)
+				return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderSwarm}, true
 			}
 			return info, true
 		}

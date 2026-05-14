@@ -70,6 +70,11 @@ sablier --configFile=path/to/myconfigfile.yml
 provider:
   # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc)
   name: docker
+  # Stop all sablier.enable=true instances that are running at startup and were not started by Sablier (default: true)
+  auto-stop-on-startup: true
+  # Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default: false)
+  # Uses both event-driven detection and a periodic reconciliation scan (every 30 seconds) as a safety net.
+  auto-stop-externally-started: false
   docker:
     # Strategy to use for stopping Docker containers: stop or pause (default: stop)
     strategy: stop
@@ -185,6 +190,8 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
 
 ```
   -h, --help                                                  help for start
+      --provider.auto-stop-on-startup                         Stop all sablier.enable=true instances running at startup that were not started by Sablier (default true)
+  --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
       --server.base-path string                               The base path for the API (default "/")

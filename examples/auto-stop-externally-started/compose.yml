@@ -1,0 +1,35 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=10s
+      # Stop instances that are already running at startup and were not started by Sablier.
+      - --provider.auto-stop-on-startup=true
+      # Continuously stop instances that start after Sablier is running and were not started by Sablier.
+      - --provider.auto-stop-externally-started=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # managed has sablier.enable=true.
+  # Sablier will stop it on startup (auto-stop-on-startup) and again if
+  # it is started externally while Sablier is running (auto-stop-externally-started).
+  managed:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=managed"
+    ports:
+      - "8080:80"
+
+  # unmanaged has no sablier labels.
+  # Sablier ignores it completely; it keeps running regardless.
+  unmanaged:
+    image: acouvreur/whoami:v1.10.2
+    ports:
+      - "8081:80"

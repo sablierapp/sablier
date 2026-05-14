@@ -15,19 +15,20 @@ import (
 const maxConsecutivePollErrors = 5
 
 // InstanceEvents polls Proxmox for status changes and emits events when
-// instances transition from running to stopped. Proxmox VE does not provide
-// a real-time event stream, so polling is used.
+// instances transition from running to stopped (or vice versa). Proxmox VE
+// does not provide a real-time event stream, so polling is used.
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	eventsC := make(chan sablier.InstanceInfo)
 	errC := make(chan error, 1)
 
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
+	wantStarted := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStarted)
 
 	go func() {
 		defer close(eventsC)
 		defer close(errC)
 
-		if !wantStopped {
+		if !wantStopped && !wantStarted {
 			<-ctx.Done()
 			return
 		}
@@ -82,18 +83,39 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 				}
 
 				// Detect containers that were running but are no longer
-				for name := range running {
-					if !currentRunning[name] {
-						p.l.DebugContext(ctx, "container stopped detected", slog.String("name", name))
-						select {
-						case eventsC <- sablier.InstanceInfo{
-							Name:            name,
-							CurrentReplicas: 0,
-							DesiredReplicas: p.desiredReplicas,
-							Status:          sablier.InstanceStatusStopped,
-						}:
-						case <-ctx.Done():
-							return
+				if wantStopped {
+					for name := range running {
+						if !currentRunning[name] {
+							p.l.DebugContext(ctx, "container stopped detected", slog.String("name", name))
+							select {
+							case eventsC <- sablier.InstanceInfo{
+								Name:            name,
+								CurrentReplicas: 0,
+								DesiredReplicas: p.desiredReplicas,
+								Status:          sablier.InstanceStatusStopped,
+							}:
+							case <-ctx.Done():
+								return
+							}
+						}
+					}
+				}
+
+				// Detect containers that were not running but are now
+				if wantStarted {
+					for name := range currentRunning {
+						if !running[name] {
+							p.l.DebugContext(ctx, "container started detected", slog.String("name", name))
+							select {
+							case eventsC <- sablier.InstanceInfo{
+								Name:            name,
+								CurrentReplicas: p.desiredReplicas,
+								DesiredReplicas: p.desiredReplicas,
+								Status:          sablier.InstanceStatusStarting,
+							}:
+							case <-ctx.Done():
+								return
+							}
 						}
 					}
 				}
