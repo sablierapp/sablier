@@ -1,0 +1,30 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=30s
+      - --sessions.expiration-interval=5s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # whoami is managed in scale mode: instead of being stopped, its CPU and
+  # memory are throttled when idle and restored when a session is requested.
+  # The container is never stopped, so there is no cold-start latency.
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=whoami"
+      # Idle: throttle to 0.1 CPU and 64 MB when the session expires
+      - "sablier.idle.cpu=0.1"
+      - "sablier.idle.memory=64m"
+      # Active: restore to 2 CPUs and 512 MB when a new session is requested
+      - "sablier.active.cpu=2.0"
+      - "sablier.active.memory=512m"
+    ports:
+      - "8080:80"

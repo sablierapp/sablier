@@ -49,6 +49,27 @@ type InstanceInfo struct {
 	// RunningHours is a daily keep-warm window in local time, parsed from
 	// the sablier.running-hours label (format: HH:MM-HH:MM).
 	RunningHours string `json:"runningHours,omitempty"`
+
+	// ScaleConfig configures resource-based scale mode for this instance.
+	// When present, Sablier throttles CPU/memory instead of stopping the container.
+	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`
+}
+
+// ScaleConfig defines the idle and active resource profiles used in scale mode.
+// In scale mode, the container keeps running but its resources are adjusted:
+// idle resources are applied when the session expires, active resources when
+// a new session is requested.
+type ScaleConfig struct {
+	Idle   ResourceProfile `json:"idle,omitempty"`
+	Active ResourceProfile `json:"active,omitempty"`
+}
+
+// ResourceProfile holds the CPU and memory limits for a single resource profile.
+type ResourceProfile struct {
+	// CPU is the CPU limit (e.g. "0.5" for Docker/Swarm, "500m" for Kubernetes).
+	CPU string `json:"cpu,omitempty"`
+	// Memory is the memory limit (e.g. "128m" for Docker/Swarm, "128Mi" for Kubernetes).
+	Memory string `json:"memory,omitempty"`
 }
 
 type InstanceConfiguration struct {
@@ -65,6 +86,24 @@ func (instance InstanceInfo) IsReady() bool {
 		return true
 	}
 	return time.Since(*instance.ReadyAt) >= instance.ReadyAfter
+}
+
+// ScaleConfigFromLabels extracts a ScaleConfig from the given label map.
+// Returns nil if none of the scale labels (sablier.idle.cpu, sablier.idle.memory,
+// sablier.active.cpu, sablier.active.memory) are present.
+func ScaleConfigFromLabels(labels map[string]string) *ScaleConfig {
+	idle := ResourceProfile{
+		CPU:    labels["sablier.idle.cpu"],
+		Memory: labels["sablier.idle.memory"],
+	}
+	active := ResourceProfile{
+		CPU:    labels["sablier.active.cpu"],
+		Memory: labels["sablier.active.memory"],
+	}
+	if idle.CPU == "" && idle.Memory == "" && active.CPU == "" && active.Memory == "" {
+		return nil
+	}
+	return &ScaleConfig{Idle: idle, Active: active}
 }
 
 // PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from
@@ -101,4 +140,5 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			)
 		}
 	}
+	info.ScaleConfig = ScaleConfigFromLabels(labels)
 }
