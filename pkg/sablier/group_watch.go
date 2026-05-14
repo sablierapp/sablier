@@ -192,13 +192,16 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 	}
 }
 
-// instanceToGroupSnapshot returns a defensive copy of the reverse map. Safe for concurrent use.
+// instanceToGroupSnapshot returns a snapshot of the current instance→group mapping,
+// derived from s.groups. Safe for concurrent use.
 func (s *Sablier) instanceToGroupSnapshot() map[string]string {
 	s.groupsMu.RLock()
 	defer s.groupsMu.RUnlock()
-	out := make(map[string]string, len(s.instanceToGroup))
-	for k, v := range s.instanceToGroup {
-		out[k] = v
+	out := make(map[string]string)
+	for group, instances := range s.groups {
+		for _, inst := range instances {
+			out[inst] = group
+		}
 	}
 	return out
 }
