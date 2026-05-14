@@ -180,3 +180,16 @@ func TestDocker_IsValid(t *testing.T) {
 		})
 	}
 }
+
+func TestNewProviderConfig_Defaults(t *testing.T) {
+	c := NewProviderConfig()
+
+	assert.Equal(t, c.Name, "docker")
+	assert.Equal(t, c.AutoStopOnStartup, true)
+	assert.Equal(t, c.AutoStopExternallyStarted, false)
+	assert.Equal(t, c.Docker.Strategy, "stop")
+	assert.Equal(t, c.Kubernetes.QPS, float32(5))
+	assert.Equal(t, c.Kubernetes.Burst, 10)
+	assert.Equal(t, c.Kubernetes.Delimiter, "_")
+	assert.Equal(t, c.Podman.Uri, "unix:///run/podman/podman.sock")
+}
