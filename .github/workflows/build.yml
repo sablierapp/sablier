@@ -41,13 +41,11 @@ jobs:
 
     - name: Test
       id: test
-      env:
-        GOCOVERDIR: /tmp/gocov
       run: |
         # gotestsum reruns failing tests with --rerun-fails; when using
         # -coverprofile this can overwrite the full-suite profile with a
-        # rerun-only profile. We collect coverage in GOCOVERDIR and merge it
-        # afterwards to keep stable aggregate coverage across reruns.
+        # rerun-only profile. We write binary coverage with -test.gocoverdir
+        # and merge it afterwards to keep stable aggregate coverage across reruns.
         # See: https://github.com/gotestyourself/gotestsum/issues/274
         mkdir -p /tmp/gocov
         go tool -modfile=tools.mod gotestsum \
@@ -57,7 +55,7 @@ jobs:
           --rerun-fails-max-failures=10 \
           --packages="./..." \
           --post-run-command .github/scripts/test-summary.sh \
-          -- -tags="nomsgpack" -race -covermode=atomic -cover ./...
+          -- -tags="nomsgpack" -race -covermode=atomic -cover ./... -args -test.gocoverdir=/tmp/gocov
 
     - name: Generate coverage report
       if: ${{ !cancelled() }}
