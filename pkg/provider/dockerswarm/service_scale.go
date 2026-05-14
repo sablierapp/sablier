@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -35,9 +36,9 @@ func parseMemoryBytes(memory string) (int64, error) {
 	return b, nil
 }
 
-// ServiceUpdateScale updates the replica count and/or CPU/memory resource limits
-// of a Swarm service in a single service update call. Pass an empty string for
-// cpu or memory to set that limit to 0 (unlimited).
+// ServiceUpdateScale updates the replica count and, optionally, CPU/memory resource limits
+// of a Swarm service in a single service update call. Invalid or empty cpu/memory values
+// are skipped with a warning rather than failing the call.
 func (p *Provider) ServiceUpdateScale(ctx context.Context, name string, replicas uint64, cpu, memory string) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
@@ -60,16 +61,18 @@ func (p *Provider) ServiceUpdateScale(ctx context.Context, name string, replicas
 		if cpu != "" {
 			v, err := parseCPUNano(cpu)
 			if err != nil {
-				return err
+				p.l.WarnContext(ctx, "invalid cpu label value, skipping", slog.String("cpu", cpu), slog.Any("error", err))
+			} else {
+				service.Spec.TaskTemplate.Resources.Limits.NanoCPUs = v
 			}
-			service.Spec.TaskTemplate.Resources.Limits.NanoCPUs = v
 		}
 		if memory != "" {
 			v, err := parseMemoryBytes(memory)
 			if err != nil {
-				return err
+				p.l.WarnContext(ctx, "invalid memory label value, skipping", slog.String("memory", memory), slog.Any("error", err))
+			} else {
+				service.Spec.TaskTemplate.Resources.Limits.MemoryBytes = v
 			}
-			service.Spec.TaskTemplate.Resources.Limits.MemoryBytes = v
 		}
 	}
 

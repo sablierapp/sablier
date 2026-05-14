@@ -16,7 +16,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
-	if sc != nil && sc.Active.Replicas >= 1 {
+	if sc.Idle.Replicas >= 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
 		if sc.Active.CPU != "" || sc.Active.Memory != "" {
 			p.l.DebugContext(ctx, "applying active resources (scale mode)",
 				slog.String("name", name),

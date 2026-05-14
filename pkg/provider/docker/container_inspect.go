@@ -25,7 +25,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		info = sablier.InstanceInfo{
 			Name:            name,
 			CurrentReplicas: 0,
-			DesiredReplicas: p.desiredReplicas,
+			DesiredReplicas: 1,
 			Status:          sablier.InstanceStatusStarting,
 		}
 	case container.StateRunning:
@@ -35,15 +35,15 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			case container.Healthy:
 				info = sablier.InstanceInfo{
 					Name:            name,
-					CurrentReplicas: p.desiredReplicas,
-					DesiredReplicas: p.desiredReplicas,
+					CurrentReplicas: 1,
+					DesiredReplicas: 1,
 					Status:          sablier.InstanceStatusReady,
 				}
 			case container.Unhealthy:
 				info = sablier.InstanceInfo{
 					Name:            name,
 					CurrentReplicas: 0,
-					DesiredReplicas: p.desiredReplicas,
+					DesiredReplicas: 1,
 					Status:          sablier.InstanceStatusError,
 					Message:         "container is unhealthy",
 				}
@@ -51,7 +51,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				info = sablier.InstanceInfo{
 					Name:            name,
 					CurrentReplicas: 0,
-					DesiredReplicas: p.desiredReplicas,
+					DesiredReplicas: 1,
 					Status:          sablier.InstanceStatusStarting,
 				}
 			}
@@ -59,8 +59,8 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			p.l.WarnContext(ctx, "container running without healthcheck, you should define a healthcheck on your container so that Sablier properly detects when the container is ready to handle requests.", slog.String("container", name))
 			info = sablier.InstanceInfo{
 				Name:            name,
-				CurrentReplicas: p.desiredReplicas,
-				DesiredReplicas: p.desiredReplicas,
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
 			}
 		}
@@ -69,7 +69,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
-				DesiredReplicas: p.desiredReplicas,
+				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusError,
 				Message:         fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode),
 			}
@@ -77,7 +77,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
-				DesiredReplicas: p.desiredReplicas,
+				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusStopped,
 			}
 		}
@@ -85,7 +85,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		info = sablier.InstanceInfo{
 			Name:            name,
 			CurrentReplicas: 0,
-			DesiredReplicas: p.desiredReplicas,
+			DesiredReplicas: 1,
 			Status:          sablier.InstanceStatusError,
 			Message:         "container in \"dead\" state cannot be restarted",
 		}
@@ -93,7 +93,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		info = sablier.InstanceInfo{
 			Name:            name,
 			CurrentReplicas: 0,
-			DesiredReplicas: p.desiredReplicas,
+			DesiredReplicas: 1,
 			Status:          sablier.InstanceStatusError,
 			Message:         fmt.Sprintf("container status \"%s\" not handled", spec.Container.State.Status),
 		}

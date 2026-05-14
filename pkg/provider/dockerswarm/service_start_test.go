@@ -84,7 +84,7 @@ func TestDockerSwarmProvider_Start_ScaleMode_ReplicasOnly(t *testing.T) {
 	err = p.InstanceStart(ctx, name)
 	assert.NilError(t, err)
 
-	service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{})
+	service, err := c.client.ServiceInspect(ctx, name, client.ServiceInspectOptions{InsertDefaults: true})
 	assert.NilError(t, err)
 	// Scale mode (replicas only): replicas must remain at 1.
 	assert.Equal(t, *service.Service.Spec.Mode.Replicated.Replicas, uint64(1))

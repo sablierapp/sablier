@@ -19,7 +19,7 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(labels)
-	if sc != nil && sc.Idle.Replicas >= 1 {
+	if sc.Idle.Replicas >= 1 {
 		p.l.DebugContext(ctx, "applying idle resources (scale mode)",
 			slog.String("name", name),
 			slog.Int("replicas", int(sc.Idle.Replicas)),

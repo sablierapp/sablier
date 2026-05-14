@@ -95,27 +95,23 @@ func (instance InstanceInfo) IsReady() bool {
 }
 
 // ScaleConfigFromLabels extracts a ScaleConfig from the given label map.
-// Returns nil if none of the scale labels (sablier.idle.{cpu,memory,replicas},
-// sablier.active.{cpu,memory,replicas}) are present.
-//
-// Defaults:
+// It always returns a value. When none of the scale labels
+// (sablier.idle.{cpu,memory,replicas}, sablier.active.{cpu,memory,replicas})
+// are present it returns a zero-value struct with defaults:
 //   - Idle.Replicas = 0 (workload is stopped when idle)
 //   - Active.Replicas = 1 (workload runs with a single replica when active)
 //
+// Callers detect whether scale mode is active via field values:
+//   - Stop path:  sc.Idle.Replicas >= 1
+//   - Start path: sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != ""
+//
 // Resource scaling (CPU/memory throttling instead of stopping) is only applied
 // when Idle.Replicas ≥ 1.
-func ScaleConfigFromLabels(labels map[string]string) *ScaleConfig {
+func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 	idleCPU := labels["sablier.idle.cpu"]
 	idleMemory := labels["sablier.idle.memory"]
 	activeCPU := labels["sablier.active.cpu"]
 	activeMemory := labels["sablier.active.memory"]
-	_, hasIdleReplicas := labels["sablier.idle.replicas"]
-	_, hasActiveReplicas := labels["sablier.active.replicas"]
-
-	if idleCPU == "" && idleMemory == "" && !hasIdleReplicas &&
-		activeCPU == "" && activeMemory == "" && !hasActiveReplicas {
-		return nil
-	}
 
 	idleReplicas := int32(0) // default: stop the workload
 	if v, ok := labels["sablier.idle.replicas"]; ok {
@@ -131,7 +127,7 @@ func ScaleConfigFromLabels(labels map[string]string) *ScaleConfig {
 		}
 	}
 
-	return &ScaleConfig{
+	return ScaleConfig{
 		Idle: ResourceProfile{
 			Replicas: idleReplicas,
 			CPU:      idleCPU,
@@ -179,5 +175,12 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			)
 		}
 	}
-	info.ScaleConfig = ScaleConfigFromLabels(labels)
+	// Only expose ScaleConfig in the response when at least one non-default
+	// scale label is present. Detects configuration by checking for values
+	// that differ from the zero-value defaults (Idle.Replicas=0, Active.Replicas=1).
+	sc := ScaleConfigFromLabels(labels)
+	if sc.Idle.Replicas > 0 || sc.Idle.CPU != "" || sc.Idle.Memory != "" ||
+		sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
+		info.ScaleConfig = &sc
+	}
 }
