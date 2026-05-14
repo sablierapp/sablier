@@ -2,6 +2,7 @@ package sablier_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -126,6 +127,29 @@ func TestSessionsManager(t *testing.T) {
 		err := manager.RemoveInstance(t.Context(), "test")
 		assert.NilError(t, err)
 	})
+}
+
+func TestRequestSession_RejectsUnlabeledInstances(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	manager.WithRejectUnlabeledRequests(true)
+	ctx := t.Context()
+
+	stoppedInfo := sablier.InstanceInfo{
+		Name:            "nginx",
+		CurrentReplicas: 0,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusStopped,
+	}
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+
+	session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
+	assert.NilError(t, err)
+
+	var notManaged sablier.ErrInstanceNotManaged
+	assert.Assert(t, errors.As(session.Instances["nginx"].Error, &notManaged))
+	assert.Equal(t, notManaged.Name, "nginx")
 }
 
 func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
