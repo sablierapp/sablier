@@ -44,7 +44,7 @@ func (s *Sablier) consumePendingError(name string) (bool, error) {
 	}
 }
 
-func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, error) {
+func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled bool) (InstanceInfo, error) {
 	// First critical section: check whether a start is already in progress.
 	// We release the lock before doing the remote inspect to avoid holding a
 	// mutex across a potentially slow network call.
@@ -76,8 +76,14 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 	// the start still proceeds.
 	info, err := s.provider.InstanceInspect(ctx, name)
 	if err != nil {
+		if rejectUnlabeled {
+			return InstanceInfo{}, err
+		}
 		s.l.DebugContext(ctx, "pre-start inspect failed, using bare info", slog.String("instance", name), slog.Any("error", err))
 		info = InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1}
+	}
+	if rejectUnlabeled && info.Enabled != "true" {
+		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
 	}
 	info.Status = InstanceStatusStarting
 
@@ -135,6 +141,10 @@ func (s *Sablier) requestStart(ctx context.Context, name string) (InstanceInfo, 
 }
 
 func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
+	return s.instanceRequest(ctx, name, duration, false)
+}
+
+func (s *Sablier) instanceRequest(ctx context.Context, name string, duration time.Duration, rejectUnlabeled bool) (InstanceInfo, error) {
 	if name == "" {
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}
@@ -143,7 +153,7 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
 
-		state, err = s.requestStart(ctx, name)
+		state, err = s.requestStart(ctx, name, rejectUnlabeled)
 		if err != nil {
 			return InstanceInfo{}, err
 		}

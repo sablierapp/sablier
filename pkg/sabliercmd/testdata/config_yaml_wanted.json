@@ -13,6 +13,8 @@
     "Name": "configfile",
     "AutoStopOnStartup": false,
     "AutoStopExternallyStarted": false,
+    "RejectUnlabeledRequests": false,
+    "VerifyEnabledOnExpiration": false,
     "Kubernetes": {
       "QPS": 64,
       "Burst": 128,

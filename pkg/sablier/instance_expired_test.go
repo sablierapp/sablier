@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -62,6 +63,60 @@ func TestOnInstanceExpired_ProviderStopErrorStillRecordsMetrics(t *testing.T) {
 	assert.Assert(t, containsCall(calls, "stop:i2/expired"))
 	assert.Assert(t, containsCall(calls, "active-:i2"))
 	assert.Assert(t, containsCall(calls, "ready_discard:i2"))
+}
+
+func TestSablierOnInstanceExpired_VerifyEnabledOnExpirationStopsLabeledInstance(t *testing.T) {
+	manager, _, provider, rec := setupSablierWithMetrics(t)
+	manager.WithVerifyEnabledOnExpiration(true)
+	ctx := t.Context()
+
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(sablier.InstanceInfo{
+		Name:    "nginx",
+		Enabled: "true",
+	}, nil)
+	provider.EXPECT().InstanceStop(ctx, "nginx").Return(nil)
+
+	manager.OnInstanceExpired(ctx)("nginx")
+
+	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
+		calls := rec.snapshot()
+		return containsCall(calls, "stop:nginx/expired") &&
+			containsCall(calls, "active-:nginx") &&
+			containsCall(calls, "ready_discard:nginx")
+	}), "expected expiration metrics")
+}
+
+func TestSablierOnInstanceExpired_VerifyEnabledOnExpirationSkipsUnlabeledInstance(t *testing.T) {
+	manager, _, provider, rec := setupSablierWithMetrics(t)
+	manager.WithVerifyEnabledOnExpiration(true)
+	ctx := t.Context()
+	inspected := make(chan struct{})
+
+	provider.EXPECT().InstanceInspect(ctx, "nginx").DoAndReturn(func(_ interface{}, _ string) (sablier.InstanceInfo, error) {
+		close(inspected)
+		return sablier.InstanceInfo{Name: "nginx"}, nil
+	})
+
+	manager.OnInstanceExpired(ctx)("nginx")
+
+	select {
+	case <-inspected:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceInspect was never called")
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	assertNoExpirationMetrics(t, rec)
+}
+
+func assertNoExpirationMetrics(t *testing.T, rec metrics.Recorder) {
+	t.Helper()
+	fake := rec.(*fakeRecorder)
+	for _, c := range fake.snapshot() {
+		if c == "stop:nginx/expired" || c == "active-:nginx" || c == "ready_discard:nginx" {
+			t.Fatalf("did not expect expiration metric %q, got: %v", c, fake.snapshot())
+		}
+	}
 }
 
 func containsCall(calls []string, want string) bool {

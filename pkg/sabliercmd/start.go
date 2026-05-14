@@ -50,13 +50,14 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	rec := buildRecorder(conf.Server.Metrics.Enabled)
 	store := inmemory.NewInMemory()
-	err = store.OnExpire(ctx, sablier.OnInstanceExpired(ctx, provider, rec, logger))
+	s := sablier.New(logger, store, provider)
+	s.WithMetrics(rec)
+	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
+	s.WithVerifyEnabledOnExpiration(conf.Provider.VerifyEnabledOnExpiration)
+	err = store.OnExpire(ctx, s.OnInstanceExpired(ctx))
 	if err != nil {
 		return err
 	}
-
-	s := sablier.New(logger, store, provider)
-	s.WithMetrics(rec)
 	// Register the GroupLockCollector on the same registry so the gauges show
 	// up alongside everything else when /metrics is scraped.
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
