@@ -60,8 +60,6 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
       - linux/arm/v7
-    extra_files:
-      - build/sablier.yaml
     labels:
       # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
       'org.opencontainers.image.title': '{{.ProjectName}}'
