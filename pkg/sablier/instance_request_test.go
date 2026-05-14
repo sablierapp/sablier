@@ -289,7 +289,7 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 
 	// 2nd call: store returns not-ready, no pending entry exists, goes straight to inspect
 	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
-	sessions.EXPECT().Put(ctx, ready, time.Minute).Return(nil)
+	sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
 
 	info, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
@@ -350,12 +350,7 @@ func TestInstanceRequest_ExistingNotReady_InspectsProvider(t *testing.T) {
 		Status:          sablier.InstanceStatusReady,
 	}, nil)
 
-	sessions.EXPECT().Put(ctx, sablier.InstanceInfo{
-		Name:            "nginx",
-		CurrentReplicas: 1,
-		DesiredReplicas: 1,
-		Status:          sablier.InstanceStatusReady,
-	}, time.Minute).Return(nil)
+	sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
 
 	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
 	assert.NilError(t, err)
@@ -489,7 +484,7 @@ func TestInstanceRequest_ReadyTransition_RecordsReadyEnd(t *testing.T) {
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(ready, nil)
-	sessions.EXPECT().Put(ctx, ready, time.Minute).Return(nil)
+	sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
 
 	// Pre-seed the ready-wait state by simulating a previous Begin.
 	rec.RecordReadyWaitBegin("nginx")
@@ -509,4 +504,82 @@ func assertContains(t *testing.T, calls []string, want string) {
 		}
 	}
 	t.Errorf("expected %q in calls, got: %v", want, calls)
+}
+
+// readyAtMatcher is a gomock matcher that accepts any InstanceInfo whose
+// Status is Ready and ReadyAt is non-nil. This is needed because ReadyAt is
+// stamped with time.Now() inside InstanceRequest and cannot be predicted.
+type readyAtMatcher struct{}
+
+func (readyAtMatcher) Matches(x interface{}) bool {
+	info, ok := x.(sablier.InstanceInfo)
+	return ok && info.Status == sablier.InstanceStatusReady && info.ReadyAt != nil
+}
+func (readyAtMatcher) String() string {
+	return "InstanceInfo{Status: ready, ReadyAt: non-nil}"
+}
+
+func TestInstanceRequest_ReadyAfter_StampsReadyAt(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	ctx := t.Context()
+
+	startingInfo := sablier.InstanceInfo{
+		Name: "nginx", Status: sablier.InstanceStatusStarting,
+	}
+	// Provider reports ready and carries the ReadyAfter label value.
+	readyFromProvider := sablier.InstanceInfo{
+		Name:       "nginx",
+		Status:     sablier.InstanceStatusReady,
+		ReadyAfter: 100 * time.Millisecond,
+	}
+
+	// Store has a Starting entry — triggers the inspect path.
+	sessions.EXPECT().Get(ctx, "nginx").Return(startingInfo, nil)
+	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(readyFromProvider, nil)
+	// Put must be called with a Ready state that has ReadyAt stamped.
+	sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
+
+	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Status, sablier.InstanceStatusReady)
+	assert.Assert(t, info.ReadyAt != nil, "ReadyAt should be stamped on first Ready transition")
+	assert.Equal(t, info.ReadyAfter, 100*time.Millisecond)
+	// Within the grace period — IsReady() should still return false.
+	assert.Assert(t, !info.IsReady(), "IsReady() should be false within ReadyAfter grace period")
+}
+
+func TestInstanceRequest_ReadyAfter_GracePeriodRespectedByPolling(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	manager.BlockingRefreshFrequency = 10 * time.Millisecond
+	ctx := t.Context()
+
+	startingInfo := sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting}
+	readyFromProvider := sablier.InstanceInfo{
+		Name:       "nginx",
+		Status:     sablier.InstanceStatusReady,
+		ReadyAfter: 150 * time.Millisecond,
+	}
+
+	// First RequestSession call: store returns Starting → inspect → stamp ReadyAt.
+	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(startingInfo, nil).Times(1)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(readyFromProvider, nil).Times(1)
+	sessions.EXPECT().Put(gomock.Any(), readyAtMatcher{}, time.Minute).Return(nil).Times(1)
+
+	// Subsequent polling calls: store returns the stamped-Ready state.
+	// ReadyAt is in the past by a growing amount; sessions.Put is called each tick.
+	sessions.EXPECT().Get(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) (sablier.InstanceInfo, error) {
+		// Simulate the store returning the previously stored Ready+ReadyAt state.
+		past := time.Now().Add(-200 * time.Millisecond) // 200ms > 150ms ReadyAfter
+		return sablier.InstanceInfo{
+			Name:       "nginx",
+			Status:     sablier.InstanceStatusReady,
+			ReadyAfter: 150 * time.Millisecond,
+			ReadyAt:    &past,
+		}, nil
+	}).AnyTimes()
+	sessions.EXPECT().Put(gomock.Any(), gomock.Any(), time.Minute).Return(nil).AnyTimes()
+
+	session, err := manager.RequestReadySession(ctx, []string{"nginx"}, time.Minute, 5*time.Second)
+	assert.NilError(t, err)
+	assert.Assert(t, session.IsReady())
 }

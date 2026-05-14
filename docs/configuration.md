@@ -10,6 +10,47 @@ These methods are evaluated in the order listed above, with later methods overri
 
 If no value is provided for a given option, a default value is used.
 
+## Instance Labels
+
+Instance labels are applied directly to your containers or workloads. They control how Sablier discovers and manages each instance.
+
+| Label | Required | Example | Description |
+|-------|----------|---------|-------------|
+| `sablier.enable` | Yes | `"true"` | Opt the instance into Sablier management. Any value other than `"true"` is ignored. |
+| `sablier.group` | No | `"myapp"` | Assign the instance to a named group. Defaults to `"default"` when `sablier.enable=true` and no group is set. |
+| `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
+
+### `sablier.ready-after`
+
+Some services are started (or pass their health check) before they finish initialising — for example a JVM application that opens its HTTP port before loading all caches, a database that accepts TCP connections before it's ready for queries, or any container without a health check that needs a few extra seconds after start-up before it can serve traffic.
+
+Setting `sablier.ready-after` introduces a mandatory settling delay. Once the provider reports the instance as ready — whether that means it has started or passed its health check — Sablier continues to return a *not-ready* response to any blocking or dynamic request until the grace period elapses.
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
+      - "sablier.ready-after=30s"  # wait 30 s after started/healthy before unblocking requests
+```
+
+The value is a Go duration string. Valid examples:
+
+| Value | Duration |
+|-------|----------|
+| `500ms` | 500 milliseconds |
+| `30s` | 30 seconds |
+| `1m30s` | 1 minute 30 seconds |
+| `2m` | 2 minutes |
+
+If the label is absent or set to an unparseable value, no extra wait is applied.
+
+!> The `sablier.ready-after` grace period counts from when the instance **first** becomes ready in a given session. It does not reset on subsequent requests.
+
+
+
 ## Configuration File
 
 At startup, Sablier searches for a configuration file named `sablier.yml` (or `sablier.yaml`) in the following locations:

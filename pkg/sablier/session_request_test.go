@@ -58,6 +58,40 @@ func TestSessionState_IsReady(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "ready instance within ReadyAfter grace period is not ready",
+			fields: fields{
+				Instances: createMap([]sablier.InstanceInfo{
+					func() sablier.InstanceInfo {
+						now := time.Now()
+						return sablier.InstanceInfo{
+							Name:       "nginx",
+							Status:     sablier.InstanceStatusReady,
+							ReadyAfter: time.Hour,
+							ReadyAt:    &now,
+						}
+					}(),
+				}),
+			},
+			want: false,
+		},
+		{
+			name: "ready instance with elapsed ReadyAfter grace period is ready",
+			fields: fields{
+				Instances: createMap([]sablier.InstanceInfo{
+					func() sablier.InstanceInfo {
+						past := time.Now().Add(-2 * time.Second)
+						return sablier.InstanceInfo{
+							Name:       "nginx",
+							Status:     sablier.InstanceStatusReady,
+							ReadyAfter: time.Second,
+							ReadyAt:    &past,
+						}
+					}(),
+				}),
+			},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

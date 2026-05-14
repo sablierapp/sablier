@@ -1,5 +1,10 @@
 package sablier
 
+import (
+	"log/slog"
+	"time"
+)
+
 type InstanceStatus string
 
 const (
@@ -32,6 +37,14 @@ type InstanceInfo struct {
 	Swarm           *SwarmServiceInfo       `json:"swarm,omitempty"`
 	Kubernetes      *KubernetesWorkloadInfo `json:"kubernetes,omitempty"`
 	Podman          *PodmanContainerInfo    `json:"podman,omitempty"`
+
+	// ReadyAfter is the minimum duration to wait after the instance first
+	// reports ready before Sablier considers it truly ready. Set via the
+	// sablier.ready-after label (e.g. "30s"). Zero means no extra wait.
+	ReadyAfter time.Duration `json:"readyAfter,omitempty"`
+	// ReadyAt records when the instance first transitioned to InstanceStatusReady.
+	// It is set internally by Sablier and is never populated by a provider.
+	ReadyAt *time.Time `json:"readyAt,omitempty"`
 }
 
 type InstanceConfiguration struct {
@@ -41,7 +54,13 @@ type InstanceConfiguration struct {
 }
 
 func (instance InstanceInfo) IsReady() bool {
-	return instance.Status == InstanceStatusReady
+	if instance.Status != InstanceStatusReady {
+		return false
+	}
+	if instance.ReadyAfter == 0 || instance.ReadyAt == nil {
+		return true
+	}
+	return time.Since(*instance.ReadyAt) >= instance.ReadyAfter
 }
 
 // PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from
@@ -54,6 +73,17 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			info.Group = g
 		} else {
 			info.Group = "default"
+		}
+	}
+	if v := labels["sablier.ready-after"]; v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			info.ReadyAfter = d
+		} else {
+			slog.Warn("invalid sablier.ready-after label value, ignoring",
+				slog.String("instance", info.Name),
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
 		}
 	}
 }
