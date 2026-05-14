@@ -24,10 +24,12 @@ func TestDockerScaleMode_Stop(t *testing.T) {
 	// Create a container with idle/active scale labels
 	result, err := c.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
-			"sablier.idle.cpu":    "0.5",
-			"sablier.idle.memory": "128m",
-			"sablier.active.cpu":  "2.0",
-			"sablier.active.memory": "512m",
+			"sablier.idle.replicas":   "1",
+			"sablier.idle.cpu":        "0.5",
+			"sablier.idle.memory":     "128m",
+			"sablier.active.replicas": "1",
+			"sablier.active.cpu":      "2.0",
+			"sablier.active.memory":   "512m",
 		},
 	})
 	assert.NilError(t, err)
@@ -71,10 +73,12 @@ func TestDockerScaleMode_Start(t *testing.T) {
 	// Create a container with scale labels and idle resources already applied
 	result, err := c.CreateMimic(ctx, MimicOptions{
 		Labels: map[string]string{
-			"sablier.idle.cpu":      "0.5",
-			"sablier.idle.memory":   "128m",
-			"sablier.active.cpu":    "2.0",
-			"sablier.active.memory": "512m",
+			"sablier.idle.replicas":   "1",
+			"sablier.idle.cpu":        "0.5",
+			"sablier.idle.memory":     "128m",
+			"sablier.active.replicas": "1",
+			"sablier.active.cpu":      "2.0",
+			"sablier.active.memory":   "512m",
 		},
 	})
 	assert.NilError(t, err)
@@ -101,4 +105,81 @@ func TestDockerScaleMode_Start(t *testing.T) {
 	// Memory limit should be set to active value (512 MiB = 536_870_912 bytes)
 	assert.Equal(t, spec.Container.HostConfig.Memory, int64(512*1024*1024),
 		"Memory should be set to active value")
+}
+
+// TestDockerScaleMode_Stop_ReplicasOnly verifies that InstanceStop keeps the container
+// running when only sablier.idle.replicas is set (no CPU/memory labels).
+func TestDockerScaleMode_Stop_ReplicasOnly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.idle.replicas": "1",
+		},
+	})
+	assert.NilError(t, err)
+
+	_, err = c.client.ContainerStart(ctx, result.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	err = p.InstanceStop(t.Context(), result.ID)
+	assert.NilError(t, err)
+
+	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, string(spec.Container.State.Status), "running",
+		"container should still be running in replicas-only scale mode")
+
+	// No resource limits should have been applied.
+	assert.Equal(t, spec.Container.HostConfig.NanoCPUs, int64(0),
+		"CPU limit should be unchanged (0 = no limit)")
+	assert.Equal(t, spec.Container.HostConfig.Memory, int64(0),
+		"Memory limit should be unchanged (0 = no limit)")
+}
+
+// TestDockerScaleMode_Start_ReplicasOnly verifies that InstanceStart is a no-op for
+// resources when only sablier.active.replicas is set (no CPU/memory labels).
+func TestDockerScaleMode_Start_ReplicasOnly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.active.replicas": "1",
+		},
+	})
+	assert.NilError(t, err)
+
+	_, err = c.client.ContainerStart(ctx, result.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), result.ID)
+	assert.NilError(t, err)
+
+	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, string(spec.Container.State.Status), "running")
+
+	// No resource limits should have been applied.
+	assert.Equal(t, spec.Container.HostConfig.NanoCPUs, int64(0),
+		"CPU limit should be unchanged (0 = no limit)")
+	assert.Equal(t, spec.Container.HostConfig.Memory, int64(0),
+		"Memory limit should be unchanged (0 = no limit)")
 }

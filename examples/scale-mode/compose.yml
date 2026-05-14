@@ -21,9 +21,11 @@ services:
       - "sablier.enable=true"
       - "sablier.group=whoami"
       # Idle: throttle to 0.1 CPU and 64 MB when the session expires
+      - "sablier.idle.replicas=1"
       - "sablier.idle.cpu=0.1"
       - "sablier.idle.memory=64m"
       # Active: restore to 2 CPUs and 512 MB when a new session is requested
+      - "sablier.active.replicas=1"
       - "sablier.active.cpu=2.0"
       - "sablier.active.memory=512m"
     ports:

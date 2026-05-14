@@ -2,6 +2,7 @@ package sablier
 
 import (
 	"log/slog"
+	"strconv"
 	"time"
 )
 
@@ -66,6 +67,11 @@ type ScaleConfig struct {
 
 // ResourceProfile holds the CPU and memory limits for a single resource profile.
 type ResourceProfile struct {
+	// Replicas is the desired replica count for this profile.
+	// For idle: 0 (default) stops the workload; ≥ 1 keeps it running with
+	// throttled resources (resource scaling mode).
+	// For active: defaults to 1.
+	Replicas int32 `json:"replicas,omitempty"`
 	// CPU is the CPU limit (e.g. "0.5" for Docker/Swarm, "500m" for Kubernetes).
 	CPU string `json:"cpu,omitempty"`
 	// Memory is the memory limit (e.g. "128m" for Docker/Swarm, "128Mi" for Kubernetes).
@@ -89,21 +95,54 @@ func (instance InstanceInfo) IsReady() bool {
 }
 
 // ScaleConfigFromLabels extracts a ScaleConfig from the given label map.
-// Returns nil if none of the scale labels (sablier.idle.cpu, sablier.idle.memory,
-// sablier.active.cpu, sablier.active.memory) are present.
+// Returns nil if none of the scale labels (sablier.idle.{cpu,memory,replicas},
+// sablier.active.{cpu,memory,replicas}) are present.
+//
+// Defaults:
+//   - Idle.Replicas = 0 (workload is stopped when idle)
+//   - Active.Replicas = 1 (workload runs with a single replica when active)
+//
+// Resource scaling (CPU/memory throttling instead of stopping) is only applied
+// when Idle.Replicas ≥ 1.
 func ScaleConfigFromLabels(labels map[string]string) *ScaleConfig {
-	idle := ResourceProfile{
-		CPU:    labels["sablier.idle.cpu"],
-		Memory: labels["sablier.idle.memory"],
-	}
-	active := ResourceProfile{
-		CPU:    labels["sablier.active.cpu"],
-		Memory: labels["sablier.active.memory"],
-	}
-	if idle.CPU == "" && idle.Memory == "" && active.CPU == "" && active.Memory == "" {
+	idleCPU := labels["sablier.idle.cpu"]
+	idleMemory := labels["sablier.idle.memory"]
+	activeCPU := labels["sablier.active.cpu"]
+	activeMemory := labels["sablier.active.memory"]
+	_, hasIdleReplicas := labels["sablier.idle.replicas"]
+	_, hasActiveReplicas := labels["sablier.active.replicas"]
+
+	if idleCPU == "" && idleMemory == "" && !hasIdleReplicas &&
+		activeCPU == "" && activeMemory == "" && !hasActiveReplicas {
 		return nil
 	}
-	return &ScaleConfig{Idle: idle, Active: active}
+
+	idleReplicas := int32(0) // default: stop the workload
+	if v, ok := labels["sablier.idle.replicas"]; ok {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			idleReplicas = int32(n)
+		}
+	}
+
+	activeReplicas := int32(1) // default: one running replica
+	if v, ok := labels["sablier.active.replicas"]; ok {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			activeReplicas = int32(n)
+		}
+	}
+
+	return &ScaleConfig{
+		Idle: ResourceProfile{
+			Replicas: idleReplicas,
+			CPU:      idleCPU,
+			Memory:   idleMemory,
+		},
+		Active: ResourceProfile{
+			Replicas: activeReplicas,
+			CPU:      activeCPU,
+			Memory:   activeMemory,
+		},
+	}
 }
 
 // PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from

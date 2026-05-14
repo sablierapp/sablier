@@ -35,10 +35,10 @@ func parseMemoryBytes(memory string) (int64, error) {
 	return b, nil
 }
 
-// ServiceUpdateResources updates the CPU and/or memory resource limits of a
-// Swarm service without changing its replica count. Pass an empty string for
+// ServiceUpdateScale updates the replica count and/or CPU/memory resource limits
+// of a Swarm service in a single service update call. Pass an empty string for
 // cpu or memory to set that limit to 0 (unlimited).
-func (p *Provider) ServiceUpdateResources(ctx context.Context, name, cpu, memory string) error {
+func (p *Provider) ServiceUpdateScale(ctx context.Context, name string, replicas uint64, cpu, memory string) error {
 	service, err := p.getServiceByName(name, ctx)
 	if err != nil {
 		return fmt.Errorf("cannot get service: %w", err)
@@ -48,33 +48,30 @@ func (p *Provider) ServiceUpdateResources(ctx context.Context, name, cpu, memory
 		return errors.New("swarm service is not in \"replicated\" mode")
 	}
 
-	var nanoCPUs int64
-	var memBytes int64
+	service.Spec.Mode.Replicated.Replicas = &replicas
 
-	if cpu != "" {
-		v, err := parseCPUNano(cpu)
-		if err != nil {
-			return err
+	if cpu != "" || memory != "" {
+		if service.Spec.TaskTemplate.Resources == nil {
+			service.Spec.TaskTemplate.Resources = &swarm.ResourceRequirements{}
 		}
-		nanoCPUs = v
-	}
-
-	if memory != "" {
-		v, err := parseMemoryBytes(memory)
-		if err != nil {
-			return err
+		if service.Spec.TaskTemplate.Resources.Limits == nil {
+			service.Spec.TaskTemplate.Resources.Limits = &swarm.Limit{}
 		}
-		memBytes = v
+		if cpu != "" {
+			v, err := parseCPUNano(cpu)
+			if err != nil {
+				return err
+			}
+			service.Spec.TaskTemplate.Resources.Limits.NanoCPUs = v
+		}
+		if memory != "" {
+			v, err := parseMemoryBytes(memory)
+			if err != nil {
+				return err
+			}
+			service.Spec.TaskTemplate.Resources.Limits.MemoryBytes = v
+		}
 	}
-
-	if service.Spec.TaskTemplate.Resources == nil {
-		service.Spec.TaskTemplate.Resources = &swarm.ResourceRequirements{}
-	}
-	if service.Spec.TaskTemplate.Resources.Limits == nil {
-		service.Spec.TaskTemplate.Resources.Limits = &swarm.Limit{}
-	}
-	service.Spec.TaskTemplate.Resources.Limits.NanoCPUs = nanoCPUs
-	service.Spec.TaskTemplate.Resources.Limits.MemoryBytes = memBytes
 
 	response, err := p.Client.ServiceUpdate(ctx, service.ID, client.ServiceUpdateOptions{
 		Version: service.Version,

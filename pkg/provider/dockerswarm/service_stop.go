@@ -15,13 +15,14 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(service.Spec.Labels)
-	if sc != nil && (sc.Idle.CPU != "" || sc.Idle.Memory != "") {
+	if sc != nil && sc.Idle.Replicas >= 1 {
 		p.l.DebugContext(ctx, "applying idle resources (scale mode)",
 			slog.String("name", name),
+			slog.Int("replicas", int(sc.Idle.Replicas)),
 			slog.String("cpu", sc.Idle.CPU),
 			slog.String("memory", sc.Idle.Memory),
 		)
-		return p.ServiceUpdateResources(ctx, name, sc.Idle.CPU, sc.Idle.Memory)
+		return p.ServiceUpdateScale(ctx, name, uint64(sc.Idle.Replicas), sc.Idle.CPU, sc.Idle.Memory)
 	}
 
 	return p.ServiceUpdateReplicas(ctx, name, 0)
