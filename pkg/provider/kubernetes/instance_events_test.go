@@ -133,30 +133,33 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 	assert.NilError(t, err)
 
 	t.Run("deployment is scaled from 0 replicas", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		testCtx, testCancel := context.WithTimeout(ctx, 20*time.Second)
+		defer testCancel()
+
+		d, err := kind.CreateMimicDeployment(testCtx, MimicOptions{})
 		assert.NilError(t, err)
 
-		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
+		err = WaitForDeploymentReady(testCtx, kind.client, d.Namespace, d.Name)
 		assert.NilError(t, err)
 
-		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(ctx, d.Name, metav1.GetOptions{})
-		assert.NilError(t, err)
-
-		s.Spec.Replicas = 0
-		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
-		assert.NilError(t, err)
-		err = WaitForDeploymentScale(ctx, kind.client, d.Namespace, d.Name, 0)
-		assert.NilError(t, err)
-
-		s, err = p.Client.AppsV1().Deployments(d.Namespace).GetScale(ctx, d.Name, metav1.GetOptions{})
-		assert.NilError(t, err)
-
-		stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
 
+		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(testCtx, d.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(testCtx, d.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+		err = WaitForDeploymentScale(testCtx, kind.client, d.Namespace, d.Name, 0)
+		assert.NilError(t, err)
+
+		s, err = p.Client.AppsV1().Deployments(d.Namespace).GetScale(testCtx, d.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
 		s.Spec.Replicas = 1
-		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, s, metav1.UpdateOptions{})
+		_, err = p.Client.AppsV1().Deployments(d.Namespace).UpdateScale(testCtx, d.Name, s, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 
 		select {
@@ -166,34 +169,39 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-testCtx.Done():
+			t.Fatalf("timed out waiting for deployment started event: %v", testCtx.Err())
 		}
 	})
 
 	t.Run("statefulSet is scaled from 0 replicas", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		testCtx, testCancel := context.WithTimeout(ctx, 20*time.Second)
+		defer testCancel()
+
+		ss, err := kind.CreateMimicStatefulSet(testCtx, MimicOptions{})
 		assert.NilError(t, err)
 
-		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
+		err = WaitForStatefulSetReady(testCtx, kind.client, ss.Namespace, ss.Name)
 		assert.NilError(t, err)
 
-		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(ctx, ss.Name, metav1.GetOptions{})
-		assert.NilError(t, err)
-
-		s.Spec.Replicas = 0
-		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
-		assert.NilError(t, err)
-		err = WaitForStatefulSetScale(ctx, kind.client, ss.Namespace, ss.Name, 0)
-		assert.NilError(t, err)
-
-		s, err = p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(ctx, ss.Name, metav1.GetOptions{})
-		assert.NilError(t, err)
-
-		stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
 
+		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(testCtx, ss.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(testCtx, ss.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+		err = WaitForStatefulSetScale(testCtx, kind.client, ss.Namespace, ss.Name, 0)
+		assert.NilError(t, err)
+
+		s, err = p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(testCtx, ss.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+
 		s.Spec.Replicas = 1
-		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(ctx, ss.Name, s, metav1.UpdateOptions{})
+		_, err = p.Client.AppsV1().StatefulSets(ss.Namespace).UpdateScale(testCtx, ss.Name, s, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 
 		select {
@@ -203,6 +211,8 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 			assert.Assert(t, info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-testCtx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", testCtx.Err())
 		}
 	})
 }
