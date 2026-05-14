@@ -1,4 +1,3 @@
-package sablier
 package sablier_test
 
 import (
