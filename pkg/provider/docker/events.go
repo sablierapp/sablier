@@ -25,16 +25,16 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		filters := client.Filters{}
 		filters.Add("type", string(events.ContainerEventType))
 		if wantStopped {
-			filters.Add("event", "die")
+			filters.Add("event", string(events.ActionDie))
 		}
 		if wantStarted {
-			filters.Add("event", "start")
+			filters.Add("event", string(events.ActionStart))
 		}
 		if wantCreated {
-			filters.Add("event", "create")
+			filters.Add("event", string(events.ActionCreate))
 		}
 		if wantRemoved {
-			filters.Add("event", "destroy")
+			filters.Add("event", string(events.ActionDestroy))
 		}
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
@@ -44,7 +44,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 			return sablier.InstanceEvent{}, false
 		}
 		switch msg.Action {
-		case "die":
+		case events.ActionDie:
 			if !wantStopped {
 				return sablier.InstanceEvent{}, false
 			}
@@ -54,7 +54,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 				return sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderDocker}}, true
 			}
 			return sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info}, true
-		case "start":
+		case events.ActionStart:
 			if !wantStarted {
 				return sablier.InstanceEvent{}, false
 			}
@@ -64,7 +64,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 				return sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderDocker}}, true
 			}
 			return sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: info}, true
-		case "create":
+		case events.ActionCreate:
 			if !wantCreated {
 				return sablier.InstanceEvent{}, false
 			}
@@ -74,13 +74,14 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 				return sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderDocker}}, true
 			}
 			return sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}, true
-		case "destroy":
+		case events.ActionDestroy:
 			if !wantRemoved {
 				return sablier.InstanceEvent{}, false
 			}
 			// Container is already gone; only the name is available.
 			return sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderDocker}}, true
 		default:
+			p.l.WarnContext(ctx, "unhandled event", "action", msg.Action, "container", name)
 			return sablier.InstanceEvent{}, false
 		}
 	}

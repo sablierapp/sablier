@@ -9,6 +9,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -48,7 +49,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -69,7 +70,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -94,7 +95,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -116,7 +117,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -173,7 +174,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -215,7 +216,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Info.Provider, "kubernetes")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -254,7 +255,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 				if info.Info.Name != expectedName {
 					continue
 				}
-				assert.Equal(t, info.Info.Provider, "kubernetes")
+				assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 				assert.Assert(t, info.Info.Kubernetes != nil)
 				return
 			case err := <-stream.Err:
@@ -276,7 +277,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 				if info.Info.Name != expectedName {
 					continue
 				}
-				assert.Equal(t, info.Info.Provider, "kubernetes")
+				assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
 				assert.Assert(t, info.Info.Kubernetes != nil)
 				return
 			case err := <-stream.Err:

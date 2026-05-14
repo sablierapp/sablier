@@ -215,6 +215,127 @@ func TestGroupWatch_ProviderErrorDoesNotUpdateGroups(t *testing.T) {
 	assert.DeepEqual(t, s.Groups(), map[string][]string{"existing": {"x"}})
 }
 
+func TestGroupWatch_UpdatedEvent_LostLabel(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"web": {"nginx"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventUpdated,
+		Info: sablier.InstanceInfo{Name: "nginx", Group: ""},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		return !containsInstance(s.Groups(), "web", "nginx")
+	}, 2*time.Second), "nginx should no longer be in group web after losing its label")
+}
+
+func TestGroupWatch_CreatedEvent_MovesToGroup(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"web": {"nginx"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventCreated,
+		Info: sablier.InstanceInfo{Name: "nginx", Group: "api"},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return !containsInstance(groups, "web", "nginx") && containsInstance(groups, "api", "nginx")
+	}, 2*time.Second), "nginx should have moved from group web to group api after created event")
+}
+
+func TestGroupWatch_UpdatedEvent_GroupUnchanged(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"web": {"nginx"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventUpdated,
+		Info: sablier.InstanceInfo{Name: "nginx", Group: "web"},
+	}
+
+	// Give the event time to be processed then assert state is unchanged.
+	time.Sleep(100 * time.Millisecond)
+	groups := s.Groups()
+	assert.Assert(t, containsInstance(groups, "web", "nginx"), "nginx should still be in group web")
+	assert.Equal(t, len(groups["web"]), 1, "nginx should appear exactly once in group web")
+}
+
+func TestGroupWatch_ReconciliationMovesGroup(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"web": {"nginx"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{"api": {"nginx"}}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return !containsInstance(groups, "web", "nginx") && containsInstance(groups, "api", "nginx")
+	}, 3*time.Second), "nginx should have moved from group web to group api via reconciliation")
+}
+
+func TestGroupWatch_ReconciliationRemovesFromGroup(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"web": {"nginx"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
+	// Provider no longer reports nginx in any group.
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	assert.Assert(t, pollFor(t, func() bool {
+		return !containsInstance(s.Groups(), "web", "nginx")
+	}, 3*time.Second), "nginx should have been removed from group web via reconciliation")
+}
+
 // pollFor repeatedly calls check until it returns true or the deadline passes.
 func pollFor(t *testing.T, check func() bool, timeout time.Duration) bool {
 	t.Helper()

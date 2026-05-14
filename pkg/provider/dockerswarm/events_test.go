@@ -9,6 +9,7 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
@@ -44,7 +45,7 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, service.Spec.Name)
-			assert.Equal(t, info.Info.Provider, "swarm")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
 			assert.Assert(t, info.Info.Swarm != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
@@ -62,7 +63,7 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 		select {
 		case info := <-stream.Events:
 			assert.Equal(t, info.Info.Name, service.Spec.Name) // Service is removed; provider is still set.
-			assert.Equal(t, info.Info.Provider, "swarm")
+			assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -110,7 +111,7 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 	select {
 	case info := <-stream.Events:
 		assert.Equal(t, info.Info.Name, service.Spec.Name)
-		assert.Equal(t, info.Info.Provider, "swarm")
+		assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
 		assert.Assert(t, info.Info.Swarm != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
@@ -147,7 +148,7 @@ func TestDockerSwarmProvider_InstanceEvents_Created(t *testing.T) {
 	select {
 	case info := <-stream.Events:
 		assert.Equal(t, info.Info.Name, inspectResult.Service.Spec.Name)
-		assert.Equal(t, info.Info.Provider, "swarm")
+		assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
 		assert.Assert(t, info.Info.Swarm != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
