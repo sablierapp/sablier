@@ -170,6 +170,9 @@ func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration tim
 			}
 			if state.Status == InstanceStatusReady {
 				s.metrics.RecordReadyWaitEnd(name)
+				// First transition to ready — stamp the time so ReadyAfter can be enforced.
+				now := time.Now()
+				state.ReadyAt = &now
 			}
 			s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", string(state.Status)))
 		}

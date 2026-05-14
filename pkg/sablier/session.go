@@ -17,7 +17,7 @@ func (s *SessionState) IsReady() bool {
 	}
 
 	for _, v := range s.Instances {
-		if v.Error != nil || v.Instance.Status != InstanceStatusReady {
+		if v.Error != nil || !v.Instance.IsReady() {
 			return false
 		}
 	}

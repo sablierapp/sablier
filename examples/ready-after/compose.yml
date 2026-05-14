@@ -1,0 +1,35 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=2m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+    depends_on:
+      - slow-starter
+
+  # Simulates a service that passes its health check only after a deliberate
+  # delay, then needs an extra settling period before it can serve traffic.
+  # The health check passes after ~5 s (start_period), but sablier.ready-after
+  # tells Sablier to wait an additional 15 s before unblocking requests.
+  slow-starter:
+    image: nginx:alpine
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=slow-starter"
+      - "sablier.ready-after=15s"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    ports:
+      - "8080:80"
