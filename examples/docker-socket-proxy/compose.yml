@@ -1,0 +1,66 @@
+services:
+  # Restricts Docker API access to only the endpoints Sablier needs.
+  # The socket is never exposed directly to Sablier or any other container.
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /run
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      # Sablier needs these three read endpoints:
+      - CONTAINERS=1   # GET  /containers/*   (list + inspect)
+      - EVENTS=1       # GET  /events          (event stream)
+      - VERSION=1      # GET  /version         (initial connection check)
+      # Sablier also calls POST /containers/{id}/start, /stop, and /wait.
+      # ALLOW_START and ALLOW_STOP do not cover /wait, so POST=1 is required.
+      # The attack surface is still bounded by CONTAINERS=1 above.
+      - POST=1
+      - AUTH=0
+      - SECRETS=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket-proxy
+
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=info
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=20s
+    environment:
+      # Point the Docker client at the proxy instead of the raw socket
+      - DOCKER_HOST=tcp://socket-proxy:2375
+    ports:
+      - "10000:10000"
+    depends_on:
+      - socket-proxy
+    networks:
+      - socket-proxy
+      - public
+    security_opt:
+      - no-new-privileges=true
+    restart: on-failure:5
+    read_only: true
+
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=whoami"
+    networks:
+      - public
+
+networks:
+  # Internal network — only socket-proxy and sablier can reach the Docker API.
+  # Nothing on this network is reachable from outside the host.
+  socket-proxy:
+    internal: true
+  public:
