@@ -12,7 +12,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier.InstanceInfo) cache.SharedIndexInformer {
+func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier.InstanceInfo, wantStopped, wantStarted bool) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			newDeployment := new.(*appsv1.Deployment)
@@ -22,17 +22,25 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 				return
 			}
 
-			if *oldDeployment.Spec.Replicas == 0 {
-				return
-			}
+			oldReplicas := *oldDeployment.Spec.Replicas
+			newReplicas := *newDeployment.Spec.Replicas
 
-			if *newDeployment.Spec.Replicas == 0 {
+			if wantStopped && oldReplicas != 0 && newReplicas == 0 {
 				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
-				// Deployment still exists (scaled to 0); inspect for full info.
 				info, err := p.InstanceInspect(ctx, parsed.Original)
 				if err != nil {
 					p.l.WarnContext(ctx, "inspect after scale-to-0 event failed, using bare info", "deployment", parsed.Original, "error", err)
 					instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderKubernetes}
+					return
+				}
+				instance <- info
+			}
+			if wantStarted && oldReplicas == 0 && newReplicas != 0 {
+				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
+				info, err := p.InstanceInspect(ctx, parsed.Original)
+				if err != nil {
+					p.l.WarnContext(ctx, "inspect after scale-from-0 event failed, using bare info", "deployment", parsed.Original, "error", err)
+					instance <- sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderKubernetes}
 					return
 				}
 				instance <- info

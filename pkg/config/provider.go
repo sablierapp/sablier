@@ -8,12 +8,13 @@ import (
 type Provider struct {
 	// The provider name to use
 	// It can be either docker, swarm, kubernetes, podman or proxmox_lxc. Defaults to "docker"
-	Name              string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
-	AutoStopOnStartup bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
-	Kubernetes        Kubernetes
-	Podman            Podman
-	Docker            Docker
-	ProxmoxLXC        ProxmoxLXC `mapstructure:"PROXMOX_LXC" yaml:"proxmox-lxc,omitempty"`
+	Name                      string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
+	AutoStopOnStartup         bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
+	AutoStopExternallyStarted bool   `yaml:"auto-stop-externally-started,omitempty" default:"false"`
+	Kubernetes                Kubernetes
+	Podman                    Podman
+	Docker                    Docker
+	ProxmoxLXC                ProxmoxLXC `mapstructure:"PROXMOX_LXC" yaml:"proxmox-lxc,omitempty"`
 }
 
 type Kubernetes struct {
@@ -57,8 +58,8 @@ var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
 	return Provider{
-
-		Name: "docker",
+		Name:              "docker",
+		AutoStopOnStartup: true,
 		Kubernetes: Kubernetes{
 			QPS:       5,
 			Burst:     10,

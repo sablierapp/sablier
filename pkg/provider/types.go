@@ -10,6 +10,8 @@ type InstanceEventType string
 const (
 	// InstanceEventStopped fires when an instance transitions to stopped / scaled-to-zero.
 	InstanceEventStopped InstanceEventType = "stopped"
+	// InstanceEventStarted fires when an instance transitions to started / running / scaled-from-zero.
+	InstanceEventStarted InstanceEventType = "started"
 )
 
 // InstanceEventsOptions controls which events InstanceEvents streams.

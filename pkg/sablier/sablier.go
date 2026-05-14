@@ -28,6 +28,10 @@ type Sablier struct {
 	// call before it is cancelled. Defaults to 5 minutes.
 	InstanceStartTimeout time.Duration
 
+	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted performs a
+	// full reconciliation scan. Defaults to 30 seconds.
+	ExternallyStartedScanInterval time.Duration
+
 	metrics metrics.Recorder
 
 	l *slog.Logger
@@ -35,15 +39,16 @@ type Sablier struct {
 
 func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 	return &Sablier{
-		provider:                 provider,
-		sessions:                 store,
-		groupsMu:                 sync.RWMutex{},
-		groups:                   map[string][]string{},
-		pendingStarts:            map[string]*pendingStart{},
-		l:                        logger,
-		metrics:                  metrics.Noop{},
-		BlockingRefreshFrequency: 5 * time.Second,
-		InstanceStartTimeout:     5 * time.Minute,
+		provider:                      provider,
+		sessions:                      store,
+		groupsMu:                      sync.RWMutex{},
+		groups:                        map[string][]string{},
+		pendingStarts:                 map[string]*pendingStart{},
+		l:                             logger,
+		metrics:                       metrics.Noop{},
+		BlockingRefreshFrequency:      5 * time.Second,
+		InstanceStartTimeout:          5 * time.Minute,
+		ExternallyStartedScanInterval: 30 * time.Second,
 	}
 }
 
