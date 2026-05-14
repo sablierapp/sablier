@@ -27,7 +27,7 @@ func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 			if verifyEnabled {
 				info, err := provider.InstanceInspect(ctx, key)
 				if err != nil {
-					logger.ErrorContext(ctx, "instance expired could not be inspected before stop", slog.String("instance", key), slog.Any("error", err))
+					logger.WarnContext(ctx, "instance expired could not be inspected before stop", slog.String("instance", key), slog.Any("error", err))
 					return
 				}
 				if info.Enabled != "true" {
