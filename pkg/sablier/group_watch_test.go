@@ -56,7 +56,7 @@ func TestGroupWatch_CreatedEvent_AddsToGroup(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventCreated,
-		Info: sablier.InstanceInfo{Name: "nginx", Group: "web"},
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
 	}
 
 	assert.Assert(t, pollFor(t, func() bool {
@@ -108,7 +108,7 @@ func TestGroupWatch_UpdatedEvent_MovesGroup(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
-		Info: sablier.InstanceInfo{Name: "nginx", Group: "api"},
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"api"}},
 	}
 
 	assert.Assert(t, pollFor(t, func() bool {
@@ -233,7 +233,7 @@ func TestGroupWatch_UpdatedEvent_LostLabel(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
-		Info: sablier.InstanceInfo{Name: "nginx", Group: ""},
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: nil},
 	}
 
 	assert.Assert(t, pollFor(t, func() bool {
@@ -259,7 +259,7 @@ func TestGroupWatch_CreatedEvent_MovesToGroup(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventCreated,
-		Info: sablier.InstanceInfo{Name: "nginx", Group: "api"},
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"api"}},
 	}
 
 	assert.Assert(t, pollFor(t, func() bool {
@@ -286,7 +286,7 @@ func TestGroupWatch_UpdatedEvent_GroupUnchanged(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
-		Info: sablier.InstanceInfo{Name: "nginx", Group: "web"},
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
 	}
 
 	// Give the event time to be processed then assert state is unchanged.
@@ -334,6 +334,138 @@ func TestGroupWatch_ReconciliationRemovesFromGroup(t *testing.T) {
 	assert.Assert(t, pollFor(t, func() bool {
 		return !containsInstance(s.Groups(), "web", "nginx")
 	}, 3*time.Second), "nginx should have been removed from group web via reconciliation")
+}
+
+// TestGroupWatch_CreatedEvent_MultipleGroups verifies that an instance whose
+// Groups field lists two groups is added to both groups simultaneously.
+func TestGroupWatch_CreatedEvent_MultipleGroups(t *testing.T) {
+	s, _, p := setupSablier(t)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	// shared-api belongs to both team-a and team-b.
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventCreated,
+		Info: sablier.InstanceInfo{Name: "shared-api", Groups: []string{"team-a", "team-b"}},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return containsInstance(groups, "team-a", "shared-api") &&
+			containsInstance(groups, "team-b", "shared-api")
+	}, 2*time.Second), "shared-api should appear in both team-a and team-b after created event")
+}
+
+// TestGroupWatch_UpdatedEvent_AddsSecondGroup verifies that updating an instance
+// to add a second group leaves the first group intact and adds to the new one.
+func TestGroupWatch_UpdatedEvent_AddsSecondGroup(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{"team-a": {"shared-api"}})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	// Label updated from "team-a" to "team-a,team-b".
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventUpdated,
+		Info: sablier.InstanceInfo{Name: "shared-api", Groups: []string{"team-a", "team-b"}},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return containsInstance(groups, "team-a", "shared-api") &&
+			containsInstance(groups, "team-b", "shared-api")
+	}, 2*time.Second), "shared-api should be in both team-a and team-b after update")
+}
+
+// TestGroupWatch_RemovedEvent_RemovesFromAllGroups verifies that removing an
+// instance that belonged to multiple groups drops it from every group.
+func TestGroupWatch_RemovedEvent_RemovesFromAllGroups(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.SetGroups(map[string][]string{
+		"team-a": {"shared-api", "frontend"},
+		"team-b": {"shared-api", "backend"},
+	})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	// Provider reflects the post-removal state: shared-api is gone; frontend and backend remain.
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{
+		"team-a": {"frontend"},
+		"team-b": {"backend"},
+	}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventRemoved,
+		Info: sablier.InstanceInfo{Name: "shared-api"},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return !containsInstance(groups, "team-a", "shared-api") &&
+			!containsInstance(groups, "team-b", "shared-api")
+	}, 2*time.Second), "shared-api should be removed from both team-a and team-b after removed event")
+
+	// Other instances should be unaffected.
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return containsInstance(groups, "team-a", "frontend") &&
+			containsInstance(groups, "team-b", "backend")
+	}, 2*time.Second), "frontend and backend should still be in their respective groups")
+}
+
+// TestGroupWatch_ReconciliationMultipleGroups verifies that reconciliation via
+// InstanceGroups correctly places an instance into multiple groups.
+func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
+	s, _, p := setupSablier(t)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{
+		"team-a": {"frontend", "shared-api"},
+		"team-b": {"backend", "shared-api"},
+	}, nil).AnyTimes()
+
+	go s.GroupWatch(ctx)
+
+	assert.Assert(t, pollFor(t, func() bool {
+		groups := s.Groups()
+		return containsInstance(groups, "team-a", "shared-api") &&
+			containsInstance(groups, "team-b", "shared-api") &&
+			containsInstance(groups, "team-a", "frontend") &&
+			containsInstance(groups, "team-b", "backend")
+	}, 3*time.Second), "reconciliation should populate all instances across multiple groups")
 }
 
 // pollFor repeatedly calls check until it returns true or the deadline passes.

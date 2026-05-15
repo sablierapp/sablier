@@ -35,9 +35,9 @@ func TestScaleConfigFromLabels_IdleCPUOnly(t *testing.T) {
 
 func TestScaleConfigFromLabels_AllLabels(t *testing.T) {
 	labels := map[string]string{
-		"sablier.idle.cpu":    "0.1",
-		"sablier.idle.memory": "128m",
-		"sablier.active.cpu":  "2.0",
+		"sablier.idle.cpu":      "0.1",
+		"sablier.idle.memory":   "128m",
+		"sablier.active.cpu":    "2.0",
 		"sablier.active.memory": "1g",
 	}
 	got := sablier.ScaleConfigFromLabels(labels)
@@ -60,7 +60,7 @@ func TestPopulateEnabledAndGroup_WithScaleLabels(t *testing.T) {
 	sablier.PopulateEnabledAndGroup(&info, labels)
 
 	assert.Equal(t, info.Enabled, "true")
-	assert.Equal(t, info.Group, "backend")
+	assert.DeepEqual(t, info.Groups, []string{"backend"})
 	assert.Assert(t, info.ScaleConfig != nil, "ScaleConfig should be populated")
 	assert.Equal(t, info.ScaleConfig.Idle.CPU, "0.25")
 	assert.Equal(t, info.ScaleConfig.Idle.Memory, "64m")

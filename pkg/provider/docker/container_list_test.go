@@ -59,12 +59,12 @@ func TestDockerClassicProvider_InstanceList(t *testing.T) {
 	want := []sablier.InstanceConfiguration{
 		{
 			Name:    strings.TrimPrefix(i1.Container.Name, "/"),
-			Group:   "default",
+			Groups:  []string{"default"},
 			Enabled: "true",
 		},
 		{
 			Name:    strings.TrimPrefix(i2.Container.Name, "/"),
-			Group:   "my-group",
+			Groups:  []string{"my-group"},
 			Enabled: "true",
 		},
 	}

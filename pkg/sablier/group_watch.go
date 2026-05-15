@@ -71,65 +71,58 @@ func (s *Sablier) handleGroupEvent(ctx context.Context, event InstanceEvent) {
 
 	switch event.Type {
 	case provider.InstanceEventCreated:
-		if info.Group == "" {
+		if len(info.Groups) == 0 {
 			return // not group-managed
 		}
-		previous := s.AddInstanceToGroup(info.Name, info.Group)
-		if previous == "" {
+		added, _ := s.SyncInstanceGroups(info.Name, info.Groups)
+		for _, g := range added {
 			s.l.InfoContext(ctx, "instance added to group",
 				slog.String("instance", info.Name),
-				slog.String("group", info.Group),
-				slog.String("reason", reason),
-			)
-		} else if previous != info.Group {
-			s.l.InfoContext(ctx, "instance moved to group",
-				slog.String("instance", info.Name),
-				slog.String("from_group", previous),
-				slog.String("to_group", info.Group),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
 		}
 
 	case provider.InstanceEventUpdated:
-		currentGroup := s.GroupForInstance(info.Name)
-		newGroup := info.Group
-		if currentGroup == newGroup {
-			return // group unchanged
+		currentGroups := s.GroupsForInstance(info.Name)
+		newGroups := info.Groups
+		if equalStringSliceSets(currentGroups, newGroups) {
+			return // groups unchanged
 		}
-		if newGroup == "" {
-			// Instance lost its group label.
-			removed := s.RemoveInstanceFromGroup(info.Name)
-			if removed != "" {
+		if len(newGroups) == 0 {
+			// Instance lost all group labels.
+			removed := s.RemoveInstanceFromAllGroups(info.Name)
+			for _, g := range removed {
 				s.l.InfoContext(ctx, "instance removed from group",
 					slog.String("instance", info.Name),
-					slog.String("group", removed),
+					slog.String("group", g),
 					slog.String("reason", reason),
 				)
 			}
 			return
 		}
-		previous := s.AddInstanceToGroup(info.Name, newGroup)
-		if previous == "" {
+		added, removed := s.SyncInstanceGroups(info.Name, newGroups)
+		for _, g := range added {
 			s.l.InfoContext(ctx, "instance added to group",
 				slog.String("instance", info.Name),
-				slog.String("group", newGroup),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
-		} else {
-			s.l.InfoContext(ctx, "instance moved to group",
+		}
+		for _, g := range removed {
+			s.l.InfoContext(ctx, "instance removed from group",
 				slog.String("instance", info.Name),
-				slog.String("from_group", previous),
-				slog.String("to_group", newGroup),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
 		}
 
 	case provider.InstanceEventRemoved:
-		group := s.RemoveInstanceFromGroup(info.Name)
-		if group != "" {
+		removed := s.RemoveInstanceFromAllGroups(info.Name)
+		for _, g := range removed {
 			s.l.InfoContext(ctx, "instance removed from group",
 				slog.String("instance", info.Name),
-				slog.String("group", group),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
 		}
@@ -147,61 +140,58 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 		return
 	}
 
-	// Build a new instanceToGroup from the provider's authoritative state and
-	// emit per-instance log messages for any changes.
-	newInstanceToGroup := make(map[string]string)
+	// Build a new instanceToGroups from the provider's authoritative state.
+	newInstanceToGroups := make(map[string][]string)
 	for group, instances := range groups {
 		for _, inst := range instances {
-			newInstanceToGroup[inst] = group
+			newInstanceToGroups[inst] = append(newInstanceToGroups[inst], group)
 		}
 	}
 
-	// Detect additions and moves.
-	for inst, newGroup := range newInstanceToGroup {
-		oldGroup := s.GroupForInstance(inst)
-		if oldGroup == newGroup {
-			continue
-		}
-		s.AddInstanceToGroup(inst, newGroup)
-		if oldGroup == "" {
+	// Sync additions and changes.
+	for inst, newGroups := range newInstanceToGroups {
+		added, removed := s.SyncInstanceGroups(inst, newGroups)
+		for _, g := range added {
 			s.l.InfoContext(ctx, "instance added to group",
 				slog.String("instance", inst),
-				slog.String("group", newGroup),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
-		} else {
-			s.l.InfoContext(ctx, "instance moved to group",
+		}
+		for _, g := range removed {
+			s.l.InfoContext(ctx, "instance removed from group",
 				slog.String("instance", inst),
-				slog.String("from_group", oldGroup),
-				slog.String("to_group", newGroup),
+				slog.String("group", g),
 				slog.String("reason", reason),
 			)
 		}
 	}
 
-	// Detect removals.
-	for inst, oldGroup := range s.instanceToGroupSnapshot() {
-		if _, stillManaged := newInstanceToGroup[inst]; !stillManaged {
-			s.RemoveInstanceFromGroup(inst)
-			s.l.InfoContext(ctx, "instance removed from group",
-				slog.String("instance", inst),
-				slog.String("group", oldGroup),
-				slog.String("reason", reason),
-			)
+	// Detect complete removals (instances no longer in any group).
+	for inst := range s.groups.InstanceSnapshot() {
+		if _, stillManaged := newInstanceToGroups[inst]; !stillManaged {
+			removed := s.RemoveInstanceFromAllGroups(inst)
+			for _, g := range removed {
+				s.l.InfoContext(ctx, "instance removed from group",
+					slog.String("instance", inst),
+					slog.String("group", g),
+					slog.String("reason", reason),
+				)
+			}
 		}
 	}
 }
 
-// instanceToGroupSnapshot returns a snapshot of the current instance→group mapping,
-// derived from s.groups. Safe for concurrent use.
-func (s *Sablier) instanceToGroupSnapshot() map[string]string {
-	s.groupsMu.RLock()
-	defer s.groupsMu.RUnlock()
-	out := make(map[string]string)
-	for group, instances := range s.groups {
-		for _, inst := range instances {
-			out[inst] = group
+// equalStringSliceSets returns true if a and b contain the same elements (order-independent).
+func equalStringSliceSets(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	setA := stringSet(a)
+	for _, v := range b {
+		if !setA[v] {
+			return false
 		}
 	}
-	return out
+	return true
 }
