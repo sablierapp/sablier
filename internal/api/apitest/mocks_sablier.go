@@ -43,6 +43,20 @@ func (m *MockSablier) EXPECT() *MockSablierMockRecorder {
 	return m.recorder
 }
 
+// InstanceEvents mocks base method.
+func (m *MockSablier) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceEvents", ctx, opts)
+	ret0, _ := ret[0].(sablier.InstanceEventStream)
+	return ret0
+}
+
+// InstanceEvents indicates an expected call of InstanceEvents.
+func (mr *MockSablierMockRecorder) InstanceEvents(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceEvents", reflect.TypeOf((*MockSablier)(nil).InstanceEvents), ctx, opts)
+}
+
 // RequestReadySession mocks base method.
 func (m *MockSablier) RequestReadySession(ctx context.Context, names []string, duration, timeout time.Duration) (*sablier.SessionState, error) {
 	m.ctrl.T.Helper()
@@ -101,18 +115,4 @@ func (m *MockSablier) RequestSessionGroup(ctx context.Context, group string, dur
 func (mr *MockSablierMockRecorder) RequestSessionGroup(ctx, group, duration any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSessionGroup", reflect.TypeOf((*MockSablier)(nil).RequestSessionGroup), ctx, group, duration)
-}
-
-// InstanceEvents mocks base method.
-func (m *MockSablier) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InstanceEvents", ctx, opts)
-	ret0, _ := ret[0].(sablier.InstanceEventStream)
-	return ret0
-}
-
-// InstanceEvents indicates an expected call of InstanceEvents.
-func (mr *MockSablierMockRecorder) InstanceEvents(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceEvents", reflect.TypeOf((*MockSablier)(nil).InstanceEvents), ctx, opts)
 }

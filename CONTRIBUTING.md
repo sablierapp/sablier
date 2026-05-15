@@ -19,6 +19,7 @@ Thank you for your interest in contributing to Sablier! This guide will help you
       - [Build for Specific Platform](#build-for-specific-platform)
       - [Run Locally](#run-locally)
       - [Build Docker Image](#build-docker-image)
+    - [Theme Development](#theme-development)
     - [Testing](#testing)
       - [Run All Tests](#run-all-tests)
       - [Run Linters](#run-linters)
@@ -157,6 +158,36 @@ go run cmd/sablier/sablier.go start --provider.name=docker
 ```bash
 make docker
 ```
+
+---
+
+### Theme Development
+
+Themes are Go HTML templates that receive a [`TemplateData`](pkg/theme/types.go) value. A JSON Schema describing every available field is published alongside each release and served at:
+
+```
+https://sablierapp.dev/theme.schema.json
+```
+
+The schema is generated from the `TemplateData` and `Instance` Go types using `cmd/schemagen` and committed at [`docs/theme.schema.json`](docs/theme.schema.json).
+
+#### Regenerating the schema
+
+Whenever `TemplateData` or `Instance` in [`pkg/theme/types.go`](pkg/theme/types.go) changes, regenerate the schema:
+
+```bash
+make schema
+# or via go generate:
+go generate ./pkg/theme/...
+```
+
+#### Verifying the schema is up to date
+
+```bash
+make check-schema
+```
+
+This command fails with a clear message if the committed schema does not match the current Go types. It is intended for use in CI to catch forgotten regenerations.
 
 ---
 
