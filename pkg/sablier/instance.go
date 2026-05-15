@@ -2,6 +2,7 @@ package sablier
 
 import (
 	"log/slog"
+	"strings"
 	"strconv"
 	"time"
 )
@@ -30,7 +31,7 @@ type InstanceInfo struct {
 	CurrentReplicas int32                   `json:"currentReplicas"`
 	DesiredReplicas int32                   `json:"desiredReplicas"`
 	Status          InstanceStatus          `json:"status"`
-	Group           string                  `json:"group,omitempty"`
+	Groups          []string                `json:"groups,omitempty"`
 	Enabled         string                  `json:"enabled,omitempty"`
 	Message         string                  `json:"message,omitempty"`
 	Provider        ProviderType            `json:"provider,omitempty"`
@@ -80,7 +81,7 @@ type ResourceProfile struct {
 
 type InstanceConfiguration struct {
 	Name    string
-	Group   string
+	Groups  []string
 	Enabled string
 }
 
@@ -141,17 +142,35 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 	}
 }
 
+// ParseGroups parses a comma-separated group label value into a deduplicated slice.
+// Returns []string{"default"} if the label is empty.
+func ParseGroups(label string) []string {
+	if label == "" {
+		return []string{"default"}
+	}
+	parts := strings.Split(label, ",")
+	seen := make(map[string]bool, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return []string{"default"}
+	}
+	return out
+}
+
 // PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from
 // labels and writes the results into info. Centralising this logic avoids
 // duplicating the same map lookups in every provider's Inspect implementation.
 func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 	info.Enabled = labels["sablier.enable"]
 	if info.Enabled == "true" {
-		if g := labels["sablier.group"]; g != "" {
-			info.Group = g
-		} else {
-			info.Group = "default"
-		}
+		info.Groups = ParseGroups(labels["sablier.group"])
 	}
 	if v := labels["sablier.ready-after"]; v != "" {
 		if d, err := time.ParseDuration(v); err == nil {

@@ -37,20 +37,15 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 }
 
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
-	var group string
-
 	enabled := s.Spec.Labels["sablier.enable"]
+	var groups []string
 	if enabled == "true" {
-		if g, ok := s.Spec.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+		groups = sablier.ParseGroups(s.Spec.Labels["sablier.group"])
 	}
 
 	return sablier.InstanceConfiguration{
 		Name:    s.Spec.Name,
-		Group:   group,
+		Groups:  groups,
 		Enabled: enabled,
 	}
 }
@@ -72,14 +67,9 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	groups := make(map[string][]string)
 	for _, service := range services.Items {
-		groupName := service.Spec.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
+		for _, groupName := range sablier.ParseGroups(service.Spec.Labels["sablier.group"]) {
+			groups[groupName] = append(groups[groupName], service.Spec.Name)
 		}
-
-		group := groups[groupName]
-		group = append(group, service.Spec.Name)
-		groups[groupName] = group
 	}
 
 	return groups, nil

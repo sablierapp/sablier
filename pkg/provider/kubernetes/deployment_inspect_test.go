@@ -143,7 +143,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
 				Enabled:         "true",
-				Group:           "myapp",
+				Groups:          []string{"myapp"},
 			},
 			wantLabels: map[string]string{
 				"sablier.enable": "true",

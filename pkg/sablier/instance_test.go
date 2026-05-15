@@ -93,6 +93,103 @@ func TestPopulateEnabledAndGroup_ReadyAfter(t *testing.T) {
 	}
 }
 
+func TestParseGroups(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		label string
+		want  []string
+	}{
+		{
+			name:  "empty label defaults to default",
+			label: "",
+			want:  []string{"default"},
+		},
+		{
+			name:  "single group",
+			label: "web",
+			want:  []string{"web"},
+		},
+		{
+			name:  "two groups comma-separated",
+			label: "team-a,team-b",
+			want:  []string{"team-a", "team-b"},
+		},
+		{
+			name:  "three groups",
+			label: "frontend,backend,shared",
+			want:  []string{"frontend", "backend", "shared"},
+		},
+		{
+			name:  "spaces around commas are trimmed",
+			label: "web , api , db",
+			want:  []string{"web", "api", "db"},
+		},
+		{
+			name:  "duplicate groups are deduplicated",
+			label: "web,web,api",
+			want:  []string{"web", "api"},
+		},
+		{
+			name:  "only commas defaults to default",
+			label: ",,",
+			want:  []string{"default"},
+		},
+		{
+			name:  "mixed empty segments are ignored",
+			label: "web,,api",
+			want:  []string{"web", "api"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := sablier.ParseGroups(tt.label)
+			assert.DeepEqual(t, got, tt.want)
+		})
+	}
+}
+
+func TestPopulateEnabledAndGroup_Groups(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		labels map[string]string
+		want   []string
+	}{
+		{
+			name:   "single group",
+			labels: map[string]string{"sablier.enable": "true", "sablier.group": "myapp"},
+			want:   []string{"myapp"},
+		},
+		{
+			name:   "multiple groups comma-separated",
+			labels: map[string]string{"sablier.enable": "true", "sablier.group": "team-a,team-b"},
+			want:   []string{"team-a", "team-b"},
+		},
+		{
+			name:   "no group label defaults to default",
+			labels: map[string]string{"sablier.enable": "true"},
+			want:   []string{"default"},
+		},
+		{
+			name:   "not enabled produces no groups",
+			labels: map[string]string{"sablier.enable": "false", "sablier.group": "web"},
+			want:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var info sablier.InstanceInfo
+			sablier.PopulateEnabledAndGroup(&info, tt.labels)
+			assert.DeepEqual(t, info.Groups, tt.want)
+		})
+	}
+}
+
 func TestPopulateEnabledAndGroup_RunningHours(t *testing.T) {
 	tests := []struct {
 		name     string

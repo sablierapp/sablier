@@ -29,16 +29,20 @@ func hasSablierTag(tags []string) bool {
 	return false
 }
 
-// extractGroup returns the group name from a "sablier-group-<name>" tag.
-// Returns "default" if no group tag is found.
-func extractGroup(tags []string) string {
+// extractGroups returns all group names from "sablier-group-<name>" tags.
+// Returns []string{"default"} if no group tag is found.
+func extractGroups(tags []string) []string {
+	var groups []string
 	for _, t := range tags {
 		if strings.HasPrefix(t, groupPrefix) {
 			group := strings.TrimPrefix(t, groupPrefix)
 			if group != "" {
-				return group
+				groups = append(groups, group)
 			}
 		}
 	}
-	return "default"
+	if len(groups) == 0 {
+		return []string{"default"}
+	}
+	return groups
 }

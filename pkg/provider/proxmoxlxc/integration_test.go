@@ -28,7 +28,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		for _, inst := range instances {
 			if inst.Name == env.name {
 				found = true
-				assert.Equal(t, inst.Group, "test") // from "sablier-group-test" tag
+				assert.Equal(t, inst.Groups[0], "test") // from "sablier-group-test" tag
 				break
 			}
 		}

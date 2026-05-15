@@ -37,20 +37,15 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 }
 
 func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
-	var group string
-
 	enabled := c.Labels["sablier.enable"]
+	var groups []string
 	if enabled == "true" {
-		if g, ok := c.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+		groups = sablier.ParseGroups(c.Labels["sablier.group"])
 	}
 
 	return sablier.InstanceConfiguration{
 		Name:    strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Group:   group,
+		Groups:  groups,
 		Enabled: enabled,
 	}
 }
@@ -73,13 +68,10 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	groups := make(map[string][]string)
 	for _, c := range containers.Items {
-		groupName := c.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
+		name := strings.TrimPrefix(c.Names[0], "/")
+		for _, groupName := range sablier.ParseGroups(c.Labels["sablier.group"]) {
+			groups[groupName] = append(groups[groupName], name)
 		}
-		group := groups[groupName]
-		group = append(group, strings.TrimPrefix(c.Names[0], "/"))
-		groups[groupName] = group
 	}
 
 	return groups, nil

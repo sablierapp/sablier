@@ -32,22 +32,17 @@ func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfig
 }
 
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
-	var group string
-
 	enabled := d.Labels["sablier.enable"]
+	var groups []string
 	if enabled == "true" {
-		if g, ok := d.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+		groups = sablier.ParseGroups(d.Labels["sablier.group"])
 	}
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
 		Name:    parsed.Original,
-		Group:   group,
+		Groups:  groups,
 		Enabled: enabled,
 	}
 }
@@ -68,15 +63,10 @@ func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, e
 
 	groups := make(map[string][]string)
 	for _, deployment := range deployments.Items {
-		groupName := deployment.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
-		}
-
-		group := groups[groupName]
 		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
-		group = append(group, parsed.Original)
-		groups[groupName] = group
+		for _, groupName := range sablier.ParseGroups(deployment.Labels["sablier.group"]) {
+			groups[groupName] = append(groups[groupName], parsed.Original)
+		}
 	}
 
 	return groups, nil

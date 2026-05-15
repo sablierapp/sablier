@@ -77,45 +77,45 @@ func TestHasSablierTag(t *testing.T) {
 	}
 }
 
-func TestExtractGroup(t *testing.T) {
+func TestExtractGroups(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name string
 		tags []string
-		want string
+		want []string
 	}{
 		{
 			name: "has group tag",
 			tags: []string{"sablier", "sablier-group-web"},
-			want: "web",
+			want: []string{"web"},
 		},
 		{
 			name: "no group tag defaults to default",
 			tags: []string{"sablier"},
-			want: "default",
+			want: []string{"default"},
 		},
 		{
 			name: "empty group prefix is ignored",
 			tags: []string{"sablier", "sablier-group-"},
-			want: "default",
+			want: []string{"default"},
 		},
 		{
-			name: "multiple group tags uses first",
+			name: "multiple group tags returns all",
 			tags: []string{"sablier-group-first", "sablier-group-second"},
-			want: "first",
+			want: []string{"first", "second"},
 		},
 		{
 			name: "empty tags",
 			tags: nil,
-			want: "default",
+			want: []string{"default"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := extractGroup(tt.tags)
-			assert.Equal(t, got, tt.want)
+			got := extractGroups(tt.tags)
+			assert.DeepEqual(t, got, tt.want)
 		})
 	}
 }

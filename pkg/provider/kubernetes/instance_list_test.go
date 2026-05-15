@@ -75,22 +75,22 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 	want := []sablier.InstanceConfiguration{
 		{
 			Name:    kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group:   "default",
+			Groups:  []string{"default"},
 			Enabled: "true",
 		},
 		{
 			Name:    kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group:   "my-group",
+			Groups:  []string{"my-group"},
 			Enabled: "true",
 		},
 		{
 			Name:    kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group:   "default",
+			Groups:  []string{"default"},
 			Enabled: "true",
 		},
 		{
 			Name:    kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			Group:   "my-group",
+			Groups:  []string{"my-group"},
 			Enabled: "true",
 		},
 	}

@@ -187,6 +187,62 @@ func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
 	}
 }
 
+// TestRequestSessionGroup_MultipleGroupsFiltering verifies that requesting a session
+// for one group does NOT start instances from other groups, even when instances belong
+// to multiple groups.
+func TestRequestSessionGroup_MultipleGroupsFiltering(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	// Setup: team-a has [frontend, shared-api], team-b has [backend, shared-api]
+	manager.SetGroups(map[string][]string{
+		"team-a": {"frontend", "shared-api"},
+		"team-b": {"backend", "shared-api"},
+	})
+	ctx := t.Context()
+
+	stoppedInfo := func(name string) sablier.InstanceInfo {
+		return sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
+		}
+	}
+
+	startingInfo := func(name string) sablier.InstanceInfo {
+		return sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStarting,
+		}
+	}
+
+	// Expect only frontend and shared-api to be started (from team-a), NOT backend
+	for _, name := range []string{"frontend", "shared-api"} {
+		sessions.EXPECT().Get(ctx, name).Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(ctx, name).Return(stoppedInfo(name), nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), name).Return(nil)
+		sessions.EXPECT().Put(ctx, startingInfo(name), time.Minute).Return(nil)
+	}
+
+	// backend should NOT be called at all
+	sessions.EXPECT().Get(ctx, "backend").Times(0)
+	provider.EXPECT().InstanceInspect(ctx, "backend").Times(0)
+	provider.EXPECT().InstanceStart(gomock.Any(), "backend").Times(0)
+
+	session, err := manager.RequestSessionGroup(ctx, "team-a", time.Minute)
+	assert.NilError(t, err)
+
+	// Verify only team-a instances are in the session
+	_, hasFrontend := session.Instances["frontend"]
+	_, hasSharedAPI := session.Instances["shared-api"]
+	_, hasBackend := session.Instances["backend"]
+
+	assert.Assert(t, hasFrontend, "frontend should be in session")
+	assert.Assert(t, hasSharedAPI, "shared-api should be in session")
+	assert.Assert(t, !hasBackend, "backend should NOT be in session")
+}
+
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 	t.Run("request ready session is cancelled by user", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())

@@ -17,7 +17,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | Label | Required | Example | Description |
 |-------|----------|---------|-------------|
 | `sablier.enable` | Yes | `"true"` | Opt the instance into Sablier management. Any value other than `"true"` is ignored. |
-| `sablier.group` | No | `"myapp"` | Assign the instance to a named group. Defaults to `"default"` when `sablier.enable=true` and no group is set. |
+| `sablier.group` | No | `"myapp"` | Assign the instance to one or more named groups (comma-separated, e.g. `"team-a,team-b"`). Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
 | `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
@@ -26,6 +26,29 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.active.cpu` | No | `"2.0"` | CPU limit restored when a new session is requested (scale mode). |
 | `sablier.active.memory` | No | `"512m"` | Memory limit restored when a new session is requested (scale mode). |
 | `sablier.active.replicas` | No | `"1"` | Replica count when active. Default `1`. Increase when you need more replicas on wake-up. |
+
+### Multiple groups per instance
+
+An instance can belong to more than one group by providing a **comma-separated** list in the `sablier.group` label:
+
+```yaml
+services:
+  shared-api:
+    image: myorg/shared-api:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=team-a,team-b"   # member of both groups
+```
+
+When a session is requested for `team-a`, Sablier starts every instance whose groups include `team-a` — including `shared-api`. The same instance is also started when a session for `team-b` is requested.
+
+Practical rules:
+
+- Spaces around commas are ignored: `"team-a , team-b"` is equivalent to `"team-a,team-b"`.
+- Duplicate group names are deduplicated silently.
+- An instance that loses all group labels (e.g. label removed at runtime) is dropped from every group it belonged to.
+
+!> For **ProxmoxLXC** the label model is replaced by Proxmox tags. Add one `sablier-group-<name>` tag per group (e.g. `sablier-group-team-a` and `sablier-group-team-b`).
 
 ### `sablier.ready-after`
 

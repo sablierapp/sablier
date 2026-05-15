@@ -104,7 +104,7 @@ func TestPopulateEnabledAndGroup_WithScaleLabels(t *testing.T) {
 	sablier.PopulateEnabledAndGroup(&info, labels)
 
 	assert.Equal(t, info.Enabled, "true")
-	assert.Equal(t, info.Group, "backend")
+	assert.DeepEqual(t, info.Groups, []string{"backend"})
 	assert.Assert(t, info.ScaleConfig != nil, "ScaleConfig should be populated")
 	assert.Equal(t, info.ScaleConfig.Idle.Replicas, int32(1))
 	assert.Equal(t, info.ScaleConfig.Idle.CPU, "0.25")
