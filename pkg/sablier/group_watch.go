@@ -152,7 +152,7 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 	newInstanceToGroup := make(map[string]string)
 	for group, instances := range groups {
 		for _, inst := range instances {
-			newInstanceToGroup[inst] = group
+			newInstanceToGroup[inst.Name] = group
 		}
 	}
 
@@ -190,6 +190,10 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 			)
 		}
 	}
+
+	// Store the provider-ordered group lists and dependency graphs so that
+	// wave-based startup ordering is respected for groups with depends-on.
+	s.SetGroupsFromConfigurations(groups)
 }
 
 // instanceToGroupSnapshot returns a snapshot of the current instance→group mapping,

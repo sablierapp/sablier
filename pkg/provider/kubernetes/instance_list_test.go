@@ -160,16 +160,16 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)
 
-	want := map[string][]string{
+	want := map[string][]sablier.InstanceConfiguration{
 		"default": {
-			kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
-			kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			{Name: kubernetes.DeploymentName(d1, kubernetes.ParseOptions{Delimiter: "_"}).Original},
+			{Name: kubernetes.StatefulSetName(ss1, kubernetes.ParseOptions{Delimiter: "_"}).Original},
 		},
 		"my-group-1": {
-			kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			{Name: kubernetes.DeploymentName(d2, kubernetes.ParseOptions{Delimiter: "_"}).Original},
 		},
 		"my-group-2": {
-			kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original,
+			{Name: kubernetes.StatefulSetName(ss2, kubernetes.ParseOptions{Delimiter: "_"}).Original},
 		},
 	}
 	assert.DeepEqual(t, got, want)

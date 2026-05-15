@@ -55,7 +55,7 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 	}
 }
 
-func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	filters := client.Filters{}
 	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
 	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
@@ -70,16 +70,14 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services.Items)))
 
-	groups := make(map[string][]string)
+	groups := make(map[string][]sablier.InstanceConfiguration)
 	for _, service := range services.Items {
 		groupName := service.Spec.Labels["sablier.group"]
 		if len(groupName) == 0 {
 			groupName = "default"
 		}
 
-		group := groups[groupName]
-		group = append(group, service.Spec.Name)
-		groups[groupName] = group
+		groups[groupName] = append(groups[groupName], sablier.InstanceConfiguration{Name: service.Spec.Name})
 	}
 
 	return groups, nil

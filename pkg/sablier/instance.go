@@ -82,6 +82,10 @@ type InstanceConfiguration struct {
 	Name    string
 	Group   string
 	Enabled string
+	// DependsOn lists the names of other instances (within the same group) that
+	// must be ready before this instance is started. Populated by providers that
+	// support dependency ordering (e.g. Docker via the sablier.depends-on label).
+	DependsOn []string
 }
 
 func (instance InstanceInfo) IsReady() bool {

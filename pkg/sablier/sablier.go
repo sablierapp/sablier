@@ -16,6 +16,9 @@ type Sablier struct {
 
 	groupsMu sync.RWMutex
 	groups   map[string][]string
+	// groupDeps holds the intra-group dependency graph: group → instance → deps.
+	// Populated by SetGroupsFromConfigurations during reconciliation.
+	groupDeps map[string]map[string][]string
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
@@ -38,11 +41,11 @@ type Sablier struct {
 
 	// rejectUnlabeledRequests blocks direct named requests unless sablier.enable=true.
 	rejectUnlabeledRequests bool
-	
+
 	// verifyEnabledOnExpiration re-checks sablier.enable before stopping expired instances.
 	verifyEnabledOnExpiration bool
-	
-	metrics                   metrics.Recorder
+
+	metrics metrics.Recorder
 
 	l *slog.Logger
 }
@@ -51,8 +54,9 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 	return &Sablier{
 		provider:                      provider,
 		sessions:                      store,
-		groupsMu: sync.RWMutex{},
-		groups:   map[string][]string{},
+		groupsMu:                      sync.RWMutex{},
+		groups:                        map[string][]string{},
+		groupDeps:                     map[string]map[string][]string{},
 		pendingStarts:                 map[string]*pendingStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
@@ -105,6 +109,63 @@ func (s *Sablier) SetGroups(groups map[string][]string) {
 		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
 		s.groups = groups
 	}
+}
+
+// SetGroupsFromConfigurations sets group membership and dependency information
+// from the provider's InstanceGroups result. Group names and their ordered
+// member lists are stored in s.groups; dependency graphs (instance → deps) are
+// stored in s.groupDeps and used for wave-based startup ordering.
+func (s *Sablier) SetGroupsFromConfigurations(configurations map[string][]InstanceConfiguration) {
+	names := make(map[string][]string, len(configurations))
+	deps := make(map[string]map[string][]string, len(configurations))
+
+	for group, instances := range configurations {
+		groupNames := make([]string, 0, len(instances))
+		for _, inst := range instances {
+			groupNames = append(groupNames, inst.Name)
+		}
+		names[group] = groupNames
+
+		// Only store a dep map for this group if at least one instance has deps.
+		var groupDeps map[string][]string
+		for _, inst := range instances {
+			if len(inst.DependsOn) > 0 {
+				if groupDeps == nil {
+					groupDeps = make(map[string][]string)
+				}
+				groupDeps[inst.Name] = inst.DependsOn
+			}
+		}
+		if groupDeps != nil {
+			deps[group] = groupDeps
+		}
+	}
+
+	s.groupsMu.Lock()
+	defer s.groupsMu.Unlock()
+	if diff := cmp.Diff(s.groups, names); diff != "" {
+		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", names), slog.Any("diff", diff))
+		s.groups = names
+	}
+	s.groupDeps = deps
+}
+
+// GroupDeps returns a defensive copy of the dependency graph for the given group.
+// Returns nil if the group has no dependency information.
+func (s *Sablier) GroupDeps(group string) map[string][]string {
+	s.groupsMu.RLock()
+	defer s.groupsMu.RUnlock()
+	src, ok := s.groupDeps[group]
+	if !ok {
+		return nil
+	}
+	out := make(map[string][]string, len(src))
+	for k, v := range src {
+		cp := make([]string, len(v))
+		copy(cp, v)
+		out[k] = cp
+	}
+	return out
 }
 
 // GroupForInstance returns the group the instance currently belongs to, or empty string.

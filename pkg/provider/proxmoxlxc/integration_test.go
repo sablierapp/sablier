@@ -44,7 +44,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 
 		found := false
 		for _, n := range names {
-			if n == env.name {
+			if n.Name == env.name {
 				found = true
 				break
 			}

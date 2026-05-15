@@ -32,7 +32,7 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 	return instances, nil
 }
 
-func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	discovered, err := p.scanContainers(ctx)
 	if err != nil {
 		return nil, err
@@ -40,15 +40,17 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	p.l.DebugContext(ctx, "containers listed for groups", slog.Int("count", len(discovered)))
 
-	groups := make(map[string][]string)
+	groups := make(map[string][]sablier.InstanceConfiguration)
 	for _, d := range discovered {
 		groupName := extractGroup(d.tags)
-		groups[groupName] = append(groups[groupName], d.ref.name)
+		groups[groupName] = append(groups[groupName], sablier.InstanceConfiguration{Name: d.ref.name})
 	}
 
 	// Sort instance names within each group for stable ordering
-	for _, names := range groups {
-		sort.Strings(names)
+	for _, instances := range groups {
+		sort.Slice(instances, func(i, j int) bool {
+			return instances[i].Name < instances[j].Name
+		})
 	}
 
 	return groups, nil

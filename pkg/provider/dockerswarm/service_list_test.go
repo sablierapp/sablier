@@ -123,9 +123,9 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)
 
-	want := map[string][]string{
-		"default":  {i1.Spec.Name},
-		"my-group": {i2.Spec.Name},
+	want := map[string][]sablier.InstanceConfiguration{
+		"default":  {{Name: i1.Spec.Name}},
+		"my-group": {{Name: i2.Spec.Name}},
 	}
 
 	assert.DeepEqual(t, got, want)

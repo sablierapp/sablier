@@ -22,7 +22,7 @@ func TestGroupWatch_ContextDone(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	cancel()
 
@@ -50,7 +50,7 @@ func TestGroupWatch_CreatedEvent_AddsToGroup(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -76,7 +76,7 @@ func TestGroupWatch_RemovedEvent_RemovesFromGroup(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -102,7 +102,7 @@ func TestGroupWatch_UpdatedEvent_MovesGroup(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -128,12 +128,12 @@ func TestGroupWatch_ReconciliationUpdatesGroups(t *testing.T) {
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
 
-	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]string, error) {
+	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 		select {
 		case called <- struct{}{}:
 		default:
 		}
-		return map[string][]string{"g": {"a", "b"}}, nil
+		return map[string][]sablier.InstanceConfiguration{"g": {{Name: "a"}, {Name: "b"}}}, nil
 	}).AnyTimes()
 
 	go s.GroupWatch(ctx)
@@ -165,12 +165,12 @@ func TestGroupWatch_EventStreamClosed_FallsBackToReconciliation(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
 	called := make(chan struct{}, 1)
-	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]string, error) {
+	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 		select {
 		case called <- struct{}{}:
 		default:
 		}
-		return map[string][]string{"g": {"x"}}, nil
+		return map[string][]sablier.InstanceConfiguration{"g": {{Name: "x"}}}, nil
 	}).AnyTimes()
 
 	go s.GroupWatch(ctx)
@@ -194,7 +194,7 @@ func TestGroupWatch_ProviderErrorDoesNotUpdateGroups(t *testing.T) {
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
 
-	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]string, error) {
+	p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 		select {
 		case called <- struct{}{}:
 		default:
@@ -227,7 +227,7 @@ func TestGroupWatch_UpdatedEvent_LostLabel(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -253,7 +253,7 @@ func TestGroupWatch_CreatedEvent_MovesToGroup(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -280,7 +280,7 @@ func TestGroupWatch_UpdatedEvent_GroupUnchanged(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -306,7 +306,7 @@ func TestGroupWatch_ReconciliationMovesGroup(t *testing.T) {
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{"api": {"nginx"}}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{"api": {{Name: "nginx"}}}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
@@ -327,7 +327,7 @@ func TestGroupWatch_ReconciliationRemovesFromGroup(t *testing.T) {
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
 	// Provider no longer reports nginx in any group.
-	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]sablier.InstanceConfiguration{}, nil).AnyTimes()
 
 	go s.GroupWatch(ctx)
 
