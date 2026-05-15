@@ -302,7 +302,7 @@ SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 
 To list all available arguments:
 
-<!-- x-release-please-version-start -->
+<!-- x-release-please-start-version -->
 ```bash
 sablier --help
 
