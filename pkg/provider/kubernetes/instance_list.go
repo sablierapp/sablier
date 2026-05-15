@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
@@ -20,7 +21,7 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 	return append(deployments, statefulSets...), nil
 }
 
-func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	deployments, err := p.DeploymentGroups(ctx)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 		return nil, err
 	}
 
-	groups := make(map[string][]string)
+	groups := make(map[string][]sablier.InstanceConfiguration)
 	for group, instances := range deployments {
 		groups[group] = instances
 	}

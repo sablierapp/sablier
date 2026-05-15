@@ -57,10 +57,10 @@ func (mr *MockProviderMockRecorder) InstanceEvents(ctx, opts any) *gomock.Call {
 }
 
 // InstanceGroups mocks base method.
-func (m *MockProvider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
+func (m *MockProvider) InstanceGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InstanceGroups", ctx)
-	ret0, _ := ret[0].(map[string][]string)
+	ret0, _ := ret[0].(map[string][]sablier.InstanceConfiguration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -58,11 +58,15 @@ func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
+	s.groupsMu.RLock()
 	names, ok := s.groups[group]
+	available := slices.Collect(maps.Keys(s.groups))
+	s.groupsMu.RUnlock()
+
 	if !ok {
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: available,
 		}
 	}
 
@@ -147,11 +151,18 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
+	s.groupsMu.RLock()
 	names, ok := s.groups[group]
+	deps := s.groupDeps[group]
+	s.groupsMu.RUnlock()
+
 	if !ok {
+		s.groupsMu.RLock()
+		available := slices.Collect(maps.Keys(s.groups))
+		s.groupsMu.RUnlock()
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: available,
 		}
 	}
 
@@ -159,5 +170,91 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.requestReadySession(ctx, names, duration, timeout, false)
+	// If the group has no dependency info, fall back to the concurrent approach.
+	if len(deps) == 0 {
+		return s.requestReadySession(ctx, names, duration, timeout, false)
+	}
+
+	// Wave-based startup: start instances in topological order, waiting for each
+	// wave to be ready before starting the next wave.
+	waves := computeWaves(names, deps)
+	if len(waves) <= 1 {
+		return s.requestReadySession(ctx, names, duration, timeout, false)
+	}
+
+	s.l.DebugContext(ctx, "starting group with dependency ordering",
+		slog.String("group", group),
+		slog.Int("waves", len(waves)),
+	)
+
+	deadline := time.Now().Add(timeout)
+	combined := &SessionState{Instances: make(map[string]InstanceInfoWithError)}
+
+	for i, wave := range waves {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return nil, fmt.Errorf("session was not ready after %s", timeout.String())
+		}
+		s.l.DebugContext(ctx, "starting wave",
+			slog.String("group", group),
+			slog.Int("wave", i+1),
+			slog.Any("instances", wave),
+		)
+		state, err := s.requestReadySession(ctx, wave, duration, remaining, false)
+		if err != nil {
+			return nil, err
+		}
+		for name, info := range state.Instances {
+			combined.Instances[name] = info
+		}
+	}
+
+	return combined, nil
+}
+
+// computeWaves partitions names into ordered groups (waves) such that each
+// instance appears only after all of its dependencies in deps. Instances with
+// no dependencies (or dependencies not listed in names) are placed in Wave 1.
+func computeWaves(names []string, deps map[string][]string) [][]string {
+	if len(deps) == 0 {
+		return [][]string{names}
+	}
+
+	satisfied := make(map[string]bool, len(names))
+	remaining := make(map[string]bool, len(names))
+	for _, n := range names {
+		remaining[n] = true
+	}
+
+	var waves [][]string
+	for len(remaining) > 0 {
+		var wave []string
+		for _, n := range names { // iterate in original (topo-sorted) order
+			if !remaining[n] {
+				continue
+			}
+			allSatisfied := true
+			for _, dep := range deps[n] {
+				if !satisfied[dep] {
+					allSatisfied = false
+					break
+				}
+			}
+			if allSatisfied {
+				wave = append(wave, n)
+			}
+		}
+		if len(wave) == 0 {
+			// Cycle or unresolvable — add all remaining to avoid an infinite loop.
+			for n := range remaining {
+				wave = append(wave, n)
+			}
+		}
+		for _, n := range wave {
+			delete(remaining, n)
+			satisfied[n] = true
+		}
+		waves = append(waves, wave)
+	}
+	return waves
 }

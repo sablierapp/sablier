@@ -52,7 +52,7 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 	}
 }
 
-func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",
@@ -66,17 +66,15 @@ func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, e
 		return nil, err
 	}
 
-	groups := make(map[string][]string)
+	groups := make(map[string][]sablier.InstanceConfiguration)
 	for _, deployment := range deployments.Items {
 		groupName := deployment.Labels["sablier.group"]
 		if len(groupName) == 0 {
 			groupName = "default"
 		}
 
-		group := groups[groupName]
 		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
-		group = append(group, parsed.Original)
-		groups[groupName] = group
+		groups[groupName] = append(groups[groupName], sablier.InstanceConfiguration{Name: parsed.Original})
 	}
 
 	return groups, nil

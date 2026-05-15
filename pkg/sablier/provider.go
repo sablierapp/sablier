@@ -27,7 +27,7 @@ type Provider interface {
 	InstanceStart(ctx context.Context, name string) error
 	InstanceStop(ctx context.Context, name string) error
 	InstanceInspect(ctx context.Context, name string) (InstanceInfo, error)
-	InstanceGroups(ctx context.Context) (map[string][]string, error)
+	InstanceGroups(ctx context.Context) (map[string][]InstanceConfiguration, error)
 	InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]InstanceConfiguration, error)
 
 	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) InstanceEventStream

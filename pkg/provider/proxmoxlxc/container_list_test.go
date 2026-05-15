@@ -110,11 +110,11 @@ func TestProxmoxLXCProvider_InstanceGroups(t *testing.T) {
 	assert.NilError(t, err)
 
 	for _, v := range groups {
-		sort.Strings(v)
+		sort.Slice(v, func(i, j int) bool { return v[i].Name < v[j].Name })
 	}
 
-	assert.DeepEqual(t, groups, map[string][]string{
-		"frontend": {"web1", "web2"},
-		"default":  {"db"},
+	assert.DeepEqual(t, groups, map[string][]sablier.InstanceConfiguration{
+		"frontend": {{Name: "web1"}, {Name: "web2"}},
+		"default":  {{Name: "db"}},
 	})
 }

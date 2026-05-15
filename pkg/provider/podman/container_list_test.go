@@ -118,9 +118,9 @@ func TestPodmanProvider_GetGroups(t *testing.T) {
 	got, err := p.InstanceGroups(ctx)
 	assert.NilError(t, err)
 
-	want := map[string][]string{
-		"default":  {strings.TrimPrefix(i1.Container.Name, "/")},
-		"my-group": {strings.TrimPrefix(i2.Container.Name, "/")},
+	want := map[string][]sablier.InstanceConfiguration{
+		"default":  {{Name: strings.TrimPrefix(i1.Container.Name, "/")}},
+		"my-group": {{Name: strings.TrimPrefix(i2.Container.Name, "/")}},
 	}
 
 	assert.DeepEqual(t, got, want)

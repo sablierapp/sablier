@@ -52,7 +52,7 @@ func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceCon
 	}
 }
 
-func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
+func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"sablier.enable": "true",
@@ -65,17 +65,15 @@ func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, 
 		return nil, err
 	}
 
-	groups := make(map[string][]string)
+	groups := make(map[string][]sablier.InstanceConfiguration)
 	for _, ss := range statefulSets.Items {
 		groupName := ss.Labels["sablier.group"]
 		if len(groupName) == 0 {
 			groupName = "default"
 		}
 
-		group := groups[groupName]
 		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
-		group = append(group, parsed.Original)
-		groups[groupName] = group
+		groups[groupName] = append(groups[groupName], sablier.InstanceConfiguration{Name: parsed.Original})
 	}
 
 	return groups, nil

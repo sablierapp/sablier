@@ -69,7 +69,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	if err != nil {
 		logger.WarnContext(ctx, "initial group scan failed", slog.Any("reason", err))
 	} else {
-		s.SetGroups(groups)
+		s.SetGroupsFromConfigurations(groups)
 	}
 
 	go s.GroupWatch(ctx)
