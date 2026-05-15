@@ -5,8 +5,9 @@ services:
       - start
       - --provider.name=docker
       - --logging.level=debug
-      - --sessions.default-duration=3s
+      - --sessions.default-duration=8s
       - --sessions.expiration-interval=1s
+      - --strategy.blocking.default-refresh-frequency=1s
       - --provider.verify-enabled-on-expiration=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
