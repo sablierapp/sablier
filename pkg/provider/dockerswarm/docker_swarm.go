@@ -2,10 +2,8 @@ package dockerswarm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -15,8 +13,7 @@ import (
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client          client.APIClient
-	desiredReplicas int32
+	Client client.APIClient
 
 	l *slog.Logger
 }
@@ -35,37 +32,8 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provide
 	)
 
 	return &Provider{
-		Client:          cli,
-		desiredReplicas: 1,
-		l:               logger,
+		Client: cli,
+		l:      logger,
 	}, nil
 
-}
-
-func (p *Provider) ServiceUpdateReplicas(ctx context.Context, name string, replicas uint64) error {
-	service, err := p.getServiceByName(name, ctx)
-	if err != nil {
-		return fmt.Errorf("cannot get service: %w", err)
-	}
-
-	if service.Spec.Mode.Replicated == nil {
-		return errors.New("swarm service is not in \"replicated\" mode")
-	}
-
-	p.l.DebugContext(ctx, "scaling service", "name", name, "current_replicas", service.Spec.Mode.Replicated.Replicas, "desired_replicas", p.desiredReplicas)
-	service.Spec.Mode.Replicated.Replicas = &replicas
-
-	response, err := p.Client.ServiceUpdate(ctx, service.ID, client.ServiceUpdateOptions{
-		Version: service.Version,
-		Spec:    service.Spec,
-	})
-	if err != nil {
-		return fmt.Errorf("cannot update service: %w", err)
-	}
-
-	if len(response.Warnings) > 0 {
-		return fmt.Errorf("warning received updating swarm service [%s]: %s", service.Spec.Name, strings.Join(response.Warnings, ", "))
-	}
-
-	return nil
 }

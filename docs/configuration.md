@@ -20,10 +20,12 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.group` | No | `"myapp"` | Assign the instance to one or more named groups (comma-separated, e.g. `"team-a,team-b"`). Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
-| `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Container keeps running with throttled CPU. |
-| `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). |
+| `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
+| `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
+| `sablier.idle.replicas` | No | `"1"` | Replica count when idle. Default `0` (stop the workload). Set to `1` or higher to keep the workload running and optionally throttle its resources. |
 | `sablier.active.cpu` | No | `"2.0"` | CPU limit restored when a new session is requested (scale mode). |
 | `sablier.active.memory` | No | `"512m"` | Memory limit restored when a new session is requested (scale mode). |
+| `sablier.active.replicas` | No | `"1"` | Replica count when active. Default `1`. Increase when you need more replicas on wake-up. |
 
 ### Multiple groups per instance
 
@@ -113,16 +115,22 @@ Running-hours are evaluated in the process local timezone.
 
 ### Scale Mode
 
-Scale mode is an alternative to stopping containers. Instead of shutting down and restarting the container, Sablier **throttles its CPU and memory** when the session expires and **restores them** when a new session is requested. The container keeps running the entire time, which eliminates cold-start latency.
+Scale mode is an alternative to stopping containers. Instead of shutting down and restarting the workload, Sablier **scales down the replica count** when the session expires and **restores it** when a new session is requested.
 
-| Label | Format | Example |
-|-------|--------|---------|
-| `sablier.idle.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | `"0.1"`, `"500m"` |
-| `sablier.idle.memory` | Docker units or Kubernetes quantity | `"64m"`, `"128Mi"` |
-| `sablier.active.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | `"2.0"`, `"2000m"` |
-| `sablier.active.memory` | Docker units or Kubernetes quantity | `"512m"`, `"1Gi"` |
+Optionally, when `sablier.idle.replicas >= 1`, the workload **keeps running** at the idle replica count with **throttled CPU and memory**, and resources are **restored** when a new session arrives. This eliminates cold-start latency at the cost of keeping the workload alive.
 
-You can set any combination of the four labels. Labels not set default to 0 (no limit).
+| Label | Format | Default | Example |
+|-------|--------|---------|----------|
+| `sablier.idle.replicas` | Integer | `0` (stop) | `"1"` |
+| `sablier.idle.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | — | `"0.1"`, `"500m"` |
+| `sablier.idle.memory` | Docker units or Kubernetes quantity | — | `"64m"`, `"128Mi"` |
+| `sablier.active.replicas` | Integer | `1` | `"2"` |
+| `sablier.active.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | — | `"2.0"`, `"2000m"` |
+| `sablier.active.memory` | Docker units or Kubernetes quantity | — | `"512m"`, `"1Gi"` |
+
+When `sablier.idle.replicas` is `0` (the default), Sablier stops the workload on session expiry and restarts it on demand — identical to the default stop behavior, but configured via scale-mode labels. Set it to `1` or higher to keep the workload running with optional resource throttling.
+
+You can set any combination of the CPU and memory labels. Labels not set default to no limit (no throttling applied).
 
 **Supported providers:** Docker, Docker Swarm, Kubernetes (Deployments and StatefulSets), Podman.
 
@@ -139,19 +147,40 @@ services:
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
+      - "sablier.idle.replicas=1"
       - "sablier.idle.cpu=0.1"
       - "sablier.idle.memory=64m"
+      - "sablier.active.replicas=1"
       - "sablier.active.cpu=2.0"
       - "sablier.active.memory=512m"
 ```
 
-When the session expires, Sablier runs the equivalent of `docker update --cpus=0.1 --memory=64m myapp`. When a new session is requested, it restores `--cpus=2.0 --memory=512m`. The container is never stopped.
+When the session expires, Sablier sets the replica count to `sablier.idle.replicas` (≥ 1 keeps the container running) and runs the equivalent of `docker update --cpus=0.1 --memory=64m myapp`. When a new session is requested, it restores `--cpus=2.0 --memory=512m`. The container is never stopped.
 
 > **Note:** Docker requires the memory swap limit to be updated in the same call as the memory limit. Sablier sets `MemorySwap` equal to `Memory` automatically, which satisfies the constraint and disables swap for the container.
 
 #### Docker Swarm
 
-Same format as Docker. Resource constraints are applied to the service's task template, triggering a Swarm service update (tasks are re-scheduled with the new limits).
+CPU and memory values use the same format as Docker. Resource constraints are applied to the service's task template, triggering a Swarm service update (tasks are re-scheduled with the new limits).
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    deploy:
+      replicas: 1
+      labels:
+        - "sablier.enable=true"
+        - "sablier.group=myapp"
+        - "sablier.idle.replicas=1"
+        - "sablier.idle.cpu=0.1"
+        - "sablier.idle.memory=64m"
+        - "sablier.active.replicas=1"
+        - "sablier.active.cpu=2.0"
+        - "sablier.active.memory=512m"
+```
+
+> **Note:** In Docker Swarm, labels that control Sablier must be placed under `deploy.labels`, not the top-level `labels` key, so that they are attached to the service rather than the container.
 
 #### Kubernetes
 
@@ -165,8 +194,10 @@ metadata:
   labels:
     sablier.enable: "true"
     sablier.group: myapp
+    sablier.idle.replicas: "1"
     sablier.idle.cpu: "100m"
     sablier.idle.memory: "64Mi"
+    sablier.active.replicas: "1"
     sablier.active.cpu: "2000m"
     sablier.active.memory: "512Mi"
 ```

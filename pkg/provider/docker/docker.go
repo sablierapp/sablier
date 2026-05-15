@@ -13,10 +13,9 @@ import (
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client          client.APIClient
-	desiredReplicas int32
-	l               *slog.Logger
-	strategy        string
+	Client   client.APIClient
+	l        *slog.Logger
+	strategy string
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
@@ -32,9 +31,8 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		slog.String("api_version", serverVersion.APIVersion),
 	)
 	return &Provider{
-		Client:          cli,
-		desiredReplicas: 1,
-		l:               logger,
-		strategy:        strategy,
+		Client:   cli,
+		l:        logger,
+		strategy: strategy,
 	}, nil
 }
