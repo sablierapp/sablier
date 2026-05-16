@@ -29,8 +29,8 @@ func TestProxmoxLXCProvider_InstanceList(t *testing.T) {
 
 	sort.Slice(instances, func(i, j int) bool { return instances[i].Name < instances[j].Name })
 	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
-		{Name: "db", Group: "default", Enabled: "true"},
-		{Name: "web", Group: "frontend", Enabled: "true"},
+		{Name: "db", Groups: []string{"default"}, Enabled: "true"},
+		{Name: "web", Groups: []string{"frontend"}, Enabled: "true"},
 	})
 }
 
@@ -51,7 +51,7 @@ func TestProxmoxLXCProvider_InstanceList_RunningOnly(t *testing.T) {
 	assert.NilError(t, err)
 
 	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
-		{Name: "web", Group: "frontend", Enabled: "true"},
+		{Name: "web", Groups: []string{"frontend"}, Enabled: "true"},
 	})
 }
 
@@ -72,8 +72,8 @@ func TestProxmoxLXCProvider_InstanceList_MultiNode(t *testing.T) {
 
 	sort.Slice(instances, func(i, j int) bool { return instances[i].Name < instances[j].Name })
 	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
-		{Name: "app1", Group: "apps", Enabled: "true"},
-		{Name: "app2", Group: "apps", Enabled: "true"},
+		{Name: "app1", Groups: []string{"apps"}, Enabled: "true"},
+		{Name: "app2", Groups: []string{"apps"}, Enabled: "true"},
 	})
 }
 

@@ -14,8 +14,7 @@ type Sablier struct {
 	provider Provider
 	sessions Store
 
-	groupsMu sync.RWMutex
-	groups   map[string][]string
+	groups *groupRegistry
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
@@ -38,11 +37,11 @@ type Sablier struct {
 
 	// rejectUnlabeledRequests blocks direct named requests unless sablier.enable=true.
 	rejectUnlabeledRequests bool
-	
+
 	// verifyEnabledOnExpiration re-checks sablier.enable before stopping expired instances.
 	verifyEnabledOnExpiration bool
-	
-	metrics                   metrics.Recorder
+
+	metrics metrics.Recorder
 
 	l *slog.Logger
 }
@@ -51,8 +50,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 	return &Sablier{
 		provider:                      provider,
 		sessions:                      store,
-		groupsMu:                      sync.RWMutex{},
-		groups:                        map[string][]string{},
+		groups:                        newGroupRegistry(),
 		pendingStarts:                 map[string]*pendingStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
@@ -81,31 +79,39 @@ func (s *Sablier) WithMetrics(r metrics.Recorder) {
 	s.metrics = r
 }
 
-// Groups returns a defensive copy of the current group→instances map. Safe for
-// concurrent use; intended for the metrics GroupLockCollector.
+// Groups returns a defensive copy of the current group→instances map.
+// Safe for concurrent use; intended for the metrics GroupLockCollector.
 func (s *Sablier) Groups() map[string][]string {
-	s.groupsMu.RLock()
-	defer s.groupsMu.RUnlock()
-	out := make(map[string][]string, len(s.groups))
-	for k, v := range s.groups {
-		cp := make([]string, len(v))
-		copy(cp, v)
-		out[k] = cp
-	}
-	return out
+	return s.groups.Snapshot()
 }
 
+// SetGroups replaces the entire group registry. Changes are logged with a diff.
 func (s *Sablier) SetGroups(groups map[string][]string) {
-	s.groupsMu.Lock()
-	defer s.groupsMu.Unlock()
-	if groups == nil {
-		groups = map[string][]string{}
+	old, changed := s.groups.Set(groups)
+	if changed {
+		s.l.Info("set groups",
+			slog.Any("old", old),
+			slog.Any("new", groups),
+			slog.Any("diff", cmp.Diff(old, groups)),
+		)
 	}
-	if diff := cmp.Diff(s.groups, groups); diff != "" {
-		// TODO: Change this log for a friendly logging, groups rarely change, so we can put some effort on displaying what changed
-		s.l.Info("set groups", slog.Any("old", s.groups), slog.Any("new", groups), slog.Any("diff", diff))
-		s.groups = groups
-	}
+}
+
+// GroupsForInstance returns all groups the instance currently belongs to.
+func (s *Sablier) GroupsForInstance(name string) []string {
+	return s.groups.GroupsOf(name)
+}
+
+// SyncInstanceGroups sets the instance's group memberships to exactly newGroups,
+// adding and removing as needed. Returns the added and removed group names.
+func (s *Sablier) SyncInstanceGroups(instance string, newGroups []string) (added, removed []string) {
+	return s.groups.Sync(instance, newGroups)
+}
+
+// RemoveInstanceFromAllGroups removes instance from all groups it belongs to.
+// Returns the list of groups it was removed from.
+func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
+	return s.groups.Remove(instance)
 }
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {

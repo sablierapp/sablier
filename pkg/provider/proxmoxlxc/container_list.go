@@ -24,7 +24,7 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 		}
 		instances = append(instances, sablier.InstanceConfiguration{
 			Name:    d.ref.name,
-			Group:   extractGroup(d.tags),
+			Groups:  extractGroups(d.tags),
 			Enabled: "true",
 		})
 	}
@@ -42,8 +42,9 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 
 	groups := make(map[string][]string)
 	for _, d := range discovered {
-		groupName := extractGroup(d.tags)
-		groups[groupName] = append(groups[groupName], d.ref.name)
+		for _, groupName := range extractGroups(d.tags) {
+			groups[groupName] = append(groups[groupName], d.ref.name)
+		}
 	}
 
 	// Sort instance names within each group for stable ordering

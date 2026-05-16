@@ -9,6 +9,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,11 +48,13 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 	t.Run("deployment is removed", func(t *testing.T) {
@@ -66,11 +69,13 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 	t.Run("statefulSet is scaled to 0 replicas", func(t *testing.T) {
@@ -89,11 +94,13 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 
@@ -109,11 +116,13 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for statefulset started event: %v", ctx.Err())
 		}
 	})
 }
@@ -164,9 +173,9 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		case <-testCtx.Done():
@@ -206,13 +215,76 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
-			assert.Equal(t, info.Provider, "kubernetes")
-			assert.Assert(t, info.Kubernetes != nil)
+			assert.Equal(t, info.Info.Name, kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+			assert.Assert(t, info.Info.Kubernetes != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		case <-testCtx.Done():
 			t.Fatalf("timed out waiting for statefulset started event: %v", testCtx.Err())
+		}
+	})
+}
+
+func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	kind := sharedKinD
+	conf := config.NewProviderConfig().Kubernetes
+	conf.QPS = 100
+	conf.Burst = 100
+	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
+	})
+
+	t.Run("deployment is created", func(t *testing.T) {
+		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		expectedName := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		for {
+			select {
+			case info := <-stream.Events:
+				if info.Info.Name != expectedName {
+					continue
+				}
+				assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+				assert.Assert(t, info.Info.Kubernetes != nil)
+				return
+			case err := <-stream.Err:
+				t.Fatalf("unexpected error: %v", err)
+			case <-ctx.Done():
+				t.Fatalf("timed out waiting for deployment created event: %v", ctx.Err())
+			}
+		}
+	})
+
+	t.Run("statefulSet is created", func(t *testing.T) {
+		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		assert.NilError(t, err)
+
+		expectedName := kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original
+		for {
+			select {
+			case info := <-stream.Events:
+				if info.Info.Name != expectedName {
+					continue
+				}
+				assert.Equal(t, info.Info.Provider, sablier.ProviderKubernetes)
+				assert.Assert(t, info.Info.Kubernetes != nil)
+				return
+			case err := <-stream.Err:
+				t.Fatalf("unexpected error: %v", err)
+			case <-ctx.Done():
+				t.Fatalf("timed out waiting for statefulset created event: %v", ctx.Err())
+			}
 		}
 	})
 }

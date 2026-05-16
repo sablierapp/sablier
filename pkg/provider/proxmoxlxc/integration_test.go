@@ -28,7 +28,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		for _, inst := range instances {
 			if inst.Name == env.name {
 				found = true
-				assert.Equal(t, inst.Group, "test") // from "sablier-group-test" tag
+				assert.Equal(t, inst.Groups[0], "test") // from "sablier-group-test" tag
 				break
 			}
 		}
@@ -119,7 +119,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		select {
 		case info, ok := <-stream.Events:
 			assert.Assert(t, ok, "events channel closed unexpectedly")
-			assert.Equal(t, info.Name, env.name)
+			assert.Equal(t, info.Info.Name, env.name)
 		case <-time.After(30 * time.Second):
 			t.Fatal("timed out waiting for stop notification")
 		}

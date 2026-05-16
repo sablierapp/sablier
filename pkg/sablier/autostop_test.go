@@ -84,7 +84,7 @@ func TestWatchAndStopExternallyStarted_StopsExternalInstance(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	eventsC := make(chan sablier.InstanceInfo, 1)
+	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -101,7 +101,7 @@ func TestWatchAndStopExternallyStarted_StopsExternalInstance(t *testing.T) {
 	})
 
 	// Send the event before starting the goroutine so the channel is pre-filled.
-	eventsC <- sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
 	go s.WatchAndStopExternallyStarted(ctx)
 
@@ -123,7 +123,7 @@ func TestWatchAndStopExternallyStarted_SkipsSablierStartedInstance_InStore(t *te
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	eventsC := make(chan sablier.InstanceInfo, 1)
+	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -137,7 +137,7 @@ func TestWatchAndStopExternallyStarted_SkipsSablierStartedInstance_InStore(t *te
 	}, nil)
 
 	// InstanceStop must NOT be called; gomock will fail the test if it is.
-	eventsC <- sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
 	go s.WatchAndStopExternallyStarted(ctx)
 
@@ -154,7 +154,7 @@ func TestWatchAndStopExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	eventsC := make(chan sablier.InstanceInfo, 1)
+	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -162,7 +162,7 @@ func TestWatchAndStopExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
 	// No sessions.Get or InstanceStop expected.
-	eventsC <- sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
 
 	go s.WatchAndStopExternallyStarted(ctx)
 
@@ -178,7 +178,7 @@ func TestWatchAndStopExternallyStarted_ReconciliationTicker(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	eventsC := make(chan sablier.InstanceInfo) // no events sent
+	eventsC := make(chan sablier.InstanceEvent) // no events sent
 	errC := make(chan error, 1)
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -219,7 +219,7 @@ func TestWatchAndStopExternallyStarted_EventStreamClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	eventsC := make(chan sablier.InstanceInfo)
+	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{

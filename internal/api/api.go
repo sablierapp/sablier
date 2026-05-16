@@ -6,6 +6,7 @@ import (
 
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/metrics"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
 )
@@ -17,6 +18,7 @@ type Sablier interface {
 	RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (*sablier.SessionState, error)
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
+	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream
 }
 
 type ServeStrategy struct {

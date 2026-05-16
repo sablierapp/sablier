@@ -100,18 +100,18 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 				continue
 			}
 			// Only act on Sablier-managed instances.
-			if info.Enabled != "true" {
+			if info.Info.Enabled != "true" {
 				continue
 			}
-			if s.isStartedByUs(ctx, info.Name) {
-				s.l.DebugContext(ctx, "instance started by Sablier, skipping", slog.String("instance", info.Name))
+			if s.isStartedByUs(ctx, info.Info.Name) {
+				s.l.DebugContext(ctx, "instance started by Sablier, skipping", slog.String("instance", info.Info.Name))
 				continue
 			}
-			s.l.InfoContext(ctx, "externally started instance detected, stopping", slog.String("instance", info.Name))
-			if err := s.provider.InstanceStop(ctx, info.Name); err != nil {
-				s.l.ErrorContext(ctx, "failed to stop externally-started instance", slog.String("instance", info.Name), slog.Any("error", err))
+			s.l.InfoContext(ctx, "externally started instance detected, stopping", slog.String("instance", info.Info.Name))
+			if err := s.provider.InstanceStop(ctx, info.Info.Name); err != nil {
+				s.l.ErrorContext(ctx, "failed to stop externally-started instance", slog.String("instance", info.Info.Name), slog.Any("error", err))
 			} else {
-				s.metrics.RecordInstanceStop(info.Name, "externally-started")
+				s.metrics.RecordInstanceStop(info.Info.Name, "externally-started")
 			}
 		case err, ok := <-errC:
 			if !ok {

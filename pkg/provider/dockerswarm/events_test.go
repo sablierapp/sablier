@@ -9,6 +9,7 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
@@ -43,9 +44,9 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, service.Spec.Name)
-			assert.Equal(t, info.Provider, "swarm")
-			assert.Assert(t, info.Swarm != nil)
+			assert.Equal(t, info.Info.Name, service.Spec.Name)
+			assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
+			assert.Assert(t, info.Info.Swarm != nil)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,8 +62,8 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 
 		select {
 		case info := <-stream.Events:
-			assert.Equal(t, info.Name, service.Spec.Name) // Service is removed; provider is still set.
-			assert.Equal(t, info.Provider, "swarm")
+			assert.Equal(t, info.Info.Name, service.Spec.Name) // Service is removed; provider is still set.
+			assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
 		case err := <-stream.Err:
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -109,10 +110,49 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 
 	select {
 	case info := <-stream.Events:
-		assert.Equal(t, info.Name, service.Spec.Name)
-		assert.Equal(t, info.Provider, "swarm")
-		assert.Assert(t, info.Swarm != nil)
+		assert.Equal(t, info.Info.Name, service.Spec.Name)
+		assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
+		assert.Assert(t, info.Info.Swarm != nil)
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for service started event: %v", ctx.Err())
+	}
+}
+
+func TestDockerSwarmProvider_InstanceEvents_Created(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
+	})
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+
+	t.Cleanup(func() {
+		_, _ = dind.client.ServiceRemove(context.Background(), c.ID, client.ServiceRemoveOptions{})
+	})
+
+	inspectResult, err := dind.client.ServiceInspect(ctx, c.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		assert.Equal(t, info.Info.Name, inspectResult.Service.Spec.Name)
+		assert.Equal(t, info.Info.Provider, sablier.ProviderSwarm)
+		assert.Assert(t, info.Info.Swarm != nil)
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for service created event: %v", ctx.Err())
 	}
 }

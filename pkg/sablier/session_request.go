@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"maps"
-	"slices"
 	"sync"
 	"time"
 )
@@ -58,11 +56,11 @@ func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names, ok := s.groups[group]
+	names, ok := s.groups.Get(group)
 	if !ok {
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: s.groups.Keys(),
 		}
 	}
 
@@ -147,11 +145,11 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names, ok := s.groups[group]
+	names, ok := s.groups.Get(group)
 	if !ok {
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: s.groups.Keys(),
 		}
 	}
 

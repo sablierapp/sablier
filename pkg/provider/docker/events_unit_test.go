@@ -12,6 +12,7 @@ import (
 	"github.com/moby/moby/api/types/events"
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
@@ -24,12 +25,12 @@ func makeResult(msgs chan events.Message, errs chan error) client.EventsResult {
 	return client.EventsResult{Messages: msgs, Err: errs}
 }
 
-func build(_ context.Context, msg events.Message) (sablier.InstanceInfo, bool) {
+func build(_ context.Context, msg events.Message) (sablier.InstanceEvent, bool) {
 	name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 	if name == "" {
-		return sablier.InstanceInfo{}, false
+		return sablier.InstanceEvent{}, false
 	}
-	return sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped}, true
+	return sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped}}, true
 }
 
 // TestStreamEvents_Reconnect verifies that when the first connection drops
@@ -69,8 +70,8 @@ func TestStreamEvents_Reconnect(t *testing.T) {
 	select {
 	case info, ok := <-stream.Events:
 		assert.Assert(t, ok, "events channel closed unexpectedly")
-		assert.Equal(t, info.Name, "web")
-		assert.Equal(t, string(info.Status), string(sablier.InstanceStatusStopped))
+		assert.Equal(t, info.Info.Name, "web")
+		assert.Equal(t, string(info.Info.Status), string(sablier.InstanceStatusStopped))
 		// Clean up: cancel the context so the goroutine exits.
 		cancel()
 	case err := <-stream.Err:
