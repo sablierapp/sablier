@@ -144,6 +144,15 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Bind the current command's flags to viper
 	bindFlags(cmd, v)
 
+	// Apply configuration sections that have no corresponding CLI flag.
+	// Fields bound to cobra flags are fully handled by bindFlags above (CLI >
+	// env > config file > default). Sections like Webhooks are config-file-only
+	// and must be unmarshalled directly from the local viper that read the file,
+	// because the global viper used in start.go only knows about pflag-bound keys.
+	if err := v.UnmarshalKey("webhooks", &conf.Webhooks); err != nil {
+		return fmt.Errorf("failed to parse webhooks configuration: %w", err)
+	}
+
 	return nil
 }
 

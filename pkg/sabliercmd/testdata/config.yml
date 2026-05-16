@@ -28,3 +28,11 @@ strategy:
   blocking:
     default-timeout: 1h
     default-refresh-frequency: 1h
+webhooks:
+  endpoints:
+    - url: https://example.com/webhook
+      headers:
+        Authorization: Bearer test-token
+      events:
+        - started
+        - stopped

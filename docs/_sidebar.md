@@ -4,6 +4,7 @@
 - [Configuration](/configuration)
 - [Strategies](/strategies)
 - [Themes](/themes)
+- [Webhooks](/webhooks)
 - [Versioning](/versioning)
 - **Providers**
   - [Overview](/providers/overview)
