@@ -147,8 +147,8 @@ func TestRequestSession_RejectsUnlabeledInstances(t *testing.T) {
 	session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
 	assert.NilError(t, err)
 
-	var notManaged sablier.ErrInstanceNotManaged
-	assert.Assert(t, errors.As(session.Instances["nginx"].Error, &notManaged))
+	notManaged, ok := errors.AsType[sablier.ErrInstanceNotManaged](session.Instances["nginx"].Error)
+	assert.Assert(t, ok)
 	assert.Equal(t, notManaged.Name, "nginx")
 }
 
@@ -280,7 +280,10 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 			errchan <- err
 		}()
 
-		assert.Error(t, <-errchan, "session was not ready after 1s")
+		err := <-errchan
+		timeoutErr, ok := errors.AsType[sablier.ErrTimeout](err)
+		assert.Assert(t, ok)
+		assert.Equal(t, time.Second, timeoutErr.Duration)
 	})
 }
 

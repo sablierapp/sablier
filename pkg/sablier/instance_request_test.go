@@ -91,8 +91,8 @@ func TestRequestSession_NewUnlabeledRejectedWhenRejectUnlabeledRequestsEnabled(t
 			session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
 			assert.NilError(t, err)
 
-			var notManaged sablier.ErrInstanceNotManaged
-			assert.Assert(t, errors.As(session.Instances["nginx"].Error, &notManaged))
+			notManaged, ok := errors.AsType[sablier.ErrInstanceNotManaged](session.Instances["nginx"].Error)
+			assert.Assert(t, ok)
 			assert.Equal(t, notManaged.Name, "nginx")
 		})
 	}

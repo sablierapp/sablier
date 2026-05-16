@@ -135,7 +135,7 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 		return nil, err
 	case <-time.After(timeout):
 		close(quit)
-		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
+		return nil, ErrTimeout{Duration: timeout}
 	}
 }
 

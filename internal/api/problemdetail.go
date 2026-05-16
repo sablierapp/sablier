@@ -1,10 +1,12 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"github.com/tniswong/go.rfcx/rfc7807"
-	"net/http"
 )
 
 func ProblemError(e error) rfc7807.Problem {
@@ -49,4 +51,34 @@ func ProblemThemeNotFound(e theme.ErrThemeNotFound) rfc7807.Problem {
 	_ = pb.Extend("requestTheme", e.Theme)
 	_ = pb.Extend("error", e.Error())
 	return pb
+}
+
+func ProblemTimeout(e sablier.ErrTimeout) rfc7807.Problem {
+	return rfc7807.Problem{
+		Type:   "https://sablierapp.dev/#/errors?id=timeout",
+		Title:  http.StatusText(http.StatusGatewayTimeout),
+		Status: http.StatusGatewayTimeout,
+		Detail: fmt.Sprintf("session was not ready after %s", e.Duration),
+	}
+}
+
+func ProblemInstanceNotManaged(e sablier.ErrInstanceNotManaged) rfc7807.Problem {
+	pb := rfc7807.Problem{
+		Type:   "https://sablierapp.dev/#/errors?id=instance-not-managed",
+		Title:  "Instance not managed",
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("instance %q is not managed by Sablier; add the sablier.enable label to the instance", e.Name),
+	}
+	_ = pb.Extend("instance", e.Name)
+	_ = pb.Extend("error", e.Error())
+	return pb
+}
+
+func ProblemRequestCancelled() rfc7807.Problem {
+	return rfc7807.Problem{
+		Type:   "https://sablierapp.dev/#/errors?id=request-cancelled",
+		Title:  "Request Cancelled",
+		Status: http.StatusServiceUnavailable,
+		Detail: "the request was cancelled before the session became ready",
+	}
 }

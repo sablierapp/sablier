@@ -57,8 +57,7 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			sessionState, err = s.Sablier.RequestSession(c, request.Names, request.SessionDuration)
 		} else {
 			sessionState, err = s.Sablier.RequestSessionGroup(c, request.Group, request.SessionDuration)
-			var groupNotFoundError sablier.ErrGroupNotFound
-			if errors.As(err, &groupNotFoundError) {
+			if groupNotFoundError, ok := errors.AsType[sablier.ErrGroupNotFound](err); ok {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
 			}
@@ -87,8 +86,7 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 		buf := new(bytes.Buffer)
 		writer := bufio.NewWriter(buf)
 		err = s.Theme.Render(request.Theme, renderOptions, writer)
-		var themeNotFound theme.ErrThemeNotFound
-		if errors.As(err, &themeNotFound) {
+		if themeNotFound, ok := errors.AsType[theme.ErrThemeNotFound](err); ok {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
 		}
