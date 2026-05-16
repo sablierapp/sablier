@@ -1,0 +1,112 @@
+# Webhooks
+
+Sablier can POST a normalized JSON notification to one or more HTTP endpoints whenever a managed instance **starts** or **stops**. Because Sablier sits in front of every supported provider (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC), webhooks act as a **unified, provider-agnostic event stream**: your receiver always gets the same payload structure regardless of the underlying runtime.
+
+Common uses:
+
+- Push "up / down" heartbeats to an uptime monitor such as [Uptime Kuma](https://github.com/louislam/uptime-kuma)
+- Trigger CI/CD pipelines or custom automation on instance lifecycle events
+- Feed a central observability bus
+
+## Configuration
+
+```yaml
+# sablier.yaml
+webhooks:
+  endpoints:
+    - url: https://uptime.example.com/api/push/xxxxxxxx
+      headers:
+        Authorization: "Bearer <token>"
+      events:
+        - started
+        - stopped
+```
+
+### Fields
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `url` | Yes | — | Full HTTP(S) URL to POST events to. |
+| `headers` | No | `{}` | Key/value map of HTTP request headers (e.g. `Authorization`). |
+| `events` | No | all | Event types that trigger this endpoint. Accepted values: `started`, `stopped`. Omit or leave empty to receive **all** events. |
+
+Multiple endpoints are supported. Each endpoint is evaluated independently so you can send different event types to different targets.
+
+### CLI / environment variables
+
+Webhook endpoints can also be set via command-line flags or environment variables using Viper's standard dotted-path mapping:
+
+| YAML key | CLI flag | Environment variable |
+|----------|----------|---------------------|
+| `webhooks.endpoints[0].url` | `--webhooks.endpoints[0].url` | `SABLIER_WEBHOOKS_ENDPOINTS_0_URL` |
+
+For multiple endpoints it is easiest to use the YAML configuration file.
+
+## Payload format
+
+Every delivery is an HTTP `POST` with `Content-Type: application/json`. The body is a single JSON object:
+
+```json
+{
+  "event": "started",
+  "instance": {
+    "name": "my-nginx"
+  },
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `event` | `string` | Normalized event type: `"started"` or `"stopped"`. |
+| `instance.name` | `string` | Name of the container / service / workload as known to Sablier. |
+| `timestamp` | RFC 3339 UTC | Time at which Sablier processed the event. |
+
+The payload is intentionally minimal and **provider-agnostic**. The same structure is emitted whether the instance is a Docker container, a Kubernetes Deployment, a Docker Swarm service, or any other supported provider. Future fields may be added in a backwards-compatible manner (new fields only).
+
+## Delivery semantics
+
+- Webhooks are delivered **asynchronously** (fire-and-forget). They do not block the event loop.
+- Each endpoint is called in its own goroutine.
+- HTTP errors (status ≥ 400) and network errors are **logged** but do **not** affect Sablier's behavior.
+- The HTTP client uses a **10-second timeout** per request.
+- There is no built-in retry. If a delivery fails, the event is lost. Use an intermediary queue (e.g., a message broker) in front of your endpoint if at-least-once delivery is required.
+
+## Example: Uptime Kuma integration
+
+[Uptime Kuma](https://github.com/louislam/uptime-kuma) supports push-style heartbeat monitoring. Configure a "Push" monitor in Uptime Kuma and paste its heartbeat URL as a Sablier webhook endpoint:
+
+```yaml
+webhooks:
+  endpoints:
+    - url: https://uptime.example.com/api/push/<monitor-id>?status=up&msg=started
+      events:
+        - started
+    - url: https://uptime.example.com/api/push/<monitor-id>?status=down&msg=stopped
+      events:
+        - stopped
+```
+
+> **Note** — Uptime Kuma heartbeat URLs accept query parameters. Since Sablier always sends a POST body, you may need to configure Uptime Kuma to interpret the HTTP request (not just the body) when routing status. Check the Uptime Kuma documentation for the exact URL format.
+
+## Example: filter by event type
+
+Only notify when an instance stops (useful for alerting):
+
+```yaml
+webhooks:
+  endpoints:
+    - url: https://alerts.example.com/hooks/instance-stopped
+      events:
+        - stopped
+```
+
+Only notify when an instance starts:
+
+```yaml
+webhooks:
+  endpoints:
+    - url: https://analytics.example.com/hooks/instance-started
+      events:
+        - started
+```

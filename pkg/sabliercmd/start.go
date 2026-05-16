@@ -16,6 +16,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/version"
+	"github.com/sablierapp/sablier/pkg/webhook"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -108,6 +109,36 @@ func Start(ctx context.Context, conf config.Config) error {
 		go s.WatchAndStopExternallyStarted(ctx)
 	}
 	go s.WatchRunningHours(ctx)
+
+	if len(conf.Webhooks.Endpoints) > 0 {
+		d := webhook.NewDispatcher(conf.Webhooks.Endpoints, logger)
+		stream := s.InstanceEvents(ctx, provpkg.InstanceEventsOptions{
+			Types: []provpkg.InstanceEventType{
+				provpkg.InstanceEventStarted,
+				provpkg.InstanceEventStopped,
+			},
+		})
+		go d.Watch(ctx, stream)
+		for i, ep := range conf.Webhooks.Endpoints {
+			events := ep.Events
+			if len(events) == 0 {
+				events = []string{"started", "stopped"}
+			}
+			logger.InfoContext(ctx, "webhook endpoint registered",
+				slog.Int("index", i),
+				slog.String("url", ep.URL),
+				slog.Any("events", events),
+			)
+			logger.DebugContext(ctx, "webhook endpoint configuration",
+				slog.Int("index", i),
+				slog.String("url", ep.URL),
+				slog.Any("events", events),
+				slog.Any("headers", ep.Headers),
+			)
+		}
+	} else {
+		logger.InfoContext(ctx, "no webhook endpoints configured")
+	}
 
 	t, err := setupTheme(ctx, conf, logger)
 	if err != nil {

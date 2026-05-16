@@ -24,3 +24,12 @@ strategy:
     default-refresh-frequency: 5s
   blocking:
     default-timeout: 1m
+webhooks:
+  endpoints:
+    # Notify an uptime-monitoring service every time an instance starts or stops.
+    # - url: https://uptime.example.com/api/push/xxxxxxxx
+    #   headers:
+    #     Authorization: "Bearer <token>"
+    #   events:
+    #     - started
+    #     - stopped

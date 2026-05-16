@@ -1,0 +1,43 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=10s
+    configs:
+      - source: sablier_config
+        target: /etc/sablier/sablier.yaml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+    depends_on:
+      - webhook-receiver
+
+  # A simple HTTP server managed by Sablier.
+  # Request it via the Sablier API to see "started" and "stopped" webhooks fire.
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=demo"
+
+  # Echoes every incoming HTTP request as JSON, including the webhook payload.
+  # Visit http://localhost:8888 after triggering an event to see what arrived.
+  webhook-receiver:
+    image: mendhak/http-https-echo:37
+    environment:
+      HTTP_PORT: "8080"
+    ports:
+      - "8888:8080"
+
+configs:
+  sablier_config:
+    content: |
+      webhooks:
+        endpoints:
+          - url: http://webhook-receiver:8080/webhook
+            # No "events" filter -> receives both "started" and "stopped"

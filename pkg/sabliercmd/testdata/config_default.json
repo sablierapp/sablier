@@ -51,5 +51,8 @@
       "DefaultTimeout": 60000000000,
       "DefaultRefreshFrequency": 5000000000
     }
+  },
+  "Webhooks": {
+    "Endpoints": null
   }
 }
