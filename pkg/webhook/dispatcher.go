@@ -148,7 +148,7 @@ func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payloa
 		d.l.ErrorContext(ctx, "webhook: delivery failed", slog.String("url", ep.URL), slog.Any("error", err))
 		return
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode >= 400 {
 		d.l.WarnContext(ctx, "webhook: endpoint returned error status",
