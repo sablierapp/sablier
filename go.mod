@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/go-cmp v0.7.0
+	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/luthermonson/go-proxmox v0.5.1
 	github.com/moby/moby/api v1.54.2
@@ -30,6 +31,13 @@ require (
 	k8s.io/api v0.36.1
 	k8s.io/apimachinery v0.36.1
 	k8s.io/client-go v0.36.1
+)
+
+require (
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.2 // indirect
+	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 )
 
 require (

@@ -10,6 +10,12 @@ run:
 gen:
 	go generate -v ./...
 
+schema:
+	go run ./cmd/schemagen -out docs/theme.schema.json
+
+check-schema:
+	@go run ./cmd/schemagen | diff - docs/theme.schema.json || (echo "docs/theme.schema.json is out of date. Run 'make schema' to regenerate."; exit 1)
+
 .PHONY: build
 build:
 	goreleaser build --single-target --snapshot --clean --output .
