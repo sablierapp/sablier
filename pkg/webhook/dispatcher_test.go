@@ -180,9 +180,9 @@ func TestDispatcher_FiltersEventsByEndpointConfig(t *testing.T) {
 }
 
 func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
-	var gotAuth string
+	gotAuth := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotAuth = r.Header.Get("Authorization")
+		gotAuth <- r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -198,12 +198,12 @@ func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
 
-	// Poll until the handler has been called.
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) && gotAuth == "" {
-		time.Sleep(5 * time.Millisecond)
+	select {
+	case auth := <-gotAuth:
+		assert.Equal(t, "Bearer secret", auth)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for webhook to be delivered")
 	}
-	assert.Equal(t, "Bearer secret", gotAuth)
 }
 
 func TestDispatcher_HandlesHTTPError(t *testing.T) {
