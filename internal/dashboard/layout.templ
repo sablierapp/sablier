@@ -1,0 +1,923 @@
+package dashboard
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+)
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } — Sablier</title>
+			<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+			<script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+			<style>
+				:root {
+					/* Sablier brand — deep navy-purple base, warm sand/gold accent */
+					--bg-base:      #0e0e1a;
+					--bg-surface:   #14142a;
+					--bg-card:      #1a1a30;
+					--bg-hover:     #22223a;
+					--bg-modal:     #1e1e36;
+					--border:       #2e2e50;
+					--border-sub:   #22223a;
+
+					--text-primary: #f0efe8;
+					--text-muted:   #9090b0;
+					--text-sub:     #555570;
+
+					/* Sablier gold / sand */
+					--gold:         #e8c46a;
+					--gold-dim:     rgba(232,196,106,0.12);
+					--gold-bright:  #f5d98a;
+					--gold-border:  rgba(232,196,106,0.3);
+
+					--green:        #5dcea8;
+					--green-dim:    rgba(93,206,168,0.12);
+					--green-border: rgba(93,206,168,0.25);
+
+					--amber:        #f0a830;
+					--amber-dim:    rgba(240,168,48,0.12);
+
+					--red:          #e85d75;
+					--red-dim:      rgba(232,93,117,0.12);
+
+					--blue:         #6cb4f0;
+					--blue-dim:     rgba(108,180,240,0.12);
+
+					--violet:       #a78bfa;
+
+					--accent:       var(--gold);
+				}
+
+				*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+				body {
+					background: var(--bg-base);
+					color: var(--text-primary);
+					font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+					font-size: 13px;
+					line-height: 1.6;
+					min-height: 100vh;
+				}
+
+				code, .mono {
+					font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+					font-size: 12px;
+				}
+
+				::-webkit-scrollbar { width: 5px; height: 5px; }
+				::-webkit-scrollbar-track { background: var(--bg-base); }
+				::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+				/* ─── Shell ──────────────────────────────── */
+				.shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+				/* ─── Topbar ─────────────────────────────── */
+				.topbar {
+					display: flex;
+					align-items: center;
+					gap: 12px;
+					padding: 0 24px;
+					height: 54px;
+					background: var(--bg-surface);
+					border-bottom: 1px solid var(--border);
+					position: sticky;
+					top: 0;
+					z-index: 200;
+				}
+
+				.topbar-logo {
+					display: flex;
+					align-items: center;
+					gap: 10px;
+					font-size: 15px;
+					font-weight: 700;
+					letter-spacing: -0.4px;
+					color: var(--text-primary);
+					text-decoration: none;
+				}
+
+				.topbar-logo .hourglass {
+					width: 26px;
+					height: 26px;
+					color: var(--gold);
+					filter: drop-shadow(0 0 6px rgba(232,196,106,0.5));
+				}
+
+				.topbar-badge {
+					font-size: 9px;
+					padding: 2px 7px;
+					background: var(--gold-dim);
+					color: var(--gold);
+					border: 1px solid var(--gold-border);
+					border-radius: 3px;
+					letter-spacing: 1px;
+					text-transform: uppercase;
+					font-weight: 600;
+				}
+
+				.topbar-right {
+					margin-left: auto;
+					display: flex;
+					align-items: center;
+					gap: 20px;
+					font-size: 12px;
+					color: var(--text-muted);
+				}
+
+				.topbar-right .ts {
+					font-family: ui-monospace, monospace;
+					font-size: 11px;
+					color: var(--text-sub);
+				}
+
+				.live-indicator {
+					display: flex;
+					align-items: center;
+					gap: 6px;
+					font-size: 11px;
+					color: var(--green);
+				}
+
+				.live-dot {
+					width: 7px; height: 7px;
+					border-radius: 50%;
+					background: var(--green);
+					box-shadow: 0 0 8px var(--green);
+					animation: pulse-dot 2s ease-in-out infinite;
+				}
+
+				@keyframes pulse-dot {
+					0%, 100% { opacity: 1; transform: scale(1); }
+					50%       { opacity: 0.5; transform: scale(0.85); }
+				}
+
+				/* ─── Main layout ────────────────────────── */
+				.main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 54px - 38px); }
+
+				/* ─── Sidebar ────────────────────────────── */
+				.sidebar {
+					width: 196px;
+					flex-shrink: 0;
+					background: var(--bg-surface);
+					border-right: 1px solid var(--border);
+					padding: 20px 0 12px;
+					display: flex;
+					flex-direction: column;
+					gap: 2px;
+					overflow-y: auto;
+				}
+
+				.sidebar-section {
+					padding: 10px 16px 4px;
+					font-size: 9px;
+					letter-spacing: 1.5px;
+					text-transform: uppercase;
+					color: var(--text-sub);
+					font-weight: 600;
+				}
+
+				.sidebar-item {
+					display: flex;
+					align-items: center;
+					gap: 9px;
+					padding: 8px 16px;
+					color: var(--text-muted);
+					cursor: pointer;
+					border-left: 2px solid transparent;
+					transition: all 0.12s;
+					text-decoration: none;
+					font-size: 13px;
+				}
+
+				.sidebar-item svg { flex-shrink: 0; opacity: 0.7; }
+
+				.sidebar-item:hover {
+					color: var(--text-primary);
+					background: var(--bg-hover);
+					border-left-color: var(--border);
+				}
+
+				.sidebar-item:hover svg { opacity: 1; }
+
+				.sidebar-item.active {
+					color: var(--gold);
+					background: var(--gold-dim);
+					border-left-color: var(--gold);
+					font-weight: 500;
+				}
+
+				.sidebar-item.active svg { opacity: 1; color: var(--gold); }
+
+				/* ─── Content ────────────────────────────── */
+				.content {
+					flex: 1;
+					overflow-y: auto;
+					padding: 24px;
+					display: flex;
+					flex-direction: column;
+					gap: 20px;
+				}
+
+				/* ─── Page header ────────────────────────── */
+				.page-header {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					gap: 16px;
+					flex-wrap: wrap;
+				}
+
+				.page-title {
+					font-size: 16px;
+					font-weight: 600;
+					color: var(--text-primary);
+				}
+
+				.page-subtitle {
+					font-size: 12px;
+					color: var(--text-muted);
+					margin-top: 2px;
+				}
+
+				/* ─── Stat row ───────────────────────────── */
+				.stat-row {
+					display: grid;
+					grid-template-columns: repeat(4, 1fr);
+					gap: 12px;
+				}
+
+				.stat-card {
+					background: var(--bg-card);
+					border: 1px solid var(--border);
+					border-radius: 10px;
+					padding: 18px 20px;
+					display: flex;
+					flex-direction: column;
+					gap: 6px;
+					position: relative;
+					overflow: hidden;
+				}
+
+				.stat-card::before {
+					content: '';
+					position: absolute;
+					top: 0; left: 0; right: 0;
+					height: 2px;
+					background: var(--stripe, var(--border));
+				}
+
+				.stat-card.gold::before  { --stripe: var(--gold); }
+				.stat-card.green::before { --stripe: var(--green); }
+				.stat-card.red::before   { --stripe: var(--red); }
+				.stat-card.amber::before { --stripe: var(--amber); }
+
+				.stat-label {
+					font-size: 10px;
+					text-transform: uppercase;
+					letter-spacing: 1px;
+					color: var(--text-sub);
+					font-weight: 600;
+				}
+
+				.stat-value {
+					font-size: 30px;
+					font-weight: 700;
+					line-height: 1;
+					color: var(--text-primary);
+					font-variant-numeric: tabular-nums;
+				}
+
+				.stat-value.gold  { color: var(--gold); }
+				.stat-value.green { color: var(--green); }
+				.stat-value.red   { color: var(--red); }
+				.stat-value.amber { color: var(--amber); }
+
+				.stat-sub { font-size: 11px; color: var(--text-muted); }
+
+				/* ─── Savings banner ─────────────────────── */
+				.savings-banner {
+					background: linear-gradient(135deg, var(--gold-dim) 0%, rgba(93,206,168,0.06) 100%);
+					border: 1px solid var(--gold-border);
+					border-radius: 10px;
+					padding: 16px 20px;
+					display: flex;
+					align-items: center;
+					gap: 24px;
+					flex-wrap: wrap;
+				}
+
+				.savings-item {
+					display: flex;
+					flex-direction: column;
+					gap: 2px;
+				}
+
+				.savings-item-label {
+					font-size: 10px;
+					text-transform: uppercase;
+					letter-spacing: 1px;
+					color: var(--text-sub);
+				}
+
+				.savings-item-value {
+					font-size: 18px;
+					font-weight: 700;
+					color: var(--gold);
+					font-variant-numeric: tabular-nums;
+				}
+
+				.savings-item-unit { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+
+				.savings-sep { width: 1px; height: 32px; background: var(--border); }
+
+				.savings-tagline {
+					margin-left: auto;
+					font-size: 12px;
+					color: var(--text-muted);
+					font-style: italic;
+					max-width: 240px;
+					text-align: right;
+				}
+
+				/* ─── Toolbar ────────────────────────────── */
+				.toolbar {
+					display: flex;
+					align-items: center;
+					gap: 10px;
+					flex-wrap: wrap;
+				}
+
+				.search-box {
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					background: var(--bg-card);
+					border: 1px solid var(--border);
+					border-radius: 6px;
+					padding: 6px 12px;
+					min-width: 220px;
+				}
+
+				.search-box svg { color: var(--text-sub); flex-shrink: 0; }
+
+				.search-box input {
+					background: none;
+					border: none;
+					outline: none;
+					color: var(--text-primary);
+					font-size: 12px;
+					width: 100%;
+				}
+
+				.search-box input::placeholder { color: var(--text-sub); }
+
+				.filter-pills {
+					display: flex;
+					align-items: center;
+					gap: 6px;
+					flex-wrap: wrap;
+				}
+
+				.filter-pill {
+					padding: 4px 12px;
+					border-radius: 20px;
+					font-size: 11px;
+					border: 1px solid var(--border);
+					background: var(--bg-card);
+					color: var(--text-muted);
+					cursor: pointer;
+					transition: all 0.12s;
+					user-select: none;
+				}
+
+				.filter-pill:hover { border-color: var(--gold-border); color: var(--gold); }
+				.filter-pill.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 500; }
+
+				.sort-select {
+					background: var(--bg-card);
+					border: 1px solid var(--border);
+					border-radius: 6px;
+					padding: 6px 10px;
+					color: var(--text-muted);
+					font-size: 12px;
+					outline: none;
+					cursor: pointer;
+				}
+
+				.sort-select:focus { border-color: var(--gold-border); }
+
+				/* ─── Section ────────────────────────────── */
+				.section {
+					background: var(--bg-card);
+					border: 1px solid var(--border);
+					border-radius: 10px;
+					overflow: hidden;
+				}
+
+				.section-header {
+					display: flex;
+					align-items: center;
+					gap: 10px;
+					padding: 14px 20px;
+					border-bottom: 1px solid var(--border-sub);
+					background: var(--bg-surface);
+				}
+
+				.section-title {
+					font-size: 11px;
+					font-weight: 600;
+					letter-spacing: 0.8px;
+					color: var(--text-primary);
+					text-transform: uppercase;
+				}
+
+				.section-count {
+					font-size: 11px;
+					padding: 1px 8px;
+					background: var(--bg-hover);
+					border-radius: 12px;
+					color: var(--text-muted);
+				}
+
+				.section-meta {
+					margin-left: auto;
+					font-size: 11px;
+					color: var(--text-sub);
+					display: flex;
+					align-items: center;
+					gap: 8px;
+				}
+
+				/* ─── Table ──────────────────────────────── */
+				table { width: 100%; border-collapse: collapse; }
+
+				thead th {
+					padding: 9px 16px;
+					text-align: left;
+					font-size: 10px;
+					font-weight: 600;
+					letter-spacing: 1px;
+					text-transform: uppercase;
+					color: var(--text-sub);
+					border-bottom: 1px solid var(--border-sub);
+					background: var(--bg-surface);
+					white-space: nowrap;
+					cursor: pointer;
+					user-select: none;
+				}
+
+				thead th:hover { color: var(--text-muted); }
+				thead th.sorted { color: var(--gold); }
+
+				tbody tr {
+					border-bottom: 1px solid var(--border-sub);
+					transition: background 0.1s;
+					cursor: pointer;
+				}
+
+				tbody tr:last-child { border-bottom: none; }
+				tbody tr:hover { background: var(--bg-hover); }
+
+				td { padding: 11px 16px; vertical-align: middle; }
+
+				/* ─── Badges ─────────────────────────────── */
+				.badge {
+					display: inline-flex;
+					align-items: center;
+					gap: 5px;
+					padding: 3px 9px;
+					border-radius: 4px;
+					font-size: 11px;
+					font-weight: 500;
+					white-space: nowrap;
+				}
+
+				.badge-dot {
+					width: 5px; height: 5px;
+					border-radius: 50%;
+					flex-shrink: 0;
+				}
+
+				.badge-ready    { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green-border); }
+				.badge-ready .badge-dot { background: var(--green); box-shadow: 0 0 4px var(--green); }
+
+				.badge-starting { background: var(--blue-dim);   color: var(--blue); }
+				.badge-starting .badge-dot { background: var(--blue); animation: pulse-dot 0.8s ease-in-out infinite; }
+
+				.badge-stopped  { background: var(--bg-hover);   color: var(--text-muted); border: 1px solid var(--border); }
+				.badge-stopped .badge-dot { background: var(--text-sub); }
+
+				.badge-error    { background: var(--red-dim);    color: var(--red); }
+				.badge-error .badge-dot { background: var(--red); }
+
+				.badge-pending  { background: var(--amber-dim);  color: var(--amber); }
+				.badge-pending .badge-dot { background: var(--amber); animation: pulse-dot 0.8s ease-in-out infinite; }
+
+				/* ─── Chips ──────────────────────────────── */
+				.chip {
+					display: inline-block;
+					padding: 2px 8px;
+					border-radius: 4px;
+					font-size: 10px;
+					letter-spacing: 0.5px;
+					text-transform: uppercase;
+					background: var(--bg-hover);
+					color: var(--text-muted);
+					border: 1px solid var(--border);
+					font-family: ui-monospace, monospace;
+				}
+
+				.group-pill {
+					display: inline-block;
+					padding: 2px 8px;
+					border-radius: 12px;
+					font-size: 11px;
+					background: var(--gold-dim);
+					color: var(--gold);
+					border: 1px solid var(--gold-border);
+					margin: 1px;
+					cursor: pointer;
+					transition: all 0.1s;
+				}
+
+				.group-pill:hover { background: rgba(232,196,106,0.22); }
+
+				/* ─── TTL bar ────────────────────────────── */
+				.ttl-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+				.ttl-label { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+				.ttl-bar-bg { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+				.ttl-bar-fill {
+					height: 100%;
+					border-radius: 2px;
+					background: var(--green);
+					transition: width 1s linear;
+				}
+				.ttl-bar-fill.low  { background: var(--amber); }
+				.ttl-bar-fill.crit { background: var(--red); }
+
+				/* ─── Last access ────────────────────────── */
+				.last-access { font-size: 11px; color: var(--text-sub); }
+				.last-access.recent { color: var(--green); }
+
+				/* ─── Uptime chart (heatmap-style) ───────── */
+				.uptime-bar {
+					display: flex;
+					gap: 1px;
+					align-items: flex-end;
+					height: 20px;
+				}
+
+				.uptime-slot {
+					flex: 1;
+					min-width: 2px;
+					height: 100%;
+					border-radius: 1px;
+					transition: opacity 0.1s;
+				}
+
+				.uptime-slot:hover { opacity: 0.7; }
+				.uptime-slot.up       { background: var(--green); opacity: 0.85; }
+				.uptime-slot.starting { background: var(--blue); opacity: 0.7; }
+				.uptime-slot.idle     { background: var(--border); }
+				.uptime-slot.error    { background: var(--red); opacity: 0.9; }
+
+				/* ─── Config grid ────────────────────────── */
+				.config-grid {
+					display: grid;
+					grid-template-columns: repeat(2, 1fr);
+				}
+
+				.config-row {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					padding: 11px 20px;
+					border-bottom: 1px solid var(--border-sub);
+					gap: 16px;
+				}
+
+				.config-grid > .config-row:nth-child(odd) { border-right: 1px solid var(--border-sub); }
+				.config-key { font-size: 12px; color: var(--text-muted); }
+				.config-val { font-size: 12px; color: var(--text-primary); font-weight: 500; font-family: ui-monospace, monospace; }
+				.config-val.on  { color: var(--green); }
+				.config-val.off { color: var(--text-sub); }
+
+				/* ─── Error msg ──────────────────────────── */
+				.err-msg {
+					font-size: 11px;
+					color: var(--red);
+					max-width: 240px;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					margin-top: 2px;
+				}
+
+				/* ─── Empty state ────────────────────────── */
+				.empty-state {
+					padding: 40px 20px;
+					text-align: center;
+					color: var(--text-sub);
+					font-size: 13px;
+				}
+
+				/* ─── Modal / drawer ─────────────────────── */
+				.modal-overlay {
+					display: none;
+					position: fixed;
+					inset: 0;
+					background: rgba(14,14,26,0.75);
+					z-index: 500;
+					backdrop-filter: blur(3px);
+					align-items: center;
+					justify-content: center;
+				}
+
+				.modal-overlay.open { display: flex; }
+
+				.modal {
+					background: var(--bg-modal);
+					border: 1px solid var(--border);
+					border-radius: 12px;
+					width: min(90vw, 860px);
+					max-height: 85vh;
+					overflow-y: auto;
+					box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+					animation: modal-in 0.15s ease-out;
+				}
+
+				@keyframes modal-in {
+					from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+					to   { opacity: 1; transform: none; }
+				}
+
+				.modal-header {
+					display: flex;
+					align-items: center;
+					gap: 12px;
+					padding: 18px 24px;
+					border-bottom: 1px solid var(--border);
+					position: sticky;
+					top: 0;
+					background: var(--bg-modal);
+					z-index: 1;
+				}
+
+				.modal-title {
+					font-size: 15px;
+					font-weight: 600;
+					color: var(--text-primary);
+				}
+
+				.modal-close {
+					margin-left: auto;
+					background: none;
+					border: none;
+					color: var(--text-sub);
+					cursor: pointer;
+					padding: 4px;
+					border-radius: 4px;
+					transition: color 0.1s;
+				}
+
+				.modal-close:hover { color: var(--text-primary); }
+
+				.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+
+				/* ─── Graph section ──────────────────────── */
+				.graph-section { display: flex; flex-direction: column; gap: 10px; }
+
+				.graph-label {
+					font-size: 10px;
+					text-transform: uppercase;
+					letter-spacing: 1px;
+					color: var(--text-sub);
+					font-weight: 600;
+				}
+
+				.heatmap-grid {
+					display: grid;
+					grid-template-columns: repeat(24, 1fr);
+					gap: 2px;
+				}
+
+				.heatmap-hour {
+					display: flex;
+					flex-direction: column;
+					gap: 1px;
+				}
+
+				.heatmap-hour-label {
+					font-size: 9px;
+					color: var(--text-sub);
+					text-align: center;
+					font-family: ui-monospace, monospace;
+				}
+
+				.heatmap-slots {
+					display: flex;
+					flex-direction: column;
+					gap: 1px;
+				}
+
+				.heatmap-slot {
+					height: 10px;
+					border-radius: 1px;
+					cursor: pointer;
+				}
+
+				.heatmap-slot.up       { background: var(--green); }
+				.heatmap-slot.starting { background: var(--blue); }
+				.heatmap-slot.idle     { background: var(--bg-hover); border: 1px solid var(--border-sub); }
+				.heatmap-slot.error    { background: var(--red); }
+
+				/* ─── Savings detail ─────────────────────── */
+				.savings-detail {
+					display: grid;
+					grid-template-columns: repeat(3, 1fr);
+					gap: 12px;
+				}
+
+				.savings-kpi {
+					background: var(--bg-surface);
+					border: 1px solid var(--border);
+					border-radius: 8px;
+					padding: 14px 16px;
+					display: flex;
+					flex-direction: column;
+					gap: 4px;
+				}
+
+				.savings-kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-sub); }
+				.savings-kpi-value { font-size: 22px; font-weight: 700; color: var(--gold); }
+				.savings-kpi-desc  { font-size: 11px; color: var(--text-muted); }
+
+				/* ─── Pulse animation for new data ───────── */
+				.sse-update { animation: sse-flash 0.4s ease-out; }
+				@keyframes sse-flash {
+					0%  { background: var(--gold-dim); }
+					100%{ background: transparent; }
+				}
+
+				/* ─── HTMX transitions ───────────────────── */
+				.htmx-swapping { opacity: 0; transition: opacity 0.15s ease-out; }
+				.htmx-settling { opacity: 1; transition: opacity 0.2s ease-in; }
+
+				/* ─── Footer ─────────────────────────────── */
+				.footer {
+					padding: 9px 24px;
+					border-top: 1px solid var(--border);
+					background: var(--bg-surface);
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					font-size: 11px;
+					color: var(--text-sub);
+					flex-shrink: 0;
+				}
+
+				/* ─── Responsive ─────────────────────────── */
+				@media (max-width: 768px) {
+					.sidebar { display: none; }
+					.stat-row { grid-template-columns: repeat(2, 1fr); }
+				}
+			</style>
+		</head>
+		<body>
+			<div class="shell">
+				<header class="topbar">
+					<a href="/dashboard" class="topbar-logo">
+						<svg class="hourglass" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.17L12 12l-4 4.17V20h8v-3.83zM8 7.83L12 12l4-4.17V4H8v3.83z"/>
+						</svg>
+						Sablier
+					</a>
+					<span class="topbar-badge">dashboard</span>
+					<div class="topbar-right">
+						<span class="ts" id="last-ts">—</span>
+						<div class="live-indicator">
+							<span class="live-dot"></span>
+							<span>live</span>
+						</div>
+					</div>
+				</header>
+
+				<div class="main">
+					<nav class="sidebar">
+						<div class="sidebar-section">Overview</div>
+						<a href="#overview" class="sidebar-item active">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+							Overview
+						</a>
+						<a href="#instances" class="sidebar-item">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="currentColor"/><circle cx="6" cy="18" r="1" fill="currentColor"/></svg>
+							Instances
+						</a>
+						<a href="#pending" class="sidebar-item">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+							Sessions
+						</a>
+						<div class="sidebar-section">System</div>
+						<a href="#config" class="sidebar-item">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+							Provider
+						</a>
+					</nav>
+
+					<main class="content">
+						{ children... }
+					</main>
+				</div>
+
+				<footer class="footer">
+					<span>sablier — scale to zero, wake on demand</span>
+					<span>read-only · real-time SSE</span>
+				</footer>
+			</div>
+
+			<!-- Instance detail modal -->
+			<div class="modal-overlay" id="instance-modal" onclick="if(event.target===this)closeModal()">
+				<div class="modal">
+					<div class="modal-header">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--gold)">
+							<path d="M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4V2zm10 14.17L12 12l-4 4.17V20h8v-3.83zM8 7.83L12 12l4-4.17V4H8v3.83z"/>
+						</svg>
+						<span class="modal-title" id="modal-instance-name">Instance</span>
+						<span id="modal-status-badge"></span>
+						<button class="modal-close" onclick="closeModal()">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						</button>
+					</div>
+					<div class="modal-body" id="modal-body">
+						<!-- filled by JS -->
+					</div>
+				</div>
+			</div>
+
+			<script src="/dashboard/static/dashboard.js"></script>
+		</body>
+	</html>
+}
+
+// ─── Shared server-rendered components ─────────────────────────────────────
+
+
+templ statusBadge(status sablier.InstanceStatus) {
+	switch status {
+		case sablier.InstanceStatusReady:
+			<span class="badge badge-ready"><span class="badge-dot"></span>ready</span>
+		case sablier.InstanceStatusStarting:
+			<span class="badge badge-starting"><span class="badge-dot"></span>starting</span>
+		case sablier.InstanceStatusStopped:
+			<span class="badge badge-stopped"><span class="badge-dot"></span>stopped</span>
+		case sablier.InstanceStatusError:
+			<span class="badge badge-error"><span class="badge-dot"></span>error</span>
+		default:
+			<span class="badge badge-stopped"><span class="badge-dot"></span>{ string(status) }</span>
+	}
+}
+
+templ ttlBar(expiresAt *time.Time, sessionTTL *time.Duration) {
+	if expiresAt == nil || sessionTTL == nil {
+		<span style="color:var(--text-sub)">—</span>
+	} else {
+		{{
+			remaining := time.Until(*expiresAt)
+			total := *sessionTTL
+			pct := int(100 * remaining.Seconds() / total.Seconds())
+			if pct < 0 { pct = 0 }
+			if pct > 100 { pct = 100 }
+			fillClass := "ttl-bar-fill"
+			if pct < 25 { fillClass = "ttl-bar-fill crit" } else if pct < 50 { fillClass = "ttl-bar-fill low" }
+		}}
+		<div class="ttl-wrap">
+			<span class="ttl-label">{ fmtDuration(remaining) }</span>
+			<div class="ttl-bar-bg">
+				<div class={ fillClass } style={ fmt.Sprintf("width:%d%%", pct) }></div>
+			</div>
+		</div>
+	}
+}
+
+templ boolVal(v bool) {
+	if v {
+		<span class="config-val on">enabled</span>
+	} else {
+		<span class="config-val off">disabled</span>
+	}
+}
+
+func fmtDuration(d time.Duration) string {
+	if d <= 0 { return "expired" }
+	if d < time.Minute { return fmt.Sprintf("%ds", int(d.Seconds())) }
+	m := int(d.Minutes())
+	s := int(d.Seconds()) % 60
+	return fmt.Sprintf("%dm %02ds", m, s)
+}

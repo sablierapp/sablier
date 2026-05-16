@@ -1,0 +1,323 @@
+package dashboard
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+)
+
+// ─── Full page ──────────────────────────────────────────────────────────────
+
+templ DashboardPage(data DashboardData) {
+	@Layout("Overview") {
+		{{
+			total    := len(data.Instances)
+			ready    := countByStatus(data.Instances, sablier.InstanceStatusReady)
+			starting := countByStatus(data.Instances, sablier.InstanceStatusStarting)
+			errored  := countByStatus(data.Instances, sablier.InstanceStatusError)
+			stopped  := countByStatus(data.Instances, sablier.InstanceStatusStopped)
+			active   := ready + starting
+			pending  := len(data.PendingRequests)
+			totalCO2 := 0.0
+			totalHours := 0.0
+			for _, inst := range data.Instances {
+				totalCO2 += inst.SavedCO2Grams
+				totalHours += inst.TotalDowntimeHours
+			}
+		}}
+		<div class="stat-row" id="overview">
+			<div class="stat-card">
+				<div class="stat-label">Total instances</div>
+				<div class="stat-value" id="stat-total">{ fmt.Sprint(total) }</div>
+				<div class="stat-sub">{ fmt.Sprint(stopped) } stopped</div>
+			</div>
+			<div class="stat-card green">
+				<div class="stat-label">Active</div>
+				<div class={ "stat-value", templ.KV("green", active > 0) } id="stat-active">{ fmt.Sprint(active) }</div>
+				<div class="stat-sub">{ fmt.Sprint(ready) } ready · { fmt.Sprint(starting) } starting</div>
+			</div>
+			<div class="stat-card red">
+				<div class="stat-label">Errors</div>
+				<div class={ "stat-value", templ.KV("red", errored > 0) } id="stat-errors">{ fmt.Sprint(errored) }</div>
+				<div class="stat-sub">need attention</div>
+			</div>
+			<div class="stat-card amber">
+				<div class="stat-label">Pending requests</div>
+				<div class={ "stat-value", templ.KV("amber", pending > 0) } id="stat-pending">{ fmt.Sprint(pending) }</div>
+				<div class="stat-sub">{ data.ProviderConfig.Name } provider</div>
+			</div>
+		</div>
+
+		<div class="savings-banner">
+			<div class="savings-item">
+				<div class="savings-item-label">Compute saved</div>
+				<div class="savings-item-value" id="stat-hours">{ fmt.Sprintf("%.0f", totalHours) }<span class="savings-item-unit">h</span></div>
+			</div>
+			<div class="savings-sep"></div>
+			<div class="savings-item">
+				<div class="savings-item-label">CO2 avoided</div>
+				<div class="savings-item-value" id="stat-co2">{ fmt.Sprintf("%.0f", totalCO2) }<span class="savings-item-unit">g</span></div>
+			</div>
+			<div class="savings-sep"></div>
+			<div class="savings-item">
+				<div class="savings-item-label">Energy saved</div>
+				<div class="savings-item-value">{ fmt.Sprintf("%.1f", totalHours*0.08) }<span class="savings-item-unit">kWh</span></div>
+			</div>
+			<div class="savings-sep"></div>
+			<div class="savings-item">
+				<div class="savings-item-label">Cost equivalent</div>
+				<div class="savings-item-value">{ fmt.Sprintf("$%.2f", totalHours*0.08*0.12) }</div>
+			</div>
+			<div class="savings-tagline">Every idle moment is a resource saved — Sablier makes your infrastructure efficient.</div>
+		</div>
+
+		<div class="section" id="instances">
+			<div class="section-header">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="currentColor"/><circle cx="6" cy="18" r="1" fill="currentColor"/></svg>
+				<span class="section-title">Instances</span>
+				<span class="section-count" id="instances-total-count">{ fmt.Sprint(total) }</span>
+				<div class="section-meta"><span>click row for details · live via SSE</span></div>
+			</div>
+			<div style="padding:10px 16px;border-bottom:1px solid var(--border-sub);display:flex;flex-direction:column;gap:8px;">
+				<div class="toolbar">
+					<div class="search-box">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+						<input type="text" id="search-input" placeholder="Search instances or groups..."/>
+					</div>
+					<select class="sort-select" onchange="setSort(this.value)">
+						<option value="name">Sort: Name</option>
+						<option value="status">Sort: Status</option>
+						<option value="ttl">Sort: TTL</option>
+						<option value="idle">Sort: Idle %</option>
+					</select>
+				</div>
+				<div class="filter-pills" id="group-pills">
+					<span class="filter-pill active" data-group="__all__" onclick="setGroupFilter(null,event)">All</span>
+					for _, g := range data.AllGroups {
+						<span class="filter-pill" data-group={ g } onclick={ templ.ComponentScript{Call: fmt.Sprintf("setGroupFilter('%s',event)", g)} }>{ g }</span>
+					}
+				</div>
+			</div>
+			<table>
+				<thead>
+					<tr>
+						<th data-sort="name" onclick="setSort('name')" class="sorted">Name</th>
+						<th data-sort="status" onclick="setSort('status')">Status</th>
+						<th>Provider</th>
+						<th>Groups</th>
+						<th data-sort="ttl" onclick="setSort('ttl')">Session TTL</th>
+						<th>Last access</th>
+						<th data-sort="idle" onclick="setSort('idle')">24h activity</th>
+					</tr>
+				</thead>
+				<tbody id="instances-tbody">
+					if len(data.Instances) == 0 {
+						<tr><td colspan="7"><div class="empty-state">No instances tracked yet.</div></td></tr>
+					} else {
+						for _, inst := range data.Instances {
+							@instanceRowSSR(inst)
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+
+		<div class="section" id="pending">
+			<div class="section-header">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+				<span class="section-title">Pending requests</span>
+				<span class="section-count" id="pending-count">{ fmt.Sprint(pending) }</span>
+			</div>
+			<table>
+				<thead>
+					<tr>
+						<th>Request ID</th>
+						<th>Target</th>
+						<th>Waiting</th>
+						<th>Timeout</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody id="pending-tbody">
+					if len(data.PendingRequests) == 0 {
+						<tr><td colspan="5"><div class="empty-state">No pending requests.</div></td></tr>
+					} else {
+						for _, req := range data.PendingRequests {
+							@pendingRowSSR(req)
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+
+		@configSection(data)
+	}
+}
+
+templ instanceRowSSR(inst MockInstance) {
+	<tr onclick={ templ.ComponentScript{Call: fmt.Sprintf("openModal('%s')", inst.Info.Name)} } title="Click for details">
+		<td style="font-weight:500">{ inst.Info.Name }</td>
+		<td>
+			@statusBadge(inst.Info.Status)
+			if inst.Info.Message != "" {
+				<div class="err-msg" title={ inst.Info.Message }>{ inst.Info.Message }</div>
+			}
+		</td>
+		<td><span class="chip">{ inst.Info.Provider }</span></td>
+		<td>
+			if len(inst.Info.Groups) == 0 {
+				<span style="color:var(--text-sub)">—</span>
+			} else {
+				for _, g := range inst.Info.Groups {
+					<span class="group-pill" onclick={ templ.ComponentScript{Call: fmt.Sprintf("setGroupFilter('%s',event)", g)} }>{ g }</span>
+				}
+			}
+		</td>
+		<td>@ttlBar(inst.ExpiresAt, inst.SessionTTL)</td>
+		<td>
+			if inst.LastAccess != nil {
+				<span class="last-access">{ fmtDuration(clockNow().Sub(*inst.LastAccess)) } ago</span>
+			} else {
+				<span class="last-access">—</span>
+			}
+		</td>
+		<td>
+			<div class="uptime-bar">
+				for _, slot := range uptimeTail(inst.UptimeSlots, 144) {
+					<div class={ "uptime-slot", slotClass(slot.State) }></div>
+				}
+			</div>
+			if inst.IdlePercent > 0 {
+				<div style="margin-top:3px;font-size:11px">
+					<span style="color:var(--gold);font-weight:600">{ fmt.Sprintf("%.0f%%", inst.IdlePercent) }</span>
+					<span style="color:var(--text-sub)"> idle</span>
+				</div>
+			}
+		</td>
+	</tr>
+}
+
+templ pendingRowSSR(req MockPendingRequest) {
+	{{
+		pct := int(0)
+		if req.Timeout > 0 {
+			elapsed := clockNow().Sub(req.RequestedAt)
+			pct = int(100 * elapsed.Seconds() / req.Timeout.Seconds())
+			if pct > 100 { pct = 100 }
+		}
+	}}
+	<tr>
+		<td class="mono" style="color:var(--text-sub)">{ req.ID }</td>
+		<td>
+			if req.Group != "" {
+				<span class="group-pill">group: { req.Group }</span>
+			} else {
+				for _, n := range req.Names {
+					<span class="group-pill">{ n }</span>
+				}
+			}
+		</td>
+		<td style="color:var(--text-muted)">{ fmtDuration(clockNow().Sub(req.RequestedAt)) }</td>
+		<td style="color:var(--text-muted)">{ fmtDuration(req.Timeout) }</td>
+		<td>
+			<div class="ttl-wrap" style="min-width:80px">
+				<span class="badge badge-pending"><span class="badge-dot"></span>waiting</span>
+				<div class="ttl-bar-bg">
+					<div
+						class={ "ttl-bar-fill", templ.KV("low", pct > 60), templ.KV("crit", pct > 85) }
+						style={ fmt.Sprintf("width:%d%%", pct) }
+					></div>
+				</div>
+			</div>
+		</td>
+	</tr>
+}
+
+templ configSection(data DashboardData) {
+	<div class="section" id="config">
+		<div class="section-header">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+			<span class="section-title">Provider &amp; session config</span>
+		</div>
+		<div class="config-grid">
+			<div class="config-row">
+				<span class="config-key">provider</span>
+				<span class="chip">{ data.ProviderConfig.Name }</span>
+			</div>
+			<div class="config-row">
+				<span class="config-key">default session duration</span>
+				<span class="config-val">{ data.SessionConfig.DefaultDuration.String() }</span>
+			</div>
+			<div class="config-row">
+				<span class="config-key">auto-stop on startup</span>
+				@boolVal(data.ProviderConfig.AutoStopOnStartup)
+			</div>
+			<div class="config-row">
+				<span class="config-key">expiration interval</span>
+				<span class="config-val">{ data.SessionConfig.ExpirationInterval.String() }</span>
+			</div>
+			<div class="config-row">
+				<span class="config-key">auto-stop externally started</span>
+				@boolVal(data.ProviderConfig.AutoStopExternallyStarted)
+			</div>
+			<div class="config-row">
+				<span class="config-key">reject unlabeled requests</span>
+				@boolVal(data.ProviderConfig.RejectUnlabeledRequests)
+			</div>
+			<div class="config-row">
+				<span class="config-key">verify enabled on expiration</span>
+				@boolVal(data.ProviderConfig.VerifyEnabledOnExpiration)
+			</div>
+			if data.ProviderConfig.Name == "docker" || data.ProviderConfig.Name == "swarm" {
+				<div class="config-row">
+					<span class="config-key">docker strategy</span>
+					<span class="config-val">{ data.ProviderConfig.Docker.Strategy }</span>
+				</div>
+			}
+			if data.ProviderConfig.Name == "kubernetes" {
+				<div class="config-row">
+					<span class="config-key">k8s delimiter</span>
+					<span class="config-val">{ data.ProviderConfig.Kubernetes.Delimiter }</span>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+func countByStatus(instances []MockInstance, status sablier.InstanceStatus) int {
+	n := 0
+	for _, i := range instances {
+		if i.Info.Status == status {
+			n++
+		}
+	}
+	return n
+}
+
+func shortImage(image string) string {
+	if idx := strings.LastIndex(image, "/"); idx >= 0 {
+		image = image[idx+1:]
+	}
+	return image
+}
+
+func uptimeTail(slots []UptimeSlot, n int) []UptimeSlot {
+	if len(slots) <= n {
+		return slots
+	}
+	return slots[len(slots)-n:]
+}
+
+func slotClass(s SlotState) string {
+	switch s {
+	case SlotStateUp:
+		return "up"
+	case SlotStateStarting:
+		return "starting"
+	case SlotStateError:
+		return "error"
+	default:
+		return "idle"
+	}
+}
