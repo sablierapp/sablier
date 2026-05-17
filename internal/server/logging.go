@@ -21,8 +21,11 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 		WithRequestHeader:  false,
 		WithResponseBody:   false,
 		WithResponseHeader: false,
-		WithSpanID:         false,
-		WithTraceID:        false,
+		// Emit trace/span IDs when OpenTelemetry tracing is active so log
+		// lines can be correlated with traces in the observability backend.
+		// Both fields are zero-valued (and omitted) when tracing is disabled.
+		WithSpanID:  true,
+		WithTraceID: true,
 
 		Filters: []sloggin.Filter{},
 	})

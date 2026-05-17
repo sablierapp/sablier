@@ -74,6 +74,17 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("server.base-path", startCmd.Flags().Lookup("server.base-path"))
 	startCmd.Flags().BoolVar(&conf.Server.Metrics.Enabled, "server.metrics.enabled", false, "Enable the Prometheus /metrics endpoint")
 	_ = viper.BindPFlag("server.metrics.enabled", startCmd.Flags().Lookup("server.metrics.enabled"))
+	// Tracing flags
+	startCmd.Flags().BoolVar(&conf.Tracing.Enabled, "tracing.enabled", false, "Enable OpenTelemetry distributed tracing")
+	_ = viper.BindPFlag("tracing.enabled", startCmd.Flags().Lookup("tracing.enabled"))
+	startCmd.Flags().StringVar(&conf.Tracing.ExporterType, "tracing.exporter-type", "otlphttp", "Trace exporter backend: otlphttp or stdout")
+	_ = viper.BindPFlag("tracing.exporter-type", startCmd.Flags().Lookup("tracing.exporter-type"))
+	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "http://localhost:4318", "OTLP collector base URL (used when tracing.exporter-type=otlphttp)")
+	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
+	startCmd.Flags().StringVar(&conf.Tracing.ServiceName, "tracing.service-name", "sablier", "Service name reported to the tracing backend")
+	_ = viper.BindPFlag("tracing.service-name", startCmd.Flags().Lookup("tracing.service-name"))
+	startCmd.Flags().Float64Var(&conf.Tracing.SamplingRate, "tracing.sampling-rate", 1.0, "Fraction of traces to sample (0.0–1.0)")
+	_ = viper.BindPFlag("tracing.sampling-rate", startCmd.Flags().Lookup("tracing.sampling-rate"))
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
 	_ = viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))

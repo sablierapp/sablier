@@ -7,13 +7,17 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/store"
 )
 
 type pendingStart struct {
-	done chan struct{}
-	err  error
-	info InstanceInfo // set at creation time; used to return consistent data while starting
+	done    chan struct{}
+	err     error
+	info    InstanceInfo      // set at creation time; used to return consistent data while starting
+	spanCtx trace.SpanContext // OTel context of the triggering request; used to propagate the trace into the goroutine
 }
 
 // consumePendingError checks whether a pending start exists for the given
@@ -64,6 +68,15 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		default:
 			// Still running — return the cached InstanceInfo to preserve provider fields
 			s.l.DebugContext(ctx, "instance start already in progress", slog.String("instance", name))
+			// Record that this request joined an already-running start goroutine so the
+			// two traces can be correlated in the backend.
+			trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
+				trace.WithAttributes(
+					attribute.String("instance", name),
+					attribute.String("pending_trace_id", ps.spanCtx.TraceID().String()),
+					attribute.String("pending_span_id", ps.spanCtx.SpanID().String()),
+				),
+			)
 			info := ps.info
 			s.pendingMu.Unlock()
 			return info, nil
@@ -98,12 +111,22 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		default:
 			// A concurrent goroutine won the race; return its cached info.
 			s.l.DebugContext(ctx, "instance start already in progress (post-inspect race)", slog.String("instance", name))
+			trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
+				trace.WithAttributes(
+					attribute.String("instance", name),
+					attribute.String("pending_trace_id", existing.spanCtx.TraceID().String()),
+					attribute.String("pending_span_id", existing.spanCtx.SpanID().String()),
+				),
+			)
 			existingInfo := existing.info
 			s.pendingMu.Unlock()
 			return existingInfo, nil
 		}
 	}
-	ps := &pendingStart{done: make(chan struct{}), info: info}
+	// Capture the OTel span context before releasing the lock so the goroutine
+	// can be parented to the triggering request's trace.
+	spanCtx := trace.SpanContextFromContext(ctx)
+	ps := &pendingStart{done: make(chan struct{}), info: info, spanCtx: spanCtx}
 	s.pendingStarts[name] = ps
 	s.pendingMu.Unlock()
 
@@ -112,9 +135,13 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	s.metrics.RecordReadyWaitBegin(name)
 	s.metrics.RecordActiveInstance(name)
 
-	// Detach from the request context to avoid retaining HTTP request values,
-	// but use a bounded timeout to prevent goroutine leaks.
-	startCtx, cancel := context.WithTimeout(context.Background(), s.InstanceStartTimeout)
+	// Build a background context that carries the OTel span context from the
+	// triggering HTTP request so the async InstanceStart call appears as a child
+	// of that request's trace, without being bound by its cancellation or deadline.
+	startCtx, cancel := context.WithTimeout(
+		trace.ContextWithSpanContext(context.Background(), spanCtx),
+		s.InstanceStartTimeout,
+	)
 
 	go func() {
 		defer cancel()

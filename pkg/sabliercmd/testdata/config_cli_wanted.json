@@ -65,5 +65,12 @@
         ]
       }
     ]
+  },
+  "Tracing": {
+    "Enabled": false,
+    "ExporterType": "otlphttp",
+    "Endpoint": "http://localhost:4318",
+    "ServiceName": "sablier",
+    "SamplingRate": 1
   }
 }
