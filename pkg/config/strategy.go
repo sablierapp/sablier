@@ -2,16 +2,52 @@ package config
 
 import "time"
 
+// DynamicStrategy holds configuration for the dynamic (waiting-page) strategy.
 type DynamicStrategy struct {
-	CustomThemesPath        string        `mapstructure:"CUSTOM_THEMES_PATH" yaml:"customThemesPath"`
-	ShowDetailsByDefault    bool          `mapstructure:"SHOW_DETAILS_BY_DEFAULT" yaml:"showDetailsByDefault"`
-	DefaultTheme            string        `mapstructure:"DEFAULT_THEME" yaml:"defaultTheme" default:"hacker-terminal"`
-	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULT_REFRESH_FREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
+	// CustomThemesPath is a directory from which Sablier loads custom waiting-page themes.
+	// All .html files found recursively under this path are registered as named themes.
+	// Leave empty to use only the built-in themes.
+	// Env: SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH
+	// CLI: --strategy.dynamic.custom-themes-path
+	// Default: "" (built-in themes only)
+	CustomThemesPath string
+
+	// ShowDetailsByDefault controls whether the waiting page shows per-instance
+	// status details without requiring the caller to opt in.
+	// Env: SABLIER_STRATEGY_DYNAMIC_SHOW_DETAILS_BY_DEFAULT
+	// CLI: --strategy.dynamic.show-details-by-default
+	// Default: true
+	ShowDetailsByDefault bool
+
+	// DefaultTheme is the name of the waiting-page theme used when the caller does not specify one.
+	// Env: SABLIER_STRATEGY_DYNAMIC_DEFAULT_THEME
+	// CLI: --strategy.dynamic.default-theme
+	// Default: "hacker-terminal"
+	DefaultTheme string
+
+	// DefaultRefreshFrequency is how often the waiting page polls Sablier for an updated
+	// readiness status when no frequency is specified by the caller.
+	// Env: SABLIER_STRATEGY_DYNAMIC_DEFAULT_REFRESH_FREQUENCY
+	// CLI: --strategy.dynamic.default-refresh-frequency
+	// Default: 5s
+	DefaultRefreshFrequency time.Duration
 }
 
+// BlockingStrategy holds configuration for the blocking strategy.
 type BlockingStrategy struct {
-	DefaultTimeout          time.Duration `mapstructure:"DEFAULT_TIMEOUT" yaml:"defaultTimeout" default:"1m"`
-	DefaultRefreshFrequency time.Duration `mapstructure:"DEFAULT_REFRESH_FREQUENCY" yaml:"defaultRefreshFrequency" default:"5s"`
+	// DefaultTimeout is the maximum time the blocking strategy waits for all requested
+	// instances to become ready before returning a timeout error.
+	// Env: SABLIER_STRATEGY_BLOCKING_DEFAULT_TIMEOUT
+	// CLI: --strategy.blocking.default-timeout
+	// Default: 1m
+	DefaultTimeout time.Duration
+
+	// DefaultRefreshFrequency is how often the blocking strategy polls instance readiness
+	// while waiting for workloads to start.
+	// Env: SABLIER_STRATEGY_BLOCKING_DEFAULT_REFRESH_FREQUENCY
+	// CLI: --strategy.blocking.default-refresh-frequency
+	// Default: 5s
+	DefaultRefreshFrequency time.Duration
 }
 
 type Strategy struct {

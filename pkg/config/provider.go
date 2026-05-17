@@ -5,55 +5,119 @@ import (
 	"slices"
 )
 
-// Provider holds the provider configurations
+// Provider holds the provider configurations.
 type Provider struct {
-	// The provider name to use
-	// It can be either docker, swarm, kubernetes, podman or proxmox_lxc. Defaults to "docker"
-	Name                      string `mapstructure:"NAME" yaml:"name,omitempty" default:"docker"`
-	AutoStopOnStartup         bool   `yaml:"auto-stop-on-startup,omitempty" default:"true"`
-	AutoStopExternallyStarted bool   `yaml:"auto-stop-externally-started,omitempty" default:"false"`
-	RejectUnlabeledRequests   bool   `yaml:"reject-unlabeled-requests,omitempty" default:"false"`
-	VerifyEnabledOnExpiration bool   `yaml:"verify-enabled-on-expiration,omitempty" default:"false"`
-	Kubernetes                Kubernetes
-	Podman                    Podman
-	Docker                    Docker
-	ProxmoxLXC                ProxmoxLXC `mapstructure:"PROXMOX_LXC" yaml:"proxmox-lxc,omitempty"`
+	// Name selects the container runtime to manage workloads.
+	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc.
+	// Env: SABLIER_PROVIDER_NAME
+	// CLI: --provider.name
+	// Default: "docker"
+	Name string
+
+	// AutoStopOnStartup stops all instances labelled with sablier.enable=true at
+	// Sablier startup, ensuring a clean zero-scale state even after an unclean shutdown.
+	// Env: SABLIER_PROVIDER_AUTO_STOP_ON_STARTUP
+	// CLI: --provider.auto-stop-on-startup
+	// Default: true
+	AutoStopOnStartup bool
+
+	// AutoStopExternallyStarted continuously stops instances with sablier.enable=true
+	// that are running but were not started by Sablier itself.
+	// Env: SABLIER_PROVIDER_AUTO_STOP_EXTERNALLY_STARTED
+	// CLI: --provider.auto-stop-externally-started
+	// Default: false
+	AutoStopExternallyStarted bool
+
+	// RejectUnlabeledRequests rejects requests for instances that do not carry
+	// the sablier.enable=true label, preventing accidental management of unlabelled workloads.
+	// Env: SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS
+	// CLI: --provider.reject-unlabeled-requests
+	// Default: false
+	RejectUnlabeledRequests bool
+
+	// VerifyEnabledOnExpiration re-checks the sablier.enable=true label before stopping
+	// an expired instance, useful when labels are managed dynamically.
+	// Env: SABLIER_PROVIDER_VERIFY_ENABLED_ON_EXPIRATION
+	// CLI: --provider.verify-enabled-on-expiration
+	// Default: false
+	VerifyEnabledOnExpiration bool
+
+	Kubernetes Kubernetes
+	Podman     Podman
+	Docker     Docker
+	ProxmoxLXC ProxmoxLXC
 }
 
 type Kubernetes struct {
-	// QPS limit for  K8S API access client-side throttle
-	QPS float32 `mapstructure:"QPS" yaml:"QPS" default:"5"`
-	// Maximum burst for client-side throttle
-	Burst int `mapstructure:"BURST" yaml:"Burst" default:"10"`
-	// Delimiter used for namespace/resource type/name resolution. Defaults to "_" for backward compatibility. But you should use "/" or ".".
-	Delimiter string `mapstructure:"DELIMITER" yaml:"Delimiter" default:"_"`
+	// QPS is the maximum number of queries per second sent to the Kubernetes API server
+	// for client-side rate limiting.
+	// Env: SABLIER_PROVIDER_KUBERNETES_QPS
+	// CLI: --provider.kubernetes.qps
+	// Default: 5
+	QPS float32
+
+	// Burst is the maximum number of requests the Kubernetes client can send in a burst
+	// before rate limiting kicks in.
+	// Env: SABLIER_PROVIDER_KUBERNETES_BURST
+	// CLI: --provider.kubernetes.burst
+	// Default: 10
+	Burst int
+
+	// Delimiter separates the namespace, resource type, and name in instance identifiers.
+	// Defaults to "_" for backward compatibility; prefer "/" or "." for new deployments.
+	// Env: SABLIER_PROVIDER_KUBERNETES_DELIMITER
+	// CLI: --provider.kubernetes.delimiter
+	// Default: "_"
+	Delimiter string
 }
 
 type Podman struct {
-	// Uri is the URI to connect to the Podman service.
-	//
-	// A valid URI connection should be scheme://
-	// For example tcp://localhost:<port>
-	// or unix:///run/podman/podman.sock
-	// or ssh://<user>@<host>[:port]/run/podman/podman.sock
-	// You can set the Uri to empty to use the CONTAINER_HOST environment variable instead.
-	Uri string `mapstructure:"URI" yaml:"uri,omitempty" default:"unix:///run/podman/podman.sock"`
+	// Uri is the connection URI for the Podman service.
+	// Accepted schemes: unix://, tcp://, ssh://.
+	// Leave empty to fall back to the CONTAINER_HOST environment variable.
+	// Env: SABLIER_PROVIDER_PODMAN_URI
+	// CLI: --provider.podman.uri
+	// Default: "unix:///run/podman/podman.sock"
+	Uri string
 }
 
 type Docker struct {
-	Strategy string `mapstructure:"STRATEGY" yaml:"strategy,omitempty" default:"stop"`
+	// Strategy controls how containers are brought to a stopped state.
+	// "stop" terminates the container process, freeing both CPU and memory.
+	// "pause" suspends execution while keeping the container in memory, allowing faster restarts.
+	// Env: SABLIER_PROVIDER_DOCKER_STRATEGY
+	// CLI: --provider.docker.strategy
+	// Default: "stop"
+	Strategy string
 }
 
-// ProxmoxLXC holds the Proxmox VE LXC provider configuration
+// ProxmoxLXC holds the Proxmox VE LXC provider configuration.
 type ProxmoxLXC struct {
-	// URL is the Proxmox VE API endpoint (e.g. "https://proxmox:8006/api2/json")
-	URL string `mapstructure:"URL" yaml:"url,omitempty"`
-	// TokenID is the API token identifier (e.g. "root@pam!sablier")
-	TokenID string `mapstructure:"TOKEN_ID" yaml:"token-id,omitempty"`
-	// TokenSecret is the API token secret UUID
-	TokenSecret string `mapstructure:"TOKEN_SECRET" yaml:"token-secret,omitempty"`
-	// TLSInsecure skips TLS certificate verification (useful for self-signed certificates)
-	TLSInsecure bool `mapstructure:"TLS_INSECURE" yaml:"tls-insecure,omitempty" default:"false"`
+	// URL is the Proxmox VE REST API base URL (e.g. "https://proxmox:8006/api2/json").
+	// Env: SABLIER_PROVIDER_PROXMOX_LXC_URL
+	// CLI: --provider.proxmox-lxc.url
+	// Default: ""
+	URL string
+
+	// TokenID is the Proxmox API token identifier in the form "user@realm!tokenname"
+	// (e.g. "root@pam!sablier").
+	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_ID
+	// CLI: --provider.proxmox-lxc.token-id
+	// Default: ""
+	TokenID string
+
+	// TokenSecret is the UUID secret associated with the Proxmox API token.
+	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_SECRET
+	// CLI: --provider.proxmox-lxc.token-secret
+	// Default: ""
+	TokenSecret string
+
+	// TLSInsecure disables TLS certificate verification when connecting to the Proxmox API.
+	// Enable only for self-signed certificates in trusted networks.
+	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TLS_INSECURE
+	// CLI: --provider.proxmox-lxc.tls-insecure
+	// Default: false
+	TLSInsecure bool
 }
 
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc"}

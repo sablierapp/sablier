@@ -1,13 +1,30 @@
 package config
 
+// Server holds the HTTP server configuration.
 type Server struct {
-	Port     int           `mapstructure:"PORT" yaml:"port" default:"10000"`
-	BasePath string        `mapstructure:"BASE_PATH" yaml:"basePath" default:"/"`
-	Metrics  MetricsConfig `mapstructure:"METRICS" yaml:"metrics"`
+	// Port is the TCP port the Sablier server listens on.
+	// Env: SABLIER_SERVER_PORT
+	// CLI: --server.port
+	// Default: 10000
+	Port int
+
+	// BasePath is the URL path prefix for all API routes.
+	// Useful when Sablier is served behind a reverse proxy at a sub-path.
+	// Env: SABLIER_SERVER_BASE_PATH
+	// CLI: --server.base-path
+	// Default: "/"
+	BasePath string
+
+	Metrics MetricsConfig
 }
 
+// MetricsConfig controls the Prometheus metrics endpoint.
 type MetricsConfig struct {
-	Enabled bool `mapstructure:"ENABLED" yaml:"enabled" default:"false"`
+	// Enabled exposes a Prometheus-compatible /metrics endpoint when true.
+	// Env: SABLIER_SERVER_METRICS_ENABLED
+	// CLI: --server.metrics.enabled
+	// Default: false
+	Enabled bool
 }
 
 func NewServerConfig() Server {
