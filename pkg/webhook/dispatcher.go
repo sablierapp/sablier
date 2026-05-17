@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/config"
@@ -65,8 +66,14 @@ func NewDispatcher(endpoints []config.WebhookEndpoint, logger *slog.Logger) *Dis
 // "stopped" transitions. It returns when ctx is cancelled, the event channel
 // is closed, or a terminal error is received from the stream.
 //
+// Watch waits for all in-flight HTTP deliveries to complete before returning,
+// so the caller can rely on no goroutines escaping after Watch exits.
+//
 // Call Watch in a dedicated goroutine.
 func (d *Dispatcher) Watch(ctx context.Context, stream sablier.InstanceEventStream) {
+	var wg sync.WaitGroup
+	defer wg.Wait() // drain all in-flight sends before returning
+
 	eventsC := stream.Events
 	errC := stream.Err
 
@@ -84,7 +91,7 @@ func (d *Dispatcher) Watch(ctx context.Context, stream sablier.InstanceEventStre
 			if event.Type != provider.InstanceEventStarted && event.Type != provider.InstanceEventStopped {
 				continue
 			}
-			d.dispatch(ctx, event)
+			d.dispatch(ctx, &wg, event)
 		case err, ok := <-errC:
 			if !ok {
 				return
@@ -96,7 +103,8 @@ func (d *Dispatcher) Watch(ctx context.Context, stream sablier.InstanceEventStre
 }
 
 // dispatch builds the payload and spawns a goroutine per endpoint that should fire.
-func (d *Dispatcher) dispatch(ctx context.Context, event sablier.InstanceEvent) {
+// Each goroutine is tracked in wg so Watch can wait for them to drain.
+func (d *Dispatcher) dispatch(ctx context.Context, wg *sync.WaitGroup, event sablier.InstanceEvent) {
 	payload := Payload{
 		Event:     string(event.Type),
 		Instance:  InstancePayload{Name: event.Info.Name},
@@ -106,7 +114,9 @@ func (d *Dispatcher) dispatch(ctx context.Context, event sablier.InstanceEvent) 
 		if !d.shouldFire(ep, string(event.Type)) {
 			continue
 		}
-		go d.send(ctx, ep, payload)
+		wg.Go(func() {
+			d.send(ctx, ep, payload)
+		})
 	}
 }
 
