@@ -79,8 +79,21 @@ func TestSessionState_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	_, err := s.MarshalJSON()
-	assert.Assert(t, err != nil)
+	b, err := s.MarshalJSON()
+	assert.NilError(t, err)
+	assert.Assert(t, contains(string(b), `"status":"ready"`))
+}
+
+func TestSessionState_MarshalJSON_ErrorField(t *testing.T) {
+	s := &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"a": {Instance: sablier.InstanceInfo{Name: "a"}, Error: errors.New("provider unavailable")},
+		},
+	}
+
+	b, err := s.MarshalJSON()
+	assert.NilError(t, err)
+	assert.Assert(t, contains(string(b), `"error":"provider unavailable"`))
 }
 
 func contains(s, sub string) bool {

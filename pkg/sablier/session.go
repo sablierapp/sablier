@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 )
 
 type SessionState struct {
@@ -45,7 +44,19 @@ func (s *SessionState) Status() string {
 }
 
 func (s *SessionState) MarshalJSON() ([]byte, error) {
-	instances := maps.Values(s.Instances)
+	type instanceJSON struct {
+		Instance InstanceInfo `json:"instance"`
+		Error    string       `json:"error,omitempty"`
+	}
+
+	instances := make([]instanceJSON, 0, len(s.Instances))
+	for _, v := range s.Instances {
+		item := instanceJSON{Instance: v.Instance}
+		if v.Error != nil {
+			item.Error = v.Error.Error()
+		}
+		instances = append(instances, item)
+	}
 
 	return json.Marshal(map[string]any{
 		"instances": instances,

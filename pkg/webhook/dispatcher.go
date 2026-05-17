@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -57,7 +59,10 @@ func NewDispatcher(endpoints []config.WebhookEndpoint, logger *slog.Logger) *Dis
 	}
 	return &Dispatcher{
 		endpoints: endpoints,
-		client:    &http.Client{Timeout: 10 * time.Second},
+		client: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
 		userAgent: "sablier/" + v,
 		l:         logger,
 	}

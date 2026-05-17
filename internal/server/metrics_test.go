@@ -22,7 +22,7 @@ func TestMetricsEndpoint_EnabledServesPrometheusExposition(t *testing.T) {
 	strategy := &api.ServeStrategy{
 		Metrics: rec,
 	}
-	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/"}, strategy)
+	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/"}, config.Tracing{ServiceName: "sablier"}, strategy)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/metrics", nil)
@@ -46,7 +46,7 @@ func TestMetricsEndpoint_DisabledReturns404(t *testing.T) {
 	strategy := &api.ServeStrategy{
 		Metrics: metrics.Noop{},
 	}
-	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/"}, strategy)
+	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/"}, config.Tracing{ServiceName: "sablier"}, strategy)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/metrics", nil)
@@ -62,7 +62,7 @@ func TestMetricsEndpoint_RespectsBasePath(t *testing.T) {
 
 	rec := metrics.NewPromRecorder()
 	strategy := &api.ServeStrategy{Metrics: rec}
-	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/sablier"}, strategy)
+	r := setupRouter(context.Background(), slogt.New(t), config.Server{BasePath: "/sablier"}, config.Tracing{ServiceName: "sablier"}, strategy)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/sablier/metrics", nil)

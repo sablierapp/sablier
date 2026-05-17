@@ -9,13 +9,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	"github.com/sablierapp/sablier/internal/api"
 	"github.com/sablierapp/sablier/pkg/config"
 )
 
-func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) *gin.Engine {
+func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, tracingConf config.Tracing, s *api.ServeStrategy) *gin.Engine {
 	r := gin.New()
 
+	// OpenTelemetry span-per-request middleware. Uses the global TracerProvider,
+	// which is a no-op when tracing is disabled.
+	r.Use(otelgin.Middleware(tracingConf.ServiceName))
 	r.Use(StructuredLogger(logger))
 	r.Use(gin.Recovery())
 
@@ -24,7 +29,7 @@ func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Ser
 	return r
 }
 
-func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) {
+func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, tracingConf config.Tracing, s *api.ServeStrategy) {
 	start := time.Now()
 
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -33,7 +38,7 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := setupRouter(ctx, logger, serverConf, s)
+	r := setupRouter(ctx, logger, serverConf, tracingConf, s)
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", serverConf.Port),
