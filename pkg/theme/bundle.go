@@ -30,7 +30,7 @@ func safeReadFile(f fs.FS, name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	// Read one byte beyond the limit so we can detect over-size files.
 	data, err := io.ReadAll(io.LimitReader(file, maxAssetBytes+1))
