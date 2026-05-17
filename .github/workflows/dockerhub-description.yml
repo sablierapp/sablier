@@ -1,6 +1,9 @@
 name: Update Docker Hub Description
 on: release
 
+permissions:
+  contents: read
+
 jobs:
   dockerHubDescription:
     runs-on: ubuntu-latest

@@ -7,15 +7,17 @@ on:
       - "v*"
 
 permissions:
-  contents: write
-  packages: write
-  issues: write
-  id-token: write
-  attestations: write
-  pull-requests: write
+  contents: read
 
 jobs:
   goreleaser:
+    permissions:
+      contents: write
+      packages: write
+      issues: write
+      id-token: write
+      attestations: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
