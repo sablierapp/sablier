@@ -2,6 +2,7 @@ package sablier_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -92,7 +93,7 @@ func TestSablierOnInstanceExpired_VerifyEnabledOnExpirationSkipsUnlabeledInstanc
 	ctx := t.Context()
 	inspected := make(chan struct{})
 
-	provider.EXPECT().InstanceInspect(ctx, "nginx").DoAndReturn(func(_ interface{}, _ string) (sablier.InstanceInfo, error) {
+	provider.EXPECT().InstanceInspect(ctx, "nginx").DoAndReturn(func(_ any, _ string) (sablier.InstanceInfo, error) {
 		close(inspected)
 		return sablier.InstanceInfo{Name: "nginx"}, nil
 	})
@@ -120,10 +121,5 @@ func assertNoExpirationMetrics(t *testing.T, rec metrics.Recorder) {
 }
 
 func containsCall(calls []string, want string) bool {
-	for _, c := range calls {
-		if c == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(calls, want)
 }

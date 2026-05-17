@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"maps"
 )
 
 func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
@@ -32,9 +33,7 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 	}
 
 	groups := make(map[string][]string)
-	for group, instances := range deployments {
-		groups[group] = instances
-	}
+	maps.Copy(groups, deployments)
 
 	for group, instances := range statefulSets {
 		groups[group] = append(groups[group], instances...)

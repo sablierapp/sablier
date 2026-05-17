@@ -3,6 +3,7 @@ package sablier_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -483,10 +484,5 @@ func pollFor(t *testing.T, check func() bool, timeout time.Duration) bool {
 
 // containsInstance reports whether group contains instance.
 func containsInstance(groups map[string][]string, group, instance string) bool {
-	for _, m := range groups[group] {
-		if m == instance {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(groups[group], instance)
 }

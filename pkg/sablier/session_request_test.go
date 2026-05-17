@@ -170,7 +170,7 @@ func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		return nil
 	})

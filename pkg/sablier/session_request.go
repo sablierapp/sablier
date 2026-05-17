@@ -32,7 +32,7 @@ func (s *Sablier) requestSession(ctx context.Context, names []string, duration t
 
 	wg.Add(len(names))
 
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		go func(name string) {
 			defer wg.Done()
 			state, err := s.instanceRequest(ctx, name, duration, rejectUnlabeled)

@@ -15,7 +15,7 @@ import (
 
 func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
 	handler := cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			if !wantCreated {
 				return
 			}
@@ -29,7 +29,7 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 			}
 			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
 		},
-		UpdateFunc: func(old, new interface{}) {
+		UpdateFunc: func(old, new any) {
 			newStatefulSet := new.(*appsv1.StatefulSet)
 			oldStatefulSet := old.(*appsv1.StatefulSet)
 
@@ -62,7 +62,7 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: info}
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if !wantRemoved && !wantStopped {
 				return
 			}

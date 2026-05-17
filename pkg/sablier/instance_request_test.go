@@ -2,6 +2,7 @@ package sablier_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -51,7 +52,7 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		return nil
 	})
@@ -116,7 +117,7 @@ func TestRequestSession_NewLabeledInstanceStartsWhenRejectUnlabeledRequestsEnabl
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		return nil
 	})
@@ -151,7 +152,7 @@ func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		<-startBlocking
 		return nil
@@ -197,7 +198,7 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil).Times(1)
 
 	// InstanceStart: exactly once (second call must not trigger another)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		<-startBlocking
 		return nil
@@ -283,7 +284,7 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 		// First attempt — fails immediately
 		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("connection refused")),
 		// Retry — succeeds
-		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 			close(secondDone)
 			return nil
 		}),
@@ -333,7 +334,7 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 		provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil), // pre-start inspect
 		provider.EXPECT().InstanceInspect(ctx, "nginx").Return(ready, nil),       // post-start inspect in not-ready path
 	)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startDone)
 		return nil
 	})
@@ -377,7 +378,7 @@ func TestInstanceRequest_StartTimeoutSurfacesError(t *testing.T) {
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
 	// InstanceStart blocks until context is cancelled
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(startCtx interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(startCtx any, _ string) error {
 		<-startCtx.(interface{ Done() <-chan struct{} }).Done()
 		return startCtx.(interface{ Err() error }).Err()
 	})
@@ -471,7 +472,7 @@ func TestInstanceRequest_NewInstance_RecordsStartMetrics_Success(t *testing.T) {
 	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
 	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startDone)
 		return nil
 	})
@@ -486,12 +487,7 @@ func TestInstanceRequest_NewInstance_RecordsStartMetrics_Success(t *testing.T) {
 	}
 	// Settle for the goroutine to record the end metric.
 	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
-		for _, c := range rec.snapshot() {
-			if c == "start_end:nginx" {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(rec.snapshot(), "start_end:nginx")
 	}), "expected start_end metric")
 
 	calls := rec.snapshot()
@@ -519,12 +515,7 @@ func TestInstanceRequest_NewInstance_RecordsStartFailure(t *testing.T) {
 	assert.NilError(t, err) // first call returns not-ready, error surfaces on next
 
 	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
-		for _, c := range rec.snapshot() {
-			if c == "start_fail:nginx" {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(rec.snapshot(), "start_fail:nginx")
 	}), "expected start_fail metric")
 
 	calls := rec.snapshot()
@@ -562,10 +553,8 @@ func TestInstanceRequest_ReadyTransition_RecordsReadyEnd(t *testing.T) {
 
 func assertContains(t *testing.T, calls []string, want string) {
 	t.Helper()
-	for _, c := range calls {
-		if c == want {
-			return
-		}
+	if slices.Contains(calls, want) {
+		return
 	}
 	t.Errorf("expected %q in calls, got: %v", want, calls)
 }
@@ -575,7 +564,7 @@ func assertContains(t *testing.T, calls []string, want string) {
 // stamped with time.Now() inside InstanceRequest and cannot be predicted.
 type readyAtMatcher struct{}
 
-func (readyAtMatcher) Matches(x interface{}) bool {
+func (readyAtMatcher) Matches(x any) bool {
 	info, ok := x.(sablier.InstanceInfo)
 	return ok && info.Status == sablier.InstanceStatusReady && info.ReadyAt != nil
 }
@@ -631,7 +620,7 @@ func TestInstanceRequest_ReadyAfter_GracePeriodRespectedByPolling(t *testing.T) 
 
 	// Subsequent polling calls: store returns the stamped-Ready state.
 	// ReadyAt is in the past by a growing amount; sessions.Put is called each tick.
-	sessions.EXPECT().Get(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) (sablier.InstanceInfo, error) {
+	sessions.EXPECT().Get(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) (sablier.InstanceInfo, error) {
 		// Simulate the store returning the previously stored Ready+ReadyAt state.
 		past := time.Now().Add(-200 * time.Millisecond) // 200ms > 150ms ReadyAfter
 		return sablier.InstanceInfo{

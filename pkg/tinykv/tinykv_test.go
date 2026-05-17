@@ -21,7 +21,7 @@ func TestTimeoutHeap(t *testing.T) {
 	r := rand.New(rand.NewSource(now.Unix()))
 	n := r.Intn(10000) + 10
 	var h th = []*timeout{}
-	for i := 0; i < n; i++ {
+	for range n {
 		to := &timeout{expiresAt: now.Add(time.Duration(r.Intn(100000)) * time.Second)}
 		timeheapPush(&h, to)
 	}
@@ -154,7 +154,7 @@ func TestUnmarshalJSONExpired(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	assert := assert.New(t)
 	rcvd := make(chan string, 100)
-	notify := func(k string, v interface{}) {
+	notify := func(k string, v any) {
 		rcvd <- k
 	}
 	rg := New(time.Millisecond*10, notify)
@@ -179,7 +179,7 @@ OUT01:
 		}
 	}
 	assert.Equal(len(got), n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if got[i] != "" {
 			continue
 		}
@@ -193,7 +193,7 @@ func Test03(t *testing.T) {
 	elapsed := make(chan time.Duration, 1)
 	kv := New(
 		time.Millisecond*50,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			elapsed <- time.Since(putAt)
 		})
 
@@ -208,7 +208,7 @@ func Test04(t *testing.T) {
 	assert := assert.New(t)
 	kv := New(
 		time.Millisecond*10,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			t.Fatal(k, v)
 		})
 
@@ -229,20 +229,20 @@ func Test05(t *testing.T) {
 	var cnt int64
 	kv := New(
 		time.Millisecond*10,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			atomic.AddInt64(&cnt, 1)
 		})
 
 	src := rand.NewSource(time.Now().Unix())
 	rnd := rand.New(src)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		k := fmt.Sprintf("%d", i)
 		require.NoError(t, kv.Put(k, fmt.Sprintf("VAL::%v", k),
 			time.Millisecond*time.Duration(rnd.Intn(10)+1)))
 	}
 
 	<-time.After(time.Millisecond * 100)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		k := fmt.Sprintf("%d", i)
 		_, ok := kv.Get(k)
 		assert.False(ok)
@@ -255,7 +255,7 @@ func Test11(t *testing.T) {
 	key := "QQG"
 
 	var expiredKey = make(chan string, 100)
-	onExpired := func(k string, v interface{}) { expiredKey <- k }
+	onExpired := func(k string, v any) { expiredKey <- k }
 
 	kv := New(time.Millisecond*100, onExpired)
 	err := kv.Put(
@@ -287,7 +287,7 @@ func Test12(t *testing.T) {
 
 	key := "QQG"
 
-	onExpired := func(k string, v interface{}) {}
+	onExpired := func(k string, v any) {}
 
 	kv := New(time.Millisecond*100, onExpired)
 	err := kv.Put(
@@ -305,8 +305,8 @@ func Test12(t *testing.T) {
 func Test13(t *testing.T) {
 	assert := assert.New(t)
 
-	got := make(chan interface{}, 10)
-	onExpired := func(k string, v interface{}) {
+	got := make(chan any, 10)
+	onExpired := func(k string, v any) {
 		got <- v
 	}
 
@@ -331,10 +331,10 @@ func TestOrdering(t *testing.T) {
 
 	type data struct {
 		key   string
-		value interface{}
+		value any
 	}
 	got := make(chan data, 100)
-	onExpired := func(k string, v interface{}) {
+	onExpired := func(k string, v any) {
 		got <- data{k, v}
 	}
 
@@ -372,14 +372,14 @@ func TestOrdering(t *testing.T) {
 }
 
 func BenchmarkGetNoValue(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
 }
 
 func BenchmarkGetValue(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	assert.NoError(b, rg.Put("1", 1, time.Minute*50))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
@@ -387,7 +387,7 @@ func BenchmarkGetValue(b *testing.B) {
 }
 
 func BenchmarkGetSlidingTimeout(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
@@ -395,7 +395,7 @@ func BenchmarkGetSlidingTimeout(b *testing.B) {
 }
 
 func BenchmarkPutExpire(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	for n := 0; n < b.N; n++ {
 		assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	}

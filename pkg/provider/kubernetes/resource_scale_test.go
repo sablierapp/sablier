@@ -17,20 +17,20 @@ func TestBuildResourcePatch_CPUAndMemory(t *testing.T) {
 	data, err := buildResourcePatch("mycontainer", "500m", "128Mi")
 	assert.NilError(t, err)
 
-	var doc map[string]interface{}
+	var doc map[string]any
 	assert.NilError(t, json.Unmarshal(data, &doc))
 
-	spec := doc["spec"].(map[string]interface{})
-	template := spec["template"].(map[string]interface{})
-	podSpec := template["spec"].(map[string]interface{})
-	containers := podSpec["containers"].([]interface{})
+	spec := doc["spec"].(map[string]any)
+	template := spec["template"].(map[string]any)
+	podSpec := template["spec"].(map[string]any)
+	containers := podSpec["containers"].([]any)
 	assert.Equal(t, len(containers), 1)
 
-	c := containers[0].(map[string]interface{})
+	c := containers[0].(map[string]any)
 	assert.Equal(t, c["name"].(string), "mycontainer")
 
-	resources := c["resources"].(map[string]interface{})
-	limits := resources["limits"].(map[string]interface{})
+	resources := c["resources"].(map[string]any)
+	limits := resources["limits"].(map[string]any)
 	assert.Equal(t, limits["cpu"].(string), "500m")
 	assert.Equal(t, limits["memory"].(string), "128Mi")
 }
@@ -39,16 +39,16 @@ func TestBuildResourcePatch_CPUOnly(t *testing.T) {
 	data, err := buildResourcePatch("app", "0.5", "")
 	assert.NilError(t, err)
 
-	var doc map[string]interface{}
+	var doc map[string]any
 	assert.NilError(t, json.Unmarshal(data, &doc))
 
-	spec := doc["spec"].(map[string]interface{})
-	template := spec["template"].(map[string]interface{})
-	podSpec := template["spec"].(map[string]interface{})
-	containers := podSpec["containers"].([]interface{})
-	c := containers[0].(map[string]interface{})
-	resources := c["resources"].(map[string]interface{})
-	limits := resources["limits"].(map[string]interface{})
+	spec := doc["spec"].(map[string]any)
+	template := spec["template"].(map[string]any)
+	podSpec := template["spec"].(map[string]any)
+	containers := podSpec["containers"].([]any)
+	c := containers[0].(map[string]any)
+	resources := c["resources"].(map[string]any)
+	limits := resources["limits"].(map[string]any)
 
 	// CPU should be set, memory should not appear in the patch
 	_, hasCPU := limits["cpu"]

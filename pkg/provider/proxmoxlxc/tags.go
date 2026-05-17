@@ -1,6 +1,7 @@
 package proxmoxlxc
 
 import (
+	"slices"
 	"strings"
 
 	proxmox "github.com/luthermonson/go-proxmox"
@@ -21,12 +22,7 @@ func parseTags(tagString string) []string {
 
 // hasSablierTag returns true if the "sablier" tag is present in the list.
 func hasSablierTag(tags []string) bool {
-	for _, t := range tags {
-		if t == enableTag {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tags, enableTag)
 }
 
 // extractGroups returns all group names from "sablier-group-<name>" tags.
@@ -34,8 +30,8 @@ func hasSablierTag(tags []string) bool {
 func extractGroups(tags []string) []string {
 	var groups []string
 	for _, t := range tags {
-		if strings.HasPrefix(t, groupPrefix) {
-			group := strings.TrimPrefix(t, groupPrefix)
+		if after, ok := strings.CutPrefix(t, groupPrefix); ok {
+			group := after
 			if group != "" {
 				groups = append(groups, group)
 			}

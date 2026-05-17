@@ -76,6 +76,6 @@ func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		c.JSON(http.StatusOK, map[string]interface{}{"session": sessionState})
+		c.JSON(http.StatusOK, map[string]any{"session": sessionState})
 	})
 }

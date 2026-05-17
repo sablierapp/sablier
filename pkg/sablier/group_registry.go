@@ -129,11 +129,8 @@ func (r *groupRegistry) InstanceSnapshot() map[string][]string {
 func (r *groupRegistry) groupsOf(instance string) []string {
 	var groups []string
 	for group, instances := range r.data {
-		for _, inst := range instances {
-			if inst == instance {
-				groups = append(groups, group)
-				break
-			}
+		if slices.Contains(instances, instance) {
+			groups = append(groups, group)
 		}
 	}
 	return groups

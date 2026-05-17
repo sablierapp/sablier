@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -125,12 +126,7 @@ func (d *Dispatcher) shouldFire(ep config.WebhookEndpoint, eventType string) boo
 	if len(ep.Events) == 0 {
 		return true // no filter → all events
 	}
-	for _, e := range ep.Events {
-		if e == eventType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ep.Events, eventType)
 }
 
 // send performs the HTTP POST. Errors are logged but never returned; webhook
