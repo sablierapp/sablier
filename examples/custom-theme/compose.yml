@@ -1,0 +1,25 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=10s
+      # Point Sablier at the themes directory mounted below.
+      - --strategy.dynamic.custom-themes-path=/themes
+      - --strategy.dynamic.default-theme=my-theme
+      - --strategy.dynamic.show-details-by-default=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount the local themes folder so Sablier can bundle the assets at startup.
+      - ./themes:/themes
+    ports:
+      - "10000:10000"
+
+  app:
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
