@@ -16,10 +16,10 @@ const (
 
 func Health(url string) (string, bool) {
 	resp, err := http.Get(url)
-
 	if err != nil {
 		return err.Error(), unhealthy
 	}
+	defer resp.Body.Close() //nolint:errcheck
 
 	body, err := io.ReadAll(resp.Body)
 

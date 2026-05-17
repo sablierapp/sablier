@@ -7,12 +7,14 @@ on:
       - main
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write  
+  contents: read
 
 jobs:
   release:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
