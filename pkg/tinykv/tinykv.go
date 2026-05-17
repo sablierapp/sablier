@@ -344,7 +344,6 @@ func notifyExpirations[T any](
 		return
 	}
 	for k, v := range expired {
-		k, v := k, v
 		_ = try(func() error {
 			onExpire(k, v)
 			return nil

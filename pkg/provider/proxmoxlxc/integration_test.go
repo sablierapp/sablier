@@ -2,6 +2,7 @@ package proxmoxlxc_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -42,13 +43,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		names, ok := groups["test"]
 		assert.Assert(t, ok, "expected group 'test' to exist")
 
-		found := false
-		for _, n := range names {
-			if n == env.name {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(names, env.name)
 		assert.Assert(t, found, "expected container %q in group 'test'", env.name)
 	})
 
@@ -64,7 +59,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 
 		// Poll InstanceInspect until ready (task completion + IP assignment).
 		var ready bool
-		for i := 0; i < 30; i++ {
+		for i := range 30 {
 			info, err = p.InstanceInspect(ctx, env.name)
 			assert.NilError(t, err)
 
@@ -94,7 +89,7 @@ func TestProxmoxLXCProvider_Integration(t *testing.T) {
 		assert.NilError(t, err)
 
 		// Wait until it's running.
-		for i := 0; i < 30; i++ {
+		for range 30 {
 			info, err := p.InstanceInspect(ctx, env.name)
 			assert.NilError(t, err)
 			if info.Status == sablier.InstanceStatusReady {

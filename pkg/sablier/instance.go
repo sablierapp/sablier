@@ -2,8 +2,8 @@ package sablier
 
 import (
 	"log/slog"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -62,8 +62,8 @@ type InstanceInfo struct {
 // idle resources are applied when the session expires, active resources when
 // a new session is requested.
 type ScaleConfig struct {
-	Idle   ResourceProfile `json:"idle,omitempty"`
-	Active ResourceProfile `json:"active,omitempty"`
+	Idle   ResourceProfile `json:"idle"`
+	Active ResourceProfile `json:"active"`
 }
 
 // ResourceProfile holds the CPU and memory limits for a single resource profile.

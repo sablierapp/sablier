@@ -7,7 +7,7 @@ import (
 
 func ListThemes(router *gin.RouterGroup, s *ServeStrategy) {
 	handler := func(c *gin.Context) {
-		c.JSON(http.StatusOK, map[string]interface{}{
+		c.JSON(http.StatusOK, map[string]any{
 			"themes": s.Theme.List(),
 		})
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 )
 
 // Provider holds the provider configurations
@@ -99,10 +100,8 @@ func (provider Provider) IsValid() error {
 }
 
 func (docker Docker) IsValid() error {
-	for _, s := range dockerStrategies {
-		if s == docker.Strategy {
-			return nil
-		}
+	if slices.Contains(dockerStrategies, docker.Strategy) {
+		return nil
 	}
 	return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
 }
