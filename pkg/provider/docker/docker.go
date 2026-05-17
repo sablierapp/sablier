@@ -6,6 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/moby/moby/client"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -16,6 +19,7 @@ type Provider struct {
 	Client   client.APIClient
 	l        *slog.Logger
 	strategy string
+	tracer   trace.Tracer
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
@@ -34,5 +38,6 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		Client:   cli,
 		l:        logger,
 		strategy: strategy,
+		tracer:   otel.Tracer("github.com/sablierapp/sablier/pkg/provider/docker"),
 	}, nil
 }

@@ -7,10 +7,24 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) InstanceStop(ctx context.Context, name string) error {
+func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
+	ctx, span := p.tracer.Start(ctx, "docker.instance.stop",
+		trace.WithAttributes(attribute.String("instance", name)))
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot inspect container: %w", err)
@@ -19,6 +33,11 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
 	if sc.Idle.Replicas >= 1 {
 		if sc.Idle.CPU != "" || sc.Idle.Memory != "" {
+			span.SetAttributes(
+				attribute.String("operation", "scale_mode.apply_resources"),
+				attribute.String("cpu", sc.Idle.CPU),
+				attribute.String("memory", sc.Idle.Memory),
+			)
 			p.l.DebugContext(ctx, "applying idle resources (scale mode)",
 				slog.String("name", name),
 				slog.String("cpu", sc.Idle.CPU),
@@ -26,12 +45,18 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) error {
 			)
 			return p.applyResources(ctx, name, sc.Idle.CPU, sc.Idle.Memory)
 		}
+		span.SetAttributes(
+			attribute.String("operation", "scale_mode.noop"),
+			attribute.Int("idle_replicas", int(sc.Idle.Replicas)),
+		)
 		return nil
 	}
 
 	if p.strategy == "pause" {
+		span.SetAttributes(attribute.String("operation", "pause"))
 		return p.dockerPause(ctx, name)
 	}
+	span.SetAttributes(attribute.String("operation", "stop"))
 	return p.dockerStop(ctx, name)
 }
 

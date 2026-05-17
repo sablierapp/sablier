@@ -10,6 +10,9 @@ import (
 	"time"
 
 	proxmox "github.com/luthermonson/go-proxmox"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -41,6 +44,7 @@ type Provider struct {
 	l               *slog.Logger
 	desiredReplicas int32
 	pollInterval    time.Duration
+	tracer          trace.Tracer
 
 	mu           sync.RWMutex
 	cache        map[string]containerRef // hostname or VMID string → ref
@@ -66,6 +70,7 @@ func New(ctx context.Context, client *proxmox.Client, logger *slog.Logger) (*Pro
 		l:               logger,
 		desiredReplicas: 1,
 		pollInterval:    10 * time.Second,
+		tracer:          otel.Tracer("github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"),
 		cache:           make(map[string]containerRef),
 		pendingTasks:    make(map[string]*pendingTask),
 	}, nil

@@ -4,13 +4,32 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func (p *Provider) InstanceStart(ctx context.Context, name string) error {
+func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
+	ctx, span := p.tracer.Start(ctx, "proxmoxlxc.instance.start",
+		trace.WithAttributes(attribute.String("instance", name)))
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	ref, err := p.resolve(ctx, name)
 	if err != nil {
 		return fmt.Errorf("cannot resolve instance %q: %w", name, err)
 	}
+
+	span.SetAttributes(
+		attribute.String("proxmox.node", ref.node),
+		attribute.Int("proxmox.vmid", ref.vmid),
+	)
 
 	ct, err := p.getContainer(ctx, ref)
 	if err != nil {
@@ -18,10 +37,12 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) error {
 	}
 
 	if ct.Status == "running" {
+		span.SetAttributes(attribute.String("operation", "noop.already_running"))
 		p.l.DebugContext(ctx, "container already running", slog.String("name", ref.name), slog.Int("vmid", ref.vmid))
 		return nil
 	}
 
+	span.SetAttributes(attribute.String("operation", "start"))
 	p.l.DebugContext(ctx, "starting container", slog.String("name", ref.name), slog.Int("vmid", ref.vmid), slog.String("node", ref.node))
 
 	task, err := ct.Start(ctx)
