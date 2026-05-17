@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/sablierapp/sablier/pkg/store"
@@ -87,7 +88,14 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	// Inspect outside the lock: this may be a slow remote network call.
 	// If inspect fails (e.g. first boot), fall back to a minimal struct so
 	// the start still proceeds.
-	info, err := s.provider.InstanceInspect(ctx, name)
+	inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
+		trace.WithAttributes(attribute.String("instance", name)))
+	info, err := s.provider.InstanceInspect(inspectCtx, name)
+	inspectSpan.RecordError(err)
+	if err != nil {
+		inspectSpan.SetStatus(codes.Error, err.Error())
+	}
+	inspectSpan.End()
 	if err != nil {
 		if rejectUnlabeled {
 			return InstanceInfo{}, err
@@ -147,13 +155,19 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		defer cancel()
 		defer close(ps.done)
 		startedAt := time.Now()
+		startCtx, startSpan := s.tracer.Start(startCtx, "sablier.instance.start",
+			trace.WithAttributes(attribute.String("instance", name)))
 		if err := s.provider.InstanceStart(startCtx, name); err != nil {
+			startSpan.RecordError(err)
+			startSpan.SetStatus(codes.Error, err.Error())
+			startSpan.End()
 			ps.err = err
 			s.metrics.RecordInstanceStartFailure(name)
-			s.l.Error("async instance start failed", slog.String("instance", name), slog.Any("error", err))
+			s.l.ErrorContext(startCtx, "async instance start failed", slog.String("instance", name), slog.Any("error", err))
 		} else {
+			startSpan.End()
 			s.metrics.RecordInstanceStartEnd(name, time.Since(startedAt))
-			s.l.InfoContext(ctx, "instance is ready", slog.String("instance", name))
+			s.l.InfoContext(startCtx, "instance is ready", slog.String("instance", name))
 			// Success — clean up immediately so the entry doesn't linger
 			s.pendingMu.Lock()
 			// Only delete if ps is still the current entry (not replaced by a retry)
@@ -201,7 +215,14 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			s.l.DebugContext(ctx, "instance start still in progress, skipping inspect", slog.String("instance", name))
 		} else {
 			s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", string(state.Status)))
-			state, err = s.provider.InstanceInspect(ctx, name)
+			inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
+				trace.WithAttributes(attribute.String("instance", name)))
+			state, err = s.provider.InstanceInspect(inspectCtx, name)
+			inspectSpan.RecordError(err)
+			if err != nil {
+				inspectSpan.SetStatus(codes.Error, err.Error())
+			}
+			inspectSpan.End()
 			if err != nil {
 				return InstanceInfo{}, err
 			}

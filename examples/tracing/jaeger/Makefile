@@ -7,7 +7,7 @@ up:
 	@echo "  /health   http://localhost:10000/health"
 	@echo "Jaeger UI:  http://localhost:16686"
 	@echo
-	@echo "Run 'make request-blocking' to trigger a request and generate traces."
+	@echo "Run 'make request-dynamic' or 'make request-blocking' to generate traces."
 
 down:
 	docker compose down -v --remove-orphans
@@ -19,6 +19,7 @@ ps:
 	docker compose ps
 
 # Dynamic strategy: returns an HTML loading page immediately.
+# The span ends right away, showing the "quick return" pattern while the instance starts in the background.
 request-dynamic:
 	@curl -s -o /dev/null -w "HTTP %{http_code}\n" \
 	  'http://localhost:10000/api/strategies/dynamic?group=demo&session_duration=1m'

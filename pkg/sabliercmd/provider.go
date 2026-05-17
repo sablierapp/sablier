@@ -76,7 +76,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		opts := []proxmox.Option{
 			proxmox.WithAPIToken(config.ProxmoxLXC.TokenID, config.ProxmoxLXC.TokenSecret),
 		}
-		var baseTransport http.RoundTripper = http.DefaultTransport
+		baseTransport := http.DefaultTransport
 		if config.ProxmoxLXC.TLSInsecure {
 			transport := http.DefaultTransport.(*http.Transport).Clone()
 			transport.TLSClientConfig = &tls.Config{
