@@ -44,7 +44,6 @@ func TestGroupWatch_CreatedEvent_AddsToGroup(t *testing.T) {
 	s, _, p := setupSablier(t)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -53,7 +52,7 @@ func TestGroupWatch_CreatedEvent_AddsToGroup(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventCreated,
@@ -70,7 +69,6 @@ func TestGroupWatch_RemovedEvent_RemovesFromGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -79,7 +77,7 @@ func TestGroupWatch_RemovedEvent_RemovesFromGroup(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventRemoved,
@@ -96,7 +94,6 @@ func TestGroupWatch_UpdatedEvent_MovesGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -105,7 +102,7 @@ func TestGroupWatch_UpdatedEvent_MovesGroup(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
@@ -122,7 +119,6 @@ func TestGroupWatch_ReconciliationUpdatesGroups(t *testing.T) {
 	s, _, p := setupSablier(t)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	called := make(chan struct{}, 1)
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -137,7 +133,7 @@ func TestGroupWatch_ReconciliationUpdatesGroups(t *testing.T) {
 		return map[string][]string{"g": {"a", "b"}}, nil
 	}).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	select {
 	case <-called:
@@ -155,7 +151,6 @@ func TestGroupWatch_EventStreamClosed_FallsBackToReconciliation(t *testing.T) {
 	s, _, p := setupSablier(t)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
@@ -174,7 +169,7 @@ func TestGroupWatch_EventStreamClosed_FallsBackToReconciliation(t *testing.T) {
 		return map[string][]string{"g": {"x"}}, nil
 	}).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	select {
 	case <-called:
@@ -188,7 +183,6 @@ func TestGroupWatch_ProviderErrorDoesNotUpdateGroups(t *testing.T) {
 	s.SetGroups(map[string][]string{"existing": {"x"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	called := make(chan struct{}, 1)
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
@@ -203,7 +197,7 @@ func TestGroupWatch_ProviderErrorDoesNotUpdateGroups(t *testing.T) {
 		return nil, errors.New("provider down")
 	}).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	select {
 	case <-called:
@@ -221,7 +215,6 @@ func TestGroupWatch_UpdatedEvent_LostLabel(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -230,7 +223,7 @@ func TestGroupWatch_UpdatedEvent_LostLabel(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
@@ -247,7 +240,6 @@ func TestGroupWatch_CreatedEvent_MovesToGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -256,7 +248,7 @@ func TestGroupWatch_CreatedEvent_MovesToGroup(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventCreated,
@@ -274,7 +266,6 @@ func TestGroupWatch_UpdatedEvent_GroupUnchanged(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -283,7 +274,7 @@ func TestGroupWatch_UpdatedEvent_GroupUnchanged(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventUpdated,
@@ -302,14 +293,13 @@ func TestGroupWatch_ReconciliationMovesGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 	}).Return(sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: make(chan error, 1)})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{"api": {"nginx"}}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	assert.Assert(t, pollFor(t, func() bool {
 		groups := s.Groups()
@@ -322,7 +312,6 @@ func TestGroupWatch_ReconciliationRemovesFromGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"web": {"nginx"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
@@ -330,7 +319,7 @@ func TestGroupWatch_ReconciliationRemovesFromGroup(t *testing.T) {
 	// Provider no longer reports nginx in any group.
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	assert.Assert(t, pollFor(t, func() bool {
 		return !containsInstance(s.Groups(), "web", "nginx")
@@ -343,7 +332,6 @@ func TestGroupWatch_CreatedEvent_MultipleGroups(t *testing.T) {
 	s, _, p := setupSablier(t)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -352,7 +340,7 @@ func TestGroupWatch_CreatedEvent_MultipleGroups(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	// shared-api belongs to both team-a and team-b.
 	eventsC <- sablier.InstanceEvent{
@@ -374,7 +362,6 @@ func TestGroupWatch_UpdatedEvent_AddsSecondGroup(t *testing.T) {
 	s.SetGroups(map[string][]string{"team-a": {"shared-api"}})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -383,7 +370,7 @@ func TestGroupWatch_UpdatedEvent_AddsSecondGroup(t *testing.T) {
 	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	// Label updated from "team-a" to "team-a,team-b".
 	eventsC <- sablier.InstanceEvent{
@@ -408,7 +395,6 @@ func TestGroupWatch_RemovedEvent_RemovesFromAllGroups(t *testing.T) {
 	})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -421,7 +407,7 @@ func TestGroupWatch_RemovedEvent_RemovesFromAllGroups(t *testing.T) {
 		"team-b": {"backend"},
 	}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventRemoved,
@@ -448,7 +434,6 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 	s, _, p := setupSablier(t)
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
@@ -458,7 +443,7 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 		"team-b": {"backend", "shared-api"},
 	}, nil).AnyTimes()
 
-	go s.GroupWatch(ctx)
+	startGroupWatch(t, s, ctx, cancel)
 
 	assert.Assert(t, pollFor(t, func() bool {
 		groups := s.Groups()
@@ -467,6 +452,25 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 			containsInstance(groups, "team-a", "frontend") &&
 			containsInstance(groups, "team-b", "backend")
 	}, 3*time.Second), "reconciliation should populate all instances across multiple groups")
+}
+
+// startGroupWatch launches s.GroupWatch in a goroutine and registers a
+// t.Cleanup that cancels the context and waits for GroupWatch to exit.
+// This prevents "Log called after test finished" panics from the slogt logger.
+func startGroupWatch(t *testing.T, s *sablier.Sablier, ctx context.Context, cancel context.CancelFunc) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		s.GroupWatch(ctx)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	})
 }
 
 // pollFor repeatedly calls check until it returns true or the deadline passes.

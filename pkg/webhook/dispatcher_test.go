@@ -66,6 +66,25 @@ func makeStream() (chan sablier.InstanceEvent, chan error, sablier.InstanceEvent
 	return eventsC, errC, sablier.InstanceEventStream{Events: eventsC, Err: errC}
 }
 
+// startWatch launches d.Watch in a goroutine and registers a t.Cleanup that
+// cancels the context and waits for Watch to exit. This prevents
+// "Log called after test finished" panics from the slogt logger.
+func startWatch(t *testing.T, d *webhook.Dispatcher, ctx context.Context, cancel context.CancelFunc, stream sablier.InstanceEventStream) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		d.Watch(ctx, stream)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	})
+}
+
 func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 	c := &capture{}
 	srv := httptest.NewServer(http.HandlerFunc(c.handler))
@@ -78,8 +97,7 @@ func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventStarted,
@@ -104,8 +122,7 @@ func TestDispatcher_FiresOnStoppedEvent(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventStopped,
@@ -129,8 +146,7 @@ func TestDispatcher_IgnoresNonLifecycleEvents(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	// Send events that are not started/stopped.
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: "nginx"}}
@@ -160,8 +176,7 @@ func TestDispatcher_FiltersEventsByEndpointConfig(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: "app"}}
@@ -193,8 +208,7 @@ func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
 
@@ -208,8 +222,13 @@ func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 
 func TestDispatcher_HandlesHTTPError(t *testing.T) {
 	// Endpoint that always returns 500 — dispatcher must not crash.
+	delivered := make(chan struct{}, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
+		select {
+		case delivered <- struct{}{}:
+		default:
+		}
 	}))
 	defer srv.Close()
 
@@ -217,13 +236,15 @@ func TestDispatcher_HandlesHTTPError(t *testing.T) {
 
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
-	// Give the goroutine time to call the endpoint and log the error.
-	time.Sleep(200 * time.Millisecond)
-	// No assertion beyond "didn't crash".
+	select {
+	case <-delivered:
+		// endpoint was reached — dispatcher handled the 500 without crashing
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for dispatcher to call the endpoint")
+	}
 }
 
 func TestDispatcher_StopsOnContextCancel(t *testing.T) {
@@ -296,8 +317,7 @@ func TestDispatcher_MultipleEndpoints(t *testing.T) {
 	d := webhook.NewDispatcher(endpoints, slogt.New(t))
 	eventsC, _, stream := makeStream()
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go d.Watch(ctx, stream)
+	startWatch(t, d, ctx, cancel, stream)
 
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
 
