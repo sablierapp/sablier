@@ -15,14 +15,16 @@ var histogramBuckets = []float64{0.1, 0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300}
 type PromRecorder struct {
 	registry *prometheus.Registry
 
-	sessionRequests       *prometheus.CounterVec
-	instanceStartFailures *prometheus.CounterVec
-	instanceStops         *prometheus.CounterVec
-	instanceStartDuration *prometheus.HistogramVec
-	instanceReadyDuration *prometheus.HistogramVec
+	sessionRequests        *prometheus.CounterVec
+	instanceStartFailures  *prometheus.CounterVec
+	instanceStops          *prometheus.CounterVec
+	instanceStartDuration  *prometheus.HistogramVec
+	instanceReadyDuration  *prometheus.HistogramVec
+	instanceActiveDuration *prometheus.CounterVec
 
 	activeMu        sync.RWMutex
 	activeInstances map[string]struct{}
+	activeSince     map[string]time.Time // protected by activeMu
 
 	readyMu   sync.Mutex
 	readyWait map[string]time.Time
@@ -36,6 +38,7 @@ func NewPromRecorder() *PromRecorder {
 	r := &PromRecorder{
 		registry:        reg,
 		activeInstances: make(map[string]struct{}),
+		activeSince:     make(map[string]time.Time),
 		readyWait:       make(map[string]time.Time),
 	}
 
@@ -76,6 +79,15 @@ func NewPromRecorder() *PromRecorder {
 		},
 		[]string{"instance"},
 	)
+	r.instanceActiveDuration = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "sablier_instance_active_seconds_total",
+			Help: "Cumulative seconds each instance has spent in the Ready state. " +
+				"Incremented each time an instance's session expires. " +
+				"Use increase() or rate() over a time window to compute the active fraction.",
+		},
+		[]string{"instance"},
+	)
 
 	reg.MustRegister(
 		r.sessionRequests,
@@ -83,6 +95,7 @@ func NewPromRecorder() *PromRecorder {
 		r.instanceStops,
 		r.instanceStartDuration,
 		r.instanceReadyDuration,
+		r.instanceActiveDuration,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -131,6 +144,12 @@ func (r *PromRecorder) RecordReadyWaitEnd(instance string) {
 	r.readyMu.Unlock()
 
 	r.instanceReadyDuration.WithLabelValues(instance).Observe(time.Since(start).Seconds())
+
+	// Start counting how long this instance stays in the Ready state.
+	// The elapsed time is harvested in RecordInactiveInstance.
+	r.activeMu.Lock()
+	r.activeSince[instance] = time.Now()
+	r.activeMu.Unlock()
 }
 
 // DiscardReadyWait clears any pending ready-wait timestamp for the instance
@@ -160,8 +179,17 @@ func (r *PromRecorder) RecordActiveInstance(instance string) {
 
 func (r *PromRecorder) RecordInactiveInstance(instance string) {
 	r.activeMu.Lock()
-	defer r.activeMu.Unlock()
 	delete(r.activeInstances, instance)
+	var activeDur time.Duration
+	if since, ok := r.activeSince[instance]; ok {
+		delete(r.activeSince, instance)
+		activeDur = time.Since(since)
+	}
+	r.activeMu.Unlock()
+
+	if activeDur > 0 {
+		r.instanceActiveDuration.WithLabelValues(instance).Add(activeDur.Seconds())
+	}
 }
 
 // SnapshotActiveInstances returns a copy of the current active set.

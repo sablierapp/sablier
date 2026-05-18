@@ -7,6 +7,7 @@
 - [Webhooks](/webhooks)
 - [Tracing](/tracing)
 - [Performance](/performance)
+- [Resource Efficiency](/resource-efficiency)
 - [Versioning](/versioning)
 - **Providers**
   - [Overview](/providers/overview)
