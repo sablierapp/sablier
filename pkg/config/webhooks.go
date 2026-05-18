@@ -3,22 +3,26 @@ package config
 // Webhooks holds the outbound webhook notification configuration.
 // Sablier fires an HTTP POST to every configured endpoint whenever an
 // instance transitions to "started" or "stopped".
+// Webhooks are configured via the YAML configuration file only;
+// there is no corresponding CLI flag or environment variable.
 type Webhooks struct {
-	// Endpoints is the list of HTTP targets to notify.
-	Endpoints []WebhookEndpoint `mapstructure:"ENDPOINTS" yaml:"endpoints,omitempty"`
+	// Endpoints is the list of HTTP targets to notify on instance lifecycle events.
+	Endpoints []WebhookEndpoint
 }
 
 // WebhookEndpoint describes a single HTTP notification target.
 type WebhookEndpoint struct {
-	// URL is the full HTTP(S) URL to POST events to (required).
-	URL string `mapstructure:"URL" yaml:"url"`
-	// Headers is an optional map of HTTP request headers to include
-	// (e.g. Authorization, X-Custom-Header).
-	Headers map[string]string `mapstructure:"HEADERS" yaml:"headers,omitempty"`
-	// Events restricts which event types trigger this endpoint.
+	// URL is the full HTTP(S) address to POST events to. Required.
+	URL string
+
+	// Headers is an optional map of HTTP request headers added to every delivery
+	// (e.g. {"Authorization": "Bearer <token>"}).
+	Headers map[string]string
+
+	// Events restricts which lifecycle events trigger a delivery to this endpoint.
 	// Accepted values: "started", "stopped".
-	// If empty or omitted, the endpoint receives all events.
-	Events []string `mapstructure:"EVENTS" yaml:"events,omitempty"`
+	// Omit or leave empty to receive all events.
+	Events []string
 }
 
 func NewWebhooksConfig() Webhooks {

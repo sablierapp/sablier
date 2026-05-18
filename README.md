@@ -10,7 +10,16 @@ It integrates with [reverse proxy plugins](#usage-with-reverse-proxies) (Traefik
 
 ![Demo](./docs/assets/img/demo.gif)
 
-Whether you don't want to overload your Raspberry Pi, or your QA environment is used only once a week and wastes resources by keeping workloads running, Sablier might be the solution you need.
+Whether you're running on a resource-constrained device like a **Raspberry Pi**, managing a **QA environment** used only once a week, or reducing cloud costs by scaling idle workloads to zero — Sablier is built for you.
+
+**Key features:**
+- On-demand start/stop for Docker, Kubernetes, Podman, and Proxmox LXC workloads
+- Customizable waiting UI with themes while workloads warm up
+- [Webhook notifications](#webhooks) when instances start or stop
+- [Prometheus metrics](#metrics) for monitoring session and workload activity
+- [OpenTelemetry tracing](#tracing) for end-to-end request observability
+- Stop or pause strategies to maximize resource reclamation on constrained hardware
+- [Scale mode](#scale-mode): throttle CPU and memory when idle instead of stopping, for zero-cold-start workloads
 
 - [Installation](#installation)
   - [Use the Docker image](#use-the-docker-image)
@@ -28,6 +37,11 @@ Whether you don't want to overload your Raspberry Pi, or your QA environment is 
   - [Podman](#podman)
   - [Kubernetes](#kubernetes)
   - [Proxmox LXC](#proxmox-lxc)
+- [Scale Mode](#scale-mode)
+- [Webhooks](#webhooks)
+- [Observability](#observability)
+  - [Metrics](#metrics)
+  - [Tracing](#tracing)
 - [Usage with Reverse Proxies](#usage-with-reverse-proxies)
   - [Apache APISIX](#apache-apisix)
   - [Caddy](#caddy)
@@ -221,6 +235,8 @@ The container should be stopped.
 
 ## Configuration
 
+📚 **[Full Documentation](https://sablierapp.dev/#/configuration)**
+
 There are three ways to configure Sablier:
 
 1. [In a configuration file](#configuration-file)
@@ -250,29 +266,39 @@ sablier --configFile=path/to/myconfigfile.yml
 provider:
   # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc)
   name: docker
+  # Reject requests for containers/services that don't have the Sablier enable label
+  reject-unlabeled-requests: false
+  # Verify that the Sablier enable label is present when an instance expires
+  verify-enabled-on-expiration: false
+  docker:
+    # Strategy to use when stopping containers (stop or pause)
+    strategy: stop
 server:
   # The server port to use
-  port: 10000 
+  port: 10000
   # The base path for the API
   base-path: /
+  metrics:
+    # Enable Prometheus metrics endpoint
+    enabled: true
 storage:
   # File path to save the state (default stateless)
   file:
 sessions:
   # The default session duration (default 5m)
   default-duration: 5m
-  # The expiration checking interval. 
-  # Higher duration gives less stress on CPU. 
+  # The expiration checking interval.
+  # Higher duration gives less stress on CPU.
   # If you only use sessions of 1h, setting this to 5m is a good trade-off.
   expiration-interval: 20s
 logging:
-  level: debug
+  level: info
 strategy:
   dynamic:
     # Custom themes folder, will load all .html files recursively (default empty)
     custom-themes-path:
     # Show instances details by default in waiting UI
-    show-details-by-default: false
+    show-details-by-default: true
     # Default theme used for dynamic strategy (default "hacker-terminal")
     default-theme: hacker-terminal
     # Default refresh frequency in the HTML page for dynamic strategy
@@ -280,6 +306,28 @@ strategy:
   blocking:
     # Default timeout used for blocking strategy (default 1m)
     default-timeout: 1m
+webhooks:
+  endpoints:
+    # Notify an uptime-monitoring service every time an instance starts or stops.
+    # - url: https://uptime.example.com/api/push/xxxxxxxx
+    #   headers:
+    #     Authorization: "Bearer <token>"
+    #   events:
+    #     - started
+    #     - stopped
+tracing:
+  # Set enabled: true to export OpenTelemetry traces.
+  enabled: false
+  # exporterType selects the trace backend: "otlphttp" (default) or "stdout".
+  exporterType: otlphttp
+  # endpoint is the OTLP collector base URL (scheme + host + optional port).
+  # For Jaeger: http://jaeger:4318
+  # For Grafana Tempo: http://tempo:4318
+  endpoint: http://localhost:4318
+  # serviceName is the logical name that appears in the tracing backend.
+  serviceName: sablier
+  # samplingRate controls the fraction of requests traced (0.0 – 1.0).
+  samplingRate: 1.0
 ```
 
 ### Environment Variables
@@ -405,6 +453,85 @@ Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmo
 - Discovers containers by `sablier` tag
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/proxmox_lxc)**
+
+## Scale Mode
+
+By default, Sablier stops (or pauses) workloads when a session expires and restarts them on the next request. **Scale mode** is an alternative: instead of stopping a container, Sablier throttles its CPU and memory to a minimal idle allocation, then restores full resources the moment a new session arrives.
+
+Because the container never stops, there is **no cold-start latency** — ideal for resource-constrained environments like a Raspberry Pi where you want to reclaim most of the hardware while keeping response times acceptable.
+
+Scale mode is controlled entirely through labels:
+
+```yaml
+labels:
+  - "sablier.enable=true"
+  - "sablier.group=myapp"
+  # Idle state: keep running but throttle resources
+  - "sablier.idle.replicas=1"
+  - "sablier.idle.cpu=0.1"
+  - "sablier.idle.memory=64m"
+  # Active state: full resources when a session is requested
+  - "sablier.active.replicas=1"
+  - "sablier.active.cpu=2.0"
+  - "sablier.active.memory=512m"
+```
+
+| Label | Description |
+|---|---|
+| `sablier.idle.replicas` | Replica count while idle. Set to `0` to stop (default behaviour), `1+` to keep running. |
+| `sablier.idle.cpu` | CPU limit while idle (e.g. `0.1` for 10% of one core). Requires `idle.replicas >= 1`. |
+| `sablier.idle.memory` | Memory limit while idle (e.g. `64m`). Requires `idle.replicas >= 1`. |
+| `sablier.active.replicas` | Replica count when a session is active. |
+| `sablier.active.cpu` | CPU limit restored when a session is active. |
+| `sablier.active.memory` | Memory limit restored when a session is active. |
+
+📚 **[Full Example](./examples/scale-mode/)**
+
+---
+
+## Webhooks
+
+Sablier can POST a normalized JSON notification to one or more HTTP endpoints whenever a managed instance starts or stops. Because Sablier sits in front of every supported provider, webhooks act as a **unified, provider-agnostic event stream** — your receiver always gets the same payload structure regardless of the underlying runtime.
+
+**Common uses:**
+- Push heartbeats to an uptime monitor such as [Uptime Kuma](https://github.com/louislam/uptime-kuma)
+- Trigger CI/CD pipelines or automation on instance lifecycle events
+- Feed a central observability or alerting bus
+
+📚 **[Full Documentation](https://sablierapp.dev/#/webhooks)**
+
+---
+
+## Observability
+
+### Metrics
+
+Sablier exposes a [Prometheus](https://prometheus.io/)-compatible `/metrics` endpoint. Enable it in your configuration:
+
+```yaml
+server:
+  metrics:
+    enabled: true
+```
+
+---
+
+### Tracing
+
+Sablier supports distributed tracing via [OpenTelemetry](https://opentelemetry.io/). When enabled, every incoming HTTP request and every call to the underlying container provider is captured as a span and exported to an OTLP-compatible backend such as [Jaeger](https://www.jaegertracing.io/) or [Grafana Tempo](https://grafana.com/oss/tempo/). Trace context is propagated using the W3C TraceContext format, so if your reverse proxy injects a `traceparent` header, Sablier will join the existing trace.
+
+```yaml
+tracing:
+  enabled: true
+  exporterType: otlphttp
+  endpoint: http://localhost:4318
+  serviceName: sablier
+  samplingRate: 1.0
+```
+
+📚 **[Full Documentation](https://sablierapp.dev/#/tracing)**
+
+---
 
 ## Usage with Reverse Proxies
 
