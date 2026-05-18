@@ -21,6 +21,8 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
 - Stop or pause strategies to maximize resource reclamation on constrained hardware
 - [Scale mode](#scale-mode): throttle CPU and memory when idle instead of stopping, for zero-cold-start workloads
 
+---
+
 - [Installation](#installation)
   - [Use the Docker image](#use-the-docker-image)
   - [Use the binary distribution](#use-the-binary-distribution)
