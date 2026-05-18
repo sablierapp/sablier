@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />
+  <title>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}Starting up…{{ end }}</title>
+
+  <!--
+    Sablier bundles these relative asset references at startup:
+      - css/style.css                       → inlined as <style>…</style>
+      - imgs/sablier-icon-color.svg         → inlined as <img src="data:image/svg+xml;base64,…">
+      - imgs/sablier-rotating-optimized.gif → inlined as <img src="data:image/gif;base64,…">
+      - js/app.js                           → inlined as <script>…</script>
+
+    Absolute URLs (e.g. Google Fonts below) are left untouched.
+  -->
+  <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+  <link href="https://fonts.bunny.net/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page">
+    <img src="imgs/sablier-rotating-optimized.gif" alt="" class="spinner" aria-hidden="true">
+
+    <h1>{{ if .DisplayName }}{{ .DisplayName }}{{ else }}Starting up…{{ end }}</h1>
+    <p class="hint">
+      This page refreshes automatically. Your session expires after
+      {{ .SessionDuration }} of inactivity.
+    </p>
+
+    {{ if .InstanceStates }}
+    <ul class="instances">
+      {{- range .InstanceStates }}
+      <li class="{{ if .Error }}error{{ else if eq .Status "ready" }}ready{{ else }}pending{{ end }}">
+        <span class="name">{{ .Name }}</span>
+        <span class="status">
+          {{- if .Error -}}
+            {{ .Error }}
+          {{- else -}}
+            {{ .Status }} ({{ .CurrentReplicas }}/{{ .DesiredReplicas }})
+          {{- end -}}
+        </span>
+      </li>
+      {{- end }}
+    </ul>
+    {{ end }}
+
+    <footer>Sablier {{ .Version }}</footer>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

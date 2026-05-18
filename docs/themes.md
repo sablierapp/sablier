@@ -18,7 +18,7 @@ You can also extend the themes by providing your own, which will be rendered as 
 
 ## Custom Themes Locations
 
-You can use the `--strategy.dynamic.custom-themes` argument to define the location where Sablier should search for themes at startup.
+You can use the `--strategy.dynamic.custom-themes-path` argument to define the location where Sablier should search for themes at startup.
 
 By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder.
 
@@ -37,6 +37,55 @@ Sablier will recursively search for themes with the `.html` extension.
 
 - You **cannot** load new themes added to the folder without restarting
 - You **can** modify existing theme files without restarting
+
+## Asset Bundling
+
+Sablier bundles external assets at startup when loading custom themes. Any **relative** CSS, JavaScript, or image reference inside a custom `.html` file is read from the same directory tree and inlined directly into the template, so the browser receives a fully self-contained page with no additional requests.
+
+| HTML pattern | What Sablier inlines |
+|---|---|
+| `<link rel="stylesheet" href="css/style.css">` | `<style>/* contents of css/style.css */</style>` |
+| `<script src="js/app.js"></script>` | `<script>/* contents of js/app.js */</script>` |
+| `<img src="imgs/logo.png">` | `<img src="data:image/png;base64,…">` |
+
+Paths that are **not** inlined and remain unchanged:
+
+- Absolute URLs: `https://cdn.example.com/style.css`
+- Protocol-relative URLs: `//cdn.example.com/style.css`
+- Root-relative paths: `/static/style.css`
+- Data URIs already present in the HTML: `data:image/png;base64,…`
+
+If a referenced file cannot be found on disk the original tag is kept as-is, so a missing asset causes a broken browser request rather than a startup error.
+
+### Directory layout example
+
+```
+/path/to/my/themes/
+├── my-theme.html
+├── css/
+│   └── style.css
+└── imgs/
+    ├── logo.png
+    └── favicon.png
+```
+
+```html
+<!-- my-theme.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <img src="imgs/logo.png" alt="Logo">
+  <p>Starting {{ .DisplayName }}…</p>
+  <script src="js/app.js"></script>
+</body>
+</html>
+```
+
+At startup Sablier reads `css/style.css`, `imgs/logo.png`, and `js/app.js` relative to `my-theme.html` and produces a single self-contained template. External CDN links (e.g. Google Fonts) are left untouched.
 
 ## Create a Custom Theme
 

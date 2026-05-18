@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 type BlockingRequest struct {
@@ -45,13 +47,24 @@ func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 			sessionState, err = s.Sablier.RequestReadySession(c.Request.Context(), request.Names, request.SessionDuration, request.Timeout)
 		} else {
 			sessionState, err = s.Sablier.RequestReadySessionGroup(c.Request.Context(), request.Group, request.SessionDuration, request.Timeout)
-			var groupNotFoundError sablier.ErrGroupNotFound
-			if errors.As(err, &groupNotFoundError) {
+			if groupNotFoundError, ok := errors.AsType[sablier.ErrGroupNotFound](err); ok {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
 			}
 		}
 		if err != nil {
+			if timeoutErr, ok := errors.AsType[sablier.ErrTimeout](err); ok {
+				AbortWithProblemDetail(c, ProblemTimeout(timeoutErr))
+				return
+			}
+			if notManagedErr, ok := errors.AsType[sablier.ErrInstanceNotManaged](err); ok {
+				AbortWithProblemDetail(c, ProblemInstanceNotManaged(notManagedErr))
+				return
+			}
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				AbortWithProblemDetail(c, ProblemRequestCancelled())
+				return
+			}
 			AbortWithProblemDetail(c, ProblemError(err))
 			return
 		}
@@ -63,6 +76,6 @@ func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		c.JSON(http.StatusOK, map[string]interface{}{"session": sessionState})
+		c.JSON(http.StatusOK, map[string]any{"session": sessionState})
 	})
 }

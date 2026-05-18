@@ -32,7 +32,7 @@ func (s *Sablier) requestSession(ctx context.Context, names []string, duration t
 
 	wg.Add(len(names))
 
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		go func(name string) {
 			defer wg.Done()
 			state, err := s.instanceRequest(ctx, name, duration, rejectUnlabeled)
@@ -91,8 +91,11 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 	}
 
 	ticker := time.NewTicker(s.BlockingRefreshFrequency)
-	readiness := make(chan *SessionState)
-	errch := make(chan error)
+	// Buffered capacity 1: the goroutine can complete its send even when the
+	// outer select has already chosen a different case (timeout, cancellation).
+	// Without the buffer the goroutine would block forever on the channel send.
+	readiness := make(chan *SessionState, 1)
+	errch := make(chan error, 1)
 	quit := make(chan struct{})
 
 	go func() {
@@ -135,7 +138,7 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 		return nil, err
 	case <-time.After(timeout):
 		close(quit)
-		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
+		return nil, ErrTimeout{Duration: timeout}
 	}
 }
 

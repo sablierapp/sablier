@@ -15,7 +15,9 @@ import (
 	provpkg "github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	"github.com/sablierapp/sablier/pkg/tracing"
 	"github.com/sablierapp/sablier/pkg/version"
+	"github.com/sablierapp/sablier/pkg/webhook"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -42,6 +44,28 @@ func Start(ctx context.Context, conf config.Config) error {
 	logger := setupLogger(conf.Logging)
 
 	logger.Info("running Sablier version " + version.Info())
+
+	// Initialise OpenTelemetry tracing. The returned shutdown function flushes
+	// all in-flight spans; it must be called before the process exits.
+	tracingShutdown, err := tracing.Setup(ctx, conf.Tracing, logger)
+	if err != nil {
+		return fmt.Errorf("cannot setup tracing: %w", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := tracingShutdown(shutdownCtx); err != nil {
+			logger.ErrorContext(ctx, "tracing shutdown error", slog.Any("error", err))
+		}
+	}()
+	if conf.Tracing.Enabled {
+		logger.Info("OpenTelemetry tracing enabled",
+			slog.String("exporter", conf.Tracing.ExporterType),
+			slog.String("endpoint", conf.Tracing.Endpoint),
+			slog.String("service_name", conf.Tracing.ServiceName),
+			slog.Float64("sampling_rate", conf.Tracing.SamplingRate),
+		)
+	}
 
 	provider, err := setupProvider(ctx, logger, conf.Provider)
 	if err != nil {
@@ -109,6 +133,36 @@ func Start(ctx context.Context, conf config.Config) error {
 	}
 	go s.WatchRunningHours(ctx)
 
+	if len(conf.Webhooks.Endpoints) > 0 {
+		d := webhook.NewDispatcher(conf.Webhooks.Endpoints, logger)
+		stream := s.InstanceEvents(ctx, provpkg.InstanceEventsOptions{
+			Types: []provpkg.InstanceEventType{
+				provpkg.InstanceEventStarted,
+				provpkg.InstanceEventStopped,
+			},
+		})
+		go d.Watch(ctx, stream)
+		for i, ep := range conf.Webhooks.Endpoints {
+			events := ep.Events
+			if len(events) == 0 {
+				events = []string{"started", "stopped"}
+			}
+			logger.InfoContext(ctx, "webhook endpoint registered",
+				slog.Int("index", i),
+				slog.String("url", ep.URL),
+				slog.Any("events", events),
+			)
+			logger.DebugContext(ctx, "webhook endpoint configuration",
+				slog.Int("index", i),
+				slog.String("url", ep.URL),
+				slog.Any("events", events),
+				slog.Any("headers", ep.Headers),
+			)
+		}
+	} else {
+		logger.InfoContext(ctx, "no webhook endpoints configured")
+	}
+
 	t, err := setupTheme(ctx, conf, logger)
 	if err != nil {
 		return fmt.Errorf("cannot setup theme: %w", err)
@@ -122,7 +176,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		SessionsConfig: conf.Sessions,
 	}
 
-	go server.Start(ctx, logger, conf.Server, strategy)
+	go server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)
 
 	// Listen for the interrupt signal.
 	<-ctx.Done()

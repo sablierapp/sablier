@@ -20,13 +20,13 @@ const (
 )
 
 // proxmoxResponse wraps data in the Proxmox API JSON envelope.
-func proxmoxResponse(data interface{}) []byte {
-	b, _ := json.Marshal(map[string]interface{}{"data": data})
+func proxmoxResponse(data any) []byte {
+	b, _ := json.Marshal(map[string]any{"data": data})
 	return b
 }
 
 // writeJSON writes a Proxmox API JSON response to w, failing the test on error.
-func writeJSON(t *testing.T, w http.ResponseWriter, data interface{}) {
+func writeJSON(t *testing.T, w http.ResponseWriter, data any) {
 	t.Helper()
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(proxmoxResponse(data)); err != nil {
@@ -69,9 +69,9 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 
 	// GET /api2/json/nodes
 	mux.HandleFunc("GET /api2/json/nodes", func(w http.ResponseWriter, r *http.Request) {
-		var ns []map[string]interface{}
+		var ns []map[string]any
 		for _, n := range nodes {
-			ns = append(ns, map[string]interface{}{
+			ns = append(ns, map[string]any{
 				"node":   n,
 				"status": "online",
 				"type":   "node",
@@ -86,7 +86,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 
 		// GET /api2/json/nodes/{node}/status (called by client.Node())
 		mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/status", node), func(w http.ResponseWriter, r *http.Request) {
-			writeJSON(t, w, map[string]interface{}{"node": node, "status": "online"})
+			writeJSON(t, w, map[string]any{"node": node, "status": "online"})
 		})
 
 		// GET /api2/json/nodes/{node}/lxc
@@ -98,7 +98,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 		for _, ct := range nodeContainers[node] {
 			c := ct // capture
 			mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/lxc/%d/status/current", node, c.VMID), func(w http.ResponseWriter, r *http.Request) {
-				writeJSON(t, w, map[string]interface{}{
+				writeJSON(t, w, map[string]any{
 					"vmid":   c.VMID,
 					"name":   c.Name,
 					"status": c.Status,
@@ -109,7 +109,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 
 			// GET /api2/json/nodes/{node}/lxc/{vmid}/config (called by node.Container())
 			mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/lxc/%d/config", node, c.VMID), func(w http.ResponseWriter, r *http.Request) {
-				writeJSON(t, w, map[string]interface{}{
+				writeJSON(t, w, map[string]any{
 					"hostname": c.Name,
 					"tags":     c.Tags,
 				})
@@ -187,7 +187,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 				}
 			}
 
-			resp := map[string]interface{}{
+			resp := map[string]any{
 				"status":     status,
 				"exitstatus": exitStatus,
 				"upid":       upid,

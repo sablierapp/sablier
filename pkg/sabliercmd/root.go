@@ -74,6 +74,17 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("server.base-path", startCmd.Flags().Lookup("server.base-path"))
 	startCmd.Flags().BoolVar(&conf.Server.Metrics.Enabled, "server.metrics.enabled", false, "Enable the Prometheus /metrics endpoint")
 	_ = viper.BindPFlag("server.metrics.enabled", startCmd.Flags().Lookup("server.metrics.enabled"))
+	// Tracing flags
+	startCmd.Flags().BoolVar(&conf.Tracing.Enabled, "tracing.enabled", false, "Enable OpenTelemetry distributed tracing")
+	_ = viper.BindPFlag("tracing.enabled", startCmd.Flags().Lookup("tracing.enabled"))
+	startCmd.Flags().StringVar(&conf.Tracing.ExporterType, "tracing.exporter-type", "otlphttp", "Trace exporter backend: otlphttp or stdout")
+	_ = viper.BindPFlag("tracing.exporter-type", startCmd.Flags().Lookup("tracing.exporter-type"))
+	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "http://localhost:4318", "OTLP collector base URL (used when tracing.exporter-type=otlphttp)")
+	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
+	startCmd.Flags().StringVar(&conf.Tracing.ServiceName, "tracing.service-name", "sablier", "Service name reported to the tracing backend")
+	_ = viper.BindPFlag("tracing.service-name", startCmd.Flags().Lookup("tracing.service-name"))
+	startCmd.Flags().Float64Var(&conf.Tracing.SamplingRate, "tracing.sampling-rate", 1.0, "Fraction of traces to sample (0.0–1.0)")
+	_ = viper.BindPFlag("tracing.sampling-rate", startCmd.Flags().Lookup("tracing.sampling-rate"))
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
 	_ = viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))
@@ -131,8 +142,7 @@ func initializeConfig(cmd *cobra.Command) error {
 	// if we cannot parse the config file.
 	if err := v.ReadInConfig(); err != nil {
 		// It's okay if there isn't a config file
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if !errors.As(err, &configFileNotFoundError) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
 			return err
 		}
 	}
@@ -144,6 +154,15 @@ func initializeConfig(cmd *cobra.Command) error {
 
 	// Bind the current command's flags to viper
 	bindFlags(cmd, v)
+
+	// Apply configuration sections that have no corresponding CLI flag.
+	// Fields bound to cobra flags are fully handled by bindFlags above (CLI >
+	// env > config file > default). Sections like Webhooks are config-file-only
+	// and must be unmarshalled directly from the local viper that read the file,
+	// because the global viper used in start.go only knows about pflag-bound keys.
+	if err := v.UnmarshalKey("webhooks", &conf.Webhooks); err != nil {
+		return fmt.Errorf("failed to parse webhooks configuration: %w", err)
+	}
 
 	return nil
 }

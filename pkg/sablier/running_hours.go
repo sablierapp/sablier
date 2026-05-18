@@ -92,9 +92,6 @@ func runningHoursRemaining(spec string, now time.Time) (time.Duration, bool, err
 	if !in {
 		return 0, false, nil
 	}
-	remaining := end.Sub(now)
-	if remaining < 0 {
-		remaining = 0
-	}
+	remaining := max(end.Sub(now), 0)
 	return remaining, true, nil
 }

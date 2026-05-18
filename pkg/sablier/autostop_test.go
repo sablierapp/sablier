@@ -74,6 +74,26 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 
 // --- WatchAndStopExternallyStarted tests ---
 
+// startAutostopWatcher launches s.WatchAndStopExternallyStarted in a goroutine
+// and registers a t.Cleanup that cancels the context and waits for the goroutine
+// to exit. This prevents "Log called after test finished" panics from the slogt
+// logger.
+func startAutostopWatcher(t *testing.T, s *sablier.Sablier, ctx context.Context, cancel context.CancelFunc) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		s.WatchAndStopExternallyStarted(ctx)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	})
+}
+
 // TestWatchAndStopExternallyStarted_StopsExternalInstance verifies that when a
 // "started" event arrives for a Sablier-managed instance that is NOT in the
 // sessions store (i.e. externally started), the instance is stopped.
@@ -82,7 +102,6 @@ func TestWatchAndStopExternallyStarted_StopsExternalInstance(t *testing.T) {
 	s.ExternallyStartedScanInterval = 24 * time.Hour // prevent ticker from firing
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -103,7 +122,7 @@ func TestWatchAndStopExternallyStarted_StopsExternalInstance(t *testing.T) {
 	// Send the event before starting the goroutine so the channel is pre-filled.
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
-	go s.WatchAndStopExternallyStarted(ctx)
+	startAutostopWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-stopped:
@@ -121,7 +140,6 @@ func TestWatchAndStopExternallyStarted_SkipsSablierStartedInstance_InStore(t *te
 	s.ExternallyStartedScanInterval = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -139,7 +157,7 @@ func TestWatchAndStopExternallyStarted_SkipsSablierStartedInstance_InStore(t *te
 	// InstanceStop must NOT be called; gomock will fail the test if it is.
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
-	go s.WatchAndStopExternallyStarted(ctx)
+	startAutostopWatcher(t, s, ctx, cancel)
 
 	// Give the goroutine time to process the event then verify no stop happened.
 	time.Sleep(100 * time.Millisecond)
@@ -152,7 +170,6 @@ func TestWatchAndStopExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
 	s.ExternallyStartedScanInterval = 24 * time.Hour
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent, 1)
 	errC := make(chan error, 1)
@@ -164,7 +181,7 @@ func TestWatchAndStopExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
 	// No sessions.Get or InstanceStop expected.
 	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
 
-	go s.WatchAndStopExternallyStarted(ctx)
+	startAutostopWatcher(t, s, ctx, cancel)
 
 	time.Sleep(100 * time.Millisecond)
 }
@@ -176,7 +193,6 @@ func TestWatchAndStopExternallyStarted_ReconciliationTicker(t *testing.T) {
 	s.ExternallyStartedScanInterval = 20 * time.Millisecond // fire quickly
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent) // no events sent
 	errC := make(chan error, 1)
@@ -199,7 +215,7 @@ func TestWatchAndStopExternallyStarted_ReconciliationTicker(t *testing.T) {
 		return nil
 	}).AnyTimes()
 
-	go s.WatchAndStopExternallyStarted(ctx)
+	startAutostopWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-stopped:
@@ -217,7 +233,6 @@ func TestWatchAndStopExternallyStarted_EventStreamClosed(t *testing.T) {
 	s.ExternallyStartedScanInterval = 20 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
 	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
@@ -243,7 +258,7 @@ func TestWatchAndStopExternallyStarted_EventStreamClosed(t *testing.T) {
 		return nil
 	}).AnyTimes()
 
-	go s.WatchAndStopExternallyStarted(ctx)
+	startAutostopWatcher(t, s, ctx, cancel)
 
 	select {
 	case <-stopped:

@@ -223,3 +223,56 @@ func TestPromRecorder_ActiveInstances(t *testing.T) {
 		t.Errorf("expected redis still present, got %v", got)
 	}
 }
+
+func TestPromRecorder_ActiveSeconds_RecordedOnExpiration(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordActiveInstance("nginx")
+	r.RecordReadyWaitBegin("nginx")
+	r.RecordReadyWaitEnd("nginx")
+	time.Sleep(20 * time.Millisecond)
+	r.RecordInactiveInstance("nginx")
+
+	m := findMetric(t, r, "sablier_instance_active_seconds_total", map[string]string{"instance": "nginx"})
+	if m == nil {
+		t.Fatal("sablier_instance_active_seconds_total{instance=nginx} not found")
+	}
+	if got := m.GetCounter().GetValue(); got <= 0 {
+		t.Errorf("expected positive active seconds, got %v", got)
+	}
+}
+
+func TestPromRecorder_ActiveSeconds_NotRecordedIfNeverReady(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordActiveInstance("nginx")
+	r.RecordReadyWaitBegin("nginx")
+	// instance stopped before becoming ready
+	r.DiscardReadyWait("nginx")
+	r.RecordInactiveInstance("nginx")
+
+	m := findMetric(t, r, "sablier_instance_active_seconds_total", map[string]string{"instance": "nginx"})
+	if m != nil && m.GetCounter().GetValue() > 0 {
+		t.Errorf("expected no active seconds for instance that never became ready, got %v", m.GetCounter().GetValue())
+	}
+}
+
+func TestPromRecorder_ActiveSeconds_AccumulatesAcrossMultipleCycles(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	for range 3 {
+		r.RecordActiveInstance("nginx")
+		r.RecordReadyWaitBegin("nginx")
+		r.RecordReadyWaitEnd("nginx")
+		time.Sleep(10 * time.Millisecond)
+		r.RecordInactiveInstance("nginx")
+	}
+
+	m := findMetric(t, r, "sablier_instance_active_seconds_total", map[string]string{"instance": "nginx"})
+	if m == nil {
+		t.Fatal("sablier_instance_active_seconds_total{instance=nginx} not found")
+	}
+	if got := m.GetCounter().GetValue(); got <= 0 {
+		t.Errorf("expected accumulated active seconds across 3 cycles, got %v", got)
+	}
+}

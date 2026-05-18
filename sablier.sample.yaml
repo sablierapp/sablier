@@ -24,3 +24,25 @@ strategy:
     default-refresh-frequency: 5s
   blocking:
     default-timeout: 1m
+webhooks:
+  endpoints:
+    # Notify an uptime-monitoring service every time an instance starts or stops.
+    # - url: https://uptime.example.com/api/push/xxxxxxxx
+    #   headers:
+    #     Authorization: "Bearer <token>"
+    #   events:
+    #     - started
+    #     - stopped
+tracing:
+  # Set enabled: true to export OpenTelemetry traces.
+  enabled: false
+  # exporterType selects the trace backend: "otlphttp" (default) or "stdout".
+  exporterType: otlphttp
+  # endpoint is the OTLP collector base URL (scheme + host + optional port).
+  # For Jaeger: http://jaeger:4318
+  # For Grafana Tempo: http://tempo:4318
+  endpoint: http://localhost:4318
+  # serviceName is the logical name that appears in the tracing backend.
+  serviceName: sablier
+  # samplingRate controls the fraction of requests traced (0.0 – 1.0).
+  samplingRate: 1.0

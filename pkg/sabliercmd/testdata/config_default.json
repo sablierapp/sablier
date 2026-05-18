@@ -51,5 +51,15 @@
       "DefaultTimeout": 60000000000,
       "DefaultRefreshFrequency": 5000000000
     }
+  },
+  "Webhooks": {
+    "Endpoints": null
+  },
+  "Tracing": {
+    "Enabled": false,
+    "ExporterType": "otlphttp",
+    "Endpoint": "http://localhost:4318",
+    "ServiceName": "sablier",
+    "SamplingRate": 1
   }
 }

@@ -2,23 +2,27 @@ package kubernetes
 
 import (
 	"context"
-	providerConfig "github.com/sablierapp/sablier/pkg/config"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
-	"k8s.io/client-go/kubernetes"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+	k8s "k8s.io/client-go/kubernetes"
+
+	providerConfig "github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 // Interface guard
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client    kubernetes.Interface
+	Client    k8s.Interface
 	delimiter string
 	l         *slog.Logger
+	tracer    trace.Tracer
 }
 
-func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
+func New(ctx context.Context, client *k8s.Clientset, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "kubernetes"))
 
 	info, err := client.ServerVersion()
@@ -36,6 +40,7 @@ func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger,
 		Client:    client,
 		delimiter: config.Delimiter,
 		l:         logger,
+		tracer:    otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil
 
 }

@@ -3,6 +3,7 @@ package sablier_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -142,13 +143,13 @@ func TestRequestSession_RejectsUnlabeledInstances(t *testing.T) {
 	}
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
 
 	session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
 	assert.NilError(t, err)
 
-	var notManaged sablier.ErrInstanceNotManaged
-	assert.Assert(t, errors.As(session.Instances["nginx"].Error, &notManaged))
+	notManaged, ok := errors.AsType[sablier.ErrInstanceNotManaged](session.Instances["nginx"].Error)
+	assert.Assert(t, ok)
 	assert.Equal(t, notManaged.Name, "nginx")
 }
 
@@ -169,8 +170,8 @@ func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
 	notReady.Status = sablier.InstanceStatusStarting
 
 	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(ctx, "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ interface{}, _ string) error {
+	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
 		close(startCalled)
 		return nil
 	})
@@ -217,17 +218,24 @@ func TestRequestSessionGroup_MultipleGroupsFiltering(t *testing.T) {
 		}
 	}
 
-	// Expect only frontend and shared-api to be started (from team-a), NOT backend
+	// Expect only frontend and shared-api to be started (from team-a), NOT backend.
+	// InstanceStart is called asynchronously in a goroutine; use a WaitGroup so
+	// we don't exit the test before both calls have been observed.
+	var startWg sync.WaitGroup
+	startWg.Add(2)
 	for _, name := range []string{"frontend", "shared-api"} {
 		sessions.EXPECT().Get(ctx, name).Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-		provider.EXPECT().InstanceInspect(ctx, name).Return(stoppedInfo(name), nil)
-		provider.EXPECT().InstanceStart(gomock.Any(), name).Return(nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), name).Return(stoppedInfo(name), nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), name).DoAndReturn(func(_ any, _ string) error {
+			startWg.Done()
+			return nil
+		})
 		sessions.EXPECT().Put(ctx, startingInfo(name), time.Minute).Return(nil)
 	}
 
 	// backend should NOT be called at all
 	sessions.EXPECT().Get(ctx, "backend").Times(0)
-	provider.EXPECT().InstanceInspect(ctx, "backend").Times(0)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "backend").Times(0)
 	provider.EXPECT().InstanceStart(gomock.Any(), "backend").Times(0)
 
 	session, err := manager.RequestSessionGroup(ctx, "team-a", time.Minute)
@@ -241,6 +249,16 @@ func TestRequestSessionGroup_MultipleGroupsFiltering(t *testing.T) {
 	assert.Assert(t, hasFrontend, "frontend should be in session")
 	assert.Assert(t, hasSharedAPI, "shared-api should be in session")
 	assert.Assert(t, !hasBackend, "backend should NOT be in session")
+
+	// Wait for both async InstanceStart goroutines to complete so gomock can
+	// verify all expected calls were made before the test exits.
+	done := make(chan struct{})
+	go func() { startWg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceStart goroutines did not complete in time")
+	}
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
@@ -250,7 +268,7 @@ func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(ctx, gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -272,7 +290,7 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 		store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 		store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-		provider.EXPECT().InstanceInspect(t.Context(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
 
 		errchan := make(chan error)
 		go func() {
@@ -280,7 +298,10 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 			errchan <- err
 		}()
 
-		assert.Error(t, <-errchan, "session was not ready after 1s")
+		err := <-errchan
+		timeoutErr, ok := errors.AsType[sablier.ErrTimeout](err)
+		assert.Assert(t, ok)
+		assert.Equal(t, time.Second, timeoutErr.Duration)
 	})
 }
 

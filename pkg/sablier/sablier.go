@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/metrics"
 )
 
@@ -42,6 +45,7 @@ type Sablier struct {
 	verifyEnabledOnExpiration bool
 
 	metrics metrics.Recorder
+	tracer  trace.Tracer
 
 	l *slog.Logger
 }
@@ -54,6 +58,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		pendingStarts:                 map[string]*pendingStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
+		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
 		BlockingRefreshFrequency:      5 * time.Second,
 		InstanceStartTimeout:          5 * time.Minute,
 		ExternallyStartedScanInterval: 30 * time.Second,

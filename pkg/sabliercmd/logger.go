@@ -8,17 +8,19 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/tracing"
 )
 
 func setupLogger(config config.Logging) *slog.Logger {
 	w := os.Stderr
 	level := parseLogLevel(config.Level)
-	// create a new logger
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
+	inner := tint.NewHandler(w, &tint.Options{
 		Level:      level,
 		TimeFormat: time.Kitchen,
 		AddSource:  true,
-	}))
+	})
+	// OTelHandler is a zero-cost pass-through when no span is active.
+	logger := slog.New(tracing.NewOTelHandler(inner))
 
 	return logger
 }

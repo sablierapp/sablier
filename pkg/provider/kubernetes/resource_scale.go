@@ -33,14 +33,14 @@ func buildResourcePatch(containerName, cpu, memory string) ([]byte, error) {
 		limits[corev1.ResourceMemory] = q
 	}
 
-	patch := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []map[string]interface{}{
+	patch := map[string]any{
+		"spec": map[string]any{
+			"template": map[string]any{
+				"spec": map[string]any{
+					"containers": []map[string]any{
 						{
 							"name": containerName,
-							"resources": map[string]interface{}{
+							"resources": map[string]any{
 								"limits": limits,
 							},
 						},

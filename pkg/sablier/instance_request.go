@@ -7,13 +7,18 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/sablierapp/sablier/pkg/store"
 )
 
 type pendingStart struct {
-	done chan struct{}
-	err  error
-	info InstanceInfo // set at creation time; used to return consistent data while starting
+	done    chan struct{}
+	err     error
+	info    InstanceInfo      // set at creation time; used to return consistent data while starting
+	spanCtx trace.SpanContext // OTel context of the triggering request; used to propagate the trace into the goroutine
 }
 
 // consumePendingError checks whether a pending start exists for the given
@@ -64,6 +69,15 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		default:
 			// Still running — return the cached InstanceInfo to preserve provider fields
 			s.l.DebugContext(ctx, "instance start already in progress", slog.String("instance", name))
+			// Record that this request joined an already-running start goroutine so the
+			// two traces can be correlated in the backend.
+			trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
+				trace.WithAttributes(
+					attribute.String("instance", name),
+					attribute.String("pending_trace_id", ps.spanCtx.TraceID().String()),
+					attribute.String("pending_span_id", ps.spanCtx.SpanID().String()),
+				),
+			)
 			info := ps.info
 			s.pendingMu.Unlock()
 			return info, nil
@@ -74,7 +88,14 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	// Inspect outside the lock: this may be a slow remote network call.
 	// If inspect fails (e.g. first boot), fall back to a minimal struct so
 	// the start still proceeds.
-	info, err := s.provider.InstanceInspect(ctx, name)
+	inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
+		trace.WithAttributes(attribute.String("instance", name)))
+	info, err := s.provider.InstanceInspect(inspectCtx, name)
+	inspectSpan.RecordError(err)
+	if err != nil {
+		inspectSpan.SetStatus(codes.Error, err.Error())
+	}
+	inspectSpan.End()
 	if err != nil {
 		if rejectUnlabeled {
 			return InstanceInfo{}, err
@@ -98,12 +119,22 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		default:
 			// A concurrent goroutine won the race; return its cached info.
 			s.l.DebugContext(ctx, "instance start already in progress (post-inspect race)", slog.String("instance", name))
+			trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
+				trace.WithAttributes(
+					attribute.String("instance", name),
+					attribute.String("pending_trace_id", existing.spanCtx.TraceID().String()),
+					attribute.String("pending_span_id", existing.spanCtx.SpanID().String()),
+				),
+			)
 			existingInfo := existing.info
 			s.pendingMu.Unlock()
 			return existingInfo, nil
 		}
 	}
-	ps := &pendingStart{done: make(chan struct{}), info: info}
+	// Capture the OTel span context before releasing the lock so the goroutine
+	// can be parented to the triggering request's trace.
+	spanCtx := trace.SpanContextFromContext(ctx)
+	ps := &pendingStart{done: make(chan struct{}), info: info, spanCtx: spanCtx}
 	s.pendingStarts[name] = ps
 	s.pendingMu.Unlock()
 
@@ -112,21 +143,31 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	s.metrics.RecordReadyWaitBegin(name)
 	s.metrics.RecordActiveInstance(name)
 
-	// Detach from the request context to avoid retaining HTTP request values,
-	// but use a bounded timeout to prevent goroutine leaks.
-	startCtx, cancel := context.WithTimeout(context.Background(), s.InstanceStartTimeout)
+	// Build a background context that carries the OTel span context from the
+	// triggering HTTP request so the async InstanceStart call appears as a child
+	// of that request's trace, without being bound by its cancellation or deadline.
+	startCtx, cancel := context.WithTimeout(
+		trace.ContextWithSpanContext(context.Background(), spanCtx),
+		s.InstanceStartTimeout,
+	)
 
 	go func() {
 		defer cancel()
 		defer close(ps.done)
 		startedAt := time.Now()
+		startCtx, startSpan := s.tracer.Start(startCtx, "sablier.instance.start",
+			trace.WithAttributes(attribute.String("instance", name)))
 		if err := s.provider.InstanceStart(startCtx, name); err != nil {
+			startSpan.RecordError(err)
+			startSpan.SetStatus(codes.Error, err.Error())
+			startSpan.End()
 			ps.err = err
 			s.metrics.RecordInstanceStartFailure(name)
-			s.l.Error("async instance start failed", slog.String("instance", name), slog.Any("error", err))
+			s.l.ErrorContext(startCtx, "async instance start failed", slog.String("instance", name), slog.Any("error", err))
 		} else {
+			startSpan.End()
 			s.metrics.RecordInstanceStartEnd(name, time.Since(startedAt))
-			s.l.InfoContext(ctx, "instance is ready", slog.String("instance", name))
+			s.l.InfoContext(startCtx, "instance is ready", slog.String("instance", name))
 			// Success — clean up immediately so the entry doesn't linger
 			s.pendingMu.Lock()
 			// Only delete if ps is still the current entry (not replaced by a retry)
@@ -174,7 +215,14 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			s.l.DebugContext(ctx, "instance start still in progress, skipping inspect", slog.String("instance", name))
 		} else {
 			s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", string(state.Status)))
-			state, err = s.provider.InstanceInspect(ctx, name)
+			inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
+				trace.WithAttributes(attribute.String("instance", name)))
+			state, err = s.provider.InstanceInspect(inspectCtx, name)
+			inspectSpan.RecordError(err)
+			if err != nil {
+				inspectSpan.SetStatus(codes.Error, err.Error())
+			}
+			inspectSpan.End()
 			if err != nil {
 				return InstanceInfo{}, err
 			}
