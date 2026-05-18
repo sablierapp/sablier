@@ -1,5 +1,54 @@
 # Changelog
 
+## [1.13.0](https://github.com/sablierapp/sablier/compare/v1.12.0...v1.13.0) (2026-05-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* sablier.idle.cpu / sablier.idle.memory no longer enable throttling on their own. Add sablier.idle.replicas=1 to existing workloads that relied on CPU/memory throttling.
+
+### Features
+
+* add --auto-stop-externally-started flag ([#906](https://github.com/sablierapp/sablier/issues/906)) ([d2fd51d](https://github.com/sablierapp/sablier/commit/d2fd51d09692cee90604199aba7d7f61b7bf9ef7))
+* add `--provider.reject-unlabeled-requests` and `--provider.verify-enabled-on-expiration`  ([#901](https://github.com/sablierapp/sablier/issues/901)) ([f1a4e61](https://github.com/sablierapp/sablier/commit/f1a4e617e38a40c2f6a1749face383cf3d9b2c5a))
+* add OpenTelemetry distributed tracing support ([#929](https://github.com/sablierapp/sablier/issues/929)) ([68faefd](https://github.com/sablierapp/sablier/commit/68faefd4bcfb57fa76754bf9aa011334abb11ac4))
+* add replica count to scale mode, gate resource throttling on idle.replicas &gt;= 1 ([#909](https://github.com/sablierapp/sablier/issues/909)) ([5722c6f](https://github.com/sablierapp/sablier/commit/5722c6f831d9c8729d8e2a914e47f9e134e6c5e3))
+* add running-hours keep-warm windows and timezone support ([#907](https://github.com/sablierapp/sablier/issues/907)) ([ed9c611](https://github.com/sablierapp/sablier/commit/ed9c611e180ead41f567f6bbc204ca8dc3a94bbf))
+* add theme options schema ([#917](https://github.com/sablierapp/sablier/issues/917)) ([20828ca](https://github.com/sablierapp/sablier/commit/20828ca6b62010bfb171c07a9d003414508e7889))
+* add webhooks ([#920](https://github.com/sablierapp/sablier/issues/920)) ([a608a8c](https://github.com/sablierapp/sablier/commit/a608a8ccc6bf3a8f6ca4b43e60361ba9dfb9b56e))
+* **api:** add SSE instance events endpoint ([#916](https://github.com/sablierapp/sablier/issues/916)) ([2eccf89](https://github.com/sablierapp/sablier/commit/2eccf89a9cb44b15012d17235bfed6f8ade0bb99))
+* **metrics:** add sablier_instance_active_seconds_total metric ([#932](https://github.com/sablierapp/sablier/issues/932)) ([e92f438](https://github.com/sablierapp/sablier/commit/e92f438b4ca6c86b594058c22523e23cab2b1b8f))
+* **provider:** add ready-after instance configuration ([#904](https://github.com/sablierapp/sablier/issues/904)) ([ff60d31](https://github.com/sablierapp/sablier/commit/ff60d31728f99eb3206c7153dcb80cadeeca89c6))
+* scale mode to throttle CPU/memory instead of stopping containers ([#908](https://github.com/sablierapp/sablier/issues/908)) ([d39804f](https://github.com/sablierapp/sablier/commit/d39804f10ea2b2e605cfa0007d03eb867c92a616))
+* support multiple groups per instance ([#913](https://github.com/sablierapp/sablier/issues/913)) ([5b0f896](https://github.com/sablierapp/sablier/commit/5b0f896d2f63759be3051fa9c9e9e302798d36c4))
+* **theme:** bundle external CSS, JS, and images into custom themes ([#928](https://github.com/sablierapp/sablier/issues/928)) ([e9ba051](https://github.com/sablierapp/sablier/commit/e9ba0515fb49d557790e684598641afedc9b7048))
+
+
+### Bug Fixes
+
+* add missing benchmarks folder ([3b1b421](https://github.com/sablierapp/sablier/commit/3b1b4219b8cfabd3a62e7da67ece0d6069887418))
+* **api:** handle multiple error types ([#921](https://github.com/sablierapp/sablier/issues/921)) ([2dba936](https://github.com/sablierapp/sablier/commit/2dba936e3a72dc8b07d8191df1c6d23b5de3d12a))
+* go routine leak in session request ([#927](https://github.com/sablierapp/sablier/issues/927)) ([91c57c3](https://github.com/sablierapp/sablier/commit/91c57c3b5eb1658df04b2d022e51bf32eb52a4a4))
+* multiple sonarqube fixes ([#924](https://github.com/sablierapp/sablier/issues/924)) ([e5d7546](https://github.com/sablierapp/sablier/commit/e5d7546dd120bb71044b98357b6a15edf2317814))
+* remove built-in configuration file ([#905](https://github.com/sablierapp/sablier/issues/905)) ([9f3dd79](https://github.com/sablierapp/sablier/commit/9f3dd79537e16580a8abae77ecc651c72bb02433))
+* run go fix ([#926](https://github.com/sablierapp/sablier/issues/926)) ([02c1223](https://github.com/sablierapp/sablier/commit/02c12238b462f37c1a59fe1b11d99cc31a558d8a))
+* **webhooks:** avoid gorouting leaks ([#925](https://github.com/sablierapp/sablier/issues/925)) ([c02d98b](https://github.com/sablierapp/sablier/commit/c02d98b95c58a824f531d99bce78c782f1e76f30))
+
+
+### Documentation
+
+* add benchmarking/performance ([#931](https://github.com/sablierapp/sablier/issues/931)) ([33abb7e](https://github.com/sablierapp/sablier/commit/33abb7e0f36855087d0836f0d0dff0156b0f93df))
+* add docker socket proxy example ([#902](https://github.com/sablierapp/sablier/issues/902)) ([af8127b](https://github.com/sablierapp/sablier/commit/af8127b92546c973dde11c190ad46391b955af1a))
+* add table of content divider ([44134a3](https://github.com/sablierapp/sablier/commit/44134a30ccc09a3c8ca43510f38e962cc7bbe4eb))
+* **examples:** example verify enabled on expiration ([#911](https://github.com/sablierapp/sablier/issues/911)) ([3e64b9e](https://github.com/sablierapp/sablier/commit/3e64b9e9098d57dae7d8d46197190d250f1ca70c))
+* release please update version typo ([b92169a](https://github.com/sablierapp/sablier/commit/b92169a028a249db5fa8f194546e511abd07bb82))
+* update configuration docs and README ([#930](https://github.com/sablierapp/sablier/issues/930)) ([57a65d9](https://github.com/sablierapp/sablier/commit/57a65d97ed8e7b1c844db6c6b780195795dc022b))
+
+
+### Code Refactoring
+
+* watch groups through events ([#910](https://github.com/sablierapp/sablier/issues/910)) ([44b57a9](https://github.com/sablierapp/sablier/commit/44b57a99615dd7f7e91af56aedb4fd2fed1a14e4))
+
 ## [1.12.0](https://github.com/sablierapp/sablier/compare/v1.11.2...v1.12.0) (2026-05-13)
 
 
