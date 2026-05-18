@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/sablierapp/sablier/pkg/metrics"
+	"github.com/sablierapp/sablier/pkg/provider"
 )
 
 type Sablier struct {
@@ -121,4 +122,27 @@ func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
 	return s.sessions.Delete(ctx, name)
+}
+
+// SnapshotSessions returns all currently active sessions (keyed by instance name).
+func (s *Sablier) SnapshotSessions(ctx context.Context) ([]InstanceInfo, error) {
+	instances, err := s.provider.InstanceList(ctx, provider.InstanceListOptions{All: true})
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]InstanceInfo, 0, len(instances))
+	for _, cfg := range instances {
+		info, err := s.sessions.Get(ctx, cfg.Name)
+		if err != nil {
+			// Instance is not in session store — it's stopped/idle.
+			info = InstanceInfo{
+				Name:    cfg.Name,
+				Status:  InstanceStatusStopped,
+				Groups:  cfg.Groups,
+				Enabled: cfg.Enabled,
+			}
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
 }

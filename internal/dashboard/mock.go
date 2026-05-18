@@ -7,21 +7,16 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-// MockInstance represents a running/tracked instance for dashboard display.
-type MockInstance struct {
-	Info       sablier.InstanceInfo
-	SessionTTL *time.Duration // nil = no active session
-	ExpiresAt  *time.Time
-	// LastAccess is when the last session request was received for this instance.
-	LastAccess *time.Time
-	// UptimeSlots holds the last N 5-minute buckets: true=up, false=idle/down.
-	UptimeSlots []UptimeSlot
-	// SavedCO2Grams is the estimated grams of CO₂ saved by keeping this instance stopped.
-	SavedCO2Grams float64
-	// IdlePercent is the percentage of time the instance was idle/stopped over the last 24h.
-	IdlePercent float64
-	// TotalDowntimeHours is hours saved over the last 7 days.
-	TotalDowntimeHours float64
+// DashboardInstance is a single instance as shown on the dashboard.
+type DashboardInstance struct {
+	Info sablier.InstanceInfo
+	// EfficiencyPct is the percentage of the uptime window the instance was idle (0–100).
+	// A value of 90 means the instance was stopped 90% of the time Sablier has been running.
+	EfficiencyPct float64
+	// ActiveSeconds is the total seconds the instance spent in the Ready state.
+	ActiveSeconds float64
+	// UptimeWindowSeconds is the total observation window in seconds (since Sablier started).
+	UptimeWindowSeconds float64
 }
 
 // UptimeSlot represents a single 5-minute monitoring window.
@@ -51,18 +46,38 @@ type MockPendingRequest struct {
 
 // DashboardData is the full data model rendered by the dashboard.
 type DashboardData struct {
-	Instances       []MockInstance
-	PendingRequests []MockPendingRequest
-	ProviderConfig  config.Provider
-	SessionConfig   config.Sessions
-	GeneratedAt     time.Time
-	AllGroups       []string // sorted deduplicated list of all groups across instances
+	Instances      []DashboardInstance
+	ProviderConfig config.Provider
+	SessionConfig  config.Sessions
+	GeneratedAt    time.Time
+	AllGroups      []string // sorted deduplicated list of all groups across instances
 }
 
 // clockNow is used in templates (avoids importing time directly there).
 func clockNow() time.Time { return time.Now() }
 
-func MockData() DashboardData {
+// MockInstance is kept for mock data generation only.
+type MockInstance struct {
+	Info        sablier.InstanceInfo
+	SessionTTL  *time.Duration
+	ExpiresAt   *time.Time
+	LastAccess  *time.Time
+	UptimeSlots []UptimeSlot
+	IdlePercent float64
+	// TotalDowntimeHours is hours the instance was stopped (estimate).
+	TotalDowntimeHours float64
+	// SavedCO2Grams is kept for backwards compatibility with mock data only.
+	SavedCO2Grams float64
+}
+
+func MockData() struct {
+	Instances       []MockInstance
+	PendingRequests []MockPendingRequest
+	ProviderConfig  config.Provider
+	SessionConfig   config.Sessions
+	GeneratedAt     time.Time
+	AllGroups       []string
+} {
 	now := time.Now()
 
 	ttl5m := 5 * time.Minute
@@ -251,7 +266,14 @@ func MockData() DashboardData {
 		ExpirationInterval: 20 * time.Second,
 	}
 
-	return DashboardData{
+	return struct {
+		Instances       []MockInstance
+		PendingRequests []MockPendingRequest
+		ProviderConfig  config.Provider
+		SessionConfig   config.Sessions
+		GeneratedAt     time.Time
+		AllGroups       []string
+	}{
 		Instances:       instances,
 		PendingRequests: pendingRequests,
 		ProviderConfig:  providerConf,

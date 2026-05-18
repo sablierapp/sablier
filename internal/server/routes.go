@@ -5,8 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sablierapp/sablier/internal/api"
+	"github.com/sablierapp/sablier/internal/dashboard"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/metrics"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.Server, s *api.ServeStrategy) {
@@ -26,4 +28,20 @@ func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.S
 	api.StartBlocking(APIv1, s)
 	api.ListThemes(APIv1, s)
 	api.InstanceEvents(APIv1, s)
+
+	var snapProvider dashboard.SnapshotProvider
+	if sp, ok := s.Sablier.(interface {
+		SnapshotSessions(ctx context.Context) ([]sablier.InstanceInfo, error)
+		Groups() map[string][]string
+	}); ok {
+		snapProvider = sp
+	}
+
+	dashHandler := &dashboard.Handler{
+		Sablier:        snapProvider,
+		Metrics:        s.Metrics,
+		ProviderConfig: s.ProviderConfig,
+		SessionConfig:  s.SessionsConfig,
+	}
+	dashboard.Register(base.Group("/dashboard"), dashHandler)
 }

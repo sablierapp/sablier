@@ -174,6 +174,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		Metrics:        rec,
 		StrategyConfig: conf.Strategy,
 		SessionsConfig: conf.Sessions,
+		ProviderConfig: conf.Provider,
 	}
 
 	go server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)

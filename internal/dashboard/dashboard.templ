@@ -18,12 +18,18 @@ templ DashboardPage(data DashboardData) {
 			errored  := countByStatus(data.Instances, sablier.InstanceStatusError)
 			stopped  := countByStatus(data.Instances, sablier.InstanceStatusStopped)
 			active   := ready + starting
-			pending  := len(data.PendingRequests)
-			totalCO2 := 0.0
-			totalHours := 0.0
+			// Compute average efficiency across instances with a known window.
+			effSum   := 0.0
+			effCount := 0
 			for _, inst := range data.Instances {
-				totalCO2 += inst.SavedCO2Grams
-				totalHours += inst.TotalDowntimeHours
+				if inst.UptimeWindowSeconds > 0 {
+					effSum += inst.EfficiencyPct
+					effCount++
+				}
+			}
+			avgEff := 0.0
+			if effCount > 0 {
+				avgEff = effSum / float64(effCount)
 			}
 		}}
 		<div class="stat-row" id="overview">
@@ -42,34 +48,11 @@ templ DashboardPage(data DashboardData) {
 				<div class={ "stat-value", templ.KV("red", errored > 0) } id="stat-errors">{ fmt.Sprint(errored) }</div>
 				<div class="stat-sub">need attention</div>
 			</div>
-			<div class="stat-card amber">
-				<div class="stat-label">Pending requests</div>
-				<div class={ "stat-value", templ.KV("amber", pending > 0) } id="stat-pending">{ fmt.Sprint(pending) }</div>
-				<div class="stat-sub">{ data.ProviderConfig.Name } provider</div>
+			<div class="stat-card gold">
+				<div class="stat-label">Efficiency score</div>
+				<div class="stat-value gold" id="stat-efficiency">{ fmt.Sprintf("%.0f", avgEff) }<span style="font-size:13px;font-weight:400;color:var(--text-muted)">/100</span></div>
+				<div class="stat-sub">avg idle fraction · since startup</div>
 			</div>
-		</div>
-
-		<div class="savings-banner">
-			<div class="savings-item">
-				<div class="savings-item-label">Compute saved</div>
-				<div class="savings-item-value" id="stat-hours">{ fmt.Sprintf("%.0f", totalHours) }<span class="savings-item-unit">h</span></div>
-			</div>
-			<div class="savings-sep"></div>
-			<div class="savings-item">
-				<div class="savings-item-label">CO2 avoided</div>
-				<div class="savings-item-value" id="stat-co2">{ fmt.Sprintf("%.0f", totalCO2) }<span class="savings-item-unit">g</span></div>
-			</div>
-			<div class="savings-sep"></div>
-			<div class="savings-item">
-				<div class="savings-item-label">Energy saved</div>
-				<div class="savings-item-value">{ fmt.Sprintf("%.1f", totalHours*0.08) }<span class="savings-item-unit">kWh</span></div>
-			</div>
-			<div class="savings-sep"></div>
-			<div class="savings-item">
-				<div class="savings-item-label">Cost equivalent</div>
-				<div class="savings-item-value">{ fmt.Sprintf("$%.2f", totalHours*0.08*0.12) }</div>
-			</div>
-			<div class="savings-tagline">Every idle moment is a resource saved — Sablier makes your infrastructure efficient.</div>
 		</div>
 
 		<div class="section" id="instances">
@@ -88,8 +71,7 @@ templ DashboardPage(data DashboardData) {
 					<select class="sort-select" onchange="setSort(this.value)">
 						<option value="name">Sort: Name</option>
 						<option value="status">Sort: Status</option>
-						<option value="ttl">Sort: TTL</option>
-						<option value="idle">Sort: Idle %</option>
+						<option value="efficiency">Sort: Efficiency</option>
 					</select>
 				</div>
 				<div class="filter-pills" id="group-pills">
@@ -106,9 +88,9 @@ templ DashboardPage(data DashboardData) {
 						<th data-sort="status" onclick="setSort('status')">Status</th>
 						<th>Provider</th>
 						<th>Groups</th>
-						<th data-sort="ttl" onclick="setSort('ttl')">Session TTL</th>
 						<th>Last access</th>
-						<th data-sort="idle" onclick="setSort('idle')">24h activity</th>
+						<th>Expires in</th>
+						<th data-sort="efficiency" onclick="setSort('efficiency')">Efficiency</th>
 					</tr>
 				</thead>
 				<tbody id="instances-tbody">
@@ -123,39 +105,11 @@ templ DashboardPage(data DashboardData) {
 			</table>
 		</div>
 
-		<div class="section" id="pending">
-			<div class="section-header">
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-				<span class="section-title">Pending requests</span>
-				<span class="section-count" id="pending-count">{ fmt.Sprint(pending) }</span>
-			</div>
-			<table>
-				<thead>
-					<tr>
-						<th>Request ID</th>
-						<th>Target</th>
-						<th>Waiting</th>
-						<th>Timeout</th>
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody id="pending-tbody">
-					if len(data.PendingRequests) == 0 {
-						<tr><td colspan="5"><div class="empty-state">No pending requests.</div></td></tr>
-					} else {
-						for _, req := range data.PendingRequests {
-							@pendingRowSSR(req)
-						}
-					}
-				</tbody>
-			</table>
-		</div>
-
 		@configSection(data)
 	}
 }
 
-templ instanceRowSSR(inst MockInstance) {
+templ instanceRowSSR(inst DashboardInstance) {
 	<tr onclick={ templ.ComponentScript{Call: fmt.Sprintf("openModal('%s')", inst.Info.Name)} } title="Click for details">
 		<td style="font-weight:500">{ inst.Info.Name }</td>
 		<td>
@@ -174,62 +128,29 @@ templ instanceRowSSR(inst MockInstance) {
 				}
 			}
 		</td>
-		<td>@ttlBar(inst.ExpiresAt, inst.SessionTTL)</td>
 		<td>
-			if inst.LastAccess != nil {
-				<span class="last-access">{ fmtDuration(clockNow().Sub(*inst.LastAccess)) } ago</span>
+			if inst.Info.ReadyAt != nil {
+				<span class="last-access">{ fmtDuration(clockNow().Sub(*inst.Info.ReadyAt)) } ago</span>
 			} else {
 				<span class="last-access">—</span>
 			}
 		</td>
 		<td>
-			<div class="uptime-bar">
-				for _, slot := range uptimeTail(inst.UptimeSlots, 144) {
-					<div class={ "uptime-slot", slotClass(slot.State) }></div>
-				}
-			</div>
-			if inst.IdlePercent > 0 {
+			if inst.Info.ExpiresAt != nil && inst.Info.ExpiresAt.After(clockNow()) {
+				<span class="expires-in">{ fmtDuration(inst.Info.ExpiresAt.Sub(clockNow())) }</span>
+			} else {
+				<span style="color:var(--text-sub)">—</span>
+			}
+		</td>
+		<td>
+			if inst.UptimeWindowSeconds > 0 {
 				<div style="margin-top:3px;font-size:11px">
-					<span style="color:var(--gold);font-weight:600">{ fmt.Sprintf("%.0f%%", inst.IdlePercent) }</span>
+					<span style="color:var(--gold);font-weight:600">{ fmt.Sprintf("%.0f%%", inst.EfficiencyPct) }</span>
 					<span style="color:var(--text-sub)"> idle</span>
 				</div>
-			}
-		</td>
-	</tr>
-}
-
-templ pendingRowSSR(req MockPendingRequest) {
-	{{
-		pct := int(0)
-		if req.Timeout > 0 {
-			elapsed := clockNow().Sub(req.RequestedAt)
-			pct = int(100 * elapsed.Seconds() / req.Timeout.Seconds())
-			if pct > 100 { pct = 100 }
-		}
-	}}
-	<tr>
-		<td class="mono" style="color:var(--text-sub)">{ req.ID }</td>
-		<td>
-			if req.Group != "" {
-				<span class="group-pill">group: { req.Group }</span>
 			} else {
-				for _, n := range req.Names {
-					<span class="group-pill">{ n }</span>
-				}
+				<span style="color:var(--text-sub)">—</span>
 			}
-		</td>
-		<td style="color:var(--text-muted)">{ fmtDuration(clockNow().Sub(req.RequestedAt)) }</td>
-		<td style="color:var(--text-muted)">{ fmtDuration(req.Timeout) }</td>
-		<td>
-			<div class="ttl-wrap" style="min-width:80px">
-				<span class="badge badge-pending"><span class="badge-dot"></span>waiting</span>
-				<div class="ttl-bar-bg">
-					<div
-						class={ "ttl-bar-fill", templ.KV("low", pct > 60), templ.KV("crit", pct > 85) }
-						style={ fmt.Sprintf("width:%d%%", pct) }
-					></div>
-				</div>
-			</div>
 		</td>
 	</tr>
 }
@@ -285,7 +206,7 @@ templ configSection(data DashboardData) {
 	</div>
 }
 
-func countByStatus(instances []MockInstance, status sablier.InstanceStatus) int {
+func countByStatus(instances []DashboardInstance, status sablier.InstanceStatus) int {
 	n := 0
 	for _, i := range instances {
 		if i.Info.Status == status {
@@ -300,24 +221,4 @@ func shortImage(image string) string {
 		image = image[idx+1:]
 	}
 	return image
-}
-
-func uptimeTail(slots []UptimeSlot, n int) []UptimeSlot {
-	if len(slots) <= n {
-		return slots
-	}
-	return slots[len(slots)-n:]
-}
-
-func slotClass(s SlotState) string {
-	switch s {
-	case SlotStateUp:
-		return "up"
-	case SlotStateStarting:
-		return "starting"
-	case SlotStateError:
-		return "error"
-	default:
-		return "idle"
-	}
 }

@@ -13,7 +13,8 @@ var histogramBuckets = []float64{0.1, 0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300}
 
 // PromRecorder is the Prometheus-backed Recorder.
 type PromRecorder struct {
-	registry *prometheus.Registry
+	registry  *prometheus.Registry
+	StartedAt time.Time
 
 	sessionRequests        *prometheus.CounterVec
 	instanceStartFailures  *prometheus.CounterVec
@@ -37,6 +38,7 @@ func NewPromRecorder() *PromRecorder {
 
 	r := &PromRecorder{
 		registry:        reg,
+		StartedAt:       time.Now(),
 		activeInstances: make(map[string]struct{}),
 		activeSince:     make(map[string]time.Time),
 		readyWait:       make(map[string]time.Time),
@@ -201,4 +203,41 @@ func (r *PromRecorder) SnapshotActiveInstances() map[string]struct{} {
 		out[k] = struct{}{}
 	}
 	return out
+}
+
+// ActiveSecondsSnapshot returns per-instance accumulated active seconds.
+// For instances currently in the Ready state, the ongoing active period is
+// included so the value is always up to date.
+func (r *PromRecorder) ActiveSecondsSnapshot() map[string]float64 {
+	result := make(map[string]float64)
+
+	// Harvest committed values from the Prometheus counter.
+	mfs, err := r.registry.Gather()
+	if err == nil {
+		for _, mf := range mfs {
+			if mf.GetName() != "sablier_instance_active_seconds_total" {
+				continue
+			}
+			for _, m := range mf.GetMetric() {
+				var name string
+				for _, lp := range m.GetLabel() {
+					if lp.GetName() == "instance" {
+						name = lp.GetValue()
+					}
+				}
+				if name != "" {
+					result[name] = m.GetCounter().GetValue()
+				}
+			}
+		}
+	}
+
+	// Add ongoing active durations for instances still in the Ready state.
+	r.activeMu.RLock()
+	for inst, since := range r.activeSince {
+		result[inst] += time.Since(since).Seconds()
+	}
+	r.activeMu.RUnlock()
+
+	return result
 }

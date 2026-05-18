@@ -52,6 +52,11 @@ type InstanceInfo struct {
 	// the sablier.running-hours label (format: HH:MM-HH:MM).
 	RunningHours string `json:"runningHours,omitempty"`
 
+	// ExpiresAt is the absolute time at which this session will expire.
+	// It is set by Sablier whenever a session is written to the store and
+	// reflects the deadline of the most recent Put call.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+
 	// ScaleConfig configures resource-based scale mode for this instance.
 	// When present, Sablier throttles CPU/memory instead of stopping the container.
 	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`

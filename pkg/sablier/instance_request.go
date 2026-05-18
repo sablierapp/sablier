@@ -249,6 +249,8 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 
 	s.l.DebugContext(ctx, "set expiration for instance", slog.String("instance", name), slog.Duration("expiration", effectiveDuration))
 
+	expiresAt := time.Now().Add(effectiveDuration)
+	state.ExpiresAt = &expiresAt
 	err = s.sessions.Put(ctx, state, effectiveDuration)
 	if err != nil {
 		s.l.ErrorContext(ctx, "could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))

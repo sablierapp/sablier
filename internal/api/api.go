@@ -28,6 +28,7 @@ type ServeStrategy struct {
 	Metrics        metrics.Recorder
 	StrategyConfig config.Strategy
 	SessionsConfig config.Sessions
+	ProviderConfig config.Provider
 }
 
 // recordSessionRequest emits the session-request counter for the given strategy
