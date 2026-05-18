@@ -14,7 +14,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/metrics"
 	provpkg "github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
-	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"github.com/sablierapp/sablier/pkg/tracing"
 	"github.com/sablierapp/sablier/pkg/version"
 	"github.com/sablierapp/sablier/pkg/webhook"
@@ -73,7 +72,8 @@ func Start(ctx context.Context, conf config.Config) error {
 	}
 
 	rec := buildRecorder(conf.Server.Metrics.Enabled)
-	store := inmemory.NewInMemory()
+	store, save := setupStorage(ctx, logger, conf)
+
 	s := sablier.New(logger, store, provider)
 	s.WithMetrics(rec)
 	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
@@ -186,6 +186,8 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
+	save()
 
 	logger.InfoContext(ctx, "Server exiting")
 
