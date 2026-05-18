@@ -44,6 +44,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
 - [Observability](#observability)
   - [Metrics](#metrics)
   - [Tracing](#tracing)
+- [Performance](#performance)
 - [Usage with Reverse Proxies](#usage-with-reverse-proxies)
   - [Apache APISIX](#apache-apisix)
   - [Caddy](#caddy)
@@ -532,6 +533,20 @@ tracing:
 ```
 
 📚 **[Full Documentation](https://sablierapp.dev/#/tracing)**
+
+---
+
+## Performance
+
+Sablier adds **~1.5–2 ms of latency** per request at steady state (session cache hot, container already running), sustaining ~5,000–5,750 req/s on a single core. Cold starts depend entirely on container startup time; once the container is ready, subsequent requests return to warm latency immediately.
+
+| Scenario | Req/s | p50 latency | p99 latency |
+|---|---|---|---|
+| Blocking, warm session | 5,751 | 1.54 ms | 4.94 ms |
+| Dynamic, warm session | 5,066 | 1.81 ms | 4.62 ms |
+| Dynamic, not-ready | 4,663 | 1.93 ms | 5.88 ms |
+
+📚 **[Full benchmark methodology and results](https://sablierapp.dev/#/performance)**
 
 ---
 
