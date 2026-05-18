@@ -6,6 +6,7 @@
 - [Themes](/themes)
 - [Webhooks](/webhooks)
 - [Tracing](/tracing)
+- [Performance](/performance)
 - [Versioning](/versioning)
 - **Providers**
   - [Overview](/providers/overview)
