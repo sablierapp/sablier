@@ -22,7 +22,7 @@ func TestKubernetesProvider_InstanceList(t *testing.T) {
 
 	ctx := t.Context()
 	kind := sharedKinD
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	p, err := kubernetes.New(ctx, kind.client, kind.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
 	d1, err := kind.CreateMimicDeployment(ctx, MimicOptions{
@@ -112,7 +112,7 @@ func TestKubernetesProvider_InstanceGroups(t *testing.T) {
 
 	ctx := t.Context()
 	kind := sharedKinD
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	p, err := kubernetes.New(ctx, kind.client, kind.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
 	assert.NilError(t, err)
 
 	d1, err := kind.CreateMimicDeployment(ctx, MimicOptions{

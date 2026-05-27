@@ -16,7 +16,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -29,7 +31,9 @@ var sharedKinD *kindContainer
 
 type kindContainer struct {
 	testcontainers.Container
-	client *kubernetes.Clientset
+	client  *kubernetes.Clientset
+	dynamic dynamic.Interface
+	restcfg *rest.Config
 }
 
 type MimicOptions struct {
@@ -175,9 +179,17 @@ func TestMain(m *testing.M) {
 		log.Fatalf("failed to create kubernetes client: %v", err)
 	}
 
+	dyn, err := dynamic.NewForConfig(restcfg)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to create dynamic client: %v", err)
+	}
+
 	sharedKinD = &kindContainer{
 		Container: kind,
 		client:    k8s,
+		dynamic:   dyn,
+		restcfg:   restcfg,
 	}
 
 	code := m.Run()

@@ -27,6 +27,13 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		return err
 	}
 
+	// CloudNativePG Clusters are resumed by clearing the hibernation annotation
+	// rather than scaling a replica count, so they bypass the scale-mode logic.
+	if parsed.Kind == KindCNPGCluster {
+		span.SetAttributes(attribute.String("operation", "cnpg_resume"))
+		return p.clusterHibernate(ctx, parsed, false)
+	}
+
 	labels, err := p.getWorkloadLabels(ctx, parsed)
 	if err != nil {
 		return err
