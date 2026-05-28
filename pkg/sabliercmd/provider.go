@@ -19,6 +19,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"k8s.io/client-go/dynamic"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -60,7 +61,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, err
 		}
-		return kubernetes.New(ctx, cli, logger, config.Kubernetes)
+		// dynamicCli manages Custom Resources (e.g. CloudNativePG Clusters) that
+		// the typed clientset cannot reach. It shares the same instrumented config.
+		dynamicCli, err := dynamic.NewForConfig(kubeclientConfig)
+		if err != nil {
+			return nil, err
+		}
+		return kubernetes.New(ctx, cli, dynamicCli, logger, config.Kubernetes)
 	case "podman":
 		opts := []client.Opt{client.FromEnv}
 		if config.Podman.Uri != "" {

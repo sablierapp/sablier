@@ -25,7 +25,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 	conf := config.NewProviderConfig().Kubernetes
 	conf.QPS = 100
 	conf.Burst = 100
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	p, err := kubernetes.New(ctx, kind.client, kind.dynamic, slogt.New(t), conf)
 	assert.NilError(t, err)
 
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
@@ -138,7 +138,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 	conf := config.NewProviderConfig().Kubernetes
 	conf.QPS = 100
 	conf.Burst = 100
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	p, err := kubernetes.New(ctx, kind.client, kind.dynamic, slogt.New(t), conf)
 	assert.NilError(t, err)
 
 	t.Run("deployment is scaled from 0 replicas", func(t *testing.T) {
@@ -237,7 +237,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 	conf := config.NewProviderConfig().Kubernetes
 	conf.QPS = 100
 	conf.Burst = 100
-	p, err := kubernetes.New(ctx, kind.client, slogt.New(t), conf)
+	p, err := kubernetes.New(ctx, kind.client, kind.dynamic, slogt.New(t), conf)
 	assert.NilError(t, err)
 
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{

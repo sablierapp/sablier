@@ -19,5 +19,11 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	go informer.Run(ctx.Done())
 	informer = p.watchStatefulSets(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved)
 	go informer.Run(ctx.Done())
+	// Only watch CloudNativePG Clusters when the CRD is present, to avoid noisy
+	// list/watch errors on clusters that don't run CloudNativePG.
+	if p.clusterCRDInstalled(ctx) {
+		informer = p.watchClusters(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved)
+		go informer.Run(ctx.Done())
+	}
 	return sablier.InstanceEventStream{Events: eventsC, Err: errC}
 }
