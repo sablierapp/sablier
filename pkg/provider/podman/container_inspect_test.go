@@ -206,10 +206,15 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A container that exited successfully and is not configured to be
+			// restarted (default restart policy "no") is treated as a completed
+			// one-shot/init container and reported as ready. The podman provider
+			// delegates inspection to the docker provider, so it shares this
+			// behaviour. See https://github.com/sablierapp/sablier/issues/952
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusStopped,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},
