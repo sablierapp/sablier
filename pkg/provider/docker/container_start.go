@@ -75,6 +75,14 @@ func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
 		return nil
 	}
 
+	// A container that is already running (and not paused) needs no action.
+	// This is common for always-on depends_on dependencies that Sablier does
+	// not manage; starting them again would fail with a conflict error.
+	if spec.Container.State.Running && !spec.Container.State.Paused {
+		span.SetAttributes(attribute.String("operation", "noop.already_running"))
+		return nil
+	}
+
 	if p.strategy == "pause" {
 		span.SetAttributes(attribute.String("operation", "unpause"))
 		return p.dockerUnpause(ctx, name)

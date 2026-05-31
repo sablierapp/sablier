@@ -85,11 +85,11 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			}
 		} else {
 			// The container exited successfully and Docker will not restart it
-			// (restart policy "no" or "on-failure"). This is typically a
-			// one-shot / init container (e.g. a database migration) that has
-			// completed its job. Respect the restart policy and report it as
-			// ready so that Sablier does not keep restarting it. The container
-			// is not running, so CurrentReplicas stays 0.
+			// (restart policy "no" or "on-failure"). This is a one-shot / init
+			// container (e.g. a database migration) that has completed its job.
+			// Respect the restart policy and report it as ready so that Sablier
+			// does not keep restarting it. The container is not running, so
+			// CurrentReplicas stays 0.
 			// See https://github.com/sablierapp/sablier/issues/952
 			info = sablier.InstanceInfo{
 				Name:            name,

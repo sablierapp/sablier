@@ -55,6 +55,12 @@ func (p *Provider) checkDependencyCondition(ctx context.Context, name, condition
 		if state.ExitCode != 0 {
 			return false, fmt.Errorf("container exited with code %d", state.ExitCode)
 		}
+		// A container with always/unless-stopped restart policy is only
+		// transiently exited; Docker will restart it, so it has not
+		// "completed successfully" yet.
+		if restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
+			return false, nil
+		}
 		return true, nil
 	case conditionServiceHealthy:
 		// A running container without a healthcheck can never become healthy:
