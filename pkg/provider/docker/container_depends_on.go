@@ -4,144 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
 	"strings"
-	"time"
 
-	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 )
 
-const (
-	// composeProjectLabel identifies the Docker Compose project a container belongs to.
-	composeProjectLabel = "com.docker.compose.project"
-	// composeServiceLabel identifies the Docker Compose service a container implements.
-	composeServiceLabel = "com.docker.compose.service"
-	// composeDependsOnLabel stores the service dependencies of a container.
-	// Its value is a comma-separated list of "service:condition:restart" entries,
-	// e.g. "db:service_healthy:false,migration:service_completed_successfully:false".
-	composeDependsOnLabel = "com.docker.compose.depends_on"
-)
-
-// Docker Compose depends_on conditions.
-const (
-	conditionServiceStarted               = "service_started"
-	conditionServiceHealthy               = "service_healthy"
-	conditionServiceCompletedSuccessfully = "service_completed_successfully"
-	conditionServiceRunningOrHealthy      = "service_running_or_healthy"
-)
-
-// dependencyPollInterval is how often the dependency conditions are re-checked
-// while waiting for them to be satisfied.
-const dependencyPollInterval = 500 * time.Millisecond
-
-// composeDependency represents a single Docker Compose depends_on edge.
-type composeDependency struct {
-	Service   string
-	Condition string
-}
-
-// parseComposeDependsOn parses the value of the com.docker.compose.depends_on
-// label into a list of dependencies. The expected format is a comma-separated
-// list of "service:condition:restart" entries. Malformed entries are skipped.
-func parseComposeDependsOn(label string) []composeDependency {
-	label = strings.TrimSpace(label)
-	if label == "" {
-		return nil
-	}
-
-	var deps []composeDependency
-	for _, entry := range strings.Split(label, ",") {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		parts := strings.Split(entry, ":")
-		if len(parts) < 2 || parts[0] == "" {
-			continue
-		}
-		deps = append(deps, composeDependency{
-			Service:   parts[0],
-			Condition: parts[1],
-		})
-	}
-	return deps
-}
-
-// treeDep is a single resolved depends_on dependency of a node: the dependency
-// container name and the condition that must be satisfied before the dependent
-// container is started.
-type treeDep struct {
-	name      string
-	condition string
-}
-
-// dependencyTree is the resolved depends_on graph rooted at a single instance.
-// nodes maps each container name to its direct dependencies. Every node that
-// appears anywhere in the tree has an entry (leaves map to an empty slice).
+// buildDependencyTree resolves the depends_on graph reachable from root by
+// inspecting containers and following their com.docker.compose.depends_on
+// labels. Dependencies with no matching container are skipped with a warning.
 //
-// Although a Compose project's depends_on graph is meant to be a Directed
-// Acyclic Graph (DAG), a misconfiguration can introduce a cycle. The tree is
-// therefore validated with hasCycle before it is used.
-type dependencyTree struct {
-	root  string
-	nodes map[string][]treeDep
-}
-
-// hasCycle reports whether the dependency tree contains a cycle. When it does,
-// it also returns a human-readable description of the offending path.
-//
-// It is a depth-first search using the classic three-color marking, mirroring
-// how Docker Compose detects cycles in its own dependency graph
-// (see pkg/compose/dependencies.go: Graph.HasCycles).
-func (t *dependencyTree) hasCycle() (bool, string) {
-	const (
-		visiting = 1 // on the current DFS path (grey)
-		visited  = 2 // fully explored (black)
-	)
-
-	state := make(map[string]int, len(t.nodes))
-
-	var visit func(node string, path []string) (bool, string)
-	visit = func(node string, path []string) (bool, string) {
-		state[node] = visiting
-		path = append(path, node)
-		for _, dep := range t.nodes[node] {
-			switch state[dep.name] {
-			case visiting:
-				return true, strings.Join(append(path, dep.name), " -> ")
-			case visited:
-				continue
-			default:
-				if cyclic, p := visit(dep.name, path); cyclic {
-					return true, p
-				}
-			}
-		}
-		state[node] = visited
-		return false, ""
-	}
-
-	for node := range t.nodes {
-		if state[node] == 0 {
-			if cyclic, p := visit(node, nil); cyclic {
-				return true, p
-			}
-		}
-	}
-	return false, ""
-}
-
-// buildDependencyTree walks the Docker Compose depends_on dependencies starting
-// from root and builds the resolved dependency tree. Dependencies that cannot
-// be resolved to a container (for example external services not managed by this
-// Compose project) are skipped with a warning.
-//
-// A node is recorded before its dependencies are walked, so a cyclic compose
-// definition does not cause infinite recursion: the cycle is recorded in full
-// and later detected by dependencyTree.hasCycle.
+// Each node is recorded before its dependencies are walked, so a cyclic Compose
+// definition terminates instead of recursing forever; the cycle is then
+// reported by dependencyTree.hasCycle.
 func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*dependencyTree, error) {
-	tree := &dependencyTree{nodes: make(map[string][]treeDep)}
+	tree := &dependencyTree{nodes: make(map[string][]dependency)}
 
 	var walk func(name string) (string, error)
 	walk = func(name string) (string, error) {
@@ -157,10 +33,9 @@ func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*depen
 
 		labels := spec.Container.Config.Labels
 		project := labels[composeProjectLabel]
-		deps := parseComposeDependsOn(labels[composeDependsOnLabel])
 
-		nodeDeps := make([]treeDep, 0, len(deps))
-		for _, dep := range deps {
+		var deps []dependency
+		for _, dep := range parseComposeDependsOn(labels[composeDependsOnLabel]) {
 			depName, err := p.findComposeContainer(ctx, project, dep.Service)
 			if err != nil {
 				return "", err
@@ -172,40 +47,35 @@ func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*depen
 				)
 				continue
 			}
-			nodeDeps = append(nodeDeps, treeDep{name: depName, condition: dep.Condition})
+			deps = append(deps, dependency{name: depName, condition: dep.Condition})
 		}
 
-		// Record the node before recursing to break cycles while building.
-		tree.nodes[canonical] = nodeDeps
-
-		for _, dep := range nodeDeps {
+		tree.nodes[canonical] = deps
+		for _, dep := range deps {
 			if _, err := walk(dep.name); err != nil {
 				return "", err
 			}
 		}
-
 		return canonical, nil
 	}
 
-	rootName, err := walk(root)
+	root, err := walk(root)
 	if err != nil {
 		return nil, err
 	}
-	tree.root = rootName
+	tree.root = root
 	return tree, nil
 }
 
-// startTree starts every container in the validated dependency tree in
-// dependency order: a container is started only once all of its depends_on
-// dependencies have been started and have satisfied their declared condition.
+// startTree starts every container in tree in dependency order: a container is
+// started only after each of its dependencies has started and satisfied its
+// condition. tree must be acyclic.
 func (p *Provider) startTree(ctx context.Context, tree *dependencyTree) error {
 	return p.resolveNode(ctx, tree, tree.root, make(map[string]struct{}))
 }
 
-// resolveNode starts node after recursively starting and waiting for its
-// dependencies. The tree is guaranteed acyclic (validated by hasCycle before
-// startTree is called), so the recursion always terminates; started guards
-// against starting a shared dependency more than once.
+// resolveNode starts node after starting and waiting for its dependencies.
+// started guards against starting a shared dependency more than once.
 func (p *Provider) resolveNode(ctx context.Context, tree *dependencyTree, node string, started map[string]struct{}) error {
 	if _, ok := started[node]; ok {
 		return nil
@@ -229,129 +99,4 @@ func (p *Provider) resolveNode(ctx context.Context, tree *dependencyTree, node s
 	}
 	started[node] = struct{}{}
 	return nil
-}
-
-// findComposeContainer returns the container name for the given Compose project
-// and service. It returns an empty name (and no error) when no matching
-// container exists.
-//
-// Multiple containers can match the same project+service labels (scaled
-// services, or leftover containers from a previous run). The Docker API does
-// not guarantee any ordering, so the selection is made deterministic: a running
-// container is preferred, otherwise the lexicographically smallest name is
-// chosen.
-func (p *Provider) findComposeContainer(ctx context.Context, project, service string) (string, error) {
-	filters := client.Filters{}
-	if project != "" {
-		filters.Add("label", fmt.Sprintf("%s=%s", composeProjectLabel, project))
-	}
-	filters.Add("label", fmt.Sprintf("%s=%s", composeServiceLabel, service))
-
-	containers, err := p.Client.ContainerList(ctx, client.ContainerListOptions{
-		All:     true,
-		Filters: filters,
-	})
-	if err != nil {
-		return "", fmt.Errorf("cannot list containers for dependency %s: %w", service, err)
-	}
-
-	var names, running []string
-	for _, c := range containers.Items {
-		if len(c.Names) == 0 {
-			continue
-		}
-		name := strings.TrimPrefix(c.Names[0], "/")
-		names = append(names, name)
-		if c.State == container.StateRunning {
-			running = append(running, name)
-		}
-	}
-
-	if len(running) > 0 {
-		sort.Strings(running)
-		return running[0], nil
-	}
-	if len(names) == 0 {
-		return "", nil
-	}
-	sort.Strings(names)
-	return names[0], nil
-}
-
-// waitForDependencyCondition blocks until the given container satisfies the
-// requested Docker Compose depends_on condition, the context is cancelled, or
-// the dependency fails (e.g. a service_completed_successfully dependency that
-// exits with a non-zero code).
-func (p *Provider) waitForDependencyCondition(ctx context.Context, name, condition string) error {
-	for {
-		satisfied, err := p.checkDependencyCondition(ctx, name, condition)
-		if err != nil {
-			return err
-		}
-		if satisfied {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(dependencyPollInterval):
-		}
-	}
-}
-
-// checkDependencyCondition reports whether the container currently satisfies the
-// requested condition. It returns an error when the condition can never be
-// satisfied (e.g. the container exited unsuccessfully for a
-// service_completed_successfully dependency).
-func (p *Provider) checkDependencyCondition(ctx context.Context, name, condition string) (bool, error) {
-	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
-	if err != nil {
-		return false, fmt.Errorf("cannot inspect dependency %s: %w", name, err)
-	}
-	state := spec.Container.State
-
-	switch condition {
-	case conditionServiceCompletedSuccessfully:
-		if state.Status != container.StateExited {
-			return false, nil
-		}
-		if state.ExitCode != 0 {
-			return false, fmt.Errorf("container exited with code %d", state.ExitCode)
-		}
-		return true, nil
-	case conditionServiceHealthy:
-		// A service_healthy dependency on a container without a healthcheck can
-		// never be satisfied. Fail fast with a clear error instead of looping
-		// until the context deadline is exceeded. The container must be running
-		// before its health can be evaluated, so only fail once it is up.
-		if state.Running && state.Health == nil {
-			return false, fmt.Errorf("dependency %s has no healthcheck configured but condition %q requires one", name, conditionServiceHealthy)
-		}
-		return isHealthy(state, false), nil
-	case conditionServiceRunningOrHealthy:
-		return isHealthy(state, true), nil
-	case conditionServiceStarted, "":
-		// Default to service_started semantics for unknown/empty conditions.
-		return state.Running, nil
-	default:
-		p.l.WarnContext(ctx, "unsupported depends_on condition, falling back to service_started",
-			slog.String("dependency", name),
-			slog.String("condition", condition),
-		)
-		return state.Running, nil
-	}
-}
-
-// isHealthy reports whether the container is healthy. When fallbackRunning is
-// true and the container has no healthcheck, it falls back to reporting whether
-// the container is running.
-func isHealthy(state *container.State, fallbackRunning bool) bool {
-	if state == nil || !state.Running {
-		return false
-	}
-	if state.Health == nil {
-		return fallbackRunning
-	}
-	return state.Health.Status == container.Healthy
 }

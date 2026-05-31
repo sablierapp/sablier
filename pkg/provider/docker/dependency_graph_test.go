@@ -1,16 +1,15 @@
 package docker
 
-// Unit tests for cycle detection on the resolved depends_on tree. These run
-// without a real Docker daemon.
+// Unit tests for cycle detection on the resolved depends_on tree.
 
 import "testing"
 
 func tree(root string, nodes map[string][]string) *dependencyTree {
-	t := &dependencyTree{root: root, nodes: make(map[string][]treeDep, len(nodes))}
+	t := &dependencyTree{root: root, nodes: make(map[string][]dependency, len(nodes))}
 	for from, deps := range nodes {
-		td := make([]treeDep, 0, len(deps))
+		td := make([]dependency, 0, len(deps))
 		for _, d := range deps {
-			td = append(td, treeDep{name: d, condition: conditionServiceStarted})
+			td = append(td, dependency{name: d, condition: conditionServiceStarted})
 		}
 		t.nodes[from] = td
 	}
@@ -84,7 +83,7 @@ func TestDependencyTree_HasCycle_IndirectCycle(t *testing.T) {
 }
 
 func TestDependencyTree_HasCycle_SingleNode(t *testing.T) {
-	tr := &dependencyTree{root: "app", nodes: map[string][]treeDep{"app": nil}}
+	tr := &dependencyTree{root: "app", nodes: map[string][]dependency{"app": nil}}
 
 	if cyclic, path := tr.hasCycle(); cyclic {
 		t.Fatalf("expected no cycle for single node, got: %s", path)
