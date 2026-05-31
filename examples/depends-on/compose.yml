@@ -13,16 +13,20 @@ services:
     ports:
       - "10000:10000"
 
-  # db is a dependency of `app`. It is NOT managed by Sablier directly (no
-  # sablier.* labels). Sablier starts it on-demand because `app` declares a
-  # `depends_on: db: { condition: service_healthy }` relationship, and waits
-  # for it to become healthy before starting `app`.
+  # db is a dependency of `app`. It carries the same sablier.group as `app`
+  # AND sablier.enable=true, so Sablier both *starts* it (to satisfy the
+  # depends_on relationship) and *stops* it together with the rest of the
+  # group when the session expires. Sablier waits for it to become healthy
+  # before starting the containers that depend on it.
   db:
     image: sablierapp/mimic:v0.3.3
     command:
       - -running-after=2s
       - -healthy=true
       - -healthy-after=2s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=app"
     healthcheck:
       test: ["CMD", "/mimic", "healthcheck"]
       interval: 1s
@@ -33,6 +37,13 @@ services:
   # and is never restarted (restart: "no"). Sablier reports a container that
   # exited with code 0 under a non-restarting policy as "ready" (completed),
   # which lets `service_completed_successfully` dependencies resolve.
+  #
+  # NOTE: migration is intentionally NOT labeled with sablier.enable / sablier.group.
+  # It is a one-shot job, not a long-running service, so there is nothing for
+  # Sablier to "keep alive" or "scale to zero". Sablier starts it on demand only
+  # because `app` declares a depends_on relationship on it. Labeling a one-shot
+  # container and putting it in a blocking group would make the group never
+  # become ready (the container exits by design and can never stay "running").
   # See https://github.com/sablierapp/sablier/issues/952
   migration:
     image: sablierapp/mimic:v0.3.3
@@ -44,10 +55,10 @@ services:
       db:
         condition: service_healthy
 
-  # app is the service managed by Sablier. When a request comes in, Sablier
-  # starts `app`, but the Docker provider first resolves its compose
-  # `depends_on` graph: it starts `db` (waiting until healthy) and `migration`
-  # (waiting until it has completed successfully) before starting `app`.
+  # app is the user-facing service. When a request comes in, the Docker
+  # provider first resolves its compose `depends_on` graph: it starts `db`
+  # (waiting until healthy) and `migration` (waiting until it has completed
+  # successfully) before starting `app`.
   # See https://github.com/sablierapp/sablier/issues/792
   app:
     image: sablierapp/mimic:v0.3.3

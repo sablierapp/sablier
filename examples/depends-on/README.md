@@ -24,9 +24,14 @@ Dependency graph (declared in compose.yml):
                           └─depends_on──▶ db (condition: service_healthy)
 ```
 
-Only `app` carries the `sablier.enable`/`sablier.group` labels. `db` and
-`migration` are **not** managed by Sablier directly — they are pulled in
-automatically as dependencies.
+The long-running services (`app` and `db`) carry the same `sablier.group=app`
+and `sablier.enable=true` labels, so Sablier scales them to zero when idle and
+brings them back up — in dependency order — on the next request. The
+`migration` container is a **one-shot init job**: it is intentionally left
+**unlabeled** because it is not something Sablier should keep alive or scale to
+zero — it simply runs once whenever `app` starts. See
+["Should I label dependencies?"](#should-i-label-dependencies) below for the full
+reasoning.
 
 ## How it works
 
@@ -54,14 +59,46 @@ See [#792](https://github.com/sablierapp/sablier/issues/792) (depends_on) and
 [#952](https://github.com/sablierapp/sablier/issues/952) (restart policy /
 init containers).
 
+## Should I label dependencies?
+
+Whether you add `sablier.enable=true` to a dependency depends on whether you
+want Sablier to **stop** it:
+
+| You want Sablier to… | Label the dependency? |
+|---|---|
+| Start it on-demand **and** scale it to zero when idle (long-running service) | ✅ `sablier.enable=true` + `sablier.group=<group>` |
+| Start it on-demand but keep it running 24/7 (e.g. a shared database) | ❌ no Sablier labels |
+| Run a one-shot job (migration, seed, init container) that exits by design | ❌ **never** label it |
+
+Key points:
+
+- **Starting** a `depends_on` dependency does **not** require any Sablier
+  labels. As long as a labeled container declares the dependency, Sablier will
+  start it (and wait for its condition) — even if the dependency itself has no
+  `sablier.*` labels.
+- **Stopping** a container only happens for containers that are explicitly
+  registered with `sablier.enable=true` and belong to the group. Sablier never
+  stops a container it was not told to manage.
+- **Never** put a one-shot container (one that exits on completion, like a
+  migration) into a **blocking** group. The blocking strategy waits for every
+  group member to be *running*; a container that exits by design would keep the
+  group from ever becoming ready. Leave it unlabeled and let `depends_on`
+  trigger it instead — that is exactly what `migration` does here.
+
+This example labels `db` so it is scaled to zero together with `app`. If `db`
+were a database shared by several apps that you don't want to shut down, you
+would simply drop its `sablier.*` labels — Sablier would still start it
+on-demand to satisfy the `depends_on`, but would leave it running. `migration`
+is left unlabeled because it is a one-shot job.
+
 ## Services
 
 | Service | Managed by Sablier | Role |
 |---|---|---|
 | `sablier` | — | Manages the `app` group; exposes the REST API on `:10000` |
 | `app` | ✅ `sablier.group=app` | The application; depends on `db` (healthy) and `migration` (completed) |
-| `db` | ➖ dependency | `sablierapp/mimic` with a health check; resolves `service_healthy` |
-| `migration` | ➖ dependency | One-shot init container (`restart: "no"`, exits `0`); resolves `service_completed_successfully` |
+| `db` | ✅ `sablier.group=app` | `sablierapp/mimic` with a health check; resolves `service_healthy`. Started before its dependents and stopped with the group |
+| `migration` | ❌ unlabeled | One-shot init container (`restart: "no"`, exits `0`); started on-demand via `app`'s `depends_on` and resolves `service_completed_successfully` |
 
 ## Prerequisites
 
@@ -70,14 +107,17 @@ init containers).
 
 ## Walkthrough
 
-### 1. Start Sablier and stop the dependency graph
+### 1. Start Sablier and create the dependency graph
 
 ```bash
 make up
 ```
 
-This starts everything, then stops `app`, `migration` and `db` so the entire
-chain is scaled to zero and ready to be triggered on-demand.
+This starts only `sablier`, then **creates** `app`, `migration` and `db`
+without starting them, so the whole chain is scaled to zero and ready to be
+triggered on-demand. (The managed containers are deliberately not started:
+because they carry `sablier.enable=true`, Sablier would otherwise immediately
+stop them again.)
 
 ### 2. Confirm everything is stopped
 
@@ -85,8 +125,8 @@ chain is scaled to zero and ready to be triggered on-demand.
 make ps
 ```
 
-You should see `app`, `db` and `migration` in an `Exited`/`Created` state and
-only `sablier` running.
+You should see `app`, `db` and `migration` in a `Created` state and only
+`sablier` running.
 
 ### 3. Watch Sablier logs in a separate terminal
 
@@ -107,7 +147,23 @@ Sablier will resolve the dependency graph before returning:
 3. Start `app`, poll until it is healthy.
 4. Return the JSON response to `curl`.
 
-### 5. Tear down
+### 5. Watch the stack scale back to zero
+
+Stop sending requests and wait for the session to expire (the stack uses
+`--sessions.default-duration=2m`). Because `db` carries the
+`sablier.enable`/`sablier.group=app` labels, Sablier stops **both** `app` and
+`db` together (the `migration` container already exited on its own after
+completing):
+
+```bash
+make ps   # after ~2 minutes: app and db are stopped again; migration is Exited(0)
+```
+
+> If `db` did not carry the Sablier labels, it would be started on-demand but
+> would **stay running** after the session expires. Labeling it is what allows
+> the database to be scaled to zero with the rest of the group.
+
+### 6. Tear down
 
 ```bash
 make down

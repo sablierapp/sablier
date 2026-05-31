@@ -1,10 +1,17 @@
 .PHONY: up down logs start ps
 
-# Start sablier, then create the dependency graph in a stopped state so the
-# whole chain (db → migration → app) is triggered on-demand by Sablier.
+# Start sablier, then *create* (but don't start) the dependency graph so the
+# whole chain (db → migration → app) is scaled to zero and triggered
+# on-demand by Sablier.
+#
+# We deliberately do NOT `docker compose up` the managed services: because they
+# carry sablier.enable=true, Sablier would immediately stop them again (it
+# scales to zero anything it didn't start), which races with Compose's native
+# depends_on health-wait. Creating them leaves them ready to be started by
+# Sablier on the first request.
 up:
-	docker compose up -d
-	docker compose stop app migration db
+	docker compose up -d sablier
+	docker compose create app migration db
 
 # Stop and remove all services
 down:
