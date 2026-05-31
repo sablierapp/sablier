@@ -25,7 +25,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	}()
 
 	// Build the depends_on dependency tree for this instance and validate that
-	// it keeps the global dependency graph a DAG. An invalid (cyclic) tree is
+	// it is a Directed Acyclic Graph (DAG). An invalid (cyclic) tree is
 	// ignored: the instance is still started, just without dependency ordering.
 	// See https://github.com/sablierapp/sablier/issues/792
 	tree, err := p.buildDependencyTree(ctx, name)
@@ -33,10 +33,10 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		return err
 	}
 
-	if err = p.dependencies.commit(tree.root, tree.edges()); err != nil {
+	if cyclic, path := tree.hasCycle(); cyclic {
 		p.l.WarnContext(ctx, "dependency tree ignored because it is invalid",
 			slog.String("instance", name),
-			slog.String("reason", err.Error()),
+			slog.String("reason", fmt.Sprintf("dependency cycle detected: %s", path)),
 		)
 		return p.startSingle(ctx, tree.root)
 	}

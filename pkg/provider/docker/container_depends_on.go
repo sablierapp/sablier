@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/moby/moby/api/types/container"
@@ -69,131 +68,6 @@ func parseComposeDependsOn(label string) []composeDependency {
 	return deps
 }
 
-// startDependencies resolves the Docker Compose depends_on dependencies declared
-// in the given container labels, starting each dependency (recursively) and
-// waiting until its declared condition is satisfied before returning.
-//
-// dependencyEdge is a directed edge "from depends on to" in the dependency
-// graph. Both endpoints are container names.
-type dependencyEdge struct {
-	from string
-	to   string
-}
-
-// dependencyGraph is the global, concurrency-safe dependency graph for the
-// provider. It is a Directed Acyclic Graph (DAG): each time an instance is
-// started, its dependency tree is committed here and rejected if it would
-// introduce a cycle.
-//
-// adjacency stores the live edges with a reference count so that edges shared
-// between multiple instance trees are only removed once the last contributing
-// tree is replaced. byRoot remembers the exact set of edges each instance tree
-// previously contributed so that re-committing an instance replaces (rather
-// than duplicates) its edges.
-type dependencyGraph struct {
-	mu        sync.Mutex
-	adjacency map[string]map[string]int
-	byRoot    map[string][]dependencyEdge
-}
-
-func newDependencyGraph() *dependencyGraph {
-	return &dependencyGraph{
-		adjacency: make(map[string]map[string]int),
-		byRoot:    make(map[string][]dependencyEdge),
-	}
-}
-
-func (g *dependencyGraph) addEdgeLocked(e dependencyEdge) {
-	to := g.adjacency[e.from]
-	if to == nil {
-		to = make(map[string]int)
-		g.adjacency[e.from] = to
-	}
-	to[e.to]++
-}
-
-func (g *dependencyGraph) removeEdgeLocked(e dependencyEdge) {
-	to := g.adjacency[e.from]
-	if to == nil {
-		return
-	}
-	to[e.to]--
-	if to[e.to] <= 0 {
-		delete(to, e.to)
-	}
-	if len(to) == 0 {
-		delete(g.adjacency, e.from)
-	}
-}
-
-// reachableLocked reports whether to is reachable from from following the
-// current edges.
-func (g *dependencyGraph) reachableLocked(from, to string) bool {
-	if from == to {
-		return true
-	}
-	visited := make(map[string]struct{})
-	stack := []string{from}
-	for len(stack) > 0 {
-		n := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		if _, ok := visited[n]; ok {
-			continue
-		}
-		visited[n] = struct{}{}
-		for next := range g.adjacency[n] {
-			if next == to {
-				return true
-			}
-			stack = append(stack, next)
-		}
-	}
-	return false
-}
-
-// commit replaces the edges previously contributed by root with the given
-// edges, provided the graph remains a DAG. If adding any edge would introduce a
-// self-loop or a cycle, the graph is rolled back to its prior valid state and a
-// descriptive error is returned.
-func (g *dependencyGraph) commit(root string, edges []dependencyEdge) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	previous := g.byRoot[root]
-	for _, e := range previous {
-		g.removeEdgeLocked(e)
-	}
-
-	added := make([]dependencyEdge, 0, len(edges))
-	for _, e := range edges {
-		if e.from == e.to {
-			g.rollbackLocked(added, previous, root)
-			return fmt.Errorf("container %q cannot depend on itself", e.from)
-		}
-		// Adding from->to creates a cycle if (and only if) to can already reach
-		// from in the graph built so far.
-		if g.reachableLocked(e.to, e.from) {
-			g.rollbackLocked(added, previous, root)
-			return fmt.Errorf("dependency %q -> %q would create a cycle", e.from, e.to)
-		}
-		g.addEdgeLocked(e)
-		added = append(added, e)
-	}
-
-	g.byRoot[root] = edges
-	return nil
-}
-
-func (g *dependencyGraph) rollbackLocked(added, previous []dependencyEdge, root string) {
-	for _, e := range added {
-		g.removeEdgeLocked(e)
-	}
-	for _, e := range previous {
-		g.addEdgeLocked(e)
-	}
-	g.byRoot[root] = previous
-}
-
 // treeDep is a single resolved depends_on dependency of a node: the dependency
 // container name and the condition that must be satisfied before the dependent
 // container is started.
@@ -202,24 +76,60 @@ type treeDep struct {
 	condition string
 }
 
-// dependencyTree is the resolved depends_on tree rooted at a single instance.
+// dependencyTree is the resolved depends_on graph rooted at a single instance.
 // nodes maps each container name to its direct dependencies. Every node that
 // appears anywhere in the tree has an entry (leaves map to an empty slice).
+//
+// Although a Compose project's depends_on graph is meant to be a Directed
+// Acyclic Graph (DAG), a misconfiguration can introduce a cycle. The tree is
+// therefore validated with hasCycle before it is used.
 type dependencyTree struct {
 	root  string
 	nodes map[string][]treeDep
 }
 
-// edges returns the directed edges of the tree for committing to the global
-// dependency graph.
-func (t *dependencyTree) edges() []dependencyEdge {
-	var edges []dependencyEdge
-	for from, deps := range t.nodes {
-		for _, dep := range deps {
-			edges = append(edges, dependencyEdge{from: from, to: dep.name})
+// hasCycle reports whether the dependency tree contains a cycle. When it does,
+// it also returns a human-readable description of the offending path.
+//
+// It is a depth-first search using the classic three-color marking, mirroring
+// how Docker Compose detects cycles in its own dependency graph
+// (see pkg/compose/dependencies.go: Graph.HasCycles).
+func (t *dependencyTree) hasCycle() (bool, string) {
+	const (
+		visiting = 1 // on the current DFS path (grey)
+		visited  = 2 // fully explored (black)
+	)
+
+	state := make(map[string]int, len(t.nodes))
+
+	var visit func(node string, path []string) (bool, string)
+	visit = func(node string, path []string) (bool, string) {
+		state[node] = visiting
+		path = append(path, node)
+		for _, dep := range t.nodes[node] {
+			switch state[dep.name] {
+			case visiting:
+				return true, strings.Join(append(path, dep.name), " -> ")
+			case visited:
+				continue
+			default:
+				if cyclic, p := visit(dep.name, path); cyclic {
+					return true, p
+				}
+			}
+		}
+		state[node] = visited
+		return false, ""
+	}
+
+	for node := range t.nodes {
+		if state[node] == 0 {
+			if cyclic, p := visit(node, nil); cyclic {
+				return true, p
+			}
 		}
 	}
-	return edges
+	return false, ""
 }
 
 // buildDependencyTree walks the Docker Compose depends_on dependencies starting
@@ -229,7 +139,7 @@ func (t *dependencyTree) edges() []dependencyEdge {
 //
 // A node is recorded before its dependencies are walked, so a cyclic compose
 // definition does not cause infinite recursion: the cycle is recorded in full
-// and later detected when the tree is committed to the global dependency graph.
+// and later detected by dependencyTree.hasCycle.
 func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*dependencyTree, error) {
 	tree := &dependencyTree{nodes: make(map[string][]treeDep)}
 
@@ -293,9 +203,9 @@ func (p *Provider) startTree(ctx context.Context, tree *dependencyTree) error {
 }
 
 // resolveNode starts node after recursively starting and waiting for its
-// dependencies. The tree is guaranteed acyclic (validated on commit), so the
-// recursion always terminates; started guards against starting a shared
-// dependency more than once.
+// dependencies. The tree is guaranteed acyclic (validated by hasCycle before
+// startTree is called), so the recursion always terminates; started guards
+// against starting a shared dependency more than once.
 func (p *Provider) resolveNode(ctx context.Context, tree *dependencyTree, node string, started map[string]struct{}) error {
 	if _, ok := started[node]; ok {
 		return nil
