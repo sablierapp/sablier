@@ -1,0 +1,210 @@
+name: Provider Examples
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build-sablier:
+    name: Build Sablier Image
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: sablierapp/sablier:${{ steps.goreleaser.outputs.metadata.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: |
+            go.sum
+            tools.mod
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        id: goreleaser
+        with:
+          distribution: goreleaser
+          version: "v2.12.7"
+          args: release --clean --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save image
+        run: |
+          docker save -o /tmp/sablier-image.tar sablierapp/sablier:${{ steps.goreleaser.outputs.metadata.version }}
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: sablier-image
+          path: /tmp/sablier-image.tar
+          retention-days: 1
+
+  test-docker-example:
+    name: Test Docker Example
+    runs-on: ubuntu-latest
+    needs: build-sablier
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Download image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: sablier-image
+          path: /tmp
+
+      - name: Load image
+        run: |
+          docker load -i /tmp/sablier-image.tar
+          docker images
+
+      - name: Run Docker example test
+        run: |
+          cd examples/docker
+          timeout 300 make test || exit 1
+        env:
+          SABLIER_IMAGE: ${{ needs.build-sablier.outputs.image-tag }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd examples/docker
+          make down || true
+
+  test-docker-swarm-example:
+    name: Test Docker Swarm Example
+    runs-on: ubuntu-latest
+    needs: build-sablier
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+
+      - name: Download image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: sablier-image
+          path: /tmp
+
+      - name: Load image
+        run: |
+          docker load -i /tmp/sablier-image.tar
+          docker images
+
+      - name: Initialize Docker Swarm
+        run: docker swarm init
+
+      - name: Run Docker Swarm example test
+        run: |
+          cd examples/docker-swarm
+          timeout 300 make test || exit 1
+        env:
+          SABLIER_IMAGE: ${{ needs.build-sablier.outputs.image-tag }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd examples/docker-swarm
+          make remove || true
+          docker swarm leave --force || true
+
+  test-kubernetes-example:
+    name: Test Kubernetes Example
+    runs-on: ubuntu-latest
+    needs: build-sablier
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Install kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+
+      - name: Download image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: sablier-image
+          path: /tmp
+
+      - name: Load image
+        run: |
+          docker load -i /tmp/sablier-image.tar
+          docker images
+
+      - name: Run Kubernetes example test
+        run: |
+          cd examples/kubernetes
+          timeout 600 make test-kind || exit 1
+        env:
+          SABLIER_IMAGE: ${{ needs.build-sablier.outputs.image-tag }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd examples/kubernetes
+          make kind-delete || true
+
+  test-podman-example:
+    name: Test Podman Example
+    runs-on: ubuntu-latest
+    needs: build-sablier
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Install podman-compose
+        run: pip install podman-compose
+
+      - name: Download image artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: sablier-image
+          path: /tmp
+
+      - name: Load image to Podman
+        run: |
+          podman load -i /tmp/sablier-image.tar
+          podman images
+
+      - name: Enable Podman socket
+        run: |
+          systemctl --user enable --now podman.socket
+          systemctl --user status podman.socket
+
+      - name: Run Podman example test
+        run: |
+          cd examples/podman
+          timeout 300 make test || exit 1
+        env:
+          SABLIER_IMAGE: docker.io/${{ needs.build-sablier.outputs.image-tag }}
+          XDG_RUNTIME_DIR: /run/user/1001
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd examples/podman
+          make down || true

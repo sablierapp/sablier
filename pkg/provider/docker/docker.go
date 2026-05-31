@@ -16,10 +16,11 @@ import (
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client   client.APIClient
-	l        *slog.Logger
-	strategy string
-	tracer   trace.Tracer
+	Client       client.APIClient
+	l            *slog.Logger
+	strategy     string
+	tracer       trace.Tracer
+	dependencies *dependencyGraph
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
@@ -35,9 +36,10 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		slog.String("api_version", serverVersion.APIVersion),
 	)
 	return &Provider{
-		Client:   cli,
-		l:        logger,
-		strategy: strategy,
-		tracer:   otel.Tracer("github.com/sablierapp/sablier/pkg/provider/docker"),
+		Client:       cli,
+		l:            logger,
+		strategy:     strategy,
+		tracer:       otel.Tracer("github.com/sablierapp/sablier/pkg/provider/docker"),
+		dependencies: newDependencyGraph(),
 	}, nil
 }

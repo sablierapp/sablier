@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Sablier - Scale to zero solution for Podman
+  sablier:
+    image: ${SABLIER_IMAGE:-docker.io/sablierapp/sablier:1.10.1}
+    container_name: sablier
+    command:
+      - start
+      - --provider.name=podman
+      - --provider.podman.uri=unix:///run/podman/podman.sock
+    volumes:
+      # Adjust socket path based on your setup:
+      # Rootless: ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock
+      # Rootful: /run/podman/podman.sock:/run/podman/podman.sock
+      - /run/podman/podman.sock:/run/podman/podman.sock
+      - ./sablier.yaml:/etc/sablier/sablier.yaml:ro
+    networks:
+      - sablier-network
+    ports:
+      - "10000:10000"
+    restart: unless-stopped
+
+  # Nginx - Reverse proxy
+  nginx:
+    image: docker.io/nginx:alpine
+    container_name: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - sablier-network
+    depends_on:
+      - sablier
+    restart: unless-stopped
+
+  # Whoami - Demo application (managed by Sablier)
+  whoami:
+    image: docker.io/acouvreur/whoami:v1.10.2
+    container_name: whoami
+    labels:
+      - sablier.enable=true
+      - sablier.group=whoami
+    networks:
+      - sablier-network
+
+networks:
+  sablier-network:
+    driver: bridge

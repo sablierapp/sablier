@@ -24,57 +24,34 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
-	return p.instanceStart(ctx, name, newStartTracker())
-}
-
-// startTracker tracks the progress of a single recursive InstanceStart
-// invocation. It distinguishes between containers whose start has fully
-// completed (done) and containers that are currently being started further up
-// the recursion stack (inProgress). The inProgress set is used to detect and
-// break dependency cycles: a dependency that is already on the current stack
-// must not be started or waited on again, otherwise the resolution would
-// deadlock until the context times out.
-type startTracker struct {
-	inProgress map[string]struct{}
-	done       map[string]struct{}
-}
-
-func newStartTracker() *startTracker {
-	return &startTracker{
-		inProgress: make(map[string]struct{}),
-		done:       make(map[string]struct{}),
+	// Build the depends_on dependency tree for this instance and validate that
+	// it keeps the global dependency graph a DAG. An invalid (cyclic) tree is
+	// ignored: the instance is still started, just without dependency ordering.
+	// See https://github.com/sablierapp/sablier/issues/792
+	tree, err := p.buildDependencyTree(ctx, name)
+	if err != nil {
+		return err
 	}
+
+	if err = p.dependencies.commit(tree.root, tree.edges()); err != nil {
+		p.l.WarnContext(ctx, "dependency tree ignored because it is invalid",
+			slog.String("instance", name),
+			slog.String("reason", err.Error()),
+		)
+		return p.startSingle(ctx, tree.root)
+	}
+
+	return p.startTree(ctx, tree)
 }
 
-// instanceStart starts a single instance, recursively starting and waiting for
-// its Docker Compose depends_on dependencies first. The tracker guards against
-// starting the same container twice within a single start invocation and breaks
-// dependency cycles.
-func (p *Provider) instanceStart(ctx context.Context, name string, tracker *startTracker) (err error) {
-	if _, ok := tracker.done[name]; ok {
-		return nil
-	}
-	tracker.inProgress[name] = struct{}{}
-	defer func() {
-		delete(tracker.inProgress, name)
-		if err == nil {
-			tracker.done[name] = struct{}{}
-		}
-	}()
-
+// startSingle starts a single container, applying the configured scale mode or
+// strategy. It does not resolve depends_on dependencies.
+func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
 	span := trace.SpanFromContext(ctx)
 
 	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot inspect container: %w", err)
-	}
-
-	// Resolve and start Docker Compose depends_on dependencies before starting
-	// the instance itself so that the ordering and conditions declared in the
-	// compose file are respected.
-	// See https://github.com/sablierapp/sablier/issues/792
-	if err = p.startDependencies(ctx, spec.Container.Config.Labels, tracker); err != nil {
-		return err
 	}
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
