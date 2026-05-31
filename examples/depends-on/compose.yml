@@ -1,0 +1,72 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=2m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # db is a dependency of `app`. It is NOT managed by Sablier directly (no
+  # sablier.* labels). Sablier starts it on-demand because `app` declares a
+  # `depends_on: db: { condition: service_healthy }` relationship, and waits
+  # for it to become healthy before starting `app`.
+  db:
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=2s
+      - -healthy=true
+      - -healthy-after=2s
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+
+  # migration is a one-shot init container. It runs once, exits successfully
+  # and is never restarted (restart: "no"). Sablier reports a container that
+  # exited with code 0 under a non-restarting policy as "ready" (completed),
+  # which lets `service_completed_successfully` dependencies resolve.
+  # See https://github.com/sablierapp/sablier/issues/952
+  migration:
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running=false
+      - -exit-code=0
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # app is the service managed by Sablier. When a request comes in, Sablier
+  # starts `app`, but the Docker provider first resolves its compose
+  # `depends_on` graph: it starts `db` (waiting until healthy) and `migration`
+  # (waiting until it has completed successfully) before starting `app`.
+  # See https://github.com/sablierapp/sablier/issues/792
+  app:
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=1s
+      - -healthy=true
+      - -healthy-after=1s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=app"
+    depends_on:
+      db:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8080:80"

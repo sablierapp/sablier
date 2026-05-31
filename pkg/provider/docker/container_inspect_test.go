@@ -237,10 +237,50 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A container that exited successfully and is not configured to be
+			// restarted by Docker (default restart policy "no") is treated as a
+			// completed one-shot/init container and reported as ready.
+			// See https://github.com/sablierapp/sablier/issues/952
 			want: sablier.InstanceInfo{
-				CurrentReplicas: 0,
+				CurrentReplicas: 1,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusStopped,
+				Status:          sablier.InstanceStatusReady,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited init container with status code 0 and restart policy on-failure",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyOnFailure},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// on-failure does not restart a container that exited successfully,
+			// so it is reported as a completed init container.
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
 			},
 			wantErr: nil,
 		},

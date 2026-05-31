@@ -73,12 +73,28 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				Status:          sablier.InstanceStatusError,
 				Message:         fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode),
 			}
-		} else {
+		} else if restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
+			// The container exited successfully but its restart policy
+			// (always / unless-stopped) means Docker will bring it back up.
+			// The exited state is therefore transient.
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusStopped,
+				Status:          sablier.InstanceStatusStarting,
+			}
+		} else {
+			// The container exited successfully and Docker will not restart it
+			// (restart policy "no" or "on-failure"). This is typically a
+			// one-shot / init container (e.g. a database migration) that has
+			// completed its job. Respect the restart policy and report it as
+			// ready so that Sablier does not keep restarting it.
+			// See https://github.com/sablierapp/sablier/issues/952
+			info = sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
 			}
 		}
 	case container.StateDead:
@@ -118,4 +134,19 @@ func healthStatus(health *container.Health) string {
 	}
 
 	return string(health.Status)
+}
+
+// restartPolicyMode returns the restart policy mode of the container, defaulting
+// to RestartPolicyDisabled ("no") when no host configuration is available.
+func restartPolicyMode(hc *container.HostConfig) container.RestartPolicyMode {
+	if hc == nil {
+		return container.RestartPolicyDisabled
+	}
+	return hc.RestartPolicy.Name
+}
+
+// restartsOnSuccess reports whether Docker will restart a container that exited
+// with a successful (zero) exit code, given its restart policy.
+func restartsOnSuccess(mode container.RestartPolicyMode) bool {
+	return mode == container.RestartPolicyAlways || mode == container.RestartPolicyUnlessStopped
 }

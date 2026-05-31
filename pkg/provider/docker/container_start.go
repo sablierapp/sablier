@@ -24,9 +24,32 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
+	return p.instanceStart(ctx, name, make(map[string]struct{}))
+}
+
+// instanceStart starts a single instance, recursively starting and waiting for
+// its Docker Compose depends_on dependencies first. The started set guards
+// against starting the same container twice within a single start invocation
+// (and against dependency cycles).
+func (p *Provider) instanceStart(ctx context.Context, name string, started map[string]struct{}) (err error) {
+	if _, ok := started[name]; ok {
+		return nil
+	}
+	started[name] = struct{}{}
+
+	span := trace.SpanFromContext(ctx)
+
 	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot inspect container: %w", err)
+	}
+
+	// Resolve and start Docker Compose depends_on dependencies before starting
+	// the instance itself so that the ordering and conditions declared in the
+	// compose file are respected.
+	// See https://github.com/sablierapp/sablier/issues/792
+	if err = p.startDependencies(ctx, spec.Container.Config.Labels, started); err != nil {
+		return err
 	}
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
