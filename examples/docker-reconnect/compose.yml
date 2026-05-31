@@ -10,7 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   sablier:
-    restart: unless-stopped
+    restart: always
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start

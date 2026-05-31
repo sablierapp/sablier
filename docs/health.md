@@ -18,7 +18,7 @@ The `sablier health` command takes one argument, `--url`, which defaults to `htt
 services:
   sablier:
     image: sablierapp/sablier:1.13.0
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["sablier", "health"]
       interval: 1m30s

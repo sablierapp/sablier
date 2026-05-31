@@ -1,0 +1,26 @@
+provider:
+  name: podman
+  podman:
+    uri: unix:///run/podman/podman.sock
+  auto-stop-on-startup: true
+
+server:
+  port: 10000
+  base-path: /
+
+sessions:
+  default-duration: 1m
+  expiration-interval: 10s
+
+logging:
+  level: debug
+
+strategy:
+  dynamic:
+    display-name: "Podman Example"
+    show-details-by-default: true
+    default-theme: hacker-terminal
+    default-refresh-frequency: 5s
+  blocking:
+    default-timeout: 1m
+    default-refresh-frequency: 1s

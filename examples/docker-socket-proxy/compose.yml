@@ -47,7 +47,7 @@ services:
       - public
     security_opt:
       - no-new-privileges=true
-    restart: unless-stopped
+    restart: always
     read_only: true
 
   whoami:

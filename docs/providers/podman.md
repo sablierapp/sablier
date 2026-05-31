@@ -36,7 +36,7 @@ SABLIER_PROVIDER_NAME=podman
 services:
   sablier:
     image: sablierapp/sablier:1.13.0
-    restart: unless-stopped
+    restart: always
     command:
       - start
       - --provider.name=podman

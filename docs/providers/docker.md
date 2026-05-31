@@ -36,7 +36,7 @@ SABLIER_PROVIDER_NAME=docker
 services:
   sablier:
     image: sablierapp/sablier:1.13.0
-    restart: unless-stopped
+    restart: always
     command:
       - start
       - --provider.name=docker

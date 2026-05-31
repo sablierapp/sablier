@@ -1,6 +1,6 @@
 services:
   sablier:
-    restart: unless-stopped
+    restart: always
     image: ${SABLIER_IMAGE:-sablier:local}
     command:
       - start
