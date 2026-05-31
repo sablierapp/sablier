@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -73,7 +74,7 @@ func parseComposeDependsOn(label string) []composeDependency {
 //
 // Dependencies that cannot be resolved to a running-or-creatable container (for
 // example external services not managed by this Compose project) are skipped.
-func (p *Provider) startDependencies(ctx context.Context, labels map[string]string, started map[string]struct{}) error {
+func (p *Provider) startDependencies(ctx context.Context, labels map[string]string, tracker *startTracker) error {
 	deps := parseComposeDependsOn(labels[composeDependsOnLabel])
 	if len(deps) == 0 {
 		return nil
@@ -94,12 +95,24 @@ func (p *Provider) startDependencies(ctx context.Context, labels map[string]stri
 			continue
 		}
 
+		// Break dependency cycles: if the dependency is already being started
+		// further up the recursion stack, starting or waiting on it here would
+		// deadlock until the context times out. Skip it and let the in-progress
+		// start higher up resolve it.
+		if _, inProgress := tracker.inProgress[name]; inProgress {
+			p.l.WarnContext(ctx, "dependency cycle detected, skipping depends_on dependency",
+				slog.String("dependency", name),
+				slog.String("condition", dep.Condition),
+			)
+			continue
+		}
+
 		p.l.DebugContext(ctx, "starting depends_on dependency",
 			slog.String("dependency", name),
 			slog.String("condition", dep.Condition),
 		)
 
-		if err = p.instanceStart(ctx, name, started); err != nil {
+		if err = p.instanceStart(ctx, name, tracker); err != nil {
 			return fmt.Errorf("cannot start dependency %s: %w", name, err)
 		}
 
@@ -114,6 +127,12 @@ func (p *Provider) startDependencies(ctx context.Context, labels map[string]stri
 // findComposeContainer returns the container name for the given Compose project
 // and service. It returns an empty name (and no error) when no matching
 // container exists.
+//
+// Multiple containers can match the same project+service labels (scaled
+// services, or leftover containers from a previous run). The Docker API does
+// not guarantee any ordering, so the selection is made deterministic: a running
+// container is preferred, otherwise the lexicographically smallest name is
+// chosen.
 func (p *Provider) findComposeContainer(ctx context.Context, project, service string) (string, error) {
 	filters := client.Filters{}
 	if project != "" {
@@ -129,11 +148,27 @@ func (p *Provider) findComposeContainer(ctx context.Context, project, service st
 		return "", fmt.Errorf("cannot list containers for dependency %s: %w", service, err)
 	}
 
-	if len(containers.Items) == 0 {
-		return "", nil
+	var names, running []string
+	for _, c := range containers.Items {
+		if len(c.Names) == 0 {
+			continue
+		}
+		name := strings.TrimPrefix(c.Names[0], "/")
+		names = append(names, name)
+		if c.State == container.StateRunning {
+			running = append(running, name)
+		}
 	}
 
-	return strings.TrimPrefix(containers.Items[0].Names[0], "/"), nil
+	if len(running) > 0 {
+		sort.Strings(running)
+		return running[0], nil
+	}
+	if len(names) == 0 {
+		return "", nil
+	}
+	sort.Strings(names)
+	return names[0], nil
 }
 
 // waitForDependencyCondition blocks until the given container satisfies the
@@ -179,6 +214,13 @@ func (p *Provider) checkDependencyCondition(ctx context.Context, name, condition
 		}
 		return true, nil
 	case conditionServiceHealthy:
+		// A service_healthy dependency on a container without a healthcheck can
+		// never be satisfied. Fail fast with a clear error instead of looping
+		// until the context deadline is exceeded. The container must be running
+		// before its health can be evaluated, so only fail once it is up.
+		if state.Running && state.Health == nil {
+			return false, fmt.Errorf("dependency %s has no healthcheck configured but condition %q requires one", name, conditionServiceHealthy)
+		}
 		return isHealthy(state, false), nil
 	case conditionServiceRunningOrHealthy:
 		return isHealthy(state, true), nil

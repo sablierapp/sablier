@@ -24,18 +24,43 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
-	return p.instanceStart(ctx, name, make(map[string]struct{}))
+	return p.instanceStart(ctx, name, newStartTracker())
+}
+
+// startTracker tracks the progress of a single recursive InstanceStart
+// invocation. It distinguishes between containers whose start has fully
+// completed (done) and containers that are currently being started further up
+// the recursion stack (inProgress). The inProgress set is used to detect and
+// break dependency cycles: a dependency that is already on the current stack
+// must not be started or waited on again, otherwise the resolution would
+// deadlock until the context times out.
+type startTracker struct {
+	inProgress map[string]struct{}
+	done       map[string]struct{}
+}
+
+func newStartTracker() *startTracker {
+	return &startTracker{
+		inProgress: make(map[string]struct{}),
+		done:       make(map[string]struct{}),
+	}
 }
 
 // instanceStart starts a single instance, recursively starting and waiting for
-// its Docker Compose depends_on dependencies first. The started set guards
-// against starting the same container twice within a single start invocation
-// (and against dependency cycles).
-func (p *Provider) instanceStart(ctx context.Context, name string, started map[string]struct{}) (err error) {
-	if _, ok := started[name]; ok {
+// its Docker Compose depends_on dependencies first. The tracker guards against
+// starting the same container twice within a single start invocation and breaks
+// dependency cycles.
+func (p *Provider) instanceStart(ctx context.Context, name string, tracker *startTracker) (err error) {
+	if _, ok := tracker.done[name]; ok {
 		return nil
 	}
-	started[name] = struct{}{}
+	tracker.inProgress[name] = struct{}{}
+	defer func() {
+		delete(tracker.inProgress, name)
+		if err == nil {
+			tracker.done[name] = struct{}{}
+		}
+	}()
 
 	span := trace.SpanFromContext(ctx)
 
@@ -48,7 +73,7 @@ func (p *Provider) instanceStart(ctx context.Context, name string, started map[s
 	// the instance itself so that the ordering and conditions declared in the
 	// compose file are respected.
 	// See https://github.com/sablierapp/sablier/issues/792
-	if err = p.startDependencies(ctx, spec.Container.Config.Labels, started); err != nil {
+	if err = p.startDependencies(ctx, spec.Container.Config.Labels, tracker); err != nil {
 		return err
 	}
 
