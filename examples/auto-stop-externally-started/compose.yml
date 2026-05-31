@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: unless-stopped
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -20,6 +21,7 @@ services:
   # Sablier will stop it on startup (auto-stop-on-startup) and again if
   # it is started externally while Sablier is running (auto-stop-externally-started).
   managed:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"
@@ -30,6 +32,7 @@ services:
   # unmanaged has no sablier labels.
   # Sablier ignores it completely; it keeps running regardless.
   unmanaged:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     ports:
       - "8081:80"

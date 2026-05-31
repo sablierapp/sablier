@@ -3,12 +3,14 @@ services:
   # Stopping this container simulates a Docker API connection loss.
   # Restarting it lets sablier's reconnect loop take over.
   docker-proxy:
+    restart: unless-stopped
     image: alpine/socat:latest
     command: TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
   sablier:
+    restart: unless-stopped
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -25,6 +27,7 @@ services:
       - docker-proxy
 
   whoami:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"

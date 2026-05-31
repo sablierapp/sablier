@@ -36,6 +36,7 @@ SABLIER_PROVIDER_NAME=podman
 services:
   sablier:
     image: sablierapp/sablier:1.13.0
+    restart: unless-stopped
     command:
       - start
       - --provider.name=podman
@@ -54,6 +55,7 @@ You have to register your containers by opting-in with labels.
 services:
   whoami:
     image: acouvreur/whoami:v1.10.2
+    restart: unless-stopped
     labels:
       - sablier.enable=true
       - sablier.group=mygroup

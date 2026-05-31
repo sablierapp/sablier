@@ -47,10 +47,11 @@ services:
       - public
     security_opt:
       - no-new-privileges=true
-    restart: on-failure:5
+    restart: unless-stopped
     read_only: true
 
   whoami:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"

@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: unless-stopped
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -14,6 +15,7 @@ services:
 
   # frontend is exclusive to team-a.
   frontend:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"
@@ -21,6 +23,7 @@ services:
 
   # backend is exclusive to team-b.
   backend:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"
@@ -29,6 +32,7 @@ services:
   # shared-api is a central service used by both teams.
   # A comma-separated list puts it in both groups at once.
   shared-api:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"

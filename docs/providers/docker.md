@@ -36,6 +36,7 @@ SABLIER_PROVIDER_NAME=docker
 services:
   sablier:
     image: sablierapp/sablier:1.13.0
+    restart: unless-stopped
     command:
       - start
       - --provider.name=docker
@@ -54,6 +55,7 @@ You have to register your containers by opting-in with labels.
 services:
   whoami:
     image: acouvreur/whoami:v1.10.2
+    restart: unless-stopped
     labels:
       - sablier.enable=true
       - sablier.group=mygroup
@@ -133,11 +135,12 @@ This matters for one-shot **init / migration** containers — containers that ru
 
 | Container state | Restart policy | Sablier status |
 |---|---|---|
-| Exited, code `0` | `no` / `on-failure` | **`ready`** — the container completed its job |
+| Exited, code `0` | `no` / `on-failure` (explicitly set) | **`ready`** — the container completed its job |
 | Exited, code `0` | `always` / `unless-stopped` | `starting` — Docker will bring it back, Sablier waits |
+| Exited, code `0` | *unset (no policy defined)* | `stopped` — historical behavior, Sablier keeps managing its lifecycle |
 | Exited, non-zero code | any | `error` — surfaced as a failure |
 
-> Before this behavior, a one-shot container that exited successfully was reported as `stopped`, which caused Sablier to restart it endlessly and the rest of the group never became ready. Now Sablier leaves the restart decision to Docker: give your init container `restart: "no"` (the default) and Sablier will treat a clean exit as success.
+> Sablier only treats a clean exit as *done* when a restart policy is **explicitly** defined on the container. Give your init container `restart: "no"` (or `on-failure`) and Sablier will report a clean exit as `ready`. When **no** restart policy is defined, Sablier keeps the historical behavior and reports the container as `stopped` so it keeps managing its lifecycle. This may change in the future to honor the restart policy completely and treat an unset policy the same as `no`.
 
 ## Ordering containers with `depends_on`
 
@@ -147,6 +150,7 @@ When you have a stack where one container must start **after** another — a web
 services:
   app:
     image: myapp
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -158,6 +162,7 @@ services:
 
   db:
     image: postgres
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 1s

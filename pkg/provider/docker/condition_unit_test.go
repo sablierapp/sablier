@@ -194,6 +194,18 @@ func TestRestartPolicyMode(t *testing.T) {
 	}
 }
 
+func TestRestartPolicyExplicitlySet(t *testing.T) {
+	if restartPolicyExplicitlySet(nil) {
+		t.Fatalf("nil host config should not be considered explicitly set")
+	}
+	if restartPolicyExplicitlySet(&container.HostConfig{}) {
+		t.Fatalf("empty restart policy name should not be considered explicitly set")
+	}
+	if !restartPolicyExplicitlySet(&container.HostConfig{RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyDisabled}}) {
+		t.Fatalf("explicit \"no\" restart policy should be considered explicitly set")
+	}
+}
+
 func TestRestartsOnSuccess(t *testing.T) {
 	tests := []struct {
 		mode container.RestartPolicyMode

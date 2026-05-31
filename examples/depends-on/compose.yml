@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: unless-stopped
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -19,6 +20,7 @@ services:
   # group when the session expires. Sablier waits for it to become healthy
   # before starting the containers that depend on it.
   db:
+    restart: unless-stopped
     image: sablierapp/mimic:v0.3.3
     command:
       - -running-after=2s
@@ -61,6 +63,7 @@ services:
   # successfully) before starting `app`.
   # See https://github.com/sablierapp/sablier/issues/792
   app:
+    restart: unless-stopped
     image: sablierapp/mimic:v0.3.3
     command:
       - -running-after=1s

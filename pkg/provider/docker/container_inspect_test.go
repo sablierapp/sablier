@@ -237,15 +237,13 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			// A container that exited successfully and is not configured to be
-			// restarted by Docker (default restart policy "no") is treated as a
-			// completed one-shot/init container and reported as ready. It is no
-			// longer running, so CurrentReplicas is 0.
-			// See https://github.com/sablierapp/sablier/issues/952
+			// A container that exited successfully with no restart policy
+			// explicitly defined keeps the historical behavior and is reported
+			// as stopped, so Sablier keeps managing its lifecycle.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusReady,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},
@@ -279,6 +277,42 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			// on-failure does not restart a container that exited successfully,
 			// so it is reported as a completed init container. It is no longer
 			// running, so CurrentReplicas is 0.
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited init container with status code 0 and restart policy no",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyDisabled},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// An explicit "no" restart policy is honored: the completed one-shot
+			// container is reported as ready instead of stopped.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,

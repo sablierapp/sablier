@@ -68,6 +68,7 @@ Add the Sablier container to the `docker-compose.yaml` file.
 services:
   proxy:
     image: caddy:2.8.4
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -75,9 +76,11 @@ services:
 
   whoami:
     image: acouvreur/whoami:v1.10.2
+    restart: unless-stopped
 
   sablier:
     image: sablierapp/sablier:1.13.0 # x-release-please-version
+    restart: unless-stopped
     command:
         - start
         - --provider.name=docker
@@ -103,6 +106,7 @@ Then change the image from `caddy:2.8.4` to `caddy:2.8.4-with-sablier`
 services:
   proxy:
     image: caddy:2.8.4-with-sablier
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -110,9 +114,11 @@ services:
 
   whoami:
     image: acouvreur/whoami:v1.10.2
+    restart: unless-stopped
 
   sablier:
     image: sablierapp/sablier:1.13.0 # x-release-please-version
+    restart: unless-stopped
     command:
         - start
         - --provider.name=docker
@@ -132,6 +138,7 @@ This is how you opt in your services and link them with the plugin.
 services:
   proxy:
     image: caddy:local
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
@@ -139,12 +146,14 @@ services:
 
   whoami:
     image: acouvreur/whoami:v1.10.2
+    restart: unless-stopped
     labels:
       - sablier.enable=true
       - sablier.group=demo
   
   sablier:
     image: sablierapp/sablier:1.13.0 # x-release-please-version
+    restart: unless-stopped
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```

@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: unless-stopped
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -20,6 +21,7 @@ services:
   # A simple HTTP server managed by Sablier.
   # Request it via the Sablier API to see "started" and "stopped" webhooks fire.
   whoami:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"
@@ -28,6 +30,7 @@ services:
   # Echoes every incoming HTTP request as JSON, including the webhook payload.
   # Visit http://localhost:8888 after triggering an event to see what arrived.
   webhook-receiver:
+    restart: unless-stopped
     image: mendhak/http-https-echo:37
     environment:
       HTTP_PORT: "8080"

@@ -83,19 +83,32 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusStarting,
 			}
-		} else {
-			// The container exited successfully and Docker will not restart it
-			// (restart policy "no" or "on-failure"). This is a one-shot / init
-			// container (e.g. a database migration) that has completed its job.
-			// Respect the restart policy and report it as ready so that Sablier
-			// does not keep restarting it. The container is not running, so
-			// CurrentReplicas stays 0.
+		} else if restartPolicyExplicitlySet(spec.Container.HostConfig) {
+			// The container exited successfully and a restart policy is
+			// explicitly set to "no" or "on-failure", so Docker will not
+			// restart it. This is a one-shot / init container (e.g. a database
+			// migration) that has completed its job. Honor the restart policy
+			// and report it as ready so that Sablier does not keep restarting
+			// it. The container is not running, so CurrentReplicas stays 0.
 			// See https://github.com/sablierapp/sablier/issues/952
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
+			}
+		} else {
+			// No restart policy was explicitly defined on the container. Keep
+			// the historical behavior and report it as stopped so that Sablier
+			// keeps managing its lifecycle and can start it again on demand.
+			// TODO: we might change this behavior in the future to honor the
+			// restart policy completely and treat an unset policy the same as
+			// "no" (Docker's default), reporting the container as ready.
+			info = sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
 			}
 		}
 	case container.StateDead:
@@ -150,4 +163,11 @@ func restartPolicyMode(hc *container.HostConfig) container.RestartPolicyMode {
 // with a successful (zero) exit code, given its restart policy.
 func restartsOnSuccess(mode container.RestartPolicyMode) bool {
 	return mode == container.RestartPolicyAlways || mode == container.RestartPolicyUnlessStopped
+}
+
+// restartPolicyExplicitlySet reports whether a restart policy was explicitly
+// defined on the container. Docker leaves the restart policy name empty when it
+// was never configured, so an empty name means "unset".
+func restartPolicyExplicitlySet(hc *container.HostConfig) bool {
+	return hc != nil && hc.RestartPolicy.Name != ""
 }
