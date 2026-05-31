@@ -239,10 +239,11 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			},
 			// A container that exited successfully and is not configured to be
 			// restarted by Docker (default restart policy "no") is treated as a
-			// completed one-shot/init container and reported as ready.
+			// completed one-shot/init container and reported as ready. It is no
+			// longer running, so CurrentReplicas is 0.
 			// See https://github.com/sablierapp/sablier/issues/952
 			want: sablier.InstanceInfo{
-				CurrentReplicas: 1,
+				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
 			},
@@ -276,9 +277,10 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 				},
 			},
 			// on-failure does not restart a container that exited successfully,
-			// so it is reported as a completed init container.
+			// so it is reported as a completed init container. It is no longer
+			// running, so CurrentReplicas is 0.
 			want: sablier.InstanceInfo{
-				CurrentReplicas: 1,
+				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
 			},

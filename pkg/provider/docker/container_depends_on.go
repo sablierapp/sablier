@@ -34,8 +34,21 @@ func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*depen
 		labels := spec.Container.Config.Labels
 		project := labels[composeProjectLabel]
 
+		// depends_on can only be resolved within a Compose project. Without the
+		// project label, a service name could match a container from any other
+		// project, so resolution is skipped to avoid starting unrelated
+		// containers.
+		raw := parseComposeDependsOn(labels[composeDependsOnLabel])
+		if len(raw) > 0 && project == "" {
+			p.l.WarnContext(ctx, "skipping depends_on resolution, container has no compose project label",
+				slog.String("container", canonical),
+			)
+			tree.nodes[canonical] = nil
+			return canonical, nil
+		}
+
 		var deps []dependency
-		for _, dep := range parseComposeDependsOn(labels[composeDependsOnLabel]) {
+		for _, dep := range raw {
 			depName, err := p.findComposeContainer(ctx, project, dep.Service)
 			if err != nil {
 				return "", err

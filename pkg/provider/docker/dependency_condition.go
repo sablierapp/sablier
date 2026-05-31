@@ -18,6 +18,9 @@ const dependencyPollInterval = 500 * time.Millisecond
 // cancelled, or the dependency fails irrecoverably (e.g. a
 // service_completed_successfully dependency that exits non-zero).
 func (p *Provider) waitForDependencyCondition(ctx context.Context, name, condition string) error {
+	ticker := time.NewTicker(dependencyPollInterval)
+	defer ticker.Stop()
+
 	for {
 		satisfied, err := p.checkDependencyCondition(ctx, name, condition)
 		if err != nil {
@@ -30,7 +33,7 @@ func (p *Provider) waitForDependencyCondition(ctx context.Context, name, conditi
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(dependencyPollInterval):
+		case <-ticker.C:
 		}
 	}
 }
