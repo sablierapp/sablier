@@ -73,7 +73,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				Status:          sablier.InstanceStatusError,
 				Message:         fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode),
 			}
-		} else if restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
+		} else if p.HonorRestartPolicy && restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
 			// The container exited successfully but its restart policy
 			// (always / unless-stopped) means Docker will bring it back up.
 			// The exited state is therefore transient.
@@ -83,13 +83,17 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusStarting,
 			}
-		} else if restartPolicyExplicitlySet(spec.Container.HostConfig) {
-			// The container exited successfully and a restart policy is
-			// explicitly set to "no" or "on-failure", so Docker will not
-			// restart it. This is a one-shot / init container (e.g. a database
-			// migration) that has completed its job. Honor the restart policy
-			// and report it as ready so that Sablier does not keep restarting
-			// it. The container is not running, so CurrentReplicas stays 0.
+		} else if p.HonorRestartPolicy {
+			// The container exited successfully and its restart policy
+			// ("no" / "on-failure") means Docker will not restart it. This is a
+			// one-shot / init container (e.g. a database migration) that has
+			// completed its job. Report it as ready so that Sablier does not
+			// keep restarting it. The container is not running, so
+			// CurrentReplicas stays 0.
+			//
+			// Note: Docker normalizes an unset restart policy to "no", so an
+			// unset policy is indistinguishable from an explicit "no" and is
+			// also reported as ready here.
 			// See https://github.com/sablierapp/sablier/issues/952
 			info = sablier.InstanceInfo{
 				Name:            name,
@@ -98,12 +102,11 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				Status:          sablier.InstanceStatusReady,
 			}
 		} else {
-			// No restart policy was explicitly defined on the container. Keep
-			// the historical behavior and report it as stopped so that Sablier
+			// HonorRestartPolicy is disabled: keep the historical behavior and
+			// report a successfully exited container as stopped so that Sablier
 			// keeps managing its lifecycle and can start it again on demand.
-			// TODO: we might change this behavior in the future to honor the
-			// restart policy completely and treat an unset policy the same as
-			// "no" (Docker's default), reporting the container as ready.
+			// TODO(v2): remove this branch and honor the restart policy by
+			// default.
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
@@ -163,11 +166,4 @@ func restartPolicyMode(hc *container.HostConfig) container.RestartPolicyMode {
 // with a successful (zero) exit code, given its restart policy.
 func restartsOnSuccess(mode container.RestartPolicyMode) bool {
 	return mode == container.RestartPolicyAlways || mode == container.RestartPolicyUnlessStopped
-}
-
-// restartPolicyExplicitlySet reports whether a restart policy was explicitly
-// defined on the container. Docker leaves the restart policy name empty when it
-// was never configured, so an empty name means "unset".
-func restartPolicyExplicitlySet(hc *container.HostConfig) bool {
-	return hc != nil && hc.RestartPolicy.Name != ""
 }

@@ -24,7 +24,8 @@
       "Uri": "unix:///run/podman/podman.sock"
     },
     "Docker": {
-      "Strategy": "stop"
+      "Strategy": "stop",
+      "HonorRestartPolicy": false
     },
     "ProxmoxLXC": {
       "URL": "",

@@ -5,6 +5,7 @@ services:
     command:
       - start
       - --provider.name=docker
+      - --provider.docker.honor-restart-policy=true
       - --logging.level=debug
       - --sessions.default-duration=2m
       - --sessions.expiration-interval=10s
@@ -36,9 +37,12 @@ services:
       retries: 10
 
   # migration is a one-shot init container. It runs once, exits successfully
-  # and is never restarted (restart: "no"). Sablier reports a container that
-  # exited with code 0 under a non-restarting policy as "ready" (completed),
-  # which lets `service_completed_successfully` dependencies resolve.
+  # and is never restarted (restart: "no"). With
+  # --provider.docker.honor-restart-policy=true, Sablier reports a container
+  # that exited with code 0 under a non-restarting policy as "ready"
+  # (completed), which lets `service_completed_successfully` dependencies
+  # resolve. Without that flag, Sablier keeps its historical behavior and
+  # reports the exited container as "stopped".
   #
   # NOTE: migration is intentionally NOT labeled with sablier.enable / sablier.group.
   # It is a one-shot job, not a long-running service, so there is nothing for
@@ -65,7 +69,7 @@ services:
   app:
     restart: unless-stopped
     image: sablierapp/mimic:v0.3.3
-    command:
+    command:  
       - -running-after=1s
       - -healthy=true
       - -healthy-after=1s

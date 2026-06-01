@@ -50,10 +50,16 @@ When a blocking request for the `app` group arrives, the Docker provider:
 ### Why the migration container matters
 
 `migration` is a one-shot init container: it runs once, exits with code `0`,
-and has `restart: "no"`. Sablier now respects the restart policy — a container
-that exited successfully under a non-restarting policy is reported as **ready
-(completed)** instead of being seen as "stopped" and restarted forever. This is
-what allows the `service_completed_successfully` condition to resolve.
+and has `restart: "no"`. With `--provider.docker.honor-restart-policy=true`
+(set on the `sablier` service in this example), Sablier honors the restart
+policy — a container that exited successfully under a non-restarting policy is
+reported as **ready (completed)** instead of "stopped". This is what allows the
+`service_completed_successfully` condition to resolve.
+
+> The `honor-restart-policy` option is **deprecated** and only exists for
+> backward compatibility. It will become the default in v2. Without it, Sablier
+> keeps its historical behavior and reports the exited `migration` container as
+> "stopped".
 
 See [#792](https://github.com/sablierapp/sablier/issues/792) (depends_on) and
 [#952](https://github.com/sablierapp/sablier/issues/952) (restart policy /

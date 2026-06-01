@@ -133,14 +133,56 @@ Sablier respects the container's [Docker restart policy](https://docs.docker.com
 
 This matters for one-shot **init / migration** containers — containers that run a task once, exit with code `0`, and are not meant to run again (for example a database migration that must complete before the application boots).
 
+By default Sablier keeps its **historical behavior** and reports any container that exits with code `0` as `stopped`. To make Sablier honor the restart policy instead, enable the `honor-restart-policy` option (see below). With it enabled, the exited status is decided as follows:
+
 | Container state | Restart policy | Sablier status |
 |---|---|---|
-| Exited, code `0` | `no` / `on-failure` (explicitly set) | **`ready`** — the container completed its job |
+| Exited, code `0` | `no` / `on-failure` | **`ready`** — the container completed its job |
 | Exited, code `0` | `always` / `unless-stopped` | `starting` — Docker will bring it back, Sablier waits |
-| Exited, code `0` | *unset (no policy defined)* | `stopped` — historical behavior, Sablier keeps managing its lifecycle |
 | Exited, non-zero code | any | `error` — surfaced as a failure |
 
-> Sablier only treats a clean exit as *done* when a restart policy is **explicitly** defined on the container. Give your init container `restart: "no"` (or `on-failure`) and Sablier will report a clean exit as `ready`. When **no** restart policy is defined, Sablier keeps the historical behavior and reports the container as `stopped` so it keeps managing its lifecycle. This may change in the future to honor the restart policy completely and treat an unset policy the same as `no`.
+> Docker normalizes an **unset** restart policy to `no`, so an unset policy is indistinguishable from an explicit `restart: "no"`. With `honor-restart-policy` enabled, both are reported as `ready`.
+
+### Honor the restart policy
+
+> [!WARNING]
+> **Deprecated.** This option only exists to preserve backward compatibility. It
+> will be **removed in v2**, where honoring the restart policy becomes the
+> default behavior.
+
+When enabled, Sablier honors the container's restart policy on a successful exit
+(`no`/`on-failure` → `ready`, `always`/`unless-stopped` → `starting`) instead of
+always reporting an exited container as `stopped`. This is required for the
+one-shot init / migration container pattern described above (and used by the
+[`depends-on`](#ordering-containers-with-depends_on) example).
+
+A complete, runnable example is available in [`examples/restart-policy`](https://github.com/sablierapp/sablier/tree/main/examples/restart-policy).
+
+<!-- tabs:start -->
+
+#### **File (YAML)**
+
+```yaml
+provider:
+  docker:
+    honor-restart-policy: true
+```
+
+#### **CLI**
+
+```bash
+sablier start --provider.docker.honor-restart-policy=true
+```
+
+#### **Environment Variable**
+
+```bash
+SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY=true
+```
+
+<!-- tabs:end -->
+
+Default: `false` (historical behavior — exited containers are reported as `stopped`).
 
 ## Ordering containers with `depends_on`
 
@@ -182,6 +224,12 @@ services:
 > Note that `migration` is **not** labeled. It is a one-shot job that exits on
 > completion, so there is nothing for Sablier to keep alive or scale to zero —
 > it is started on-demand only because `app` declares a `depends_on` on it.
+
+> The `service_completed_successfully` condition relies on the exited
+> `migration` container being reported as `ready`. Enable
+> [`--provider.docker.honor-restart-policy=true`](#honor-the-restart-policy) so
+> Sablier honors the `restart: "no"` policy; without it, the exited container is
+> reported as `stopped` and the condition never resolves.
 
 When Sablier is asked to start a container, it reads the `com.docker.compose.depends_on` label (written automatically by `docker compose`) and **starts every dependency first**, recursively, waiting for each declared condition before continuing. All four Compose conditions are supported:
 

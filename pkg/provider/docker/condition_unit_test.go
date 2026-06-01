@@ -9,6 +9,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 // fakeInspectClient is a minimal client.APIClient that only implements
@@ -194,18 +195,6 @@ func TestRestartPolicyMode(t *testing.T) {
 	}
 }
 
-func TestRestartPolicyExplicitlySet(t *testing.T) {
-	if restartPolicyExplicitlySet(nil) {
-		t.Fatalf("nil host config should not be considered explicitly set")
-	}
-	if restartPolicyExplicitlySet(&container.HostConfig{}) {
-		t.Fatalf("empty restart policy name should not be considered explicitly set")
-	}
-	if !restartPolicyExplicitlySet(&container.HostConfig{RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyDisabled}}) {
-		t.Fatalf("explicit \"no\" restart policy should be considered explicitly set")
-	}
-}
-
 func TestRestartsOnSuccess(t *testing.T) {
 	tests := []struct {
 		mode container.RestartPolicyMode
@@ -229,5 +218,51 @@ func TestHealthStatus(t *testing.T) {
 	}
 	if got := healthStatus(&container.Health{Status: container.Healthy}); got != string(container.Healthy) {
 		t.Fatalf("got %q, want %q", got, container.Healthy)
+	}
+}
+
+func TestInstanceInspectExitedRestartPolicy(t *testing.T) {
+	ctx := context.Background()
+
+	newResult := func(mode container.RestartPolicyMode) client.ContainerInspectResult {
+		return client.ContainerInspectResult{
+			Container: container.InspectResponse{
+				ID:         "abc",
+				State:      &container.State{Status: container.StateExited, ExitCode: 0},
+				HostConfig: &container.HostConfig{RestartPolicy: container.RestartPolicy{Name: mode}},
+				Config:     &container.Config{Image: "img"},
+			},
+		}
+	}
+
+	tests := []struct {
+		name  string
+		honor bool
+		mode  container.RestartPolicyMode
+		want  sablier.InstanceStatus
+	}{
+		// HonorRestartPolicy disabled (default): always stopped, regardless of policy.
+		{"disabled: no -> stopped", false, container.RestartPolicyDisabled, sablier.InstanceStatusStopped},
+		{"disabled: on-failure -> stopped", false, container.RestartPolicyOnFailure, sablier.InstanceStatusStopped},
+		{"disabled: always -> stopped", false, container.RestartPolicyAlways, sablier.InstanceStatusStopped},
+		{"disabled: unless-stopped -> stopped", false, container.RestartPolicyUnlessStopped, sablier.InstanceStatusStopped},
+		// HonorRestartPolicy enabled: honor the policy.
+		{"honor: no -> ready", true, container.RestartPolicyDisabled, sablier.InstanceStatusReady},
+		{"honor: on-failure -> ready", true, container.RestartPolicyOnFailure, sablier.InstanceStatusReady},
+		{"honor: always -> starting", true, container.RestartPolicyAlways, sablier.InstanceStatusStarting},
+		{"honor: unless-stopped -> starting", true, container.RestartPolicyUnlessStopped, sablier.InstanceStatusStarting},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newTestProvider(fakeInspectClient{result: newResult(tt.mode)})
+			p.HonorRestartPolicy = tt.honor
+			got, err := p.InstanceInspect(ctx, "abc")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.Status != tt.want {
+				t.Fatalf("got %q, want %q", got.Status, tt.want)
+			}
+		})
 	}
 }

@@ -1,0 +1,62 @@
+services:
+  sablier:
+    restart: always
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      # Honor the container restart policy when a container exits with code 0.
+      # With this enabled, a one-shot container with a non-restarting policy
+      # ("no" / "on-failure") is reported as `ready` (completed) instead of the
+      # historical `stopped`, so it can live in a blocking group next to a
+      # long-running service. Deprecated: becomes the default in v2.
+      - --provider.docker.honor-restart-policy=true
+      - --logging.level=debug
+      - --sessions.default-duration=2m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # app is a long-running web service. It carries restart: unless-stopped, so
+  # while it is running Sablier reports it as ready, and while it is exited
+  # (between restarts) Sablier reports it as starting and waits for it.
+  app:
+    restart: unless-stopped
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=1s
+      - -healthy=true
+      - -healthy-after=1s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=demo"
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8080:80"
+
+  # init is a one-shot container in the SAME group as `app`. It runs once,
+  # exits with code 0 and is never restarted (restart: "no"). Normally you must
+  # never put a one-shot container in a blocking group, because the blocking
+  # strategy waits for every member to be running and a container that exits by
+  # design would block the group forever.
+  #
+  # With --provider.docker.honor-restart-policy=true, Sablier honors the "no"
+  # restart policy and reports the completed container as `ready` instead of
+  # `stopped`. That lets the blocking group reach the ready state even though
+  # one of its members is a one-shot init job.
+  init:
+    restart: "no"
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running=false
+      - -exit-code=0
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=demo"

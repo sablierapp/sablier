@@ -20,6 +20,16 @@ type Provider struct {
 	l        *slog.Logger
 	strategy string
 	tracer   trace.Tracer
+
+	// HonorRestartPolicy makes InstanceInspect honor the container's restart
+	// policy when it exits successfully (exit code 0): "no"/"on-failure" are
+	// reported as ready (completed one-shot/init container) and
+	// "always"/"unless-stopped" as starting. When false, a successfully exited
+	// container is always reported as stopped (historical behavior).
+	//
+	// Deprecated: transitional flag for backward compatibility; honoring the
+	// restart policy will become the default in v2.
+	HonorRestartPolicy bool
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
