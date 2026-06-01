@@ -47,6 +47,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, err
 		}
+		//nolint:staticcheck // Intentionally wiring the deprecated transitional flag until it becomes the default in v2.
 		p.HonorRestartPolicy = config.Docker.HonorRestartPolicy
 		return p, nil
 	case "kubernetes":
