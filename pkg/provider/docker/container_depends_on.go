@@ -23,7 +23,7 @@ func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*depen
 	walk = func(name string) (string, error) {
 		spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 		if err != nil {
-			return "", fmt.Errorf("cannot inspect container: %w", err)
+			return "", fmt.Errorf("cannot inspect dependency container %q: %w", name, err)
 		}
 
 		canonical := strings.TrimPrefix(spec.Container.Name, "/")

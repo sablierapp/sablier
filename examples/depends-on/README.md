@@ -178,8 +178,8 @@ make down
 ## What to look for in the logs
 
 ```
-level=DEBUG msg="starting depends_on dependency" dependency=db        condition=service_healthy
-level=DEBUG msg="starting depends_on dependency" dependency=migration condition=service_completed_successfully
+level=DEBUG msg="waiting for depends_on dependency" dependency=db        condition=service_healthy
+level=DEBUG msg="waiting for depends_on dependency" dependency=migration condition=service_completed_successfully
 level=DEBUG msg="starting container" name=db
 level=DEBUG msg="starting container" name=migration
 level=DEBUG msg="starting container" name=app
