@@ -20,6 +20,10 @@ func setupSablier(t *testing.T) (*sablier.Sablier, *storetest.MockStore, *provid
 	p := providertest.NewMockProvider(ctrl)
 	s := storetest.NewMockStore(ctrl)
 
+	// Default: no dependencies for any instance. Individual tests can override
+	// this by registering a more-specific expectation after setupSablier returns.
+	p.EXPECT().InstanceDependencies(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
 	m := sablier.New(slogt.New(t), s, p)
 	return m, s, p
 }

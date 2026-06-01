@@ -7,7 +7,32 @@ import (
 	"strings"
 
 	"github.com/moby/moby/client"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
+
+// InstanceDependencies returns the transitive depends_on dependencies of name
+// in topological order by inspecting the container's Docker Compose labels.
+// Each dependency is listed before the nodes that depend on it, so Sablier core
+// can iterate the slice and start each entry in order.
+//
+// If the dependency graph contains a cycle (invalid Compose configuration), an
+// empty slice is returned with a warning log so the caller can still attempt to
+// start the instance on its own.
+func (p *Provider) InstanceDependencies(ctx context.Context, name string) ([]sablier.InstanceDependency, error) {
+	tree, err := p.buildDependencyTree(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if cyclic, path := tree.hasCycle(); cyclic {
+		p.l.WarnContext(ctx, "depends_on cycle detected, ignoring dependencies",
+			slog.String("instance", name),
+			slog.String("cycle", path),
+		)
+		return nil, nil
+	}
+	return tree.topologicalDependencies(), nil
+}
 
 // buildDependencyTree resolves the depends_on graph reachable from root by
 // inspecting containers and following their com.docker.compose.depends_on
@@ -80,36 +105,3 @@ func (p *Provider) buildDependencyTree(ctx context.Context, root string) (*depen
 	return tree, nil
 }
 
-// startTree starts every container in tree in dependency order: a container is
-// started only after each of its dependencies has started and satisfied its
-// condition. tree must be acyclic.
-func (p *Provider) startTree(ctx context.Context, tree *dependencyTree) error {
-	return p.resolveNode(ctx, tree, tree.root, make(map[string]struct{}))
-}
-
-// resolveNode starts node after starting and waiting for its dependencies.
-// started guards against starting a shared dependency more than once.
-func (p *Provider) resolveNode(ctx context.Context, tree *dependencyTree, node string, started map[string]struct{}) error {
-	if _, ok := started[node]; ok {
-		return nil
-	}
-
-	for _, dep := range tree.nodes[node] {
-		if err := p.resolveNode(ctx, tree, dep.name, started); err != nil {
-			return err
-		}
-		p.l.DebugContext(ctx, "waiting for depends_on dependency",
-			slog.String("dependency", dep.name),
-			slog.String("condition", dep.condition),
-		)
-		if err := p.waitForDependencyCondition(ctx, dep.name, dep.condition); err != nil {
-			return fmt.Errorf("dependency %s did not satisfy condition %q: %w", dep.name, dep.condition, err)
-		}
-	}
-
-	if err := p.startSingle(ctx, node); err != nil {
-		return err
-	}
-	started[node] = struct{}{}
-	return nil
-}

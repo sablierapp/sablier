@@ -89,3 +89,52 @@ func TestDependencyTree_HasCycle_SingleNode(t *testing.T) {
 		t.Fatalf("expected no cycle for single node, got: %s", path)
 	}
 }
+
+func TestDependencyTree_TopologicalDependencies_Chain(t *testing.T) {
+	// app -> migration -> db  should yield [db, migration] (deps first).
+	tr := tree("app", map[string][]string{
+		"app":       {"migration"},
+		"migration": {"db"},
+		"db":        nil,
+	})
+
+	got := tr.topologicalDependencies()
+	if len(got) != 2 {
+		t.Fatalf("expected 2 deps, got %d: %v", len(got), got)
+	}
+	if got[0].Name != "db" {
+		t.Errorf("expected db first, got %s", got[0].Name)
+	}
+	if got[1].Name != "migration" {
+		t.Errorf("expected migration second, got %s", got[1].Name)
+	}
+}
+
+func TestDependencyTree_TopologicalDependencies_Diamond(t *testing.T) {
+	// app -> {web, worker} -> db  — db must appear exactly once.
+	tr := tree("app", map[string][]string{
+		"app":    {"web", "worker"},
+		"web":    {"db"},
+		"worker": {"db"},
+		"db":     nil,
+	})
+
+	got := tr.topologicalDependencies()
+	dbCount := 0
+	for _, d := range got {
+		if d.Name == "db" {
+			dbCount++
+		}
+	}
+	if dbCount != 1 {
+		t.Errorf("expected db exactly once, got %d times in %v", dbCount, got)
+	}
+}
+
+func TestDependencyTree_TopologicalDependencies_NoDeps(t *testing.T) {
+	tr := &dependencyTree{root: "app", nodes: map[string][]dependency{"app": nil}}
+	got := tr.topologicalDependencies()
+	if len(got) != 0 {
+		t.Fatalf("expected no deps for standalone container, got %v", got)
+	}
+}

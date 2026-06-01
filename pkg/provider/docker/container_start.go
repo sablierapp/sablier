@@ -24,23 +24,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
-	// Resolve and start depends_on dependencies in order. A cyclic tree is
-	// invalid and ignored: the instance is started on its own instead.
-	// See https://github.com/sablierapp/sablier/issues/792
-	tree, err := p.buildDependencyTree(ctx, name)
-	if err != nil {
-		return err
-	}
-
-	if cyclic, path := tree.hasCycle(); cyclic {
-		p.l.WarnContext(ctx, "dependency tree ignored, cycle detected",
-			slog.String("instance", name),
-			slog.String("cycle", path),
-		)
-		return p.startSingle(ctx, tree.root)
-	}
-
-	return p.startTree(ctx, tree)
+	return p.startSingle(ctx, name)
 }
 
 // startSingle starts a single container, applying the configured scale mode or

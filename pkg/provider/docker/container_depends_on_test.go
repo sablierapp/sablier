@@ -2,6 +2,7 @@ package docker_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,11 +13,11 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// TestDockerClassicProvider_StartWithDependsOn verifies that starting a
-// container resolves its Docker Compose depends_on dependencies first, respecting
-// the declared conditions.
+// TestDockerClassicProvider_InstanceDependencies_ServiceCompletedSuccessfully
+// verifies that InstanceDependencies resolves the Docker Compose depends_on label
+// and returns the correct dependency with condition service_completed_successfully.
 // See https://github.com/sablierapp/sablier/issues/792
-func TestDockerClassicProvider_StartWithDependsOn(t *testing.T) {
+func TestDockerClassicProvider_InstanceDependencies_ServiceCompletedSuccessfully(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -27,16 +28,13 @@ func TestDockerClassicProvider_StartWithDependsOn(t *testing.T) {
 	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	const project = "depends-on-test"
+	const project = "depends-on-completed-test"
 
-	// migration is an init container that runs once and exits successfully.
 	migration, err := c.CreateMimic(ctx, MimicOptions{
 		Cmd: []string{"/mimic", "-running=false", "-exit-code=0"},
 		Labels: map[string]string{
 			"com.docker.compose.project": project,
 			"com.docker.compose.service": "migration",
-			"sablier.enable":             "true",
-			"sablier.group":              project,
 		},
 	})
 	assert.NilError(t, err)
@@ -54,28 +52,22 @@ func TestDockerClassicProvider_StartWithDependsOn(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	startCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
-	err = p.InstanceStart(startCtx, app.ID)
-	assert.NilError(t, err)
-
-	// The migration dependency must have been started and run to completion.
+	// Inspect migration to get its canonical container name (Docker strips the
+	// leading "/" from Names[0] when comparing with the dep returned by the provider).
 	migrationSpec, err := c.client.ContainerInspect(ctx, migration.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
-	assert.Equal(t, migrationSpec.Container.State.Status, container.StateExited)
-	assert.Equal(t, migrationSpec.Container.State.ExitCode, 0)
+	migrationName := strings.TrimPrefix(migrationSpec.Container.Name, "/")
 
-	// The app must be running once its dependency completed.
-	appSpec, err := c.client.ContainerInspect(ctx, app.ID, client.ContainerInspectOptions{})
+	deps, err := p.InstanceDependencies(ctx, app.ID)
 	assert.NilError(t, err)
-	assert.Equal(t, appSpec.Container.State.Running, true)
+	assert.Equal(t, len(deps), 1, "expected one dependency")
+	assert.Equal(t, deps[0].Name, migrationName)
+	assert.Equal(t, deps[0].Condition, "service_completed_successfully")
 }
 
-// TestDockerClassicProvider_StartWithDependsOnHealthy verifies that a
-// service_healthy dependency is started and awaited until healthy before the
-// dependent container is started.
-func TestDockerClassicProvider_StartWithDependsOnHealthy(t *testing.T) {
+// TestDockerClassicProvider_InstanceDependencies_ServiceHealthy verifies that a
+// service_healthy depends_on is resolved and returned with the correct condition.
+func TestDockerClassicProvider_InstanceDependencies_ServiceHealthy(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
@@ -115,19 +107,15 @@ func TestDockerClassicProvider_StartWithDependsOnHealthy(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
-	startCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
-	err = p.InstanceStart(startCtx, app.ID)
-	assert.NilError(t, err)
-
+	// Inspect db to get its canonical container name.
 	dbSpec, err := c.client.ContainerInspect(ctx, db.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
-	assert.Equal(t, dbSpec.Container.State.Running, true)
-	assert.Assert(t, dbSpec.Container.State.Health != nil)
-	assert.Equal(t, dbSpec.Container.State.Health.Status, container.Healthy)
+	dbName := strings.TrimPrefix(dbSpec.Container.Name, "/")
 
-	appSpec, err := c.client.ContainerInspect(ctx, app.ID, client.ContainerInspectOptions{})
+	deps, err := p.InstanceDependencies(ctx, app.ID)
 	assert.NilError(t, err)
-	assert.Equal(t, appSpec.Container.State.Running, true)
+	assert.Equal(t, len(deps), 1, "expected one dependency")
+	assert.Equal(t, deps[0].Name, dbName)
+	assert.Equal(t, deps[0].Condition, "service_healthy")
 }
+
