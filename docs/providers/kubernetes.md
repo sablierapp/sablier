@@ -69,9 +69,17 @@ rules:
       - list    # Discovery and events
       - watch   # Events
       - patch   # Toggle the hibernation annotation
+  # Only required if you manage OT-CONTAINER-KIT Redis instances (see below).
+  - apiGroups:
+      - redis.redis.opstreelabs.in
+    resources:
+      - redis
+    verbs:
+      - get     # Resolve the Redis CR owner of a StatefulSet
+      - patch   # Toggle the skip-reconcile annotation
 ```
 
-?> The `postgresql.cnpg.io` rule is optional. When the CloudNativePG CRD is absent, Sablier simply skips CloudNativePG discovery.
+?> The `postgresql.cnpg.io` and `redis.redis.opstreelabs.in` rules are optional. Sablier skips those integrations gracefully when the CRDs are absent.
 
 ## Register Deployments
 
@@ -143,3 +151,31 @@ A CloudNativePG Cluster is considered:
 - `starting` otherwise.
 
 ?> Resuming a hibernated cluster takes longer than a simple scale-up (PVC reattachment and PostgreSQL recovery). Make sure your reverse-proxy timeouts allow for it.
+
+## Register OT-CONTAINER-KIT Redis instances
+
+Sablier can scale to zero StatefulSets managed by the [OT-CONTAINER-KIT redis-operator](https://github.com/OT-CONTAINER-KIT/redis-operator). The operator continuously reconciles its StatefulSets back to the desired replica count, so a plain scale-to-zero is immediately undone. Sablier works around this by toggling the operator's own pause mechanism:
+
+- **Stop** sets `redis.opstreelabs.in/skip-reconcile: "true"` on the Redis CR, then scales the StatefulSet to 0.
+- **Start** scales the StatefulSet back to 1, then removes the annotation so the operator resumes normal reconciliation.
+
+If the scale fails, the annotation is cleared immediately so the operator is never left paused with pods still running.
+
+Opt-in by adding the standard Sablier labels to the Redis CR. The operator propagates them to the StatefulSet it manages, so no extra labelling is needed:
+
+```yaml
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: Redis
+metadata:
+  name: myapp-redis
+  labels:
+    sablier.enable: "true"
+    sablier.group: myapp
+spec:
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.12
+```
+
+This makes it straightforward to group a Redis instance with the rest of an application stack so that a single request wakes everything up and inactivity shuts it all down together.
+
+?> The `redis.redis.opstreelabs.in` RBAC rule (see above) is required for Sablier to patch the skip-reconcile annotation on the Redis CR. If the rule is absent or the CRD is not installed, Sablier logs a warning and scales the StatefulSet anyway — the operator will reconcile replicas back, but no other harm is done.
