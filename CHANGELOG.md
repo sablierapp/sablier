@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/sablierapp/sablier/compare/v1.13.0...v1.14.0) (2026-06-12)
+
+
+### Features
+
+* **provider:** pause redis-operator reconciliation during StatefulSet scale-to-zero ([#963](https://github.com/sablierapp/sablier/issues/963)) ([f3f1af0](https://github.com/sablierapp/sablier/commit/f3f1af0118742d1f0d539c3100612fbe2771d4b6))
+
+
+### Bug Fixes
+
+* **kubernetes:** address code review findings on redis-operator skip-reconcile ([f3f1af0](https://github.com/sablierapp/sablier/commit/f3f1af0118742d1f0d539c3100612fbe2771d4b6))
+
 ## [1.13.0](https://github.com/sablierapp/sablier/compare/v1.12.0...v1.13.0) (2026-05-29)
 
 
