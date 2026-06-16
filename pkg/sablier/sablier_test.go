@@ -43,12 +43,13 @@ func (f *fakeRecorder) snapshot() []string {
 	return out
 }
 
-func (f *fakeRecorder) RecordSessionRequest(strategy, target string) {
-	f.record("session:" + strategy + "/" + target)
+func (f *fakeRecorder) RecordSessionRequest(strategy, target, group string) {
+	f.record("session:" + strategy + "/" + target + "/" + group)
 }
 func (f *fakeRecorder) RecordInstanceStartEnd(instance string, _ time.Duration) {
 	f.record("start_end:" + instance)
 }
+func (f *fakeRecorder) RecordGroupStartDuration(string, time.Duration) {}
 func (f *fakeRecorder) RecordInstanceStartFailure(instance string) {
 	f.record("start_fail:" + instance)
 }

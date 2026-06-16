@@ -49,15 +49,15 @@ func keys(m map[string]bool) []string {
 func TestPromRecorder_Counters(t *testing.T) {
 	r := metrics.NewPromRecorder()
 
-	r.RecordSessionRequest("dynamic", "names")
-	r.RecordSessionRequest("dynamic", "names")
-	r.RecordSessionRequest("blocking", "group")
+	r.RecordSessionRequest("dynamic", "names", "")
+	r.RecordSessionRequest("dynamic", "names", "")
+	r.RecordSessionRequest("blocking", "group", "team-a")
 	r.RecordInstanceStartFailure("nginx")
 	r.RecordInstanceStop("nginx", "expired")
 	r.RecordInstanceStop("nginx", "unregistered")
 
-	mustCounter(t, r, "sablier_session_requests_total", map[string]string{"strategy": "dynamic", "target": "names"}, 2)
-	mustCounter(t, r, "sablier_session_requests_total", map[string]string{"strategy": "blocking", "target": "group"}, 1)
+	mustCounter(t, r, "sablier_session_requests_total", map[string]string{"strategy": "dynamic", "target": "names", "group": ""}, 2)
+	mustCounter(t, r, "sablier_session_requests_total", map[string]string{"strategy": "blocking", "target": "group", "group": "team-a"}, 1)
 	mustCounter(t, r, "sablier_instance_start_failures_total", map[string]string{"instance": "nginx"}, 1)
 	mustCounter(t, r, "sablier_instance_stops_total", map[string]string{"instance": "nginx", "reason": "expired"}, 1)
 	mustCounter(t, r, "sablier_instance_stops_total", map[string]string{"instance": "nginx", "reason": "unregistered"}, 1)
@@ -275,4 +275,15 @@ func TestPromRecorder_ActiveSeconds_AccumulatesAcrossMultipleCycles(t *testing.T
 	if got := m.GetCounter().GetValue(); got <= 0 {
 		t.Errorf("expected accumulated active seconds across 3 cycles, got %v", got)
 	}
+}
+
+func TestPromRecorder_GroupStartDuration(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordGroupStartDuration("team-a", 2*time.Second)
+	r.RecordGroupStartDuration("team-a", 5*time.Second)
+	r.RecordGroupStartDuration("team-b", 1*time.Second)
+
+	mustHistogramCount(t, r, "sablier_group_start_duration_seconds", map[string]string{"group": "team-a"}, 2)
+	mustHistogramCount(t, r, "sablier_group_start_duration_seconds", map[string]string{"group": "team-b"}, 1)
 }

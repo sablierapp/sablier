@@ -160,5 +160,11 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.requestReadySession(ctx, names, duration, timeout, false)
+	start := time.Now()
+	session, err := s.requestReadySession(ctx, names, duration, timeout, false)
+	if err != nil {
+		return nil, err
+	}
+	s.metrics.RecordGroupStartDuration(group, time.Since(start))
+	return session, nil
 }

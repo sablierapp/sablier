@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
 	"go.uber.org/mock/gomock"
@@ -320,4 +323,39 @@ func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 		assert.NilError(t, <-errchan)
 	})
+}
+
+func TestRequestReadySessionGroup_RecordsGroupStartDuration(t *testing.T) {
+	manager, store, _ := setupSablier(t)
+	rec := metrics.NewPromRecorder()
+	manager.WithMetrics(rec)
+	manager.SetGroups(map[string][]string{"team-a": {"apache"}})
+
+	store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusReady}, nil).AnyTimes()
+	store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	_, err := manager.RequestReadySessionGroup(t.Context(), "team-a", time.Minute, time.Second)
+	assert.NilError(t, err)
+
+	count, err := testutil.GatherAndCount(rec.Registry().(*prometheus.Registry), "sablier_group_start_duration_seconds")
+	assert.NilError(t, err)
+	assert.Equal(t, count, 1)
+}
+
+func TestRequestReadySessionGroup_NoDurationOnTimeout(t *testing.T) {
+	manager, store, provider := setupSablier(t)
+	rec := metrics.NewPromRecorder()
+	manager.WithMetrics(rec)
+	manager.SetGroups(map[string][]string{"team-a": {"apache"}})
+
+	store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
+	store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	provider.EXPECT().InstanceInspect(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
+
+	_, err := manager.RequestReadySessionGroup(t.Context(), "team-a", time.Minute, time.Second)
+	assert.Assert(t, err != nil)
+
+	count, err := testutil.GatherAndCount(rec.Registry().(*prometheus.Registry), "sablier_group_start_duration_seconds")
+	assert.NilError(t, err)
+	assert.Equal(t, count, 0)
 }

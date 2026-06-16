@@ -288,10 +288,41 @@ When set to `true`, Sablier registers a `GET <base-path>/metrics` route on the s
 | `sablier_group_active_instances` | gauge | `group` | Number of instances in the group that currently have an active session. |
 | `sablier_instance_start_duration_seconds` | histogram | `instance` | Duration of `provider.InstanceStart` calls (seconds). Observed only on success. |
 | `sablier_instance_ready_duration_seconds` | histogram | `instance` | End-to-end wall time from first not-ready observation to ready (seconds). |
-| `sablier_session_requests_total` | counter | `strategy` (`dynamic`\|`blocking`), `target` (`names`\|`group`) | Total number of session requests received. |
+| `sablier_group_start_duration_seconds` | histogram | `group` | End-to-end wall time for a **blocking** group request to become ready (seconds). The dynamic strategy is not observed. |
+| `sablier_session_requests_total` | counter | `strategy` (`dynamic`\|`blocking`), `target` (`names`\|`group`), `group` (group name, empty for names-based) | Total number of session requests received. |
 | `sablier_instance_start_failures_total` | counter | `instance` | Total number of `provider.InstanceStart` failures. |
 | `sablier_instance_stops_total` | counter | `instance`, `reason` (`expired`\|`unregistered`) | Total number of instance stops. |
+| `sablier_instance_group` | gauge | `instance`, `group` | Always `1`. Maps each instance to the groups it belongs to, for joining per-instance metrics by group. |
 | Go runtime + process collectors | (default) | (default) | Standard `go_*` and `process_*` metrics from the Prometheus Go client. |
+
+#### Querying per-group
+
+Instances can belong to multiple groups, so per-instance timing and lifetime metrics carry no `group` label. Slice them by group by joining on `sablier_instance_group`.
+
+Session active time per group (last hour):
+
+```promql
+sum by (group) (
+  increase(sablier_instance_active_seconds_total[1h])
+  * on(instance) group_left(group) sablier_instance_group
+)
+```
+
+Ready-time p95 per group:
+
+```promql
+histogram_quantile(0.95, sum by (group, le) (
+  rate(sablier_instance_ready_duration_seconds_bucket[1h])
+  * on(instance) group_left(group) sablier_instance_group
+))
+```
+
+Request rate and blocking start-time p95 are already labeled by group directly:
+
+```promql
+sum by (group) (rate(sablier_session_requests_total{group!=""}[5m]))
+histogram_quantile(0.95, sum by (group, le) (rate(sablier_group_start_duration_seconds_bucket[1h])))
+```
 
 ### Security note
 

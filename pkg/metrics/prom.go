@@ -21,6 +21,7 @@ type PromRecorder struct {
 	instanceStartDuration  *prometheus.HistogramVec
 	instanceReadyDuration  *prometheus.HistogramVec
 	instanceActiveDuration *prometheus.CounterVec
+	groupStartDuration     *prometheus.HistogramVec
 
 	activeMu        sync.RWMutex
 	activeInstances map[string]struct{}
@@ -45,9 +46,9 @@ func NewPromRecorder() *PromRecorder {
 	r.sessionRequests = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "sablier_session_requests_total",
-			Help: "Total number of session requests received, by strategy and target.",
+			Help: "Total number of session requests received, by strategy, target and group.",
 		},
-		[]string{"strategy", "target"},
+		[]string{"strategy", "target", "group"},
 	)
 	r.instanceStartFailures = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -88,6 +89,14 @@ func NewPromRecorder() *PromRecorder {
 		},
 		[]string{"instance"},
 	)
+	r.groupStartDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "sablier_group_start_duration_seconds",
+			Help:    "End-to-end wall time for a blocking group request to become ready (seconds). Only the blocking strategy is observed.",
+			Buckets: histogramBuckets,
+		},
+		[]string{"group"},
+	)
 
 	reg.MustRegister(
 		r.sessionRequests,
@@ -96,6 +105,7 @@ func NewPromRecorder() *PromRecorder {
 		r.instanceStartDuration,
 		r.instanceReadyDuration,
 		r.instanceActiveDuration,
+		r.groupStartDuration,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -108,8 +118,8 @@ func (r *PromRecorder) Registry() prometheus.Registerer {
 	return r.registry
 }
 
-func (r *PromRecorder) RecordSessionRequest(strategy, target string) {
-	r.sessionRequests.WithLabelValues(strategy, target).Inc()
+func (r *PromRecorder) RecordSessionRequest(strategy, target, group string) {
+	r.sessionRequests.WithLabelValues(strategy, target, group).Inc()
 }
 
 func (r *PromRecorder) RecordInstanceStartFailure(instance string) {
@@ -122,6 +132,10 @@ func (r *PromRecorder) RecordInstanceStop(instance, reason string) {
 
 func (r *PromRecorder) RecordInstanceStartEnd(instance string, dur time.Duration) {
 	r.instanceStartDuration.WithLabelValues(instance).Observe(dur.Seconds())
+}
+
+func (r *PromRecorder) RecordGroupStartDuration(group string, dur time.Duration) {
+	r.groupStartDuration.WithLabelValues(group).Observe(dur.Seconds())
 }
 
 func (r *PromRecorder) RecordReadyWaitBegin(instance string) {
