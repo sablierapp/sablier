@@ -9,7 +9,7 @@ require (
 	github.com/lmittmann/tint v1.1.3
 	github.com/luthermonson/go-proxmox v0.5.1
 	github.com/moby/moby/api v1.55.0
-	github.com/moby/moby/client v0.4.1
+	github.com/moby/moby/client v0.5.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
