@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.1.3
-	github.com/luthermonson/go-proxmox v0.5.1
+	github.com/luthermonson/go-proxmox v0.8.0
 	github.com/moby/moby/api v1.55.0
 	github.com/moby/moby/client v0.5.0
 	github.com/neilotoole/slogt v1.1.0
