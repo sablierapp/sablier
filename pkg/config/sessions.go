@@ -10,6 +10,12 @@ type Sessions struct {
 	// Default: 5m
 	DefaultDuration time.Duration
 
+	// CreateOnGroupDiscovery creates a default-duration session when a group-managed instance is discovered.
+	// Env: SABLIER_SESSIONS_CREATE_ON_GROUP_DISCOVERY
+	// CLI: --sessions.create-on-group-discovery
+	// Default: false
+	CreateOnGroupDiscovery bool
+
 	// ExpirationInterval is how often Sablier checks for and stops expired sessions.
 	// A longer interval reduces CPU overhead; align it with your shortest session duration
 	// (e.g. if all sessions are ≥1 h, 5 m is a reasonable trade-off).

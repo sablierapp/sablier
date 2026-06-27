@@ -38,6 +38,10 @@ type Sablier struct {
 	// reconciled. Defaults to 30 seconds.
 	RunningHoursRefreshFrequency time.Duration
 
+	// GroupDiscoverySessionDuration creates sessions for discovered group members.
+	// Zero disables it.
+	GroupDiscoverySessionDuration time.Duration
+
 	// rejectUnlabeledRequests blocks direct named requests unless sablier.enable=true.
 	rejectUnlabeledRequests bool
 

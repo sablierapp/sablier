@@ -2,10 +2,12 @@ package sablier
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/store"
 )
 
 // GroupWatch maintains group membership in sync with the provider.
@@ -82,6 +84,9 @@ func (s *Sablier) handleGroupEvent(ctx context.Context, event InstanceEvent) {
 				slog.String("reason", reason),
 			)
 		}
+		if len(added) > 0 {
+			s.seedGroupSession(ctx, info.Name)
+		}
 
 	case provider.InstanceEventUpdated:
 		currentGroups := s.GroupsForInstance(info.Name)
@@ -115,6 +120,9 @@ func (s *Sablier) handleGroupEvent(ctx context.Context, event InstanceEvent) {
 				slog.String("group", g),
 				slog.String("reason", reason),
 			)
+		}
+		if len(added) > 0 {
+			s.seedGroupSession(ctx, info.Name)
 		}
 
 	case provider.InstanceEventRemoved:
@@ -158,6 +166,9 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 				slog.String("reason", reason),
 			)
 		}
+		if len(added) > 0 {
+			s.seedGroupSession(ctx, inst)
+		}
 		for _, g := range removed {
 			s.l.InfoContext(ctx, "instance removed from group",
 				slog.String("instance", inst),
@@ -179,6 +190,48 @@ func (s *Sablier) reconcileGroups(ctx context.Context, reason string) {
 				)
 			}
 		}
+	}
+}
+
+// SeedGroupSessions creates default-duration sessions for discovered group members.
+func (s *Sablier) SeedGroupSessions(ctx context.Context, groups map[string][]string) {
+	seen := map[string]bool{}
+	for _, instances := range groups {
+		for _, name := range instances {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			s.seedGroupSession(ctx, name)
+		}
+	}
+}
+
+func (s *Sablier) seedGroupSession(ctx context.Context, name string) {
+	if s.GroupDiscoverySessionDuration <= 0 {
+		return
+	}
+
+	_, err := s.sessions.Get(ctx, name)
+	switch {
+	case err == nil:
+		return
+	case !errors.Is(err, store.ErrKeyNotFound):
+		s.l.WarnContext(ctx, "group discovery session lookup failed", slog.String("instance", name), slog.Any("error", err))
+		return
+	}
+
+	info, err := s.provider.InstanceInspect(ctx, name)
+	if err != nil {
+		s.l.WarnContext(ctx, "group discovery instance inspect failed", slog.String("instance", name), slog.Any("error", err))
+		return
+	}
+	if info.Status != InstanceStatusReady {
+		return
+	}
+
+	if err := s.sessions.Put(ctx, info, s.GroupDiscoverySessionDuration); err != nil {
+		s.l.WarnContext(ctx, "group discovery session seed failed", slog.String("instance", name), slog.Any("error", err))
 	}
 }
 

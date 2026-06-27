@@ -251,6 +251,8 @@ storage:
 sessions:
   # The default session duration (default 5m)
   default-duration: 5m
+  # Create a default-duration session when a group-managed instance is discovered (default false)
+  create-on-group-discovery: false
   # The expiration checking interval. 
   # Higher duration gives less stress on CPU. 
   # If you only use sessions of 1h, setting this to 5m is a good trade-off.
@@ -358,6 +360,7 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
       --server.base-path string                               The base path for the API (default "/")
       --server.metrics.enabled                                Enable the Prometheus /metrics endpoint (default false)
       --server.port int                                       The server port to use (default 10000)
+      --sessions.create-on-group-discovery                    Create a default-duration session when a group-managed instance is discovered
       --sessions.default-duration duration                    The default session duration (default 5m0s)
       --sessions.expiration-interval duration                 The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off. (default 20s)
       --storage.file string                                   File path to save the state

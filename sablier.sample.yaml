@@ -13,6 +13,7 @@ storage:
   file:
 sessions:
   default-duration: 5m
+  create-on-group-discovery: false
   expiration-interval: 20s
 logging:
   level: info

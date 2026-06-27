@@ -1,0 +1,24 @@
+services:
+  whoami:
+    image: acouvreur/whoami:v1.10.2
+    container_name: sablier-group-discovery-whoami
+    labels:
+      - sablier.enable=true
+      - sablier.group=whoami
+
+  sablier:
+    image: ${SABLIER_IMAGE:-sablier:local}
+    depends_on:
+      - whoami
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=10s
+      - --sessions.expiration-interval=1s
+      - --sessions.create-on-group-discovery=true
+      - --provider.auto-stop-on-startup=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"

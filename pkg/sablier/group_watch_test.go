@@ -7,8 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
@@ -62,6 +66,77 @@ func TestGroupWatch_CreatedEvent_AddsToGroup(t *testing.T) {
 	assert.Assert(t, pollFor(t, func() bool {
 		return containsInstance(s.Groups(), "web", "nginx")
 	}, 2*time.Second), "nginx should be in group web after created event")
+}
+
+func TestGroupWatch_GroupDiscoverySessionExpiresAndStopsInstanceWhenEnabled(t *testing.T) {
+	s, sessions, p := setupGroupWatchWithInMemoryStore(t)
+	s.GroupDiscoverySessionDuration = 200 * time.Millisecond
+
+	ctx, cancel := context.WithCancel(t.Context())
+	assert.NilError(t, sessions.OnExpire(ctx, s.OnInstanceExpired(ctx)))
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+	ready := sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady}
+	p.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(ready, nil)
+	stopped := make(chan struct{}, 1)
+	p.EXPECT().InstanceStop(gomock.Any(), "nginx").DoAndReturn(func(context.Context, string) error {
+		stopped <- struct{}{}
+		return nil
+	})
+
+	startGroupWatch(t, s, ctx, cancel)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventCreated,
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		_, err := sessions.Get(ctx, "nginx")
+		return err == nil
+	}, time.Second), "discovered instance should get a session")
+
+	time.Sleep(250 * time.Millisecond)
+	_, _ = sessions.Get(ctx, "nginx") // trigger immediate expiry instead of waiting for the store ticker
+
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("expired discovery session did not stop the instance")
+	}
+}
+
+func TestGroupWatch_GroupDiscoveryDoesNotCreateSessionWhenDisabled(t *testing.T) {
+	s, sessions, p := setupGroupWatchWithInMemoryStore(t)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	assert.NilError(t, sessions.OnExpire(ctx, s.OnInstanceExpired(ctx)))
+
+	eventsC := make(chan sablier.InstanceEvent, 1)
+	errC := make(chan error, 1)
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+	p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+	startGroupWatch(t, s, ctx, cancel)
+
+	eventsC <- sablier.InstanceEvent{
+		Type: provider.InstanceEventCreated,
+		Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
+	}
+
+	assert.Assert(t, pollFor(t, func() bool {
+		return containsInstance(s.Groups(), "web", "nginx")
+	}, 2*time.Second), "nginx should be tracked in the group")
+
+	_, err := sessions.Get(ctx, "nginx")
+	assert.Equal(t, err, store.ErrKeyNotFound)
 }
 
 func TestGroupWatch_RemovedEvent_RemovesFromGroup(t *testing.T) {
@@ -452,6 +527,14 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 			containsInstance(groups, "team-a", "frontend") &&
 			containsInstance(groups, "team-b", "backend")
 	}, 3*time.Second), "reconciliation should populate all instances across multiple groups")
+}
+
+func setupGroupWatchWithInMemoryStore(t *testing.T) (*sablier.Sablier, sablier.Store, *providertest.MockProvider) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	p := providertest.NewMockProvider(ctrl)
+	sessions := inmemory.NewInMemory()
+	return sablier.New(slogt.New(t), sessions, p), sessions, p
 }
 
 // startGroupWatch launches s.GroupWatch in a goroutine and registers a

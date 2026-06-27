@@ -35,6 +35,7 @@
   },
   "Sessions": {
     "DefaultDuration": 3600000000000,
+    "CreateOnGroupDiscovery": false,
     "ExpirationInterval": 3600000000000
   },
   "Logging": {

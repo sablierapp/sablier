@@ -91,6 +91,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	// Sessions flags
 	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.default-duration", time.Duration(5)*time.Minute, "The default session duration")
 	_ = viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))
+	startCmd.Flags().BoolVar(&conf.Sessions.CreateOnGroupDiscovery, "sessions.create-on-group-discovery", false, "Create a default-duration session when a group-managed instance is discovered")
+	_ = viper.BindPFlag("sessions.create-on-group-discovery", startCmd.Flags().Lookup("sessions.create-on-group-discovery"))
 	startCmd.Flags().DurationVar(&conf.Sessions.ExpirationInterval, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
 	_ = viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
 

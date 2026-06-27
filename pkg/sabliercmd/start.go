@@ -78,6 +78,9 @@ func Start(ctx context.Context, conf config.Config) error {
 	s.WithMetrics(rec)
 	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
 	s.WithVerifyEnabledOnExpiration(conf.Provider.VerifyEnabledOnExpiration)
+	if conf.Sessions.CreateOnGroupDiscovery {
+		s.GroupDiscoverySessionDuration = conf.Sessions.DefaultDuration
+	}
 	err = store.OnExpire(ctx, s.OnInstanceExpired(ctx))
 	if err != nil {
 		return err
@@ -94,6 +97,7 @@ func Start(ctx context.Context, conf config.Config) error {
 		logger.WarnContext(ctx, "initial group scan failed", slog.Any("reason", err))
 	} else {
 		s.SetGroups(groups)
+		s.SeedGroupSessions(ctx, groups)
 	}
 
 	go s.GroupWatch(ctx)
