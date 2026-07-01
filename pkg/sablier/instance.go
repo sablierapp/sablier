@@ -114,7 +114,15 @@ type ResourceProfile struct {
 // blkio field) is set on this profile. It does not consider Replicas.
 func (r ResourceProfile) HasResources() bool {
 	return r.CPU != "" || r.Memory != "" || r.BlkioWeight != 0 ||
-		len(r.BlkioWeightDevice) > 0 ||
+		r.HasBlkioDeviceLimits()
+}
+
+// HasBlkioDeviceLimits reports whether any per-device blkio constraint is set on
+// this profile. These fields require a Docker daemon API version >= 1.55 to be
+// honored on a running container (see moby/moby#52650); the global BlkioWeight
+// field is not affected.
+func (r ResourceProfile) HasBlkioDeviceLimits() bool {
+	return len(r.BlkioWeightDevice) > 0 ||
 		len(r.BlkioDeviceReadBps) > 0 ||
 		len(r.BlkioDeviceWriteBps) > 0 ||
 		len(r.BlkioDeviceReadIOps) > 0 ||

@@ -9,8 +9,16 @@ import (
 	"github.com/moby/moby/api/types/blkiodev"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
+
+// minBlkioDeviceAPIVersion is the earliest Docker daemon API version that honors
+// per-device blkio limits (BlkioWeightDevice, BlkioDevice{Read,Write}{Bps,IOps})
+// on a running container via `docker update`. Older daemons return 200 OK but
+// silently drop these fields.
+// See moby/moby#52650.
+const minBlkioDeviceAPIVersion = "1.55"
 
 // parseCPUNano converts a decimal CPU value (e.g. "0.5", "2") to Docker nanocores.
 // 1 CPU = 1,000,000,000 nanocores.
@@ -33,19 +41,6 @@ func parseMemoryBytes(memory string) (int64, error) {
 		return 0, fmt.Errorf("invalid memory value %q: %w", memory, err)
 	}
 	return b, nil
-}
-
-// parseBlkioWeight validates and returns a Docker blkio-weight value (10–1000).
-// A value of 0 means "unset"; values outside the valid range return an error.
-func parseBlkioWeight(s string) (uint16, error) {
-	n, err := strconv.ParseUint(s, 10, 16)
-	if err != nil {
-		return 0, fmt.Errorf("invalid blkio-weight value %q: %w", s, err)
-	}
-	if n < 10 || n > 1000 {
-		return 0, fmt.Errorf("blkio-weight %d out of range [10, 1000]", n)
-	}
-	return uint16(n), nil
 }
 
 // parseBpsRate converts a human-readable throughput string (e.g. "10m", "100k")
@@ -73,6 +68,19 @@ func parseIOpsRate(s string) (uint64, error) {
 // applyResources updates the resource limits of a running container using cgroup
 // constraints (docker update). Fields with zero/empty values are left unchanged.
 func (p *Provider) applyResources(ctx context.Context, name string, profile sablier.ResourceProfile) error {
+	// Per-device blkio limits are silently dropped by daemons older than
+	// API 1.55 (moby/moby#52650): the update succeeds but the cgroup is never
+	// changed. Warn so the misconfiguration is visible rather than failing quietly.
+	if profile.HasBlkioDeviceLimits() && p.apiVersion != "" &&
+		versions.LessThan(p.apiVersion, minBlkioDeviceAPIVersion) {
+		p.l.WarnContext(ctx, "per-device blkio throttling requires a newer Docker daemon; these limits will be silently ignored",
+			"container", name,
+			"daemon_api_version", p.apiVersion,
+			"required_api_version", minBlkioDeviceAPIVersion,
+			"reference", "https://github.com/moby/moby/issues/52650",
+		)
+	}
+
 	resources := &container.Resources{}
 
 	if profile.CPU != "" {
