@@ -26,6 +26,18 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.active.cpu` | No | `"2.0"` | CPU limit restored when a new session is requested (scale mode). |
 | `sablier.active.memory` | No | `"512m"` | Memory limit restored when a new session is requested (scale mode). |
 | `sablier.active.replicas` | No | `"1"` | Replica count when active. Default `1`. Increase when you need more replicas on wake-up. |
+| `sablier.idle.blkio-weight` | No | `"100"` | Relative block I/O weight (`10`–`1000`) applied when idle (scale mode, Docker only). Requires `sablier.idle.replicas >= 1`. |
+| `sablier.active.blkio-weight` | No | `"500"` | Block I/O weight (`10`–`1000`) restored when active. |
+| `sablier.idle.blkio-weight-device` | No | `"/dev/sda:100"` | Per-device I/O weight (`10`–`1000`). Comma-separated for multiple devices. Requires daemon API ≥ 1.55 (see note below). |
+| `sablier.active.blkio-weight-device` | No | `"/dev/sda:500"` | Per-device I/O weight restored when active. |
+| `sablier.idle.blkio-device-read-bps` | No | `"/dev/sda:10m"` | Per-device read throughput limit. Rate uses Docker units (`10m` = 10 MB/s). Requires daemon API ≥ 1.55. |
+| `sablier.active.blkio-device-read-bps` | No | `"/dev/sda:100m"` | Read throughput limit restored when active. |
+| `sablier.idle.blkio-device-write-bps` | No | `"/dev/sda:10m"` | Per-device write throughput limit. Requires daemon API ≥ 1.55. |
+| `sablier.active.blkio-device-write-bps` | No | `"/dev/sda:100m"` | Write throughput limit restored when active. |
+| `sablier.idle.blkio-device-read-iops` | No | `"/dev/sda:100"` | Per-device read IOPS limit (plain integer). Requires daemon API ≥ 1.55. |
+| `sablier.active.blkio-device-read-iops` | No | `"/dev/sda:1000"` | Read IOPS limit restored when active. |
+| `sablier.idle.blkio-device-write-iops` | No | `"/dev/sda:100"` | Per-device write IOPS limit (plain integer). Requires daemon API ≥ 1.55. |
+| `sablier.active.blkio-device-write-iops` | No | `"/dev/sda:1000"` | Write IOPS limit restored when active. |
 
 ### Multiple groups per instance
 
@@ -127,6 +139,12 @@ Optionally, when `sablier.idle.replicas >= 1`, the workload **keeps running** at
 | `sablier.active.replicas` | Integer | `1` | `"2"` |
 | `sablier.active.cpu` | Decimal cores (Docker/Swarm) or Kubernetes quantity | — | `"2.0"`, `"2000m"` |
 | `sablier.active.memory` | Docker units or Kubernetes quantity | — | `"512m"`, `"1Gi"` |
+| `sablier.idle.blkio-weight` / `sablier.active.blkio-weight` | Integer `10`–`1000` (Docker only) | — | `"100"`, `"500"` |
+| `sablier.idle.blkio-weight-device` / `sablier.active.blkio-weight-device` | `path:weight` list (Docker only) | — | `"/dev/sda:100"` |
+| `sablier.idle.blkio-device-read-bps` / `sablier.active.blkio-device-read-bps` | `path:rate` list, Docker units (Docker only) | — | `"/dev/sda:10m"` |
+| `sablier.idle.blkio-device-write-bps` / `sablier.active.blkio-device-write-bps` | `path:rate` list, Docker units (Docker only) | — | `"/dev/sda:10m"` |
+| `sablier.idle.blkio-device-read-iops` / `sablier.active.blkio-device-read-iops` | `path:iops` list (Docker only) | — | `"/dev/sda:100"` |
+| `sablier.idle.blkio-device-write-iops` / `sablier.active.blkio-device-write-iops` | `path:iops` list (Docker only) | — | `"/dev/sda:100"` |
 
 When `sablier.idle.replicas` is `0` (the default), Sablier stops the workload on session expiry and restarts it on demand — identical to the default stop behavior, but configured via scale-mode labels. Set it to `1` or higher to keep the workload running with optional resource throttling.
 
@@ -158,6 +176,36 @@ services:
 When the session expires, Sablier sets the replica count to `sablier.idle.replicas` (≥ 1 keeps the container running) and runs the equivalent of `docker update --cpus=0.1 --memory=64m myapp`. When a new session is requested, it restores `--cpus=2.0 --memory=512m`. The container is never stopped.
 
 > **Note:** Docker requires the memory swap limit to be updated in the same call as the memory limit. Sablier sets `MemorySwap` equal to `Memory` automatically, which satisfies the constraint and disables swap for the container.
+
+##### Block I/O (blkio) throttling
+
+In addition to CPU and memory, the **Docker** provider can throttle block I/O in scale mode. This is useful when an idle workload should keep running but must not compete with active workloads for disk bandwidth.
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
+      - "sablier.idle.replicas=1"
+      # Global relative weight (10–1000)
+      - "sablier.idle.blkio-weight=100"
+      - "sablier.active.blkio-weight=500"
+      # Per-device limits (comma-separate multiple devices: "/dev/sda:10m,/dev/sdb:5m")
+      - "sablier.idle.blkio-device-read-bps=/dev/sda:10m"
+      - "sablier.idle.blkio-device-write-bps=/dev/sda:10m"
+      - "sablier.idle.blkio-device-read-iops=/dev/sda:100"
+      - "sablier.idle.blkio-device-write-iops=/dev/sda:100"
+```
+
+- `blkio-weight` is a relative I/O scheduling weight in the range `10`–`1000`. Values outside that range (or the value `0`) are ignored.
+- `*-bps` rates accept Docker-style byte units (`10m` = 10 MB/s, `100k` = 100 KB/s).
+- `*-iops` rates are plain integers.
+- Per-device values are `path:value` pairs; separate multiple devices with commas.
+- As with CPU/memory, a limit set on the idle profile is **not** cleared automatically on wake-up. To restore full I/O, set the corresponding `sablier.active.*` label (e.g. a higher `blkio-weight` or a larger rate).
+
+!> **Per-device blkio limits require a Docker daemon with API version ≥ 1.55.** Older daemons accept the update request but silently ignore the per-device fields (`blkio-weight-device`, `blkio-device-read-bps`, `blkio-device-write-bps`, `blkio-device-read-iops`, `blkio-device-write-iops`) — the container's cgroup is left unchanged. See [moby/moby#52650](https://github.com/moby/moby/issues/52650). Sablier logs a warning when it detects this situation. The global `blkio-weight` label is unaffected and works on all supported Docker versions.
 
 #### Docker Swarm
 

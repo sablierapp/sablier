@@ -97,6 +97,28 @@ func TestMain(m *testing.M) {
 		client:    dindCli,
 	}
 
+	// Enable the cgroupv2 "io" controller inside the DinD container so that blkio
+	// resource updates (BlkioWeight, device throttle) work for nested containers.
+	//
+	// How it works:
+	//  - The DinD container already runs with --privileged and --cgroupns=host,
+	//    so it sees and can write to the host VM's cgroup hierarchy.
+	//  - The inner dockerd creates /sys/fs/cgroup/docker/ when it starts.
+	//    For containers created under that cgroup to have io.weight / io.max,
+	//    "io" must be present in /sys/fs/cgroup/docker/cgroup.subtree_control.
+	//  - Writing "+io" to the root subtree_control makes the controller
+	//    available to child cgroups; writing it to the docker subtree_control
+	//    makes it available to container cgroups the inner dockerd creates.
+	//
+	// This is a best-effort step: if the underlying kernel or VM doesn't support
+	// the io controller (e.g. cgroupv1, restricted Docker Desktop VM), the exec
+	// will fail silently and the blkio tests will skip themselves at runtime.
+	enableIO := "echo +io > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null; " +
+		"echo +io > /sys/fs/cgroup/docker/cgroup.subtree_control 2>/dev/null; true"
+	if exitCode, _, execErr := c.Exec(ctx, []string{"sh", "-c", enableIO}); execErr != nil || exitCode != 0 {
+		log.Printf("note: could not enable cgroupv2 io controller in DinD (code=%d, err=%v); blkio tests will be skipped", exitCode, execErr)
+	}
+
 	code := m.Run()
 	_ = c.Terminate(ctx)
 	os.Exit(code)

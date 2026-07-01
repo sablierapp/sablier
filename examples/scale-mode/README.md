@@ -95,11 +95,32 @@ If `sablier.idle.replicas` is absent or `0`, Sablier stops the workload normally
 
 **Migration:** add `sablier.idle.replicas=1` to any workload that previously used `sablier.idle.cpu` / `sablier.idle.memory`.
 
+## Block I/O throttling (Docker)
+
+On the **Docker** provider you can also throttle block I/O when idle, in addition to CPU and memory:
+
+```yaml
+labels:
+  - "sablier.idle.replicas=1"
+  # Relative I/O weight (10–1000)
+  - "sablier.idle.blkio-weight=100"
+  - "sablier.active.blkio-weight=500"
+  # Per-device limits (comma-separate multiple devices)
+  - "sablier.idle.blkio-device-read-bps=/dev/sda:10m"
+  - "sablier.idle.blkio-device-write-bps=/dev/sda:10m"
+  - "sablier.idle.blkio-device-read-iops=/dev/sda:100"
+  - "sablier.idle.blkio-device-write-iops=/dev/sda:100"
+```
+
+> **Requires Docker daemon API ≥ 1.55 for the per-device limits.** Older daemons silently ignore the `blkio-*-device` / `blkio-device-*` fields (the update returns success but the cgroup is unchanged — see [moby/moby#52650](https://github.com/moby/moby/issues/52650)). Sablier logs a warning in that case. The global `blkio-weight` label works on all supported Docker versions.
+
 ## Notes
 
 - Scale mode is supported for **Docker**, **Docker Swarm**, **Kubernetes** (Deployments and StatefulSets), and **Podman**.
+- Block I/O (blkio) throttling is **Docker only**.
 - For Kubernetes, replica and resource changes trigger a rolling restart. The service stays available during the transition.
-- CPU/memory labels are optional. You can use replicas alone (no throttling).
+- CPU/memory/blkio labels are optional. You can use replicas alone (no throttling).
+- A limit applied on the idle profile is not cleared automatically on wake-up; set the corresponding `sablier.active.*` label to restore full resources.
 
 ### Memory swap (Docker)
 
