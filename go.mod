@@ -24,7 +24,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/k3s v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/valkey v0.43.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
-	github.com/valkey-io/valkey-go v1.0.75
+	github.com/valkey-io/valkey-go v1.0.76
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
