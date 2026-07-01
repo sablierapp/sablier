@@ -19,6 +19,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.enable` | Yes | `"true"` | Opt the instance into Sablier management. Any value other than `"true"` is ignored. |
 | `sablier.group` | No | `"myapp"` | Assign the instance to one or more named groups (comma-separated, e.g. `"team-a,team-b"`). Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
+| `sablier.ready-on-start` | No | `"true"` | Treat the instance as ready as soon as the start is dispatched. Useful for background services where the main app doesn't need them healthy to function. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
 | `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
 | `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
@@ -78,6 +79,32 @@ The value is a Go duration string. Valid examples:
 If the label is absent or set to an unparseable value, no extra wait is applied.
 
 !> The `sablier.ready-after` grace period counts from when the instance **first** becomes ready in a given session. It does not reset on subsequent requests.
+
+### `sablier.ready-on-start`
+
+Some services only run in the background — NVR recorders, cache sidecars,
+build agents, etc. The main application works without them being healthy, but
+you still want Sablier to start them when a request arrives.
+
+Setting `sablier.ready-on-start=true` tells Sablier to dispatch the start but
+immediately treat the instance as ready, skipping the health check. The reverse
+proxy passes the request through without waiting.
+
+```yaml
+services:
+  frigate:
+    image: frigate:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=home"
+      - "sablier.ready-on-start=true"   # start frigate, don't wait for health
+```
+
+- Only the instance with `sablier.ready-on-start=true` is affected. Other
+  instances in the same session still wait for their health checks normally.
+- Accepts a Go boolean value (`"true"`, `"1"`, …). Invalid values are ignored with a warning.
+  An empty or absent value means no special treatment.
+- Works with both dynamic and blocking strategies — no plugin-side changes needed.
 
 ### `sablier.running-hours`
 

@@ -139,8 +139,9 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 					s, err := dind.CreateMimic(ctx, MimicOptions{
 						Cmd: []string{"/mimic"},
 						Labels: map[string]string{
-							"sablier.enable": "true",
-							"sablier.group":  "myapp",
+							"sablier.enable":         "true",
+							"sablier.group":          "myapp",
+							"sablier.ready-on-start": "true",
 						},
 					})
 					if err != nil {
@@ -166,10 +167,12 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 				Status:          sablier.InstanceStatusReady,
 				Enabled:         "true",
 				Groups:          []string{"myapp"},
+				ReadyOnStart:    true,
 			},
 			wantLabels: map[string]string{
-				"sablier.enable": "true",
-				"sablier.group":  "myapp",
+				"sablier.enable":         "true",
+				"sablier.group":          "myapp",
+				"sablier.ready-on-start": "true",
 			},
 			wantErr: nil,
 		},
