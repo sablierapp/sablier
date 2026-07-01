@@ -38,14 +38,14 @@ func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 			args: args{
 				name: "service_default_my-service_1",
 			},
-			want: fmt.Errorf("unsupported kind \"service\" must be one of \"deployment\", \"statefulset\""),
+			want: fmt.Errorf("unsupported kind \"service\" must be one of \"deployment\", \"statefulset\", \"cnpgcluster\""),
 		},
 	}
 	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
 			assert.NilError(t, err)
 
 			_, err = p.InstanceInspect(ctx, tt.args.name)

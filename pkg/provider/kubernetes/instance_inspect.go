@@ -17,7 +17,9 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return p.DeploymentInspect(ctx, parsed)
 	case "statefulset":
 		return p.StatefulSetInspect(ctx, parsed)
+	case KindCNPGCluster:
+		return p.ClusterInspect(ctx, parsed)
 	default:
-		return sablier.InstanceInfo{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\"", parsed.Kind)
+		return sablier.InstanceInfo{}, fmt.Errorf("unsupported kind \"%s\" must be one of \"deployment\", \"statefulset\", \"cnpgcluster\"", parsed.Kind)
 	}
 }
