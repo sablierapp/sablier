@@ -64,6 +64,68 @@ func (v *ValKey) Delete(ctx context.Context, s string) error {
 	return v.Client.Do(ctx, v.Client.B().Del().Key(s).Build()).Error()
 }
 
+func (v *ValKey) Range(ctx context.Context, f func(sablier.InstanceInfo, time.Time)) error {
+	// SCAN guarantees a full iteration but may return the same key several times
+	// (e.g. during a keyspace rehash). Deduplicate so the caller never observes a
+	// session twice, which would otherwise produce duplicate metric series.
+	seen := make(map[string]struct{})
+	var cursor uint64
+	for {
+		entry, err := v.Client.Do(ctx, v.Client.B().Scan().Cursor(cursor).Count(100).Build()).AsScanEntry()
+		if err != nil {
+			return err
+		}
+
+		for _, key := range entry.Elements {
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+
+			// PTTL and GET are read-only: they never reset the key's TTL, so
+			// enumerating sessions this way does not renew them.
+			pttl, err := v.Client.Do(ctx, v.Client.B().Pttl().Key(key).Build()).AsInt64()
+			if err != nil {
+				return err
+			}
+			// -2: the key vanished between SCAN and PTTL. -1: the key has no
+			// expiry, so it is not a session. Skip both; only keys with a live
+			// TTL represent an active session.
+			if pttl <= 0 {
+				continue
+			}
+
+			b, err := v.Client.Do(ctx, v.Client.B().Get().Key(key).Build()).AsBytes()
+			if valkey.IsValkeyNil(err) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			// The store may share its keyspace with keys that are not Sablier
+			// sessions. Skip anything that is not a valid InstanceInfo, or whose
+			// payload does not belong to this key, instead of aborting the whole
+			// enumeration on a single foreign or corrupt key.
+			var i sablier.InstanceInfo
+			if err = json.Unmarshal(b, &i); err != nil {
+				continue
+			}
+			if i.Name != key {
+				continue
+			}
+
+			f(i, time.Now().Add(time.Duration(pttl)*time.Millisecond))
+		}
+
+		cursor = entry.Cursor
+		if cursor == 0 {
+			break
+		}
+	}
+	return nil
+}
+
 func (v *ValKey) OnExpire(ctx context.Context, f func(string)) error {
 	go func() {
 		err := v.Client.Receive(ctx, v.Client.B().Psubscribe().Pattern("__key*__:*").Build(), func(msg valkey.PubSubMessage) {

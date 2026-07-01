@@ -62,6 +62,7 @@ type KV[T any] interface {
 	Keys() (keys []string)
 	Values() (values []T)
 	Entries() (entries map[string]entry[T])
+	Range(f func(key string, value T, expiresAt time.Time))
 	Put(k string, v T, expiresAfter time.Duration) error
 	Stop()
 	SetOnExpire(onExpire func(k string, v T))
@@ -175,6 +176,24 @@ func (kv *store[T]) Entries() (entries map[string]entry[T]) {
 		entries[k] = e
 	}
 	return entries
+}
+
+// Range calls f for every non-expired entry currently held by the store,
+// passing the key, its value and its absolute expiration time. The store lock
+// is held for the whole iteration, so f must be fast and must not call back
+// into the store. Entries without a timeout or already past their expiration
+// are skipped. Range only reads: it never renews an entry's timeout, so it is
+// safe to use for observing sessions without extending them.
+func (kv *store[T]) Range(f func(key string, value T, expiresAt time.Time)) {
+	kv.mx.Lock()
+	defer kv.mx.Unlock()
+
+	for k, e := range kv.kv {
+		if e.timeout == nil || e.expired() {
+			continue
+		}
+		f(k, e.value, e.expiresAt)
+	}
 }
 
 // Put puts an entry inside kv store with provided options
