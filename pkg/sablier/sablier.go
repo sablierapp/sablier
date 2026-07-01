@@ -90,6 +90,37 @@ func (s *Sablier) Groups() map[string][]string {
 	return s.groups.Snapshot()
 }
 
+// SessionsSnapshot returns a point-in-time view of every active session for the
+// metrics SessionExpiryCollector. It is non-destructive: it enumerates the store
+// without renewing any session's timeout. The group label is taken from the
+// instance's first group, or "" when it belongs to none.
+func (s *Sablier) SessionsSnapshot() []metrics.SessionEntry {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var out []metrics.SessionEntry
+	err := s.sessions.Range(ctx, func(info InstanceInfo, expiresAt time.Time) {
+		group := ""
+		if len(info.Groups) > 0 {
+			group = info.Groups[0]
+		}
+		out = append(out, metrics.SessionEntry{
+			Instance:  info.Name,
+			Group:     group,
+			ExpiresAt: expiresAt,
+		})
+	})
+	if err != nil {
+		// Enumeration failed partway through, so out only holds a subset of the
+		// live sessions. Emitting that subset would make the missing sessions
+		// look expired; drop the whole snapshot instead, so a scrape is
+		// all-or-nothing.
+		s.l.Warn("could not snapshot sessions for metrics", slog.Any("error", err))
+		return nil
+	}
+	return out
+}
+
 // SetGroups replaces the entire group registry. Changes are logged with a diff.
 func (s *Sablier) SetGroups(groups map[string][]string) {
 	old, changed := s.groups.Set(groups)
