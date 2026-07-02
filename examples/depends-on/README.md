@@ -53,8 +53,10 @@ When a blocking request for the `app` group arrives, the Docker provider:
 and has `restart: "no"`. With `--provider.docker.honor-restart-policy=true`
 (set on the `sablier` service in this example), Sablier honors the restart
 policy — a container that exited successfully under a non-restarting policy is
-reported as **ready (completed)** instead of "stopped". This is what allows the
-`service_completed_successfully` condition to resolve.
+reported as **`completed`** instead of "stopped". This is what allows the
+`service_completed_successfully` condition to resolve. (`completed` is distinct
+from `ready`: a `completed` container ran and exited, whereas a `ready` one is
+running and serving traffic.)
 
 > The `honor-restart-policy` option is **deprecated** and only exists for
 > backward compatibility. It will become the default in v2. Without it, Sablier

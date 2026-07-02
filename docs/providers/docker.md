@@ -138,7 +138,7 @@ By default Sablier keeps its **historical behavior** and reports any container t
 | Container state | Restart policy | Sablier status |
 |---|---|---|
 | Exited, code `0` | `no` / `on-failure` | **`completed`** — the container ran and finished its job |
-| Exited, code `0` | `always` / `unless-stopped` | `starting` — Docker will bring it back, Sablier waits |
+| Exited, code `0` | `always` / `unless-stopped` | `stopped` — a long-running service that was stopped; Sablier starts it again on demand |
 | Exited, non-zero code | any | `error` — surfaced as a failure |
 
 > `completed` is a distinct status from `ready`: a `ready` container is running and serving traffic, whereas a `completed` container ran once and exited. A `completed` dependency satisfies a `service_completed_successfully` condition, but never a `service_healthy` one.

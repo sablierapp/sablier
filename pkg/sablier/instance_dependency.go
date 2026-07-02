@@ -243,6 +243,11 @@ func (s *Sablier) ensureDependencyStarted(ctx context.Context, name string) erro
 // (as reported by provider.InstanceInspect), ctx is cancelled, or the dependency
 // reports an error status.
 func (s *Sablier) waitForDependencyCondition(ctx context.Context, name, condition string) error {
+	s.l.DebugContext(ctx, "waiting for depends_on dependency",
+		slog.String("dependency", name),
+		slog.String("condition", condition),
+	)
+
 	ticker := time.NewTicker(dependencyPollInterval)
 	defer ticker.Stop()
 

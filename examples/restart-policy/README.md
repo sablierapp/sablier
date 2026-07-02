@@ -3,7 +3,8 @@
 This example demonstrates how Sablier's Docker provider reports the status of an
 **exited** container based on its [Docker restart
 policy](https://docs.docker.com/engine/containers/start-containers-automatically/),
-using [sablierapp/mimic](https://github.com/sablierapp/mimic), a configurable
+and why that matters for one-shot **init / migration** containers, using
+[sablierapp/mimic](https://github.com/sablierapp/mimic), a configurable
 web-server built for testing purposes.
 
 By default, Sablier keeps its **historical behavior** and reports any container
@@ -13,9 +14,14 @@ restart policy when a container exits successfully:
 
 | Container state | Restart policy | Sablier status |
 |---|---|---|
-| Exited, code `0` | `no` / `on-failure` | **`ready`** — the container completed its job |
-| Exited, code `0` | `always` / `unless-stopped` | `starting` — Docker will bring it back, Sablier waits |
+| Exited, code `0` | `no` / `on-failure` | **`completed`** — the container ran and finished its job |
+| Exited, code `0` | `always` / `unless-stopped` | `stopped` — a long-running service that was stopped; Sablier starts it again on demand |
 | Exited, non-zero code | any | `error` — surfaced as a failure |
+
+> `completed` is a distinct status from `ready`: a `ready` container is running
+> and serving traffic, whereas a `completed` container ran once and exited. A
+> `completed` dependency satisfies a `service_completed_successfully` condition,
+> but never a `service_healthy` one.
 
 > [!WARNING]
 > `--provider.docker.honor-restart-policy` is **deprecated**. It only exists to
@@ -27,39 +33,46 @@ restart policy when a container exits successfully:
 
 ## What this example shows
 
-The `demo` group contains two members that share `sablier.group=demo` and
-`sablier.enable=true`:
+Two containers:
 
-- **`app`** — a long-running web service (`restart: unless-stopped`). While
-  running it is reported as `ready`.
-- **`init`** — a one-shot init container (`restart: "no"`) that runs once,
-  exits with code `0`, and is never restarted.
+- **`app`** — a long-running web service (`restart: unless-stopped`), labeled
+  with `sablier.enable=true` and `sablier.group=demo`. It declares a
+  `depends_on` on `init` with condition `service_completed_successfully`.
+- **`init`** — a one-shot init container (`restart: "no"`) that runs once, exits
+  with code `0`, and is never restarted. It is **not** labeled; Sablier starts
+  it on demand only to satisfy `app`'s `depends_on`.
 
-Normally you must **never** put a one-shot container in a blocking group: the
-blocking strategy waits for every member to be running, so a container that
-exits by design would block the group forever.
+When Sablier is asked to start `app`, it first starts `init` and waits until it
+has **completed successfully** before starting `app`. This only works because
+`honor-restart-policy` makes the exited `init` container report as `completed`:
 
-With `--provider.docker.honor-restart-policy=true`, Sablier honors the `"no"`
-restart policy and reports the completed `init` container as **`ready`**
-(completed) instead of `stopped`. That lets the blocking `demo` group reach the
-ready state even though one of its members is a one-shot init job.
+- **With** `honor-restart-policy=true`: `init` exits `0` → reported `completed`
+  → `service_completed_successfully` resolves → `app` starts. On subsequent
+  requests, `init` is already `completed`, so Sablier does **not** restart it.
+- **Without** the flag: `init` exits `0` → reported `stopped` → the condition
+  never resolves and Sablier keeps restarting `init` on every poll
+  (the bug described in [#952](https://github.com/sablierapp/sablier/issues/952)).
+
+> A one-shot container must **never** be a labeled member of a **blocking**
+> group: the blocking strategy waits for every member to be `ready` (running),
+> and a `completed` container is not `ready`, so the group would never resolve.
+> Keep the one-shot unlabeled and let `depends_on` start it, as shown here.
 
 ## How it works
 
 1. `make up` starts Sablier and *creates* (scaled to zero) the `app` and `init`
    containers.
 2. `make start` issues a blocking request for the `demo` group.
-3. Sablier starts both containers and waits until the group is ready:
-   - `app` reaches the `ready` state once it is running and healthy.
-   - `init` runs, exits with code `0`, and — thanks to
-     `honor-restart-policy` — is reported as `ready` (completed).
-4. The blocking request returns once both members are ready.
+3. Sablier resolves `app`'s `depends_on`: it starts `init`, waits until it has
+   completed (exit `0` → `completed`), then starts `app` and waits until it is
+   `ready`.
+4. The blocking request returns once `app` is ready.
 
 ## Try it
 
 ```bash
-make up      # start Sablier and create the group (scaled to zero)
-make start   # blocking request — returns once the group is ready
+make up      # start Sablier and create the containers (scaled to zero)
+make start   # blocking request — returns once app is ready
 make logs    # follow Sablier logs
 make ps      # inspect container states
 make down    # tear everything down
@@ -68,7 +81,8 @@ make down    # tear everything down
 To see the historical behavior, remove
 `--provider.docker.honor-restart-policy=true` from the `sablier` command in
 [`compose.yml`](./compose.yml): the exited `init` container is then reported as
-`stopped` and the blocking group never becomes ready.
+`stopped`, its `service_completed_successfully` condition never resolves, and
+the blocking request times out.
 
 See [#952](https://github.com/sablierapp/sablier/issues/952) for the original
 discussion about restart policies and init containers.

@@ -137,11 +137,13 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A running-but-unhealthy container is still starting (it may become
+			// healthy), with the health state surfaced as a message — not an error.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusError,
-				Message:         "container is unhealthy",
+				Status:          sablier.InstanceStatusStarting,
+				Message:         "container is running but not healthy yet",
 			},
 			wantErr: nil,
 		},
@@ -361,6 +363,46 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusCompleted,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited container with status code 0 and restart policy unless-stopped",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// An unless-stopped (or always) container that is *exited* was stopped
+			// (Docker does not auto-restart a manually stopped container), so even
+			// with HonorRestartPolicy enabled it is reported as stopped — not
+			// starting — and Sablier restarts it on demand. It is not a completed
+			// one-shot either, since its policy would keep it running.
+			honorRestartPolicy: true,
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},

@@ -40,12 +40,19 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 					Status:          sablier.InstanceStatusReady,
 				}
 			case container.Unhealthy:
+				// The container is running but its health check is not passing
+				// yet. This is reported as still starting, with the health state
+				// surfaced as a detail, rather than as an error: containers
+				// frequently report unhealthy transiently while they boot, so
+				// Sablier keeps waiting for healthiness instead of failing the
+				// request outright. A genuinely broken container is surfaced when
+				// the request times out.
 				info = sablier.InstanceInfo{
 					Name:            name,
 					CurrentReplicas: 0,
 					DesiredReplicas: 1,
-					Status:          sablier.InstanceStatusError,
-					Message:         "container is unhealthy",
+					Status:          sablier.InstanceStatusStarting,
+					Message:         "container is running but not healthy yet",
 				}
 			default: // container.Starting
 				info = sablier.InstanceInfo{
@@ -73,17 +80,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				Status:          sablier.InstanceStatusError,
 				Message:         fmt.Sprintf("container exited with code \"%d\"", spec.Container.State.ExitCode),
 			}
-		} else if p.HonorRestartPolicy && restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
-			// The container exited successfully but its restart policy
-			// (always / unless-stopped) means Docker will bring it back up.
-			// The exited state is therefore transient.
-			info = sablier.InstanceInfo{
-				Name:            name,
-				CurrentReplicas: 0,
-				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusStarting,
-			}
-		} else if p.HonorRestartPolicy {
+		} else if p.HonorRestartPolicy && !restartsOnSuccess(restartPolicyMode(spec.Container.HostConfig)) {
 			// The container exited successfully and its restart policy
 			// ("no" / "on-failure") means Docker will not restart it. This is a
 			// one-shot / init container (e.g. a database migration) that has
@@ -103,11 +100,16 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 				Status:          sablier.InstanceStatusCompleted,
 			}
 		} else {
-			// HonorRestartPolicy is disabled: keep the historical behavior and
-			// report a successfully exited container as stopped so that Sablier
-			// keeps managing its lifecycle and can start it again on demand.
-			// TODO(v2): remove this branch and honor the restart policy by
-			// default.
+			// The container exited successfully and Sablier should start it again
+			// on demand. This covers two cases:
+			//   - HonorRestartPolicy disabled: the historical behavior for every
+			//     restart policy.
+			//   - always / unless-stopped: an *exited* (as opposed to
+			//     "restarting") container is not being brought back by Docker.
+			//     Sablier stops containers with a manual stop, which suppresses
+			//     the always/unless-stopped auto-restart, so the container stays
+			//     down until Sablier starts it again. Reporting "starting" here
+			//     would be wrong — the container is stopped.
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,

@@ -39,10 +39,10 @@ services:
   # migration is a one-shot init container. It runs once, exits successfully
   # and is never restarted (restart: "no"). With
   # --provider.docker.honor-restart-policy=true, Sablier reports a container
-  # that exited with code 0 under a non-restarting policy as "ready"
-  # (completed), which lets `service_completed_successfully` dependencies
-  # resolve. Without that flag, Sablier keeps its historical behavior and
-  # reports the exited container as "stopped".
+  # that exited with code 0 under a non-restarting policy as "completed",
+  # which lets `service_completed_successfully` dependencies resolve. Without
+  # that flag, Sablier keeps its historical behavior and reports the exited
+  # container as "stopped".
   #
   # NOTE: migration is intentionally NOT labeled with sablier.enable / sablier.group.
   # It is a one-shot job, not a long-running service, so there is nothing for
@@ -61,10 +61,10 @@ services:
       db:
         condition: service_healthy
 
-  # app is the user-facing service. When a request comes in, the Docker
-  # provider first resolves its compose `depends_on` graph: it starts `db`
-  # (waiting until healthy) and `migration` (waiting until it has completed
-  # successfully) before starting `app`.
+  # app is the user-facing service. When a request comes in, Sablier first
+  # resolves its compose `depends_on` graph: it starts `db` (waiting until
+  # healthy) and `migration` (waiting until it has completed successfully)
+  # before starting `app`.
   # See https://github.com/sablierapp/sablier/issues/792
   app:
     restart: unless-stopped
