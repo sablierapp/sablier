@@ -257,6 +257,9 @@ func (s *Sablier) waitForDependencyCondition(ctx context.Context, name, conditio
 			return fmt.Errorf("cannot inspect dependency %q: %w", name, err)
 		}
 		if info.Status == InstanceStatusError {
+			if info.Message != "" {
+				return fmt.Errorf("dependency %q is in error state: %s", name, info.Message)
+			}
 			return fmt.Errorf("dependency %q is in error state", name)
 		}
 		if dependencyConditionSatisfied(info.Status, condition) {

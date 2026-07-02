@@ -92,14 +92,15 @@ type Docker struct {
 
 	// HonorRestartPolicy makes Sablier honor a container's restart policy when it
 	// exits successfully (exit code 0). When enabled, a container with a "no" or
-	// "on-failure" policy is reported as ready (a completed one-shot/init
-	// container), while "always" and "unless-stopped" are reported as starting.
-	// When disabled, Sablier keeps the historical behavior and always reports a
-	// successfully exited container as stopped.
+	// "on-failure" policy is reported as completed (a one-shot/init container that
+	// finished its job). An "always"/"unless-stopped" container that is exited was
+	// stopped and is reported as stopped (Docker does not auto-restart a manually
+	// stopped container). When disabled, Sablier keeps the historical behavior and
+	// always reports a successfully exited container as stopped.
 	//
 	// Note: Docker normalizes an unset restart policy to "no", so an unset policy
 	// is indistinguishable from an explicit "no" and is therefore also reported
-	// as ready when this option is enabled.
+	// as completed when this option is enabled.
 	//
 	// Deprecated: this option only exists to preserve backward compatibility. It
 	// will be removed in v2, where honoring the restart policy becomes the

@@ -27,9 +27,10 @@ type Provider struct {
 
 	// HonorRestartPolicy makes InstanceInspect honor the container's restart
 	// policy when it exits successfully (exit code 0): "no"/"on-failure" are
-	// reported as ready (completed one-shot/init container) and
-	// "always"/"unless-stopped" as starting. When false, a successfully exited
-	// container is always reported as stopped (historical behavior).
+	// reported as completed (a one-shot/init container that finished its job),
+	// while an exited "always"/"unless-stopped" container was stopped and is
+	// reported as stopped. When false, a successfully exited container is always
+	// reported as stopped (historical behavior).
 	//
 	// Deprecated: transitional flag for backward compatibility; honoring the
 	// restart policy will become the default in v2.
