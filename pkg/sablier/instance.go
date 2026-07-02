@@ -57,6 +57,21 @@ type InstanceInfo struct {
 	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`
 }
 
+// BlkioWeightDevice holds a per-device I/O scheduling weight override.
+type BlkioWeightDevice struct {
+	Path   string `json:"path"`
+	Weight uint16 `json:"weight"` // valid range: 10–1000
+}
+
+// BlkioThrottleDevice holds a per-device I/O rate constraint.
+// Rate is the raw label value: human-readable bytes for bps (e.g. "10m", "100k")
+// or a plain integer for iops (e.g. "100"). Conversion to the numeric wire format
+// is performed by the provider.
+type BlkioThrottleDevice struct {
+	Path string `json:"path"`
+	Rate string `json:"rate"`
+}
+
 // ScaleConfig defines the idle and active resource profiles used in scale mode.
 // In scale mode, the container keeps running but its resources are adjusted:
 // idle resources are applied when the session expires, active resources when
@@ -66,7 +81,7 @@ type ScaleConfig struct {
 	Active ResourceProfile `json:"active"`
 }
 
-// ResourceProfile holds the CPU and memory limits for a single resource profile.
+// ResourceProfile holds the CPU, memory, and I/O limits for a single resource profile.
 type ResourceProfile struct {
 	// Replicas is the desired replica count for this profile.
 	// For idle: 0 (default) stops the workload; ≥ 1 keeps it running with
@@ -77,6 +92,41 @@ type ResourceProfile struct {
 	CPU string `json:"cpu,omitempty"`
 	// Memory is the memory limit (e.g. "128m" for Docker/Swarm, "128Mi" for Kubernetes).
 	Memory string `json:"memory,omitempty"`
+	// BlkioWeight is the relative block I/O scheduling weight (10–1000).
+	// 0 means unset (use the container's current or default weight).
+	// Supported on Docker and Podman; ignored on Docker Swarm and Kubernetes.
+	BlkioWeight uint16 `json:"blkioWeight,omitempty"`
+	// BlkioWeightDevice overrides the I/O scheduling weight per block device.
+	BlkioWeightDevice []BlkioWeightDevice `json:"blkioWeightDevice,omitempty"`
+	// BlkioDeviceReadBps limits the read throughput per block device (bytes/s).
+	// Rate values use human-readable suffixes, e.g. "10m" = 10 MB/s.
+	BlkioDeviceReadBps []BlkioThrottleDevice `json:"blkioDeviceReadBps,omitempty"`
+	// BlkioDeviceWriteBps limits the write throughput per block device (bytes/s).
+	BlkioDeviceWriteBps []BlkioThrottleDevice `json:"blkioDeviceWriteBps,omitempty"`
+	// BlkioDeviceReadIOps limits the read IOPS per block device.
+	// Rate values are plain integers, e.g. "100".
+	BlkioDeviceReadIOps []BlkioThrottleDevice `json:"blkioDeviceReadIOps,omitempty"`
+	// BlkioDeviceWriteIOps limits the write IOPS per block device.
+	BlkioDeviceWriteIOps []BlkioThrottleDevice `json:"blkioDeviceWriteIOps,omitempty"`
+}
+
+// HasResources reports whether any resource constraint (CPU, memory, or any
+// blkio field) is set on this profile. It does not consider Replicas.
+func (r ResourceProfile) HasResources() bool {
+	return r.CPU != "" || r.Memory != "" || r.BlkioWeight != 0 ||
+		r.HasBlkioDeviceLimits()
+}
+
+// HasBlkioDeviceLimits reports whether any per-device blkio constraint is set on
+// this profile. These fields require a Docker daemon API version >= 1.55 to be
+// honored on a running container (see moby/moby#52650); the global BlkioWeight
+// field is not affected.
+func (r ResourceProfile) HasBlkioDeviceLimits() bool {
+	return len(r.BlkioWeightDevice) > 0 ||
+		len(r.BlkioDeviceReadBps) > 0 ||
+		len(r.BlkioDeviceWriteBps) > 0 ||
+		len(r.BlkioDeviceReadIOps) > 0 ||
+		len(r.BlkioDeviceWriteIOps) > 0
 }
 
 type InstanceConfiguration struct {
@@ -97,16 +147,16 @@ func (instance InstanceInfo) IsReady() bool {
 
 // ScaleConfigFromLabels extracts a ScaleConfig from the given label map.
 // It always returns a value. When none of the scale labels
-// (sablier.idle.{cpu,memory,replicas}, sablier.active.{cpu,memory,replicas})
+// (sablier.idle.{cpu,memory,replicas,blkio-weight}, sablier.active.{cpu,memory,replicas,blkio-weight})
 // are present it returns a zero-value struct with defaults:
 //   - Idle.Replicas = 0 (workload is stopped when idle)
 //   - Active.Replicas = 1 (workload runs with a single replica when active)
 //
 // Callers detect whether scale mode is active via field values:
 //   - Stop path:  sc.Idle.Replicas >= 1
-//   - Start path: sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != ""
+//   - Start path: sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" || sc.Active.BlkioWeight != 0
 //
-// Resource scaling (CPU/memory throttling instead of stopping) is only applied
+// Resource scaling (CPU/memory/blkio throttling instead of stopping) is only applied
 // when Idle.Replicas ≥ 1.
 func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 	idleCPU := labels["sablier.idle.cpu"]
@@ -128,18 +178,119 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 		}
 	}
 
+	var idleBlkioWeight, activeBlkioWeight uint16
+	if v, ok := labels["sablier.idle.blkio-weight"]; ok {
+		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
+			idleBlkioWeight = uint16(n)
+		}
+	}
+	if v, ok := labels["sablier.active.blkio-weight"]; ok {
+		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
+			activeBlkioWeight = uint16(n)
+		}
+	}
+
+	var idleWeightDevice []BlkioWeightDevice
+	var idleReadBps, idleWriteBps, idleReadIOps, idleWriteIOps []BlkioThrottleDevice
+	var activeWeightDevice []BlkioWeightDevice
+	var activeReadBps, activeWriteBps, activeReadIOps, activeWriteIOps []BlkioThrottleDevice
+
+	if v := labels["sablier.idle.blkio-weight-device"]; v != "" {
+		idleWeightDevice = parseWeightDevices(v)
+	}
+	if v := labels["sablier.idle.blkio-device-read-bps"]; v != "" {
+		idleReadBps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.idle.blkio-device-write-bps"]; v != "" {
+		idleWriteBps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.idle.blkio-device-read-iops"]; v != "" {
+		idleReadIOps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.idle.blkio-device-write-iops"]; v != "" {
+		idleWriteIOps = parseThrottleDevices(v)
+	}
+
+	if v := labels["sablier.active.blkio-weight-device"]; v != "" {
+		activeWeightDevice = parseWeightDevices(v)
+	}
+	if v := labels["sablier.active.blkio-device-read-bps"]; v != "" {
+		activeReadBps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.active.blkio-device-write-bps"]; v != "" {
+		activeWriteBps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.active.blkio-device-read-iops"]; v != "" {
+		activeReadIOps = parseThrottleDevices(v)
+	}
+	if v := labels["sablier.active.blkio-device-write-iops"]; v != "" {
+		activeWriteIOps = parseThrottleDevices(v)
+	}
+
 	return ScaleConfig{
 		Idle: ResourceProfile{
-			Replicas: idleReplicas,
-			CPU:      idleCPU,
-			Memory:   idleMemory,
+			Replicas:             idleReplicas,
+			CPU:                  idleCPU,
+			Memory:               idleMemory,
+			BlkioWeight:          idleBlkioWeight,
+			BlkioWeightDevice:    idleWeightDevice,
+			BlkioDeviceReadBps:   idleReadBps,
+			BlkioDeviceWriteBps:  idleWriteBps,
+			BlkioDeviceReadIOps:  idleReadIOps,
+			BlkioDeviceWriteIOps: idleWriteIOps,
 		},
 		Active: ResourceProfile{
-			Replicas: activeReplicas,
-			CPU:      activeCPU,
-			Memory:   activeMemory,
+			Replicas:             activeReplicas,
+			CPU:                  activeCPU,
+			Memory:               activeMemory,
+			BlkioWeight:          activeBlkioWeight,
+			BlkioWeightDevice:    activeWeightDevice,
+			BlkioDeviceReadBps:   activeReadBps,
+			BlkioDeviceWriteBps:  activeWriteBps,
+			BlkioDeviceReadIOps:  activeReadIOps,
+			BlkioDeviceWriteIOps: activeWriteIOps,
 		},
 	}
+}
+
+// parseWeightDevices parses a comma-separated list of "path:weight" pairs.
+// Entries with out-of-range weights (10–1000) or malformed format are skipped.
+func parseWeightDevices(s string) []BlkioWeightDevice {
+	var out []BlkioWeightDevice
+	for _, entry := range strings.Split(s, ",") {
+		entry = strings.TrimSpace(entry)
+		i := strings.LastIndex(entry, ":")
+		if i <= 0 {
+			continue
+		}
+		path, wstr := entry[:i], strings.TrimSpace(entry[i+1:])
+		n, err := strconv.ParseUint(wstr, 10, 16)
+		if err != nil || n < 10 || n > 1000 {
+			continue
+		}
+		out = append(out, BlkioWeightDevice{Path: path, Weight: uint16(n)})
+	}
+	return out
+}
+
+// parseThrottleDevices parses a comma-separated list of "path:rate" pairs.
+// The rate is kept as a raw string; conversion to bytes or IOPS is the
+// provider's responsibility. Entries with a missing path or empty rate are skipped.
+func parseThrottleDevices(s string) []BlkioThrottleDevice {
+	var out []BlkioThrottleDevice
+	for _, entry := range strings.Split(s, ",") {
+		entry = strings.TrimSpace(entry)
+		i := strings.LastIndex(entry, ":")
+		if i <= 0 {
+			continue
+		}
+		path, rate := entry[:i], strings.TrimSpace(entry[i+1:])
+		if path == "" || rate == "" {
+			continue
+		}
+		out = append(out, BlkioThrottleDevice{Path: path, Rate: rate})
+	}
+	return out
 }
 
 // ParseGroups parses a comma-separated group label value into a deduplicated slice.
@@ -198,8 +349,8 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 	// scale label is present. Detects configuration by checking for values
 	// that differ from the zero-value defaults (Idle.Replicas=0, Active.Replicas=1).
 	sc := ScaleConfigFromLabels(labels)
-	if sc.Idle.Replicas > 0 || sc.Idle.CPU != "" || sc.Idle.Memory != "" ||
-		sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
+	if sc.Idle.Replicas > 0 || sc.Idle.HasResources() ||
+		sc.Active.Replicas > 1 || sc.Active.HasResources() {
 		info.ScaleConfig = &sc
 	}
 }

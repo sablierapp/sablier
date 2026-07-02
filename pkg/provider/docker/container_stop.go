@@ -32,18 +32,20 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
 	if sc.Idle.Replicas >= 1 {
-		if sc.Idle.CPU != "" || sc.Idle.Memory != "" {
+		if sc.Idle.HasResources() {
 			span.SetAttributes(
 				attribute.String("operation", "scale_mode.apply_resources"),
 				attribute.String("cpu", sc.Idle.CPU),
 				attribute.String("memory", sc.Idle.Memory),
+				attribute.Int("blkio_weight", int(sc.Idle.BlkioWeight)),
 			)
 			p.l.DebugContext(ctx, "applying idle resources (scale mode)",
 				slog.String("name", name),
 				slog.String("cpu", sc.Idle.CPU),
 				slog.String("memory", sc.Idle.Memory),
+				slog.Int("blkio_weight", int(sc.Idle.BlkioWeight)),
 			)
-			return p.applyResources(ctx, name, sc.Idle.CPU, sc.Idle.Memory)
+			return p.applyResources(ctx, name, sc.Idle)
 		}
 		span.SetAttributes(
 			attribute.String("operation", "scale_mode.noop"),

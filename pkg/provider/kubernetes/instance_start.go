@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
@@ -36,6 +37,25 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	if parsed.Kind == KindCNPGCluster {
 		span.SetAttributes(attribute.String("operation", "cnpg_resume"))
 		return p.clusterHibernate(ctx, parsed, false)
+	}
+
+	// For StatefulSets managed by the OT-CONTAINER-KIT redis-operator, re-enable
+	// the operator's reconciliation loop after a successful scale-up. A detached
+	// context is used so a cancelled request context does not prevent the annotation
+	// from being removed even when the scale itself completed successfully.
+	if parsed.Kind == "statefulset" {
+		defer func() {
+			if err == nil {
+				detached := context.WithoutCancel(ctx)
+				ss, fetchErr := p.Client.AppsV1().StatefulSets(parsed.Namespace).Get(detached, parsed.Name, metav1.GetOptions{})
+				if fetchErr != nil {
+					p.l.WarnContext(detached, "cannot fetch statefulset for redis-operator owner check",
+						"namespace", parsed.Namespace, "name", parsed.Name, "error", fetchErr)
+				} else {
+					p.setRedisOperatorSkipReconcile(detached, ss, false)
+				}
+			}
+		}()
 	}
 
 	labels, err := p.getWorkloadLabels(ctx, parsed)

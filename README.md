@@ -73,7 +73,7 @@ You can install Sablier using one of the following methods:
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.13.0)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.14.0)
 <!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
@@ -85,13 +85,13 @@ Choose one of the Docker images and run it with a sample configuration file:
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.13.0
+docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.14.0
 ```
 
 > [!TIP]
 > Verify the image signature to ensure authenticity:
 > ```bash
-> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.13.0
+> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.14.0
 > ```
 
 <!-- x-release-please-end -->
@@ -359,7 +359,7 @@ sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.13.0 --help
+docker run sablierapp/sablier:1.14.0 --help
 ```
 <!-- x-release-please-end -->
 
@@ -459,7 +459,7 @@ Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmo
 
 ## Scale Mode
 
-By default, Sablier stops (or pauses) workloads when a session expires and restarts them on the next request. **Scale mode** is an alternative: instead of stopping a container, Sablier throttles its CPU and memory to a minimal idle allocation, then restores full resources the moment a new session arrives.
+By default, Sablier stops (or pauses) workloads when a session expires and restarts them on the next request. **Scale mode** is an alternative: instead of stopping a container, Sablier throttles its CPU, memory, and (on Docker) block I/O to a minimal idle allocation, then restores full resources the moment a new session arrives.
 
 Because the container never stops, there is **no cold-start latency** — ideal for resource-constrained environments like a Raspberry Pi where you want to reclaim most of the hardware while keeping response times acceptable.
 
@@ -487,6 +487,10 @@ labels:
 | `sablier.active.replicas` | Replica count when a session is active. |
 | `sablier.active.cpu` | CPU limit restored when a session is active. |
 | `sablier.active.memory` | Memory limit restored when a session is active. |
+| `sablier.idle.blkio-weight` / `sablier.active.blkio-weight` | Block I/O weight `10`–`1000` (Docker only). |
+| `sablier.idle.blkio-device-{read,write}-{bps,iops}` | Per-device I/O throughput/IOPS limits (Docker only). |
+
+> **Docker only:** Block I/O throttling is supported on the Docker provider. Per-device limits (`blkio-*-device`, `blkio-device-*`) require a Docker daemon with API version ≥ 1.55 ([moby/moby#52650](https://github.com/moby/moby/issues/52650)); Sablier logs a warning on older daemons. See the [configuration reference](./docs/configuration.md#block-io-blkio-throttling) for the full list.
 
 📚 **[Full Example](./examples/scale-mode/)**
 

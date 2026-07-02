@@ -79,7 +79,7 @@ services:
     restart: unless-stopped
 
   sablier:
-    image: sablierapp/sablier:1.13.0 # x-release-please-version
+    image: sablierapp/sablier:1.14.0 # x-release-please-version
     restart: always
     command:
         - start
@@ -117,7 +117,7 @@ services:
     restart: unless-stopped
 
   sablier:
-    image: sablierapp/sablier:1.13.0 # x-release-please-version
+    image: sablierapp/sablier:1.14.0 # x-release-please-version
     restart: always
     command:
         - start
@@ -152,7 +152,7 @@ services:
       - sablier.group=demo
   
   sablier:
-    image: sablierapp/sablier:1.13.0 # x-release-please-version
+    image: sablierapp/sablier:1.14.0 # x-release-please-version
     restart: always
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'

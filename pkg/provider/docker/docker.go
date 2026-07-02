@@ -16,10 +16,14 @@ import (
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client   client.APIClient
-	l        *slog.Logger
-	strategy string
-	tracer   trace.Tracer
+	Client client.APIClient
+	l      *slog.Logger
+	// apiVersion is the negotiated Docker daemon API version (e.g. "1.51"),
+	// captured at construction time. It is used to warn when a requested
+	// feature is not supported by the connected daemon.
+	apiVersion string
+	strategy   string
+	tracer     trace.Tracer
 
 	// HonorRestartPolicy makes InstanceInspect honor the container's restart
 	// policy when it exits successfully (exit code 0): "no"/"on-failure" are
@@ -45,9 +49,10 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy 
 		slog.String("api_version", serverVersion.APIVersion),
 	)
 	return &Provider{
-		Client:   cli,
-		l:        logger,
-		strategy: strategy,
-		tracer:   otel.Tracer("github.com/sablierapp/sablier/pkg/provider/docker"),
+		Client:     cli,
+		l:          logger,
+		apiVersion: serverVersion.APIVersion,
+		strategy:   strategy,
+		tracer:     otel.Tracer("github.com/sablierapp/sablier/pkg/provider/docker"),
 	}, nil
 }

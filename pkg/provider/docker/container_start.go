@@ -38,19 +38,21 @@ func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
-	if sc.Idle.Replicas >= 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
-		if sc.Active.CPU != "" || sc.Active.Memory != "" {
+	if sc.Idle.Replicas >= 1 || sc.Active.HasResources() {
+		if sc.Active.HasResources() {
 			span.SetAttributes(
 				attribute.String("operation", "scale_mode.apply_resources"),
 				attribute.String("cpu", sc.Active.CPU),
 				attribute.String("memory", sc.Active.Memory),
+				attribute.Int("blkio_weight", int(sc.Active.BlkioWeight)),
 			)
 			p.l.DebugContext(ctx, "applying active resources (scale mode)",
 				slog.String("name", name),
 				slog.String("cpu", sc.Active.CPU),
 				slog.String("memory", sc.Active.Memory),
+				slog.Int("blkio_weight", int(sc.Active.BlkioWeight)),
 			)
-			return p.applyResources(ctx, name, sc.Active.CPU, sc.Active.Memory)
+			return p.applyResources(ctx, name, sc.Active)
 		}
 		span.SetAttributes(
 			attribute.String("operation", "scale_mode.noop"),

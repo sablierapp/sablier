@@ -8,8 +8,8 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/luthermonson/go-proxmox v0.5.1
-	github.com/moby/moby/api v1.54.2
-	github.com/moby/moby/client v0.4.1
+	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
@@ -19,22 +19,22 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/testcontainers/testcontainers-go v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/dind v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/k3s v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/valkey v0.42.0
+	github.com/testcontainers/testcontainers-go v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/dind v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/k3s v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/valkey v0.43.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
-	github.com/valkey-io/valkey-go v1.0.75
+	github.com/valkey-io/valkey-go v1.0.76
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/sync v0.20.0
-	google.golang.org/grpc v1.81.1
+	golang.org/x/sync v0.21.0
+	google.golang.org/grpc v1.82.0
 	gotest.tools/v3 v3.5.2
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
-	k8s.io/client-go v0.36.1
+	k8s.io/api v0.36.2
+	k8s.io/apimachinery v0.36.2
+	k8s.io/client-go v0.36.2
 )
 
 require (
@@ -131,7 +131,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
-	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.5 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

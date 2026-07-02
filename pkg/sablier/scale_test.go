@@ -124,3 +124,99 @@ func TestPopulateEnabledAndGroup_NoScaleLabels(t *testing.T) {
 
 	assert.Assert(t, info.ScaleConfig == nil, "ScaleConfig should be nil when no scale labels")
 }
+
+func TestScaleConfigFromLabels_BlkioWeightDevice(t *testing.T) {
+	labels := map[string]string{
+		"sablier.idle.blkio-weight-device":   "/dev/sda:100",
+		"sablier.active.blkio-weight-device": "/dev/sda:800,/dev/sdb:500",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	assert.Assert(t, cmp.DeepEqual(got, sablier.ScaleConfig{
+		Idle: sablier.ResourceProfile{
+			Replicas:          0,
+			BlkioWeightDevice: []sablier.BlkioWeightDevice{{Path: "/dev/sda", Weight: 100}},
+		},
+		Active: sablier.ResourceProfile{
+			Replicas: 1,
+			BlkioWeightDevice: []sablier.BlkioWeightDevice{
+				{Path: "/dev/sda", Weight: 800},
+				{Path: "/dev/sdb", Weight: 500},
+			},
+		},
+	}))
+}
+
+func TestScaleConfigFromLabels_BlkioThrottleDevice(t *testing.T) {
+	labels := map[string]string{
+		"sablier.idle.blkio-device-read-bps":   "/dev/sda:5m",
+		"sablier.idle.blkio-device-write-bps":  "/dev/sda:2m",
+		"sablier.idle.blkio-device-read-iops":  "/dev/sda:50",
+		"sablier.idle.blkio-device-write-iops": "/dev/sda:20",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	assert.Assert(t, cmp.DeepEqual(got, sablier.ScaleConfig{
+		Idle: sablier.ResourceProfile{
+			Replicas:             0,
+			BlkioDeviceReadBps:   []sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "5m"}},
+			BlkioDeviceWriteBps:  []sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "2m"}},
+			BlkioDeviceReadIOps:  []sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "50"}},
+			BlkioDeviceWriteIOps: []sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "20"}},
+		},
+		Active: sablier.ResourceProfile{Replicas: 1},
+	}))
+}
+
+func TestScaleConfigFromLabels_BlkioDeviceMultiple(t *testing.T) {
+	labels := map[string]string{
+		"sablier.idle.blkio-device-read-bps": "/dev/sda:10m,/dev/nvme0n1:20m",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	assert.Assert(t, cmp.DeepEqual(got, sablier.ScaleConfig{
+		Idle: sablier.ResourceProfile{
+			Replicas: 0,
+			BlkioDeviceReadBps: []sablier.BlkioThrottleDevice{
+				{Path: "/dev/sda", Rate: "10m"},
+				{Path: "/dev/nvme0n1", Rate: "20m"},
+			},
+		},
+		Active: sablier.ResourceProfile{Replicas: 1},
+	}))
+}
+
+func TestScaleConfigFromLabels_BlkioWeightDeviceInvalidWeight(t *testing.T) {
+	labels := map[string]string{
+		// weight=9 is below minimum (10), weight=bad is not a number — both skipped
+		"sablier.idle.blkio-weight-device": "/dev/sda:9,/dev/sdb:bad,/dev/sdc:100",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	// Only the valid entry survives
+	assert.Assert(t, cmp.DeepEqual(got.Idle.BlkioWeightDevice,
+		[]sablier.BlkioWeightDevice{{Path: "/dev/sdc", Weight: 100}}))
+}
+
+func TestScaleConfigFromLabels_BlkioThrottleDeviceMalformed(t *testing.T) {
+	labels := map[string]string{
+		// No colon → skipped; empty rate → skipped; valid entry survives
+		"sablier.idle.blkio-device-read-bps": "nocodon,/dev/sda:,/dev/sdb:5m",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	assert.Assert(t, cmp.DeepEqual(got.Idle.BlkioDeviceReadBps,
+		[]sablier.BlkioThrottleDevice{{Path: "/dev/sdb", Rate: "5m"}}))
+}
+
+func TestPopulateEnabledAndGroup_BlkioDeviceLabels(t *testing.T) {
+	info := sablier.InstanceInfo{Name: "my-service"}
+	labels := map[string]string{
+		"sablier.enable":                      "true",
+		"sablier.idle.blkio-device-read-bps":  "/dev/sda:5m",
+		"sablier.idle.blkio-device-write-bps": "/dev/sda:2m",
+	}
+
+	sablier.PopulateEnabledAndGroup(&info, labels)
+
+	assert.Assert(t, info.ScaleConfig != nil, "ScaleConfig should be populated when blkio device labels are set")
+	assert.Assert(t, cmp.DeepEqual(info.ScaleConfig.Idle.BlkioDeviceReadBps,
+		[]sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "5m"}}))
+	assert.Assert(t, cmp.DeepEqual(info.ScaleConfig.Idle.BlkioDeviceWriteBps,
+		[]sablier.BlkioThrottleDevice{{Path: "/dev/sda", Rate: "2m"}}))
+}
