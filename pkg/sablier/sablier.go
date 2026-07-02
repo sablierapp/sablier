@@ -30,9 +30,14 @@ type Sablier struct {
 	// call before it is cancelled. Defaults to 5 minutes.
 	InstanceStartTimeout time.Duration
 
-	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted performs a
-	// full reconciliation scan. Defaults to 30 seconds.
+	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted and
+	// WatchAndWarmExternallyStarted perform a full reconciliation scan. Defaults to 30 seconds.
 	ExternallyStartedScanInterval time.Duration
+
+	// DefaultSessionDuration is the session duration used when seeding sessions
+	// for externally started instances (WatchAndWarmExternallyStarted).
+	// Defaults to 5 minutes.
+	DefaultSessionDuration time.Duration
 
 	// RunningHoursRefreshFrequency is how often running-hours windows are
 	// reconciled. Defaults to 30 seconds.
@@ -62,6 +67,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		BlockingRefreshFrequency:      5 * time.Second,
 		InstanceStartTimeout:          5 * time.Minute,
 		ExternallyStartedScanInterval: 30 * time.Second,
+		DefaultSessionDuration:        5 * time.Minute,
 		RunningHoursRefreshFrequency:  30 * time.Second,
 	}
 }

@@ -278,6 +278,15 @@ provider:
   # Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default: false)
   # Uses both event-driven detection and a periodic reconciliation scan (every 30 seconds) as a safety net.
   auto-stop-externally-started: false
+  # Continuously create a session (with the default session duration) for instances with sablier.enable=true
+  # that are running but were not started by Sablier, instead of stopping them (default: false)
+  # This is the non-destructive counterpart to auto-stop-externally-started (the two options are
+  # mutually exclusive): the instance keeps running until its seeded session expires, then hibernates
+  # through the regular expiration lifecycle. Uses both event-driven detection and a periodic
+  # reconciliation scan (every 30 seconds) as a safety net.
+  # Pair it with auto-stop-on-startup: false, otherwise instances already running when Sablier
+  # boots are stopped once at startup before the warm watch takes over.
+  auto-warm-externally-started: false
   # Reject direct named requests for instances without sablier.enable=true
   reject-unlabeled-requests: false
   # Verify sablier.enable=true before stopping expired instances
@@ -398,7 +407,8 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
 ```
   -h, --help                                                  help for start
       --provider.auto-stop-on-startup                         Stop all sablier.enable=true instances running at startup that were not started by Sablier (default true)
-  --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
+      --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
+      --provider.auto-warm-externally-started                 Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them (default false)
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
       --provider.reject-unlabeled-requests                    Reject requests for instances without sablier.enable=true (default false)

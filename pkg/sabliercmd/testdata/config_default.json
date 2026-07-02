@@ -13,6 +13,7 @@
     "Name": "docker",
     "AutoStopOnStartup": true,
     "AutoStopExternallyStarted": false,
+    "AutoWarmExternallyStarted": false,
     "RejectUnlabeledRequests": false,
     "VerifyEnabledOnExpiration": false,
     "Kubernetes": {
