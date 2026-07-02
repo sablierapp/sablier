@@ -137,11 +137,13 @@ By default Sablier keeps its **historical behavior** and reports any container t
 
 | Container state | Restart policy | Sablier status |
 |---|---|---|
-| Exited, code `0` | `no` / `on-failure` | **`ready`** — the container completed its job |
+| Exited, code `0` | `no` / `on-failure` | **`completed`** — the container ran and finished its job |
 | Exited, code `0` | `always` / `unless-stopped` | `starting` — Docker will bring it back, Sablier waits |
 | Exited, non-zero code | any | `error` — surfaced as a failure |
 
-> Docker normalizes an **unset** restart policy to `no`, so an unset policy is indistinguishable from an explicit `restart: "no"`. With `honor-restart-policy` enabled, both are reported as `ready`.
+> `completed` is a distinct status from `ready`: a `ready` container is running and serving traffic, whereas a `completed` container ran once and exited. A `completed` dependency satisfies a `service_completed_successfully` condition, but never a `service_healthy` one.
+
+> Docker normalizes an **unset** restart policy to `no`, so an unset policy is indistinguishable from an explicit `restart: "no"`. With `honor-restart-policy` enabled, both are reported as `completed`.
 
 ### Honor the restart policy
 
@@ -151,7 +153,7 @@ By default Sablier keeps its **historical behavior** and reports any container t
 > default behavior.
 
 When enabled, Sablier honors the container's restart policy on a successful exit
-(`no`/`on-failure` → `ready`, `always`/`unless-stopped` → `starting`) instead of
+(`no`/`on-failure` → `completed`, `always`/`unless-stopped` → `starting`) instead of
 always reporting an exited container as `stopped`. This is required for the
 one-shot init / migration container pattern described above (and used by the
 [`depends-on`](#ordering-containers-with-depends_on) example).
@@ -226,7 +228,7 @@ services:
 > it is started on-demand only because `app` declares a `depends_on` on it.
 
 > The `service_completed_successfully` condition relies on the exited
-> `migration` container being reported as `ready`. Enable
+> `migration` container being reported as `completed`. Enable
 > [`--provider.docker.honor-restart-policy=true`](#honor-the-restart-policy) so
 > Sablier honors the `restart: "no"` policy; without it, the exited container is
 > reported as `stopped` and the condition never resolves.
@@ -237,7 +239,7 @@ When Sablier is asked to start a container, it reads the `com.docker.compose.dep
 |---|---|
 | `service_started` | the dependency is running |
 | `service_healthy` | the dependency passes its health check |
-| `service_completed_successfully` | the dependency has exited with code `0` |
+| `service_completed_successfully` | the dependency has exited with code `0` (reported as `completed`) |
 | `service_running_or_healthy` | the dependency is running, or healthy if it has a health check |
 
 ### Do I need `sablier.enable` on a dependency?

@@ -118,4 +118,3 @@ func TestDockerClassicProvider_InstanceDependencies_ServiceHealthy(t *testing.T)
 	assert.Equal(t, deps[0].Name, dbName)
 	assert.Equal(t, deps[0].Condition, "service_healthy")
 }
-

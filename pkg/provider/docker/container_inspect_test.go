@@ -277,13 +277,13 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			// Same container as above, but with HonorRestartPolicy enabled. The
 			// container has no explicit restart policy, which Docker normalizes
 			// to "no". Since "no" does not restart a successfully exited
-			// container, it is reported as a completed (ready) one-shot
-			// container instead of stopped.
+			// container, it is reported as a completed one-shot container
+			// instead of stopped.
 			honorRestartPolicy: true,
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusReady,
+				Status:          sablier.InstanceStatusCompleted,
 			},
 			wantErr: nil,
 		},
@@ -322,7 +322,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusReady,
+				Status:          sablier.InstanceStatusCompleted,
 			},
 			wantErr: nil,
 		},
@@ -354,13 +354,13 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 				},
 			},
 			// With HonorRestartPolicy enabled, a "no" restart policy is honored:
-			// the completed one-shot container is reported as ready instead of
-			// stopped.
+			// the completed one-shot container is reported as completed instead
+			// of stopped.
 			honorRestartPolicy: true,
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusReady,
+				Status:          sablier.InstanceStatusCompleted,
 			},
 			wantErr: nil,
 		},

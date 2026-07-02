@@ -18,9 +18,10 @@ type InstanceDependency struct {
 	Name string `json:"name"`
 	// Condition is the state the dependency must reach. Condition strings
 	// follow Docker Compose conventions and map to InstanceStatus values:
-	//   service_started                → Starting or Ready
+	//   service_started                → Starting, Ready or Completed
 	//   service_healthy                → Ready
-	//   service_completed_successfully → Ready
+	//   service_running_or_healthy     → Starting or Ready
+	//   service_completed_successfully → Completed
 	Condition string `json:"condition"`
 }
 
@@ -33,12 +34,19 @@ const (
 // depends_on condition. Condition strings follow Docker Compose conventions.
 func dependencyConditionSatisfied(status InstanceStatus, condition string) bool {
 	switch condition {
-	case "service_healthy", "service_completed_successfully":
-		// Both require the dependency to be fully ready (healthy or exited-0).
+	case "service_healthy":
+		// The dependency must be running and pass its health check.
 		return status == InstanceStatusReady
-	default:
-		// service_started and unknown conditions: running is enough.
+	case "service_completed_successfully":
+		// The dependency must have exited successfully (a completed one-shot).
+		return status == InstanceStatusCompleted
+	case "service_running_or_healthy":
+		// The dependency must be running (or healthy if it has a health check).
 		return status == InstanceStatusStarting || status == InstanceStatusReady
+	default:
+		// service_started and unknown conditions: the dependency only needs to
+		// have started. A one-shot that already ran (Completed) also qualifies.
+		return status == InstanceStatusStarting || status == InstanceStatusReady || status == InstanceStatusCompleted
 	}
 }
 

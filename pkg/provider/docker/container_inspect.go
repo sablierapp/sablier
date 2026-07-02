@@ -87,19 +87,20 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 			// The container exited successfully and its restart policy
 			// ("no" / "on-failure") means Docker will not restart it. This is a
 			// one-shot / init container (e.g. a database migration) that has
-			// completed its job. Report it as ready so that Sablier does not
-			// keep restarting it. The container is not running, so
-			// CurrentReplicas stays 0.
+			// completed its job. Report it as completed so that Sablier does not
+			// keep restarting it, and so a service_completed_successfully
+			// dependency resolves without treating it as a running service. The
+			// container is not running, so CurrentReplicas stays 0.
 			//
 			// Note: Docker normalizes an unset restart policy to "no", so an
 			// unset policy is indistinguishable from an explicit "no" and is
-			// also reported as ready here.
+			// also reported as completed here.
 			// See https://github.com/sablierapp/sablier/issues/952
 			info = sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusReady,
+				Status:          sablier.InstanceStatusCompleted,
 			}
 		} else {
 			// HonorRestartPolicy is disabled: keep the historical behavior and
