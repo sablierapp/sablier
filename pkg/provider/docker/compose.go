@@ -17,14 +17,6 @@ const (
 	composeDependsOnLabel = "com.docker.compose.depends_on"
 )
 
-// Docker Compose depends_on conditions.
-const (
-	conditionServiceStarted               = "service_started"
-	conditionServiceHealthy               = "service_healthy"
-	conditionServiceCompletedSuccessfully = "service_completed_successfully"
-	conditionServiceRunningOrHealthy      = "service_running_or_healthy"
-)
-
 // composeDependency is one entry of the com.docker.compose.depends_on label,
 // referencing a service by name (not yet resolved to a container).
 type composeDependency struct {

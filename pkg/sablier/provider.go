@@ -30,10 +30,11 @@ type Provider interface {
 	InstanceGroups(ctx context.Context) (map[string][]string, error)
 	InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]InstanceConfiguration, error)
 
-	// InstanceDependencies returns the transitive dependencies of name in
-	// topological order: each dependency is listed before any instance that
-	// depends on it. Providers that do not support dependency ordering return
-	// nil, nil.
+	// InstanceDependencies returns the direct dependencies of name (the instances
+	// it must wait for before starting), each with the condition it must reach.
+	// Sablier core walks these hints transitively, detects cycles, and orders the
+	// starts; providers only report one instance's immediate dependencies.
+	// Providers that do not support dependencies return nil, nil.
 	InstanceDependencies(ctx context.Context, name string) ([]InstanceDependency, error)
 
 	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) InstanceEventStream

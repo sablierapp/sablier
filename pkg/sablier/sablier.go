@@ -21,6 +21,10 @@ type Sablier struct {
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
+	// depStarts single-flights InstanceStart calls issued for depends_on
+	// dependencies, so concurrent requests that share a dependency (e.g. two
+	// group members that both depend on the same database) never start it twice.
+	depStarts map[string]*depStart
 
 	// BlockingRefreshFrequency is the frequency at which the instances are checked
 	// against the provider. Defaults to 5 seconds.
@@ -56,6 +60,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                      store,
 		groups:                        newGroupRegistry(),
 		pendingStarts:                 map[string]*pendingStart{},
+		depStarts:                     map[string]*depStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
