@@ -1,0 +1,52 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=2m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+    depends_on:
+      - web
+      - nvr
+
+  web:
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=5s
+      - -healthy=true
+      - -healthy-after=5s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=home"
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8080:80"
+
+  nvr:
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=5s
+      - -healthy=true
+      - -healthy-after=5s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=home"
+      - "sablier.ready-on-start=true"
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8081:80"
