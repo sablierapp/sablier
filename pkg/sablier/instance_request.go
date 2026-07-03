@@ -238,7 +238,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 
 	effectiveDuration := duration
 	if state.RunningHours != "" {
-		remaining, inWindow, runningHoursErr := runningHoursRemaining(state.RunningHours, time.Now())
+		remaining, inWindow, runningHoursErr := runningHoursRemaining(state.RunningHours, state.RunningDays, time.Now())
 		if runningHoursErr != nil {
 			s.l.WarnContext(ctx, "invalid running-hours value in state, ignoring", slog.String("instance", name), slog.String("value", state.RunningHours), slog.Any("error", runningHoursErr))
 		} else if inWindow && remaining > effectiveDuration {

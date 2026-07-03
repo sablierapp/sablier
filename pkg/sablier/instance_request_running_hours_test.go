@@ -3,6 +3,7 @@ package sablier_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,3 +62,36 @@ func TestInstanceRequest_DoesNotExtendExpirationOutsideRunningHours(t *testing.T
 	assert.NilError(t, err)
 	assert.Equal(t, info.Name, "nginx")
 }
+
+func TestInstanceRequest_DoesNotExtendExpirationOnExcludedDay(t *testing.T) {
+	manager, sessions, _ := setupSablier(t)
+	ctx := t.Context()
+
+	now := time.Now()
+	start := now.Add(-time.Minute)
+	end := now.Add(3 * time.Minute)
+	spec := fmt.Sprintf("%02d:%02d-%02d:%02d", start.Hour(), start.Minute(), end.Hour(), end.Minute())
+
+	// Restrict the window to every weekday except today so the window is inactive.
+	var days []string
+	for d := time.Sunday; d <= time.Saturday; d++ {
+		if d != start.Weekday() {
+			days = append(days, d.String())
+		}
+	}
+
+	state := sablier.InstanceInfo{
+		Name:         "nginx",
+		Status:       sablier.InstanceStatusReady,
+		RunningHours: spec,
+		RunningDays:  strings.Join(days, ","),
+	}
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(state, nil)
+	sessions.EXPECT().Put(ctx, state, 20*time.Second).Return(nil)
+
+	info, err := manager.InstanceRequest(ctx, "nginx", 20*time.Second)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Name, "nginx")
+}
+

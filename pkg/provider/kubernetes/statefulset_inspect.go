@@ -37,7 +37,7 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		}
 	}
 
-	sablier.PopulateEnabledAndGroup(&info, ss.Labels)
+	sablier.PopulateEnabledAndGroup(&info, sablierConfig(ss.Labels, ss.Annotations))
 
 	var image string
 	if len(ss.Spec.Template.Spec.Containers) > 0 {
