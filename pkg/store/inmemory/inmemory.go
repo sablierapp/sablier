@@ -48,6 +48,13 @@ func (i InMemory) Delete(_ context.Context, s string) error {
 	return nil
 }
 
+func (i InMemory) Range(_ context.Context, f func(sablier.InstanceInfo, time.Time)) error {
+	i.kv.Range(func(_ string, value sablier.InstanceInfo, expiresAt time.Time) {
+		f(value, expiresAt)
+	})
+	return nil
+}
+
 func (i InMemory) OnExpire(_ context.Context, f func(string)) error {
 	i.kv.SetOnExpire(func(k string, _ sablier.InstanceInfo) {
 		f(k)

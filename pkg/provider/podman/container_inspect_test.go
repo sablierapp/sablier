@@ -134,11 +134,16 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A container that is running but not yet healthy is reported as
+			// starting (Sablier keeps waiting for it to become healthy), with the
+			// health state surfaced as a message — not an error. The podman
+			// provider delegates inspection to the docker provider, so it shares
+			// this behaviour.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusError,
-				Message:         "container is unhealthy",
+				Status:          sablier.InstanceStatusStarting,
+				Message:         "container is running but not healthy yet",
 			},
 			wantErr: nil,
 		},

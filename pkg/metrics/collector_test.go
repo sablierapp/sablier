@@ -1,12 +1,18 @@
 package metrics_test
 
 import (
+	"context"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sablierapp/sablier/pkg/metrics"
+	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
 )
 
 type fakeGroupsProvider struct {
@@ -61,5 +67,76 @@ func TestGroupLockCollector_NoGroupsEmitsNothing(t *testing.T) {
 	got := testutil.CollectAndCount(c, "sablier_group_locked", "sablier_group_active_instances")
 	if got != 0 {
 		t.Errorf("expected 0 series with no groups, got %d", got)
+	}
+}
+
+type fakeSessionSource struct {
+	entries []metrics.SessionEntry
+}
+
+func (f fakeSessionSource) SessionsSnapshot() []metrics.SessionEntry {
+	return f.entries
+}
+
+func TestSessionExpiryCollector_ExposesGauge(t *testing.T) {
+	src := fakeSessionSource{entries: []metrics.SessionEntry{
+		{Instance: "whoami", Group: "demo", ExpiresAt: time.Unix(1000000000, 0)},
+		{Instance: "nginx", Group: "", ExpiresAt: time.Unix(1000000060, 0)},
+	}}
+
+	c := metrics.NewSessionExpiryCollector(src)
+
+	want := `
+# HELP sablier_session_expires_at_timestamp_seconds Unix timestamp (seconds) at which the instance's session expires and the instance is stopped. One series per active session. The value tracks the latest access and is pushed back on every session renewal. Derive the remaining time in Grafana with the expression: value - time().
+# TYPE sablier_session_expires_at_timestamp_seconds gauge
+sablier_session_expires_at_timestamp_seconds{group="",instance="nginx"} 1000000060
+sablier_session_expires_at_timestamp_seconds{group="demo",instance="whoami"} 1000000000
+`
+
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want),
+		"sablier_session_expires_at_timestamp_seconds"); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
+	}
+
+	lints, err := testutil.CollectAndLint(c, "sablier_session_expires_at_timestamp_seconds")
+	if err != nil {
+		t.Fatalf("CollectAndLint: %v", err)
+	}
+	if len(lints) > 0 {
+		t.Errorf("lint problems: %+v", lints)
+	}
+}
+
+func TestSessionExpiryCollector_NoSessionsEmitsNothing(t *testing.T) {
+	c := metrics.NewSessionExpiryCollector(fakeSessionSource{})
+	got := testutil.CollectAndCount(c, "sablier_session_expires_at_timestamp_seconds")
+	if got != 0 {
+		t.Errorf("expected 0 series with no sessions, got %d", got)
+	}
+}
+
+// TestSessionExpiryCollector_NonDestructive exercises the full production path
+// (store -> Sablier.SessionsSnapshot -> collector) and proves that scraping the
+// metric never renews the session: the exposed expiry must stay constant across
+// repeated scrapes.
+func TestSessionExpiryCollector_NonDestructive(t *testing.T) {
+	ctx := context.Background()
+	st := inmemory.NewInMemory()
+	if err := st.Put(ctx, sablier.InstanceInfo{Name: "whoami", Groups: []string{"demo"}}, 5*time.Minute); err != nil {
+		t.Fatalf("seed store: %v", err)
+	}
+
+	s := sablier.New(slog.New(slog.NewTextHandler(io.Discard, nil)), st, nil)
+	c := metrics.NewSessionExpiryCollector(s)
+
+	first := testutil.ToFloat64(c)
+	if first <= 0 {
+		t.Fatalf("expected a positive expiry timestamp, got %v", first)
+	}
+	for i := 0; i < 3; i++ {
+		<-time.After(10 * time.Millisecond)
+		if got := testutil.ToFloat64(c); got != first {
+			t.Fatalf("expiry moved across scrapes (%v -> %v): the collector renews sessions", first, got)
+		}
 	}
 }

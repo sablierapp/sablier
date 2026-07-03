@@ -98,3 +98,17 @@ func (mr *MockStoreMockRecorder) Put(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockStore)(nil).Put), arg0, arg1, arg2)
 }
+
+// Range mocks base method.
+func (m *MockStore) Range(arg0 context.Context, arg1 func(sablier.InstanceInfo, time.Time)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Range", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Range indicates an expected call of Range.
+func (mr *MockStoreMockRecorder) Range(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Range", reflect.TypeOf((*MockStore)(nil).Range), arg0, arg1)
+}
