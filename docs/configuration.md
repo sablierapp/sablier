@@ -374,6 +374,7 @@ When set to `true`, Sablier registers a `GET <base-path>/metrics` route on the s
 |------|------|--------|-------------|
 | `sablier_group_locked` | gauge | `group` | `1` if any instance in the group has an active session, else `0`. One series per known group, including groups with no active sessions. |
 | `sablier_group_active_instances` | gauge | `group` | Number of instances in the group that currently have an active session. |
+| `sablier_session_expires_at_timestamp_seconds` | gauge | `instance`, `group` | Unix timestamp (seconds) at which the instance's session expires and the instance is stopped. One series per active session. The value tracks the latest access, so it is pushed back on every session renewal. Derive the remaining time in Grafana with `sablier_session_expires_at_timestamp_seconds - time()`. |
 | `sablier_instance_start_duration_seconds` | histogram | `instance` | Duration of `provider.InstanceStart` calls (seconds). Observed only on success. |
 | `sablier_instance_ready_duration_seconds` | histogram | `instance` | End-to-end wall time from first not-ready observation to ready (seconds). |
 | `sablier_session_requests_total` | counter | `strategy` (`dynamic`\|`blocking`), `target` (`names`\|`group`) | Total number of session requests received. |

@@ -82,6 +82,44 @@ func TestValKey(t *testing.T) {
 		_, err = vk.Get(ctx, "ValKeyDelete")
 		assert.ErrorIs(t, err, store.ErrKeyNotFound)
 	})
+	t.Run("ValKeyRange", func(t *testing.T) {
+		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyRange", Groups: []string{"demo"}}, 30*time.Second)
+		assert.NilError(t, err)
+
+		got := make(map[string]time.Time)
+		err = vk.Range(ctx, func(info sablier.InstanceInfo, expiresAt time.Time) {
+			got[info.Name] = expiresAt
+		})
+		assert.NilError(t, err)
+
+		// The live session is enumerated with a future expiry. Other subtests
+		// share the same store, so we only assert on our key.
+		exp, ok := got["ValKeyRange"]
+		assert.Assert(t, ok)
+		assert.Assert(t, exp.After(time.Now()))
+	})
+	t.Run("ValKeyRangeIgnoresForeignKeys", func(t *testing.T) {
+		// A real session.
+		err := vk.Put(ctx, sablier.InstanceInfo{Name: "ValKeyRangeReal"}, 30*time.Second)
+		assert.NilError(t, err)
+		// A foreign, non-JSON key with a TTL (e.g. another app sharing the DB).
+		err = vk.Client.Do(ctx, vk.Client.B().Set().Key("ValKeyRangeForeignPlain").Value("not-json").Ex(30*time.Second).Build()).Error()
+		assert.NilError(t, err)
+		// A foreign JSON key whose payload is not an InstanceInfo for this key.
+		err = vk.Client.Do(ctx, vk.Client.B().Set().Key("ValKeyRangeForeignJSON").Value(`{"foo":"bar"}`).Ex(30*time.Second).Build()).Error()
+		assert.NilError(t, err)
+
+		got := make(map[string]time.Time)
+		err = vk.Range(ctx, func(info sablier.InstanceInfo, expiresAt time.Time) {
+			got[info.Name] = expiresAt
+		})
+		// Foreign/corrupt keys must be skipped, never abort the enumeration.
+		assert.NilError(t, err)
+		_, ok := got["ValKeyRangeReal"]
+		assert.Assert(t, ok)
+		_, emptyName := got[""]
+		assert.Assert(t, !emptyName)
+	})
 	t.Run("ValKeyOnExpire", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
