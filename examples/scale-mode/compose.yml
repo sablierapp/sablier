@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: always
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -16,6 +17,7 @@ services:
   # memory are throttled when idle and restored when a session is requested.
   # The container is never stopped, so there is no cold-start latency.
   whoami:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"

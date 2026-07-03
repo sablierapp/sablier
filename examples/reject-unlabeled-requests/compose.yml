@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: always
     image: ${SABLIER_IMAGE:-sablier:local}
     command:
       - start
@@ -13,5 +14,6 @@ services:
       - "10000:10000"
 
   unmanaged:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     container_name: sablier-reject-unlabeled-unmanaged

@@ -48,6 +48,7 @@ An instance can belong to more than one group by providing a **comma-separated**
 services:
   shared-api:
     image: myorg/shared-api:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=team-a,team-b"   # member of both groups
@@ -73,6 +74,7 @@ Setting `sablier.ready-after` introduces a mandatory settling delay. Once the pr
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
@@ -132,6 +134,7 @@ Behavior:
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
@@ -189,6 +192,7 @@ CPU values are decimal fractions of one core (`"0.5"` = half a core). Memory val
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"

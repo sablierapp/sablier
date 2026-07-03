@@ -12,6 +12,10 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+func (p *Provider) InstanceDependencies(_ context.Context, _ string) ([]sablier.InstanceDependency, error) {
+	return nil, nil
+}
+
 func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "kubernetes.instance.start",
 		trace.WithAttributes(attribute.String("instance", name)))

@@ -14,6 +14,12 @@ const (
 	InstanceStatusStarting InstanceStatus = "starting"
 	InstanceStatusReady    InstanceStatus = "ready"
 	InstanceStatusError    InstanceStatus = "error"
+	// InstanceStatusCompleted is the terminal state of a one-shot / init
+	// workload that ran and exited successfully (exit code 0) and is not
+	// expected to run again. It is distinct from Ready (running and serving
+	// traffic): a completed instance is not running. It satisfies a
+	// service_completed_successfully dependency but never a service_healthy one.
+	InstanceStatusCompleted InstanceStatus = "completed"
 )
 
 // ProviderType identifies the infrastructure provider that manages an instance.

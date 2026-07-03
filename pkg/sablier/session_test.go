@@ -37,6 +37,25 @@ func TestSessionState_IsReady_FalseWhenInstanceNotReady(t *testing.T) {
 	assert.Assert(t, !s.IsReady())
 }
 
+// A completed one-shot is a distinct terminal state from ready: it is not
+// running and serving traffic, so a session that contains one is not ready.
+// This is why a one-shot must never be a labeled member of a blocking group.
+func TestSessionState_IsReady_FalseWhenInstanceCompleted(t *testing.T) {
+	s := &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"a": {
+				Instance: sablier.InstanceInfo{Status: sablier.InstanceStatusCompleted},
+			},
+		},
+	}
+	assert.Assert(t, !s.IsReady())
+}
+
+func TestInstanceInfo_IsReady_CompletedIsNotReady(t *testing.T) {
+	assert.Assert(t, !sablier.InstanceInfo{Status: sablier.InstanceStatusCompleted}.IsReady())
+	assert.Assert(t, sablier.InstanceInfo{Status: sablier.InstanceStatusReady}.IsReady())
+}
+
 func TestSessionState_InstanceErrors(t *testing.T) {
 	s := &sablier.SessionState{
 		Instances: map[string]sablier.InstanceInfoWithError{

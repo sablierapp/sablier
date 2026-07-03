@@ -206,6 +206,10 @@ func TestPodmanProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A container that exited successfully with no restart policy
+			// explicitly defined keeps the historical behavior and is reported
+			// as stopped. The podman provider delegates inspection to the
+			// docker provider, so it shares this behaviour.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
