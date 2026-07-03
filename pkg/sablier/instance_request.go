@@ -190,6 +190,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}
 
+	newSession := false
 	state, err := s.sessions.Get(ctx, name)
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
@@ -198,6 +199,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		if err != nil {
 			return InstanceInfo{}, err
 		}
+		newSession = true
 
 		s.l.InfoContext(ctx, "request to start instance dispatched", slog.String("instance", name), slog.String("status", string(state.Status)), slog.Duration("expiration", duration))
 	} else if err != nil {
@@ -254,5 +256,12 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		s.l.ErrorContext(ctx, "could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))
 		return InstanceInfo{}, fmt.Errorf("could not put instance to store: %w", err)
 	}
+
+	// A brand-new session may have made this instance's group(s) active; force any
+	// instance that declared an anti-affinity against them to back off.
+	if newSession {
+		s.triggerAntiAffinityReconcile(ctx)
+	}
+
 	return state, nil
 }

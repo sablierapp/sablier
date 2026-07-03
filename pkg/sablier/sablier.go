@@ -19,6 +19,20 @@ type Sablier struct {
 
 	groups *groupRegistry
 
+	// antiAffinity is the reverse index antagonist-group -> instances that back
+	// off from it, built from the sablier.anti-affinity label. It is kept in
+	// sync alongside groups by GroupWatch.
+	antiAffinity *groupRegistry
+
+	// affinityMu guards suppressed and serialises anti-affinity reconciliations
+	// so concurrent activations/expirations cannot race each other.
+	affinityMu sync.Mutex
+	// suppressed is the set of instances Sablier has currently forced idle
+	// because of an active antagonist group. Only instances recorded here are
+	// restored when their antagonists become inactive, so an instance that was
+	// already idle before suppression is never spuriously started.
+	suppressed map[string]struct{}
+
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
 	// depStarts single-flights InstanceStart calls issued for depends_on
@@ -64,6 +78,8 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		provider:                      provider,
 		sessions:                      store,
 		groups:                        newGroupRegistry(),
+		antiAffinity:                  newGroupRegistry(),
+		suppressed:                    map[string]struct{}{},
 		pendingStarts:                 map[string]*pendingStart{},
 		depStarts:                     map[string]*depStart{},
 		l:                             logger,

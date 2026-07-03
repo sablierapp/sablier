@@ -63,6 +63,13 @@ type InstanceInfo struct {
 	// Controlled by the sablier.ready-on-start label.
 	ReadyOnStart bool `json:"readyOnStart,omitempty"`
 
+	// AntiAffinity lists the groups this instance backs off from. Whenever any
+	// listed group has an active session, Sablier forces this instance to its
+	// idle state (stopped, or idle resources in scale mode) and restores it once
+	// none of the listed groups are active anymore. Parsed from the
+	// sablier.anti-affinity label (comma-separated group names).
+	AntiAffinity []string `json:"antiAffinity,omitempty"`
+
 	// ScaleConfig configures resource-based scale mode for this instance.
 	// When present, Sablier throttles CPU/memory instead of stopping the container.
 	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`
@@ -329,6 +336,26 @@ func ParseGroups(label string) []string {
 	return out
 }
 
+// ParseAntiAffinity parses a comma-separated anti-affinity label value into a
+// deduplicated slice of group names. Unlike ParseGroups it has no "default"
+// fallback: an empty or whitespace-only value yields nil (no anti-affinity).
+func ParseAntiAffinity(label string) []string {
+	parts := strings.Split(label, ",")
+	seen := make(map[string]bool, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from
 // labels and writes the results into info. Centralising this logic avoids
 // duplicating the same map lookups in every provider's Inspect implementation.
@@ -370,6 +397,9 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 		} else {
 			info.ReadyOnStart = b
 		}
+	}
+	if v := labels["sablier.anti-affinity"]; v != "" {
+		info.AntiAffinity = ParseAntiAffinity(v)
 	}
 	// Only expose ScaleConfig in the response when at least one non-default
 	// scale label is present. Detects configuration by checking for values
