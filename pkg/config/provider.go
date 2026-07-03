@@ -28,6 +28,16 @@ type Provider struct {
 	// Default: false
 	AutoStopExternallyStarted bool
 
+	// AutoWarmExternallyStarted continuously creates a session (with the default
+	// session duration) for instances with sablier.enable=true that are running
+	// but were not started by Sablier itself, instead of stopping them. The regular
+	// expiration lifecycle then stops the instance once its session expires.
+	// This is the non-destructive counterpart to AutoStopExternallyStarted.
+	// Env: SABLIER_PROVIDER_AUTO_WARM_EXTERNALLY_STARTED
+	// CLI: --provider.auto-warm-externally-started
+	// Default: false
+	AutoWarmExternallyStarted bool
+
 	// RejectUnlabeledRequests rejects requests for instances that do not carry
 	// the sablier.enable=true label, preventing accidental management of unlabelled workloads.
 	// Env: SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS
@@ -143,6 +153,9 @@ func NewProviderConfig() Provider {
 }
 
 func (provider Provider) IsValid() error {
+	if provider.AutoStopExternallyStarted && provider.AutoWarmExternallyStarted {
+		return fmt.Errorf("provider.auto-stop-externally-started and provider.auto-warm-externally-started are mutually exclusive")
+	}
 	for _, p := range providers {
 		if p == provider.Name {
 			// Validate Docker-specific settings when using Docker provider
