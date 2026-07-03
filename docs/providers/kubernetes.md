@@ -119,7 +119,7 @@ Sablier checks for the deployment replicas. As soon as the current replicas matc
 
 ## Configure with labels or annotations
 
-On Kubernetes, every `sablier.*` key can be set either as a **label** or as an **annotation**. This applies to Deployments, StatefulSets, CloudNativePG Clusters and OT-CONTAINER-KIT Redis instances.
+On Kubernetes, `sablier.*` keys can be set either as a **label** or as an **annotation**, with one exception: `sablier.enable` must always be a label (see the note below). This applies to Deployments, StatefulSets, CloudNativePG Clusters and OT-CONTAINER-KIT Redis instances.
 
 Annotations are useful because Kubernetes **label values are restricted** (max 63 characters, only `[A-Za-z0-9._-]`, no commas or colons). Some Sablier values cannot be expressed as labels and must use annotations, for example:
 

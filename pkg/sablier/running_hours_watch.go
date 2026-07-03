@@ -52,7 +52,7 @@ func (s *Sablier) reconcileRunningHours(ctx context.Context) {
 
 		remaining, inWindow, err := runningHoursRemaining(info.RunningHours, info.RunningDays, now)
 		if err != nil {
-			s.l.WarnContext(ctx, "invalid running-hours label, skipping instance", slog.String("instance", info.Name), slog.String("value", info.RunningHours), slog.Any("error", err))
+			s.l.WarnContext(ctx, "invalid running-hours or running-days value, skipping instance", slog.String("instance", info.Name), slog.String("running-hours", info.RunningHours), slog.String("running-days", info.RunningDays), slog.Any("error", err))
 			continue
 		}
 		if !inWindow || remaining <= 0 {
