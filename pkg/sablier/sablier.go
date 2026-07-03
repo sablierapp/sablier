@@ -21,6 +21,10 @@ type Sablier struct {
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
+	// depStarts single-flights InstanceStart calls issued for depends_on
+	// dependencies, so concurrent requests that share a dependency (e.g. two
+	// group members that both depend on the same database) never start it twice.
+	depStarts map[string]*depStart
 
 	// BlockingRefreshFrequency is the frequency at which the instances are checked
 	// against the provider. Defaults to 5 seconds.
@@ -30,9 +34,14 @@ type Sablier struct {
 	// call before it is cancelled. Defaults to 5 minutes.
 	InstanceStartTimeout time.Duration
 
-	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted performs a
-	// full reconciliation scan. Defaults to 30 seconds.
+	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted and
+	// WatchAndWarmExternallyStarted perform a full reconciliation scan. Defaults to 30 seconds.
 	ExternallyStartedScanInterval time.Duration
+
+	// DefaultSessionDuration is the session duration used when seeding sessions
+	// for externally started instances (WatchAndWarmExternallyStarted).
+	// Defaults to 5 minutes.
+	DefaultSessionDuration time.Duration
 
 	// RunningHoursRefreshFrequency is how often running-hours windows are
 	// reconciled. Defaults to 30 seconds.
@@ -56,12 +65,14 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                      store,
 		groups:                        newGroupRegistry(),
 		pendingStarts:                 map[string]*pendingStart{},
+		depStarts:                     map[string]*depStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
 		BlockingRefreshFrequency:      5 * time.Second,
 		InstanceStartTimeout:          5 * time.Minute,
 		ExternallyStartedScanInterval: 30 * time.Second,
+		DefaultSessionDuration:        5 * time.Minute,
 		RunningHoursRefreshFrequency:  30 * time.Second,
 	}
 }

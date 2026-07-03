@@ -44,6 +44,18 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: fmt.Errorf("unrecognized docker strategy invalid. strategies available: [stop pause]"),
 		},
 		{
+			name: "auto-stop and auto-warm externally started are mutually exclusive",
+			provider: Provider{
+				Name:                      "docker",
+				AutoStopExternallyStarted: true,
+				AutoWarmExternallyStarted: true,
+				Docker: Docker{
+					Strategy: "stop",
+				},
+			},
+			wantErr: fmt.Errorf("provider.auto-stop-externally-started and provider.auto-warm-externally-started are mutually exclusive"),
+		},
+		{
 			name: "valid kubernetes provider",
 			provider: Provider{
 				Name: "kubernetes",
@@ -187,6 +199,7 @@ func TestNewProviderConfig_Defaults(t *testing.T) {
 	assert.Equal(t, c.Name, "docker")
 	assert.Equal(t, c.AutoStopOnStartup, true)
 	assert.Equal(t, c.AutoStopExternallyStarted, false)
+	assert.Equal(t, c.AutoWarmExternallyStarted, false)
 	assert.Equal(t, c.Docker.Strategy, "stop")
 	assert.Equal(t, c.Kubernetes.QPS, float32(5))
 	assert.Equal(t, c.Kubernetes.Burst, 10)

@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: always
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -19,6 +20,7 @@ services:
       - "10000:10000"
 
   app:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"

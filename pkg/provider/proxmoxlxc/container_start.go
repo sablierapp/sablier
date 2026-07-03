@@ -8,7 +8,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
+
+func (p *Provider) InstanceDependencies(_ context.Context, _ string) ([]sablier.InstanceDependency, error) {
+	return nil, nil
+}
 
 func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "proxmoxlxc.instance.start",

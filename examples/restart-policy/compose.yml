@@ -1,0 +1,64 @@
+services:
+  sablier:
+    restart: always
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      # Honor the container restart policy when a container exits with code 0.
+      # With this enabled, a one-shot container with a non-restarting policy
+      # ("no" / "on-failure") is reported as `completed` instead of the
+      # historical `stopped`. That is what lets a `service_completed_successfully`
+      # dependency resolve. Deprecated: becomes the default in v2.
+      - --provider.docker.honor-restart-policy=true
+      - --logging.level=debug
+      - --sessions.default-duration=2m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # app is a long-running web service managed by Sablier. It declares a
+  # depends_on on the one-shot `init` container, so when a request comes in
+  # Sablier starts `init` first, waits until it has completed successfully, and
+  # only then starts `app`.
+  app:
+    restart: unless-stopped
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running-after=1s
+      - -healthy=true
+      - -healthy-after=1s
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=demo"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8080:80"
+
+  # init is a one-shot container. It runs once, exits with code 0 and is never
+  # restarted (restart: "no"). It is intentionally NOT labeled with
+  # sablier.enable / sablier.group: it is not a long-running service for Sablier
+  # to keep alive or scale to zero. Sablier starts it on demand only to satisfy
+  # app's depends_on.
+  #
+  # With --provider.docker.honor-restart-policy=true, Sablier reports the exited
+  # init container as `completed` (not `stopped`), which lets app's
+  # service_completed_successfully condition resolve — and means Sablier does not
+  # keep restarting it (see https://github.com/sablierapp/sablier/issues/952).
+  # Without the flag, init is reported `stopped` and the condition never resolves.
+  init:
+    restart: "no"
+    image: sablierapp/mimic:v0.3.3
+    command:
+      - -running=false
+      - -exit-code=0

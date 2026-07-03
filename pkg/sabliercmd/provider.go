@@ -43,7 +43,13 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
-		return docker.New(ctx, cli, logger, config.Docker.Strategy)
+		p, err := docker.New(ctx, cli, logger, config.Docker.Strategy)
+		if err != nil {
+			return nil, err
+		}
+		//nolint:staticcheck // Intentionally wiring the deprecated transitional flag until it becomes the default in v2.
+		p.HonorRestartPolicy = config.Docker.HonorRestartPolicy
+		return p, nil
 	case "kubernetes":
 		kubeclientConfig, err := rest.InClusterConfig()
 		if err != nil {

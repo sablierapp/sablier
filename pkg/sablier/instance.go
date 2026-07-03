@@ -14,6 +14,12 @@ const (
 	InstanceStatusStarting InstanceStatus = "starting"
 	InstanceStatusReady    InstanceStatus = "ready"
 	InstanceStatusError    InstanceStatus = "error"
+	// InstanceStatusCompleted is the terminal state of a one-shot / init
+	// workload that ran and exited successfully (exit code 0) and is not
+	// expected to run again. It is distinct from Ready (running and serving
+	// traffic): a completed instance is not running. It satisfies a
+	// service_completed_successfully dependency but never a service_healthy one.
+	InstanceStatusCompleted InstanceStatus = "completed"
 )
 
 // ProviderType identifies the infrastructure provider that manages an instance.
@@ -56,6 +62,11 @@ type InstanceInfo struct {
 	// parsed from the sablier.running-days label (e.g. "Mon,Tue,Wed,Thu,Fri").
 	// Empty means the window applies every day.
 	RunningDays string `json:"runningDays,omitempty"`
+
+	// ReadyOnStart indicates the instance should be considered ready as soon as
+	// the start is dispatched, without waiting for health.
+	// Controlled by the sablier.ready-on-start label.
+	ReadyOnStart bool `json:"readyOnStart,omitempty"`
 
 	// ScaleConfig configures resource-based scale mode for this instance.
 	// When present, Sablier throttles CPU/memory instead of stopping the container.
@@ -141,6 +152,9 @@ type InstanceConfiguration struct {
 }
 
 func (instance InstanceInfo) IsReady() bool {
+	if instance.ReadyOnStart {
+		return true
+	}
 	if instance.Status != InstanceStatusReady {
 		return false
 	}
@@ -359,6 +373,18 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 				slog.String("value", v),
 				slog.Any("error", err),
 			)
+		}
+	}
+	if v := labels["sablier.ready-on-start"]; v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			slog.Warn("invalid sablier.ready-on-start label value, ignoring",
+				slog.String("instance", info.Name),
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		} else {
+			info.ReadyOnStart = b
 		}
 	}
 	// Only expose ScaleConfig in the response when at least one non-default

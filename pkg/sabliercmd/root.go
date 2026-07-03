@@ -44,6 +44,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
 	startCmd.Flags().BoolVar(&conf.Provider.AutoStopExternallyStarted, "provider.auto-stop-externally-started", false, "Continuously stop instances with sablier.enable=true that are running but were not started by Sablier")
 	_ = viper.BindPFlag("provider.auto-stop-externally-started", startCmd.Flags().Lookup("provider.auto-stop-externally-started"))
+	startCmd.Flags().BoolVar(&conf.Provider.AutoWarmExternallyStarted, "provider.auto-warm-externally-started", false, "Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them")
+	_ = viper.BindPFlag("provider.auto-warm-externally-started", startCmd.Flags().Lookup("provider.auto-warm-externally-started"))
 	startCmd.Flags().BoolVar(&conf.Provider.RejectUnlabeledRequests, "provider.reject-unlabeled-requests", false, "Reject direct named requests for instances without sablier.enable=true")
 	_ = viper.BindPFlag("provider.reject-unlabeled-requests", startCmd.Flags().Lookup("provider.reject-unlabeled-requests"))
 	startCmd.Flags().BoolVar(&conf.Provider.VerifyEnabledOnExpiration, "provider.verify-enabled-on-expiration", false, "Verify sablier.enable=true before stopping expired instances")
@@ -58,6 +60,9 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
 	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
 	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
+	//nolint:staticcheck // Intentionally binding the deprecated transitional flag until it becomes the default in v2.
+	startCmd.Flags().BoolVar(&conf.Provider.Docker.HonorRestartPolicy, "provider.docker.honor-restart-policy", false, "Honor the container restart policy on successful exit: report \"no\"/\"on-failure\" containers as completed and exited \"always\"/\"unless-stopped\" containers as stopped. Deprecated: will become the default in v2.")
+	_ = viper.BindPFlag("provider.docker.honor-restart-policy", startCmd.Flags().Lookup("provider.docker.honor-restart-policy"))
 	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.URL, "provider.proxmox-lxc.url", "", "Proxmox VE API URL (e.g. https://proxmox:8006/api2/json)")
 	_ = viper.BindPFlag("provider.proxmox-lxc.url", startCmd.Flags().Lookup("provider.proxmox-lxc.url"))
 	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.TokenID, "provider.proxmox-lxc.token-id", "", "Proxmox VE API token ID (e.g. root@pam!sablier)")

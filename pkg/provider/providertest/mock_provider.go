@@ -42,6 +42,21 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
+// InstanceDependencies mocks base method.
+func (m *MockProvider) InstanceDependencies(ctx context.Context, name string) ([]sablier.InstanceDependency, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceDependencies", ctx, name)
+	ret0, _ := ret[0].([]sablier.InstanceDependency)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstanceDependencies indicates an expected call of InstanceDependencies.
+func (mr *MockProviderMockRecorder) InstanceDependencies(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceDependencies", reflect.TypeOf((*MockProvider)(nil).InstanceDependencies), ctx, name)
+}
+
 // InstanceEvents mocks base method.
 func (m *MockProvider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	m.ctrl.T.Helper()
