@@ -40,6 +40,7 @@ type MimicOptions struct {
 	Cmd         []string
 	Healthcheck *corev1.Probe
 	Labels      map[string]string
+	Annotations map[string]string
 }
 
 func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOptions) (*v1.Deployment, error) {
@@ -54,8 +55,9 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 	replicas := int32(1)
 	return d.client.AppsV1().Deployments("default").Create(ctx, &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: opts.Labels,
+			Name:        name,
+			Labels:      opts.Labels,
+			Annotations: opts.Annotations,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
@@ -96,8 +98,9 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 	replicas := int32(1)
 	return d.client.AppsV1().StatefulSets("default").Create(ctx, &v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: opts.Labels,
+			Name:        name,
+			Labels:      opts.Labels,
+			Annotations: opts.Annotations,
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas: &replicas,
