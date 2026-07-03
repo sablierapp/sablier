@@ -53,6 +53,15 @@ func (f *fakeAAStore) Delete(_ context.Context, k string) error {
 
 func (f *fakeAAStore) OnExpire(context.Context, func(string)) error { return nil }
 
+func (f *fakeAAStore) Range(_ context.Context, fn func(InstanceInfo, time.Time)) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, v := range f.data {
+		fn(v, time.Time{})
+	}
+	return nil
+}
+
 func (f *fakeAAStore) session(name string) {
 	_ = f.Put(context.Background(), InstanceInfo{Name: name, Status: InstanceStatusReady}, time.Minute)
 }
