@@ -56,6 +56,14 @@ func TestInstanceInfo_IsReady_ReadyAfter_NilReadyAt(t *testing.T) {
 	assert.Assert(t, info.IsReady())
 }
 
+func TestInstanceInfo_IsReady_ReadyOnStart(t *testing.T) {
+	info := sablier.InstanceInfo{
+		Status:      sablier.InstanceStatusStarting,
+		ReadyOnStart: true,
+	}
+	assert.Assert(t, info.IsReady())
+}
+
 func TestPopulateEnabledAndGroup_ReadyAfter(t *testing.T) {
 	tests := []struct {
 		name      string

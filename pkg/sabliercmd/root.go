@@ -44,6 +44,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
 	startCmd.Flags().BoolVar(&conf.Provider.AutoStopExternallyStarted, "provider.auto-stop-externally-started", false, "Continuously stop instances with sablier.enable=true that are running but were not started by Sablier")
 	_ = viper.BindPFlag("provider.auto-stop-externally-started", startCmd.Flags().Lookup("provider.auto-stop-externally-started"))
+	startCmd.Flags().BoolVar(&conf.Provider.AutoWarmExternallyStarted, "provider.auto-warm-externally-started", false, "Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them")
+	_ = viper.BindPFlag("provider.auto-warm-externally-started", startCmd.Flags().Lookup("provider.auto-warm-externally-started"))
 	startCmd.Flags().BoolVar(&conf.Provider.RejectUnlabeledRequests, "provider.reject-unlabeled-requests", false, "Reject direct named requests for instances without sablier.enable=true")
 	_ = viper.BindPFlag("provider.reject-unlabeled-requests", startCmd.Flags().Lookup("provider.reject-unlabeled-requests"))
 	startCmd.Flags().BoolVar(&conf.Provider.VerifyEnabledOnExpiration, "provider.verify-enabled-on-expiration", false, "Verify sablier.enable=true before stopping expired instances")
