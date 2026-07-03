@@ -86,8 +86,10 @@ func Start(ctx context.Context, conf config.Config) error {
 	// up alongside everything else when /metrics is scraped.
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
 		pr.Registry().MustRegister(metrics.NewGroupLockCollector(s, pr))
+		pr.Registry().MustRegister(metrics.NewSessionExpiryCollector(s))
 	}
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
+	s.DefaultSessionDuration = conf.Sessions.DefaultDuration
 
 	groups, err := provider.InstanceGroups(ctx)
 	if err != nil {
@@ -130,6 +132,9 @@ func Start(ctx context.Context, conf config.Config) error {
 
 	if conf.Provider.AutoStopExternallyStarted {
 		go s.WatchAndStopExternallyStarted(ctx)
+	}
+	if conf.Provider.AutoWarmExternallyStarted {
+		go s.WatchAndWarmExternallyStarted(ctx)
 	}
 	go s.WatchRunningHours(ctx)
 

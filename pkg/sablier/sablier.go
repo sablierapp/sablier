@@ -21,6 +21,10 @@ type Sablier struct {
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
+	// depStarts single-flights InstanceStart calls issued for depends_on
+	// dependencies, so concurrent requests that share a dependency (e.g. two
+	// group members that both depend on the same database) never start it twice.
+	depStarts map[string]*depStart
 
 	// BlockingRefreshFrequency is the frequency at which the instances are checked
 	// against the provider. Defaults to 5 seconds.
@@ -30,9 +34,14 @@ type Sablier struct {
 	// call before it is cancelled. Defaults to 5 minutes.
 	InstanceStartTimeout time.Duration
 
-	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted performs a
-	// full reconciliation scan. Defaults to 30 seconds.
+	// ExternallyStartedScanInterval is how often WatchAndStopExternallyStarted and
+	// WatchAndWarmExternallyStarted perform a full reconciliation scan. Defaults to 30 seconds.
 	ExternallyStartedScanInterval time.Duration
+
+	// DefaultSessionDuration is the session duration used when seeding sessions
+	// for externally started instances (WatchAndWarmExternallyStarted).
+	// Defaults to 5 minutes.
+	DefaultSessionDuration time.Duration
 
 	// RunningHoursRefreshFrequency is how often running-hours windows are
 	// reconciled. Defaults to 30 seconds.
@@ -56,12 +65,14 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		sessions:                      store,
 		groups:                        newGroupRegistry(),
 		pendingStarts:                 map[string]*pendingStart{},
+		depStarts:                     map[string]*depStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
 		BlockingRefreshFrequency:      5 * time.Second,
 		InstanceStartTimeout:          5 * time.Minute,
 		ExternallyStartedScanInterval: 30 * time.Second,
+		DefaultSessionDuration:        5 * time.Minute,
 		RunningHoursRefreshFrequency:  30 * time.Second,
 	}
 }
@@ -88,6 +99,40 @@ func (s *Sablier) WithMetrics(r metrics.Recorder) {
 // Safe for concurrent use; intended for the metrics GroupLockCollector.
 func (s *Sablier) Groups() map[string][]string {
 	return s.groups.Snapshot()
+}
+
+// Sablier is the source of active-session snapshots for the expiry collector.
+var _ metrics.SessionSource = (*Sablier)(nil)
+
+// SessionsSnapshot returns a point-in-time view of every active session for the
+// metrics SessionExpiryCollector. It is non-destructive: it enumerates the store
+// without renewing any session's timeout. The group label is taken from the
+// instance's first group, or "" when it belongs to none.
+func (s *Sablier) SessionsSnapshot() []metrics.SessionEntry {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var out []metrics.SessionEntry
+	err := s.sessions.Range(ctx, func(info InstanceInfo, expiresAt time.Time) {
+		group := ""
+		if len(info.Groups) > 0 {
+			group = info.Groups[0]
+		}
+		out = append(out, metrics.SessionEntry{
+			Instance:  info.Name,
+			Group:     group,
+			ExpiresAt: expiresAt,
+		})
+	})
+	if err != nil {
+		// Enumeration failed partway through, so out only holds a subset of the
+		// live sessions. Emitting that subset would make the missing sessions
+		// look expired; drop the whole snapshot instead, so a scrape is
+		// all-or-nothing.
+		s.l.Warn("could not snapshot sessions for metrics", slog.Any("error", err))
+		return nil
+	}
+	return out
 }
 
 // SetGroups replaces the entire group registry. Changes are logged with a diff.

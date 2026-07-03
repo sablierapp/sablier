@@ -157,7 +157,7 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		startedAt := time.Now()
 		startCtx, startSpan := s.tracer.Start(startCtx, "sablier.instance.start",
 			trace.WithAttributes(attribute.String("instance", name)))
-		if err := s.provider.InstanceStart(startCtx, name); err != nil {
+		if err := s.startWithDependencies(startCtx, name); err != nil {
 			startSpan.RecordError(err)
 			startSpan.SetStatus(codes.Error, err.Error())
 			startSpan.End()

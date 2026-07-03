@@ -19,6 +19,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.enable` | Yes | `"true"` | Opt the instance into Sablier management. Any value other than `"true"` is ignored. |
 | `sablier.group` | No | `"myapp"` | Assign the instance to one or more named groups (comma-separated, e.g. `"team-a,team-b"`). Defaults to `"default"` when `sablier.enable=true` and no group is set. |
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
+| `sablier.ready-on-start` | No | `"true"` | Treat the instance as ready as soon as the start is dispatched. Useful for background services where the main app doesn't need them healthy to function. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
 | `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
 | `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
@@ -47,6 +48,7 @@ An instance can belong to more than one group by providing a **comma-separated**
 services:
   shared-api:
     image: myorg/shared-api:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=team-a,team-b"   # member of both groups
@@ -72,6 +74,7 @@ Setting `sablier.ready-after` introduces a mandatory settling delay. Once the pr
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
@@ -91,6 +94,32 @@ If the label is absent or set to an unparseable value, no extra wait is applied.
 
 !> The `sablier.ready-after` grace period counts from when the instance **first** becomes ready in a given session. It does not reset on subsequent requests.
 
+### `sablier.ready-on-start`
+
+Some services only run in the background — NVR recorders, cache sidecars,
+build agents, etc. The main application works without them being healthy, but
+you still want Sablier to start them when a request arrives.
+
+Setting `sablier.ready-on-start=true` tells Sablier to dispatch the start but
+immediately treat the instance as ready, skipping the health check. The reverse
+proxy passes the request through without waiting.
+
+```yaml
+services:
+  frigate:
+    image: frigate:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=home"
+      - "sablier.ready-on-start=true"   # start frigate, don't wait for health
+```
+
+- Only the instance with `sablier.ready-on-start=true` is affected. Other
+  instances in the same session still wait for their health checks normally.
+- Accepts a Go boolean value (`"true"`, `"1"`, …). Invalid values are ignored with a warning.
+  An empty or absent value means no special treatment.
+- Works with both dynamic and blocking strategies — no plugin-side changes needed.
+
 ### `sablier.running-hours`
 
 Use `sablier.running-hours` when an instance must stay available during specific daily hours.
@@ -105,6 +134,7 @@ Behavior:
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
@@ -162,6 +192,7 @@ CPU values are decimal fractions of one core (`"0.5"` = half a core). Memory val
 services:
   myapp:
     image: myapp:latest
+    restart: unless-stopped
     labels:
       - "sablier.enable=true"
       - "sablier.group=myapp"
@@ -278,6 +309,15 @@ provider:
   # Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default: false)
   # Uses both event-driven detection and a periodic reconciliation scan (every 30 seconds) as a safety net.
   auto-stop-externally-started: false
+  # Continuously create a session (with the default session duration) for instances with sablier.enable=true
+  # that are running but were not started by Sablier, instead of stopping them (default: false)
+  # This is the non-destructive counterpart to auto-stop-externally-started (the two options are
+  # mutually exclusive): the instance keeps running until its seeded session expires, then hibernates
+  # through the regular expiration lifecycle. Uses both event-driven detection and a periodic
+  # reconciliation scan (every 30 seconds) as a safety net.
+  # Pair it with auto-stop-on-startup: false, otherwise instances already running when Sablier
+  # boots are stopped once at startup before the warm watch takes over.
+  auto-warm-externally-started: false
   # Reject direct named requests for instances without sablier.enable=true
   reject-unlabeled-requests: false
   # Verify sablier.enable=true before stopping expired instances
@@ -334,6 +374,7 @@ When set to `true`, Sablier registers a `GET <base-path>/metrics` route on the s
 |------|------|--------|-------------|
 | `sablier_group_locked` | gauge | `group` | `1` if any instance in the group has an active session, else `0`. One series per known group, including groups with no active sessions. |
 | `sablier_group_active_instances` | gauge | `group` | Number of instances in the group that currently have an active session. |
+| `sablier_session_expires_at_timestamp_seconds` | gauge | `instance`, `group` | Unix timestamp (seconds) at which the instance's session expires and the instance is stopped. One series per active session. The value tracks the latest access, so it is pushed back on every session renewal. Derive the remaining time in Grafana with `sablier_session_expires_at_timestamp_seconds - time()`. |
 | `sablier_instance_start_duration_seconds` | histogram | `instance` | Duration of `provider.InstanceStart` calls (seconds). Observed only on success. |
 | `sablier_instance_ready_duration_seconds` | histogram | `instance` | End-to-end wall time from first not-ready observation to ready (seconds). |
 | `sablier_session_requests_total` | counter | `strategy` (`dynamic`\|`blocking`), `target` (`names`\|`group`) | Total number of session requests received. |
@@ -398,7 +439,8 @@ sablier start --strategy.dynamic.custom-themes-path /my/path
 ```
   -h, --help                                                  help for start
       --provider.auto-stop-on-startup                         Stop all sablier.enable=true instances running at startup that were not started by Sablier (default true)
-  --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
+      --provider.auto-stop-externally-started                 Continuously stop instances with sablier.enable=true that are running but were not started by Sablier (default false)
+      --provider.auto-warm-externally-started                 Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them (default false)
       --provider.docker.strategy string                       Strategy to use to stop docker containers (stop or pause) (default "stop")
       --provider.name string                                  Provider to use to manage containers [docker swarm kubernetes podman proxmox_lxc] (default "docker")
       --provider.reject-unlabeled-requests                    Reject requests for instances without sablier.enable=true (default false)
