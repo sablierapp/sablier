@@ -390,6 +390,16 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					case <-wait.Result:
 					}
 
+					// unless-stopped makes Docker auto-restart a container that exits
+					// on its own, leaving it looping through the restarting state.
+					// Manually stopping it — exactly what Sablier's InstanceStop does —
+					// suppresses the restart so it settles into a stable exited state,
+					// which is the scenario this case exercises. The container exits
+					// with code 0 on its own, so the manual stop preserves that code.
+					if _, err = dind.client.ContainerStop(ctx, c.ID, client.ContainerStopOptions{}); err != nil {
+						return "", err
+					}
+
 					return c.ID, nil
 				},
 			},
@@ -447,9 +457,9 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					c, err := dind.CreateMimic(ctx, MimicOptions{
 						Cmd: []string{"/mimic", "-running", "-running-after=1ms"},
 						Labels: map[string]string{
-							"sablier.enable":          "true",
-							"sablier.group":           "myapp",
-							"sablier.ready-on-start":  "true",
+							"sablier.enable":         "true",
+							"sablier.group":          "myapp",
+							"sablier.ready-on-start": "true",
 						},
 					})
 					if err != nil {
