@@ -315,18 +315,27 @@ func (kv *store[T]) expireFunc() time.Duration {
 			expired[last.key] = entry.value
 		}
 	}
-REVAL:
-	for k := range expired {
+	// Re-validate each candidate against the current entry and build the set to
+	// notify in a single pass. A candidate is skipped when its key was removed or
+	// re-Put with a later expiry (a stale timeout was popped from the heap). Every
+	// key that is deleted from the store here is also added to toNotify, so a
+	// deletion can never happen without firing onExpire.
+	//
+	// The previous implementation mutated `expired` in place and used `goto` to
+	// restart the range whenever a candidate was skipped; because survivors were
+	// already deleted from kv.kv before the restart, they read back as absent and
+	// were silently dropped from the notification set — the entry vanished from the
+	// store but onExpire never fired.
+	toNotify := make(map[string]T, len(expired))
+	for k, v := range expired {
 		newVal, ok := kv.kv[k]
-		if !ok ||
-			newVal.timeout == nil ||
-			!newVal.expired() {
-			delete(expired, k)
-			goto REVAL
+		if !ok || newVal.timeout == nil || !newVal.expired() {
+			continue
 		}
 		delete(kv.kv, k)
+		toNotify[k] = v
 	}
-	go notifyExpirations(expired, kv.onExpire)
+	go notifyExpirations(toNotify, kv.onExpire)
 	if interval == 0 && len(kv.heap) > 0 {
 		last := kv.heap[0]
 		interval = time.Until(last.expiresAt)
