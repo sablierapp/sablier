@@ -77,9 +77,9 @@ type SessionEntry struct {
 	ExpiresAt time.Time
 }
 
-// sessionSource enumerates the currently active sessions. Implementations must
+// SessionSource enumerates the currently active sessions. Implementations must
 // be non-destructive: producing the snapshot must never renew a session.
-type sessionSource interface {
+type SessionSource interface {
 	SessionsSnapshot() []SessionEntry
 }
 
@@ -88,14 +88,14 @@ type sessionSource interface {
 // lazily at scrape time and never writes back, so scraping /metrics does not
 // renew any session.
 type SessionExpiryCollector struct {
-	sessions sessionSource
+	sessions SessionSource
 
 	expiresAtDesc *prometheus.Desc
 }
 
-// NewSessionExpiryCollector wires a sessionSource into a Collector that can be
+// NewSessionExpiryCollector wires a SessionSource into a Collector that can be
 // registered on the same registry as the rest of the metrics.
-func NewSessionExpiryCollector(sessions sessionSource) *SessionExpiryCollector {
+func NewSessionExpiryCollector(sessions SessionSource) *SessionExpiryCollector {
 	return &SessionExpiryCollector{
 		sessions: sessions,
 		expiresAtDesc: prometheus.NewDesc(

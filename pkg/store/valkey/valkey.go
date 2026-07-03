@@ -94,6 +94,10 @@ func (v *ValKey) Range(ctx context.Context, f func(sablier.InstanceInfo, time.Ti
 			if pttl <= 0 {
 				continue
 			}
+			// Compute the absolute expiry from the TTL observed right now, before
+			// the GET + unmarshal below. Deriving it after those calls would push
+			// the reported expiry later than the true TTL under load.
+			expiresAt := time.Now().Add(time.Duration(pttl) * time.Millisecond)
 
 			b, err := v.Client.Do(ctx, v.Client.B().Get().Key(key).Build()).AsBytes()
 			if valkey.IsValkeyNil(err) {
@@ -115,7 +119,7 @@ func (v *ValKey) Range(ctx context.Context, f func(sablier.InstanceInfo, time.Ti
 				continue
 			}
 
-			f(i, time.Now().Add(time.Duration(pttl)*time.Millisecond))
+			f(i, expiresAt)
 		}
 
 		cursor = entry.Cursor

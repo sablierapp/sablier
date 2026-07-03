@@ -90,6 +90,9 @@ func (s *Sablier) Groups() map[string][]string {
 	return s.groups.Snapshot()
 }
 
+// Sablier is the source of active-session snapshots for the expiry collector.
+var _ metrics.SessionSource = (*Sablier)(nil)
+
 // SessionsSnapshot returns a point-in-time view of every active session for the
 // metrics SessionExpiryCollector. It is non-destructive: it enumerates the store
 // without renewing any session's timeout. The group label is taken from the

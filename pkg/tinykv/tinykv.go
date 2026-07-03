@@ -178,21 +178,31 @@ func (kv *store[T]) Entries() (entries map[string]entry[T]) {
 	return entries
 }
 
-// Range calls f for every non-expired entry currently held by the store,
-// passing the key, its value and its absolute expiration time. The store lock
-// is held for the whole iteration, so f must be fast and must not call back
-// into the store. Entries without a timeout or already past their expiration
-// are skipped. Range only reads: it never renews an entry's timeout, so it is
-// safe to use for observing sessions without extending them.
+// Range calls f for every non-expired entry, passing the key, its value and its
+// absolute expiration time. It takes an instant snapshot under the store lock
+// and then invokes f for each item with the lock released, so f may be slow and
+// may safely call back into the store. Entries without a timeout or already past
+// their expiration are skipped. Range only reads: it never renews an entry's
+// timeout, so it is safe to use for observing sessions without extending them.
 func (kv *store[T]) Range(f func(key string, value T, expiresAt time.Time)) {
-	kv.mx.Lock()
-	defer kv.mx.Unlock()
+	type snapshotItem struct {
+		key       string
+		value     T
+		expiresAt time.Time
+	}
 
+	kv.mx.Lock()
+	snapshot := make([]snapshotItem, 0, len(kv.kv))
 	for k, e := range kv.kv {
 		if e.timeout == nil || e.expired() {
 			continue
 		}
-		f(k, e.value, e.expiresAt)
+		snapshot = append(snapshot, snapshotItem{key: k, value: e.value, expiresAt: e.expiresAt})
+	}
+	kv.mx.Unlock()
+
+	for _, it := range snapshot {
+		f(it.key, it.value, it.expiresAt)
 	}
 }
 
