@@ -70,7 +70,9 @@ jobs:
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
-      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
+      # SONAR_TOKEN is not exposed to fork PRs, so the scan only runs for branches
+      # pushed to this repo (pushes to main and same-repo PRs), never for forks.
+      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork }}
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
