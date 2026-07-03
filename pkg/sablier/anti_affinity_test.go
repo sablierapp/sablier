@@ -26,9 +26,11 @@ type fakeAAStore struct {
 	mu   sync.Mutex
 	data map[string]InstanceInfo
 	// getErr, when set, is returned by Get for every key (simulating a store
-	// failure that is not ErrKeyNotFound). deleteErr behaves likewise for Delete.
+	// failure that is not ErrKeyNotFound). deleteErr/putErr behave likewise for
+	// Delete/Put.
 	getErr    error
 	deleteErr error
+	putErr    error
 }
 
 func newFakeAAStore() *fakeAAStore { return &fakeAAStore{data: map[string]InstanceInfo{}} }
@@ -49,6 +51,9 @@ func (f *fakeAAStore) Get(_ context.Context, k string) (InstanceInfo, error) {
 func (f *fakeAAStore) Put(_ context.Context, v InstanceInfo, _ time.Duration) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.putErr != nil {
+		return f.putErr
+	}
 	f.data[v.Name] = v
 	return nil
 }
@@ -433,18 +438,22 @@ func TestSuppressForAntiAffinity_Errors(t *testing.T) {
 }
 
 func TestRestoreFromAntiAffinity(t *testing.T) {
-	t.Run("success clears suppressed", func(t *testing.T) {
-		s, _, p := setupAntiAffinity(t)
+	t.Run("success clears suppressed and re-establishes a tracked session", func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
 		s.affinityMu.Lock()
 		s.suppressed["nextcloud"] = struct{}{}
 		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
 		s.affinityMu.Unlock()
 		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"))
 		assert.Assert(t, !s.isSuppressed("nextcloud"))
+		// A tracked session must exist so the instance is not treated as
+		// externally started and expires on the normal schedule.
+		_, err := st.Get(context.Background(), "nextcloud")
+		assert.NilError(t, err, "restored instance should have a tracked session")
 	})
 
-	t.Run("start failure keeps it suppressed for a retry", func(t *testing.T) {
-		s, _, p := setupAntiAffinity(t)
+	t.Run("start failure keeps it suppressed and creates no session", func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
 		p.startErr = errors.New("cannot start")
 		s.affinityMu.Lock()
 		s.suppressed["nextcloud"] = struct{}{}
@@ -452,7 +461,56 @@ func TestRestoreFromAntiAffinity(t *testing.T) {
 		s.affinityMu.Unlock()
 		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "start was attempted")
 		assert.Assert(t, s.isSuppressed("nextcloud"), "a failed restore stays suppressed so a later reconcile retries")
+		_, err := st.Get(context.Background(), "nextcloud")
+		assert.ErrorIs(t, err, store.ErrKeyNotFound, "a failed restore must not create a session")
 	})
+
+	t.Run("seeds a minimal session when inspect fails", func(t *testing.T) {
+		s, st, _ := setupAntiAffinity(t)
+		p := s.provider.(*fakeAAProvider)
+		p.inspectErr = map[string]error{"nextcloud": errors.New("cannot inspect")}
+		s.affinityMu.Lock()
+		s.suppressed["nextcloud"] = struct{}{}
+		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
+		s.affinityMu.Unlock()
+		got, err := st.Get(context.Background(), "nextcloud")
+		assert.NilError(t, err, "a session should be seeded even when inspect fails")
+		assert.Equal(t, got.Status, InstanceStatusStarting)
+		assert.Assert(t, !s.isSuppressed("nextcloud"))
+	})
+
+	t.Run("still clears suppression when the session put fails", func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		st.putErr = errors.New("store down")
+		s.affinityMu.Lock()
+		s.suppressed["nextcloud"] = struct{}{}
+		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
+		s.affinityMu.Unlock()
+		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"))
+		assert.Assert(t, !s.isSuppressed("nextcloud"), "the instance was started, so suppression is cleared even if the session put failed")
+	})
+}
+
+func TestSeedAntiAffinity_EnforcesImmediately(t *testing.T) {
+	s, st, p := setupAntiAffinity(t)
+	ctx := context.Background()
+
+	p.list = []InstanceConfiguration{{Name: "plex"}, {Name: "nextcloud"}}
+	p.inspect = map[string]InstanceInfo{
+		"nextcloud": {Name: "nextcloud", AntiAffinity: []string{"streaming"}},
+		"plex":      {Name: "plex"},
+	}
+	// plex (the streaming group) is active via a persisted session, and nextcloud
+	// is already running — exactly the startup conflict seeding must resolve.
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	st.session("plex")
+	st.session("nextcloud")
+
+	s.SeedAntiAffinity(ctx)
+
+	assert.Assert(t, slices.Contains(p.snapshotStopped(), "nextcloud"),
+		"seeding should build the index and immediately suppress the conflicting instance")
+	assert.Assert(t, s.isSuppressed("nextcloud"))
 }
 
 func TestIsGroupActive(t *testing.T) {
