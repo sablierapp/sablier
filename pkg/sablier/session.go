@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 )
 
 type SessionState struct {
@@ -22,6 +23,22 @@ func (s *SessionState) IsReady() bool {
 	}
 
 	return true
+}
+
+// NotReadyInstances returns the instances that are not ready yet (or errored),
+// sorted by name for stable output. Ready instances are omitted. It is used to
+// explain why a session did not become ready within a blocking timeout.
+func (s *SessionState) NotReadyInstances() []InstanceInfoWithError {
+	var out []InstanceInfoWithError
+	for _, v := range s.Instances {
+		if v.Error != nil || !v.Instance.IsReady() {
+			out = append(out, v)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Instance.Name < out[j].Instance.Name
+	})
+	return out
 }
 
 // InstanceErrors returns a joined error if any instance has a non-nil error.

@@ -325,7 +325,8 @@ How it works:
 Behavior notes:
 
 - Only instances Sablier **actually suppressed while they were running** are restored later — an instance that was already idle is left untouched.
-- The relationship is **one-directional**: the declaring instance yields to the group, not the reverse. It is not a mutual lock — an explicit request for the backing-off instance is still honored.
+- The relationship is **one-directional**: the declaring instance yields to the group, not the reverse.
+- **Requesting a held instance:** while an antagonist group is active, a request for the backing-off instance does **not** start it. It is reported as `not-ready` with the message *"paused while group \"streaming\" is active (anti-affinity)"*, which appears on the waiting page (with `show_details`) and in the API response. A **blocking** request keeps waiting and will time out if the antagonist outlasts its timeout; the **dynamic** waiting page keeps refreshing and starts the instance automatically once the antagonist expires.
 - Anti-affinity instances must be **Sablier-managed** (`sablier.enable=true`) so Sablier can stop and start them.
 - Reconciliation is reactive (on session start and expiry) with a periodic safety net, so backing off is fast enough to avoid the collision that motivated the feature.
 

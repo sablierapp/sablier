@@ -20,6 +20,11 @@ const (
 	// traffic): a completed instance is not running. It satisfies a
 	// service_completed_successfully dependency but never a service_healthy one.
 	InstanceStatusCompleted InstanceStatus = "completed"
+	// InstanceStatusNotReady marks an instance that Sablier is deliberately not
+	// starting yet — currently only when it is held back by an active
+	// anti-affinity antagonist group. It carries a Message explaining why, is
+	// never persisted or seen by providers, and is treated as not ready.
+	InstanceStatusNotReady InstanceStatus = "not-ready"
 )
 
 // ProviderType identifies the infrastructure provider that manages an instance.

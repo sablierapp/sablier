@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -500,6 +501,68 @@ func TestTriggerAntiAffinityReconcile(t *testing.T) {
 			return slices.Contains(p.snapshotStopped(), "nextcloud")
 		}), "the background reconcile should have suppressed nextcloud")
 	})
+}
+
+func TestAntiAffinityHold(t *testing.T) {
+	t.Run("held while antagonist is active", func(t *testing.T) {
+		s, st, _ := setupAntiAffinity(t)
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		st.session("plex")
+		assert.Equal(t, s.antiAffinityHold(context.Background(), "nextcloud"), "streaming")
+	})
+
+	t.Run("free once no antagonist is active", func(t *testing.T) {
+		s, _, _ := setupAntiAffinity(t)
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		assert.Equal(t, s.antiAffinityHold(context.Background(), "nextcloud"), "")
+	})
+
+	t.Run("free when instance has no anti-affinity", func(t *testing.T) {
+		s, st, _ := setupAntiAffinity(t)
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		st.session("plex")
+		assert.Equal(t, s.antiAffinityHold(context.Background(), "plex"), "")
+	})
+}
+
+func TestInstanceRequest_HeldByAntiAffinity(t *testing.T) {
+	s, st, p := setupAntiAffinity(t)
+	ctx := context.Background()
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+	st.session("plex") // antagonist active
+
+	info, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+	assert.NilError(t, err)
+
+	assert.Equal(t, info.Status, InstanceStatusNotReady)
+	assert.Assert(t, !info.IsReady(), "a held instance must not be reported ready")
+	assert.Assert(t, strings.Contains(info.Message, "streaming"), "message should name the active group, got %q", info.Message)
+
+	// It must not have been started, and no session should have been created.
+	assert.Equal(t, len(p.snapshotStarted()), 0, "held instance must not be started")
+	_, getErr := st.Get(ctx, "nextcloud")
+	assert.ErrorIs(t, getErr, store.ErrKeyNotFound, "held instance must not get a session")
+}
+
+func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {
+	s, st, _ := setupAntiAffinity(t)
+	s.BlockingRefreshFrequency = 10 * time.Millisecond
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+	st.session("plex") // antagonist active -> nextcloud is held
+
+	_, err := s.requestReadySession(context.Background(), []string{"nextcloud"}, time.Minute, 60*time.Millisecond, false)
+
+	var te ErrTimeout
+	assert.Assert(t, errors.As(err, &te), "expected ErrTimeout, got %v", err)
+	assert.Equal(t, len(te.Instances), 1)
+	assert.Equal(t, te.Instances[0].Instance.Name, "nextcloud")
+	assert.Assert(t, strings.Contains(te.Instances[0].Instance.Message, "streaming"),
+		"held instance message should name the antagonist group, got %q", te.Instances[0].Instance.Message)
+	assert.Assert(t, strings.Contains(te.Error(), "streaming"), "timeout error should carry the reason")
 }
 
 // eventually polls cond for up to a second, returning true as soon as it holds.

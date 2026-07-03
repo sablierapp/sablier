@@ -23,6 +23,10 @@ import (
 // Only instances Sablier actively suppressed — tracked in the suppressed set —
 // are restarted when their antagonists become inactive, so an instance that was
 // already idle before an antagonist woke up is never spuriously started.
+//
+// The request path is aware of this too: while an antagonist is active, a request
+// for a backing-off instance is reported as not-ready with an explanation (see
+// antiAffinityHold) rather than started and immediately suppressed again.
 
 // SyncInstanceAntiAffinity sets the instance's anti-affinity antagonist groups to
 // exactly groups, updating the reverse index. Returns the antagonists added and
@@ -216,6 +220,19 @@ func (s *Sablier) restoreFromAntiAffinity(ctx context.Context, instance string) 
 		return
 	}
 	delete(s.suppressed, instance)
+}
+
+// antiAffinityHold reports the first active antagonist group that currently
+// forces name to stay idle, or "" when name is free to start. It lets the
+// request path avoid starting an instance the background reconcile would
+// immediately suppress, and surface the reason to the caller instead.
+func (s *Sablier) antiAffinityHold(ctx context.Context, name string) string {
+	for _, group := range s.antiAffinity.GroupsOf(name) {
+		if s.isGroupActive(ctx, group) {
+			return group
+		}
+	}
+	return ""
 }
 
 // isGroupActive reports whether any member of group currently holds a live

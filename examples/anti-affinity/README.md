@@ -64,7 +64,8 @@ docker compose ps            # background is running again (restored)
 ## Notes
 
 - Only instances Sablier **actually suppressed while running** are restored later. An instance that was already idle is left untouched — that is why the demo activates `background` first.
-- The relationship is **one-directional**: `background` yields to `streaming`, not the reverse. It is not a mutual lock; an explicit request for `background` is still honored.
+- The relationship is **one-directional**: `background` yields to `streaming`, not the reverse.
+- While `streaming` is active, requesting `background` does **not** start it — it is reported as `not-ready` with a message explaining it is paused by anti-affinity (shown on the waiting page and in the API response). It starts automatically once `streaming` expires.
 - Anti-affinity instances must be **Sablier-managed** (`sablier.enable=true`) so Sablier can stop and start them.
 - To keep a background service **always on** except while an antagonist is active, combine anti-affinity with [`sablier.running-hours`](../../docs/configuration.md#sablierrunning-hours) or auto-warm, so it re-acquires a session after being restored.
 - Anti-affinity is supported on **Docker**, **Docker Swarm**, **Kubernetes**, and **Podman** (not Proxmox LXC).
