@@ -26,11 +26,9 @@ type fakeAAStore struct {
 	mu   sync.Mutex
 	data map[string]InstanceInfo
 	// getErr, when set, is returned by Get for every key (simulating a store
-	// failure that is not ErrKeyNotFound). deleteErr/putErr behave likewise for
-	// Delete/Put.
+	// failure that is not ErrKeyNotFound). deleteErr behaves likewise for Delete.
 	getErr    error
 	deleteErr error
-	putErr    error
 }
 
 func newFakeAAStore() *fakeAAStore { return &fakeAAStore{data: map[string]InstanceInfo{}} }
@@ -51,9 +49,6 @@ func (f *fakeAAStore) Get(_ context.Context, k string) (InstanceInfo, error) {
 func (f *fakeAAStore) Put(_ context.Context, v InstanceInfo, _ time.Duration) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.putErr != nil {
-		return f.putErr
-	}
 	f.data[v.Name] = v
 	return nil
 }
@@ -206,7 +201,10 @@ func TestReconcileAntiAffinity_RestoresWhenGroupInactive(t *testing.T) {
 	_ = st.Delete(ctx, "plex")
 	s.reconcileAntiAffinity(ctx)
 
-	assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "dependent should be restored")
+	// The restore goes through the request path, which starts asynchronously.
+	assert.Assert(t, eventually(func() bool {
+		return slices.Contains(p.snapshotStarted(), "nextcloud")
+	}), "dependent should be restored")
 	assert.Assert(t, !s.isSuppressed("nextcloud"), "dependent should no longer be suppressed")
 }
 
@@ -244,10 +242,12 @@ func TestReconcileAntiAffinity_RestoreOnlyWhenAllAntagonistsInactive(t *testing.
 	assert.Assert(t, s.isSuppressed("nextcloud"), "dependent should stay suppressed while streaming is active")
 	assert.Assert(t, !slices.Contains(p.snapshotStarted(), "nextcloud"), "must not restore while an antagonist is active")
 
-	// All antagonists inactive -> restore.
+	// All antagonists inactive -> restore (asynchronously, via the request path).
 	_ = st.Delete(ctx, "plex")
 	s.reconcileAntiAffinity(ctx)
-	assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "dependent should be restored once all antagonists are inactive")
+	assert.Assert(t, eventually(func() bool {
+		return slices.Contains(p.snapshotStarted(), "nextcloud")
+	}), "dependent should be restored once all antagonists are inactive")
 	assert.Assert(t, !s.isSuppressed("nextcloud"))
 }
 
@@ -438,56 +438,33 @@ func TestSuppressForAntiAffinity_Errors(t *testing.T) {
 }
 
 func TestRestoreFromAntiAffinity(t *testing.T) {
-	t.Run("success clears suppressed and re-establishes a tracked session", func(t *testing.T) {
+	t.Run("requests the instance, tracking a session and clearing suppression", func(t *testing.T) {
 		s, st, p := setupAntiAffinity(t)
 		s.affinityMu.Lock()
 		s.suppressed["nextcloud"] = struct{}{}
 		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
 		s.affinityMu.Unlock()
-		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"))
-		assert.Assert(t, !s.isSuppressed("nextcloud"))
-		// A tracked session must exist so the instance is not treated as
-		// externally started and expires on the normal schedule.
+
+		// Requesting establishes a tracked session synchronously (so the instance
+		// is not treated as externally started and expires normally) and starts
+		// the instance via the normal, asynchronous request path.
 		_, err := st.Get(context.Background(), "nextcloud")
 		assert.NilError(t, err, "restored instance should have a tracked session")
-	})
-
-	t.Run("start failure keeps it suppressed and creates no session", func(t *testing.T) {
-		s, st, p := setupAntiAffinity(t)
-		p.startErr = errors.New("cannot start")
-		s.affinityMu.Lock()
-		s.suppressed["nextcloud"] = struct{}{}
-		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
-		s.affinityMu.Unlock()
-		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "start was attempted")
-		assert.Assert(t, s.isSuppressed("nextcloud"), "a failed restore stays suppressed so a later reconcile retries")
-		_, err := st.Get(context.Background(), "nextcloud")
-		assert.ErrorIs(t, err, store.ErrKeyNotFound, "a failed restore must not create a session")
-	})
-
-	t.Run("seeds a minimal session when inspect fails", func(t *testing.T) {
-		s, st, _ := setupAntiAffinity(t)
-		p := s.provider.(*fakeAAProvider)
-		p.inspectErr = map[string]error{"nextcloud": errors.New("cannot inspect")}
-		s.affinityMu.Lock()
-		s.suppressed["nextcloud"] = struct{}{}
-		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
-		s.affinityMu.Unlock()
-		got, err := st.Get(context.Background(), "nextcloud")
-		assert.NilError(t, err, "a session should be seeded even when inspect fails")
-		assert.Equal(t, got.Status, InstanceStatusStarting)
 		assert.Assert(t, !s.isSuppressed("nextcloud"))
+		assert.Assert(t, eventually(func() bool {
+			return slices.Contains(p.snapshotStarted(), "nextcloud")
+		}), "restored instance should be started")
 	})
 
-	t.Run("still clears suppression when the session put fails", func(t *testing.T) {
+	t.Run("keeps it suppressed when the request fails", func(t *testing.T) {
 		s, st, p := setupAntiAffinity(t)
-		st.putErr = errors.New("store down")
+		st.getErr = errors.New("store down") // makes instanceRequest fail before starting
 		s.affinityMu.Lock()
 		s.suppressed["nextcloud"] = struct{}{}
 		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
 		s.affinityMu.Unlock()
-		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"))
-		assert.Assert(t, !s.isSuppressed("nextcloud"), "the instance was started, so suppression is cleared even if the session put failed")
+		assert.Assert(t, s.isSuppressed("nextcloud"), "a failed restore stays suppressed so a later reconcile retries")
+		assert.Equal(t, len(p.snapshotStarted()), 0, "no start should be dispatched when the request fails")
 	})
 }
 

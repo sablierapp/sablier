@@ -211,35 +211,23 @@ func (s *Sablier) suppressForAntiAffinity(ctx context.Context, instance string) 
 	s.metrics.RecordInstanceStop(instance, "anti-affinity")
 }
 
-// restoreFromAntiAffinity restarts an instance Sablier previously suppressed,
-// once none of its antagonist groups are active anymore. In scale mode this
-// re-applies the active resource profile; otherwise it starts the instance.
-//
-// It also re-establishes a tracked session for the instance so that it is
-// recognised as started by Sablier — without one, WatchAndStopExternallyStarted
-// would treat it as externally started and immediately stop it again — and so it
-// expires on the normal schedule instead of running indefinitely.
+// restoreFromAntiAffinity brings a previously-suppressed instance back once none
+// of its antagonist groups are active anymore, by requesting a fresh session for
+// it exactly as an ordinary request would. Going through the request path
+// re-establishes the session (with its TTL), marks it as started by Sablier — so
+// WatchAndStopExternallyStarted does not mistake it for an externally-started
+// instance and stop it again — resolves its depends_on, and, in scale mode,
+// re-applies the active resource profile. A failed request leaves the instance
+// marked suppressed so a later reconcile retries it.
 //
 // Must be called with affinityMu held.
 func (s *Sablier) restoreFromAntiAffinity(ctx context.Context, instance string) {
 	s.l.InfoContext(ctx, "anti-affinity: restoring instance", slog.String("instance", instance))
-	if err := s.provider.InstanceStart(ctx, instance); err != nil {
+	if _, err := s.instanceRequest(ctx, instance, s.DefaultSessionDuration, false); err != nil {
 		s.l.ErrorContext(ctx, "anti-affinity: cannot restore instance",
 			slog.String("instance", instance), slog.Any("error", err))
 		return
 	}
-
-	info, err := s.provider.InstanceInspect(ctx, instance)
-	if err != nil {
-		s.l.WarnContext(ctx, "anti-affinity: cannot inspect restored instance, seeding a minimal session",
-			slog.String("instance", instance), slog.Any("error", err))
-		info = InstanceInfo{Name: instance, Status: InstanceStatusStarting, DesiredReplicas: 1}
-	}
-	if err := s.sessions.Put(ctx, info, s.DefaultSessionDuration); err != nil {
-		s.l.WarnContext(ctx, "anti-affinity: cannot record session for restored instance",
-			slog.String("instance", instance), slog.Any("error", err))
-	}
-
 	delete(s.suppressed, instance)
 }
 
