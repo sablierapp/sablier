@@ -1,0 +1,33 @@
+{{- /*
+  Persistent per-provider tabs. Each child {{< provider-tab name="..." >}} is a
+  panel for one provider. The visible provider is chosen from a single global
+  setting (localStorage 'sablier-provider'), so once a reader picks a provider
+  it stays selected across every page that has these tabs.
+
+  @example
+    {{< provider-tabs >}}
+    {{< provider-tab name="docker" >}}...{{< /provider-tab >}}
+    {{< provider-tab name="kubernetes" >}}...{{< /provider-tab >}}
+    {{< /provider-tabs >}}
+*/ -}}
+{{- .Inner -}}
+{{- $ptabs := .Store.Get "ptabs" | default slice -}}
+{{- if $ptabs -}}
+{{- $providers := hugo.Data.providers -}}
+<div class="provider-tabs" id="provider-notes" data-provider-tabs>
+  <div class="provider-tabs-nav" role="tablist" aria-label="Provider">
+    {{- range $i, $t := $ptabs -}}
+      {{- $match := where $providers "key" $t.key -}}
+      {{- $p := cond (gt (len $match) 0) (index $match 0) dict -}}
+      <button type="button" class="provider-tab-btn" role="tab" data-provider="{{ $t.key }}"{{ if eq $i 0 }} data-state="selected" aria-selected="true"{{ else }} aria-selected="false"{{ end }}>{{- with $p.icon }}<img class="provider-tab-icon" src="/assets/img/{{ . }}" alt="" loading="lazy" />{{ end }}<span>{{ with $p.name }}{{ . }}{{ else }}{{ $t.key }}{{ end }}</span></button>
+    {{- end -}}
+  </div>
+  <div class="provider-tabs-panels">
+    {{- range $i, $t := $ptabs -}}
+      <div class="provider-tab-panel" role="tabpanel" data-provider="{{ $t.key }}"{{ if ne $i 0 }} hidden{{ end }}>
+        {{- $t.content | markdownify -}}
+      </div>
+    {{- end -}}
+  </div>
+</div>
+{{- end -}}

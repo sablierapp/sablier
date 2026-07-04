@@ -70,7 +70,7 @@ type InstanceInfo struct {
 
 	// ReadyOnStart indicates the instance should be considered ready as soon as
 	// the start is dispatched, without waiting for health.
-	// Controlled by the sablier.ready-on-start label.
+	// Controlled by the sablier.ready-on-start Label
 	ReadyOnStart bool `json:"readyOnStart,omitempty"`
 
 	// AntiAffinity lists the groups this instance backs off from. Whenever any
@@ -190,32 +190,32 @@ func (instance InstanceInfo) IsReady() bool {
 // Resource scaling (CPU/memory/blkio throttling instead of stopping) is only applied
 // when Idle.Replicas ≥ 1.
 func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
-	idleCPU := labels["sablier.idle.cpu"]
-	idleMemory := labels["sablier.idle.memory"]
-	activeCPU := labels["sablier.active.cpu"]
-	activeMemory := labels["sablier.active.memory"]
+	idleCPU := labels[LabelIdleCPU]
+	idleMemory := labels[LabelIdleMemory]
+	activeCPU := labels[LabelActiveCPU]
+	activeMemory := labels[LabelActiveMemory]
 
 	idleReplicas := int32(0) // default: stop the workload
-	if v, ok := labels["sablier.idle.replicas"]; ok {
+	if v, ok := labels[LabelIdleReplicas]; ok {
 		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
 			idleReplicas = int32(n)
 		}
 	}
 
 	activeReplicas := int32(1) // default: one running replica
-	if v, ok := labels["sablier.active.replicas"]; ok {
+	if v, ok := labels[LabelActiveReplicas]; ok {
 		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
 			activeReplicas = int32(n)
 		}
 	}
 
 	var idleBlkioWeight, activeBlkioWeight uint16
-	if v, ok := labels["sablier.idle.blkio-weight"]; ok {
+	if v, ok := labels[LabelIdleBlkioWeight]; ok {
 		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
 			idleBlkioWeight = uint16(n)
 		}
 	}
-	if v, ok := labels["sablier.active.blkio-weight"]; ok {
+	if v, ok := labels[LabelActiveBlkioWeight]; ok {
 		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
 			activeBlkioWeight = uint16(n)
 		}
@@ -226,35 +226,35 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 	var activeWeightDevice []BlkioWeightDevice
 	var activeReadBps, activeWriteBps, activeReadIOps, activeWriteIOps []BlkioThrottleDevice
 
-	if v := labels["sablier.idle.blkio-weight-device"]; v != "" {
+	if v := labels[LabelIdleBlkioWeightDevice]; v != "" {
 		idleWeightDevice = parseWeightDevices(v)
 	}
-	if v := labels["sablier.idle.blkio-device-read-bps"]; v != "" {
+	if v := labels[LabelIdleBlkioReadBps]; v != "" {
 		idleReadBps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.idle.blkio-device-write-bps"]; v != "" {
+	if v := labels[LabelIdleBlkioWriteBps]; v != "" {
 		idleWriteBps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.idle.blkio-device-read-iops"]; v != "" {
+	if v := labels[LabelIdleBlkioReadIOps]; v != "" {
 		idleReadIOps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.idle.blkio-device-write-iops"]; v != "" {
+	if v := labels[LabelIdleBlkioWriteIOps]; v != "" {
 		idleWriteIOps = parseThrottleDevices(v)
 	}
 
-	if v := labels["sablier.active.blkio-weight-device"]; v != "" {
+	if v := labels[LabelActiveBlkioWeightDevice]; v != "" {
 		activeWeightDevice = parseWeightDevices(v)
 	}
-	if v := labels["sablier.active.blkio-device-read-bps"]; v != "" {
+	if v := labels[LabelActiveBlkioReadBps]; v != "" {
 		activeReadBps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.active.blkio-device-write-bps"]; v != "" {
+	if v := labels[LabelActiveBlkioWriteBps]; v != "" {
 		activeWriteBps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.active.blkio-device-read-iops"]; v != "" {
+	if v := labels[LabelActiveBlkioReadIOps]; v != "" {
 		activeReadIOps = parseThrottleDevices(v)
 	}
-	if v := labels["sablier.active.blkio-device-write-iops"]; v != "" {
+	if v := labels[LabelActiveBlkioWriteIOps]; v != "" {
 		activeWriteIOps = parseThrottleDevices(v)
 	}
 
@@ -370,11 +370,11 @@ func ParseAntiAffinity(label string) []string {
 // labels and writes the results into info. Centralising this logic avoids
 // duplicating the same map lookups in every provider's Inspect implementation.
 func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
-	info.Enabled = labels["sablier.enable"]
+	info.Enabled = labels[LabelEnable]
 	if info.Enabled == "true" {
-		info.Groups = ParseGroups(labels["sablier.group"])
+		info.Groups = ParseGroups(labels[LabelGroup])
 	}
-	if v := labels["sablier.ready-after"]; v != "" {
+	if v := labels[LabelReadyAfter]; v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			info.ReadyAfter = d
 		} else {
@@ -385,7 +385,7 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			)
 		}
 	}
-	if v := labels["sablier.running-hours"]; v != "" {
+	if v := labels[LabelRunningHours]; v != "" {
 		if _, err := ParseRunningHours(v); err == nil {
 			info.RunningHours = v
 		} else {
@@ -396,7 +396,7 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			)
 		}
 	}
-	if v := labels["sablier.running-days"]; v != "" {
+	if v := labels[LabelRunningDays]; v != "" {
 		if _, err := ParseRunningDays(v); err == nil {
 			info.RunningDays = v
 		} else {
@@ -407,7 +407,7 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			)
 		}
 	}
-	if v := labels["sablier.ready-on-start"]; v != "" {
+	if v := labels[LabelReadyOnStart]; v != "" {
 		b, err := strconv.ParseBool(v)
 		if err != nil {
 			slog.Warn("invalid sablier.ready-on-start label value, ignoring",
@@ -419,7 +419,7 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			info.ReadyOnStart = b
 		}
 	}
-	if v := labels["sablier.anti-affinity"]; v != "" {
+	if v := labels[LabelAntiAffinity]; v != "" {
 		info.AntiAffinity = ParseAntiAffinity(v)
 	}
 	// Only expose ScaleConfig in the response when at least one non-default

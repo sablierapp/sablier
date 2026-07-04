@@ -14,7 +14,7 @@ import (
 
 func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	filters := client.Filters{}
-	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
 
 	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", options.All), slog.Any("filters", filters)))
 	containers, err := p.Client.ContainerList(ctx, client.ContainerListOptions{
@@ -37,10 +37,10 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 }
 
 func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
-	enabled := c.Labels["sablier.enable"]
+	enabled := c.Labels[sablier.LabelEnable]
 	var groups []string
 	if enabled == "true" {
-		groups = sablier.ParseGroups(c.Labels["sablier.group"])
+		groups = sablier.ParseGroups(c.Labels[sablier.LabelGroup])
 	}
 
 	return sablier.InstanceConfiguration{
@@ -52,7 +52,7 @@ func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	filters := client.Filters{}
-	filters.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
+	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
 
 	p.l.DebugContext(ctx, "listing containers", slog.Group("options", slog.Bool("all", true), slog.Any("filters", filters)))
 	containers, err := p.Client.ContainerList(ctx, client.ContainerListOptions{
@@ -69,7 +69,7 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 	groups := make(map[string][]string)
 	for _, c := range containers.Items {
 		name := strings.TrimPrefix(c.Names[0], "/")
-		for _, groupName := range sablier.ParseGroups(c.Labels["sablier.group"]) {
+		for _, groupName := range sablier.ParseGroups(c.Labels[sablier.LabelGroup]) {
 			groups[groupName] = append(groups[groupName], name)
 		}
 	}

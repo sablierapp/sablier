@@ -1,0 +1,710 @@
+{
+  "components": {
+    "schemas": {
+      "api.SessionResponse": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/sablier.SessionState"
+          }
+        },
+        "type": "object"
+      },
+      "api.ThemesResponse": {
+        "properties": {
+          "themes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "rfc7807.Problem": {
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "$ref": "#/components/schemas/url.URL"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.BlkioThrottleDevice": {
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.BlkioWeightDevice": {
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "weight": {
+            "description": "valid range: 10–1000",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.DockerContainerInfo": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.InstanceInfo": {
+        "properties": {
+          "antiAffinity": {
+            "description": "AntiAffinity lists the groups this instance backs off from. Whenever any\nlisted group has an active session, Sablier forces this instance to its\nidle state (stopped, or idle resources in scale mode) and restores it once\nnone of the listed groups are active anymore. Parsed from the\nsablier.anti-affinity label (comma-separated group names).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "currentReplicas": {
+            "type": "integer"
+          },
+          "desiredReplicas": {
+            "type": "integer"
+          },
+          "docker": {
+            "$ref": "#/components/schemas/sablier.DockerContainerInfo"
+          },
+          "enabled": {
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kubernetes": {
+            "$ref": "#/components/schemas/sablier.KubernetesWorkloadInfo"
+          },
+          "message": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "podman": {
+            "$ref": "#/components/schemas/sablier.PodmanContainerInfo"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/sablier.ProviderType"
+          },
+          "readyAfter": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/time.Duration"
+              }
+            ],
+            "description": "ReadyAfter is the minimum duration to wait after the instance first\nreports ready before Sablier considers it truly ready. Set via the\nsablier.ready-after label (e.g. \"30s\"). Zero means no extra wait."
+          },
+          "readyAt": {
+            "description": "ReadyAt records when the instance first transitioned to InstanceStatusReady.\nIt is set internally by Sablier and is never populated by a provider.",
+            "type": "string"
+          },
+          "readyOnStart": {
+            "description": "ReadyOnStart indicates the instance should be considered ready as soon as\nthe start is dispatched, without waiting for health.\nControlled by the sablier.ready-on-start Label",
+            "type": "boolean"
+          },
+          "runningDays": {
+            "description": "RunningDays restricts the RunningHours window to specific weekdays,\nparsed from the sablier.running-days label (e.g. \"Mon,Tue,Wed,Thu,Fri\").\nEmpty means the window applies every day.",
+            "type": "string"
+          },
+          "runningHours": {
+            "description": "RunningHours is a daily keep-warm window in local time, parsed from\nthe sablier.running-hours label (format: HH:MM-HH:MM).",
+            "type": "string"
+          },
+          "scaleConfig": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/sablier.ScaleConfig"
+              }
+            ],
+            "description": "ScaleConfig configures resource-based scale mode for this instance.\nWhen present, Sablier throttles CPU/memory instead of stopping the container."
+          },
+          "status": {
+            "$ref": "#/components/schemas/sablier.InstanceStatus"
+          },
+          "swarm": {
+            "$ref": "#/components/schemas/sablier.SwarmServiceInfo"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.InstanceInfoWithError": {
+        "properties": {
+          "error": {},
+          "instance": {
+            "$ref": "#/components/schemas/sablier.InstanceInfo"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.InstanceStatus": {
+        "enum": [
+          "completed",
+          "error",
+          "not-ready",
+          "ready",
+          "starting",
+          "stopped"
+        ],
+        "type": "string"
+      },
+      "sablier.KubernetesWorkloadInfo": {
+        "properties": {
+          "image": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "namespace": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.PodmanContainerInfo": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.ProviderType": {
+        "enum": [
+          "docker",
+          "kubernetes",
+          "podman",
+          "swarm"
+        ],
+        "type": "string"
+      },
+      "sablier.ResourceProfile": {
+        "properties": {
+          "blkioDeviceReadBps": {
+            "description": "BlkioDeviceReadBps limits the read throughput per block device (bytes/s).\nRate values use human-readable suffixes, e.g. \"10m\" = 10 MB/s.",
+            "items": {
+              "$ref": "#/components/schemas/sablier.BlkioThrottleDevice"
+            },
+            "type": "array"
+          },
+          "blkioDeviceReadIOps": {
+            "description": "BlkioDeviceReadIOps limits the read IOPS per block device.\nRate values are plain integers, e.g. \"100\".",
+            "items": {
+              "$ref": "#/components/schemas/sablier.BlkioThrottleDevice"
+            },
+            "type": "array"
+          },
+          "blkioDeviceWriteBps": {
+            "description": "BlkioDeviceWriteBps limits the write throughput per block device (bytes/s).",
+            "items": {
+              "$ref": "#/components/schemas/sablier.BlkioThrottleDevice"
+            },
+            "type": "array"
+          },
+          "blkioDeviceWriteIOps": {
+            "description": "BlkioDeviceWriteIOps limits the write IOPS per block device.",
+            "items": {
+              "$ref": "#/components/schemas/sablier.BlkioThrottleDevice"
+            },
+            "type": "array"
+          },
+          "blkioWeight": {
+            "description": "BlkioWeight is the relative block I/O scheduling weight (10–1000).\n0 means unset (use the container's current or default weight).\nSupported on Docker and Podman; ignored on Docker Swarm and Kubernetes.",
+            "type": "integer"
+          },
+          "blkioWeightDevice": {
+            "description": "BlkioWeightDevice overrides the I/O scheduling weight per block device.",
+            "items": {
+              "$ref": "#/components/schemas/sablier.BlkioWeightDevice"
+            },
+            "type": "array"
+          },
+          "cpu": {
+            "description": "CPU is the CPU limit (e.g. \"0.5\" for Docker/Swarm, \"500m\" for Kubernetes).",
+            "type": "string"
+          },
+          "memory": {
+            "description": "Memory is the memory limit (e.g. \"128m\" for Docker/Swarm, \"128Mi\" for Kubernetes).",
+            "type": "string"
+          },
+          "replicas": {
+            "description": "Replicas is the desired replica count for this profile.\nFor idle: 0 (default) stops the workload; ≥ 1 keeps it running with\nthrottled resources (resource scaling mode).\nFor active: defaults to 1.",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.ScaleConfig": {
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/sablier.ResourceProfile"
+          },
+          "idle": {
+            "$ref": "#/components/schemas/sablier.ResourceProfile"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.SessionState": {
+        "properties": {
+          "instances": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/sablier.InstanceInfoWithError"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.SwarmServiceInfo": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "time.Duration": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "url.URL": {
+        "properties": {
+          "forceQuery": {
+            "description": "ForceQuery indicates whether the original URL contained a query ('?') character.\nWhen set, the String method will include a trailing '?', even when RawQuery is empty.",
+            "type": "boolean"
+          },
+          "fragment": {
+            "description": "fragment for references (without '#')",
+            "type": "string"
+          },
+          "host": {
+            "description": "\"host\" or \"host:port\" (see Hostname and Port methods)",
+            "type": "string"
+          },
+          "omitHost": {
+            "description": "OmitHost indicates the URL has an empty host (authority).\nWhen set, the String method will not include the host when it is empty.",
+            "type": "boolean"
+          },
+          "opaque": {
+            "description": "encoded opaque data",
+            "type": "string"
+          },
+          "path": {
+            "description": "path (relative paths may omit leading slash)",
+            "type": "string"
+          },
+          "rawFragment": {
+            "description": "RawFragment is an optional field containing an encoded fragment hint.\nSee the EscapedFragment method for more details.\n\nIn general, code should call EscapedFragment instead of reading RawFragment.",
+            "type": "string"
+          },
+          "rawPath": {
+            "description": "RawPath is an optional field containing an encoded path hint.\nSee the EscapedPath method for more details.\n\nIn general, code should call EscapedPath instead of reading RawPath.",
+            "type": "string"
+          },
+          "rawQuery": {
+            "description": "RawQuery contains the encoded query values, without the initial '?'.\nUse URL.Query to decode the query.",
+            "type": "string"
+          },
+          "scheme": {
+            "type": "string"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/url.Userinfo"
+              }
+            ],
+            "description": "username and password information"
+          }
+        },
+        "type": "object"
+      },
+      "url.Userinfo": {
+        "type": "object"
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Documentation",
+    "url": "https://sablierapp.dev/"
+  },
+  "info": {
+    "contact": {
+      "name": "Sablier",
+      "url": "https://github.com/sablierapp/sablier"
+    },
+    "description": "The Sablier HTTP API. Reverse-proxy integrations call these endpoints to start instances on demand and check session readiness.\nThe two strategy endpoints are the heart of Sablier: `dynamic` serves a themed waiting page that self-refreshes, while `blocking` holds the request until the session is ready.",
+    "license": {
+      "name": "AGPL-3.0",
+      "url": "https://github.com/sablierapp/sablier/blob/main/LICENSE"
+    },
+    "title": "Sablier API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/events": {
+      "get": {
+        "description": "Server-Sent Events stream of instance lifecycle events. Each event is `event: \u003ctype\u003e` followed by `data: \u003cInstanceInfo JSON\u003e`. The stream stays open until the client disconnects.",
+        "parameters": [
+          {
+            "description": "Event types to include (created, updated, removed, started, stopped). Repeat for multiple.",
+            "in": "query",
+            "name": "types",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "SSE stream (text/event-stream)"
+          }
+        },
+        "summary": "Instance events (SSE)",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/strategies/blocking": {
+      "get": {
+        "description": "Holds the request until the requested instances are ready, or until the timeout elapses. Provide either `names` (one or more) or `group`, never both.",
+        "parameters": [
+          {
+            "description": "Instance name(s); repeat for multiple. Mutually exclusive with group.",
+            "in": "query",
+            "name": "names",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Group name. Mutually exclusive with names.",
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Session duration as a Go duration (e.g. 5m). Defaults to the server default.",
+            "in": "query",
+            "name": "session_duration",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum time to wait as a Go duration (e.g. 1m).",
+            "in": "query",
+            "name": "timeout",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/api.SessionResponse"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "X-Sablier-Session-Status": {
+                "description": "ready or not-ready",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Group or instance not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Session was not ready before the timeout"
+          }
+        },
+        "summary": "Blocking strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/strategies/dynamic": {
+      "get": {
+        "description": "Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.",
+        "parameters": [
+          {
+            "description": "Instance name(s). Mutually exclusive with group.",
+            "in": "query",
+            "name": "names",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Group name. Mutually exclusive with names.",
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Session duration as a Go duration (e.g. 5m).",
+            "in": "query",
+            "name": "session_duration",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Waiting-page refresh interval as a Go duration (e.g. 5s).",
+            "in": "query",
+            "name": "refresh_frequency",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Show per-instance details on the waiting page.",
+            "in": "query",
+            "name": "show_details",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Display name shown on the waiting page.",
+            "in": "query",
+            "name": "display_name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Theme name for the waiting page.",
+            "in": "query",
+            "name": "theme",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "HTML waiting page",
+            "headers": {
+              "X-Sablier-Session-Status": {
+                "description": "ready or not-ready",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Group or theme not found"
+          },
+          "500": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Internal error"
+          }
+        },
+        "summary": "Dynamic strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/api/themes": {
+      "get": {
+        "description": "Lists the waiting-page themes available to the dynamic strategy (built-in and custom). Also served at the legacy path `/api/dynamic/themes`.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/api.ThemesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List themes",
+        "tags": [
+          "themes"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Liveness endpoint. Returns 200 while serving and 503 while the server is terminating.",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "503": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  }
+}

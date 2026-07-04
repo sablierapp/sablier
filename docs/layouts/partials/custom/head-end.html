@@ -1,0 +1,107 @@
+{{- /*
+  Client-side redirect shim for the docsify -> Hugo migration.
+
+  The old docsify site used hash routing (e.g. https://sablierapp.dev/#/providers/docker).
+  The "#/..." fragment never reaches the server, so these legacy links can only be
+  rescued in the browser. On load we look up the old route in the redirect map
+  (data/redirects.yaml) and replace the location with the new Hugo path.
+
+  Only hashes starting with "#/" (docsify routes) are touched; ordinary in-page
+  anchors like "#some-heading" are left alone.
+*/ -}}
+{{- $redirects := dict -}}
+{{- range hugo.Data.redirects.redirects -}}
+  {{- $redirects = merge $redirects (dict .from .to) -}}
+{{- end -}}
+<script>
+(function () {
+  var hash = window.location.hash;
+  if (hash.indexOf('#/') !== 0) return;
+
+  var map = {{ $redirects | jsonify | safeJS }};
+
+  var route = hash.slice(1); // drop the leading '#'
+
+  // An exact match on the full old route — including any "?id=" anchor — wins
+  // first. This is how deep links to sections that have since moved to another
+  // page are redirected (e.g. /configuration?id=scale-mode -> /features/scale-mode/).
+  if (map[route]) {
+    window.location.replace(map[route]);
+    return;
+  }
+
+  var anchor = '';
+
+  // docsify anchors look like "?id=some-heading"
+  var q = route.indexOf('?id=');
+  if (q !== -1) {
+    anchor = '#' + route.slice(q + 4);
+    route = route.slice(0, q);
+  }
+
+  // normalize a trailing slash on the old route before lookup
+  if (route.length > 1 && route.charAt(route.length - 1) === '/') {
+    route = route.slice(0, -1);
+  }
+
+  var target = map[route];
+  // best-effort fallback for any route not explicitly mapped
+  if (!target && route.length > 1) {
+    target = route + '/';
+  }
+
+  if (target) {
+    window.location.replace(target + anchor);
+  }
+})();
+</script>
+
+{{- /*
+  Global provider selector for the {{< provider-tabs >}} shortcode. A single
+  choice (localStorage 'sablier-provider') drives which provider panel is shown
+  on every page, so the reader's provider "sticks" across the whole site.
+*/ -}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var KEY = 'sablier-provider';
+  var DEFAULT = 'docker';
+  function current() { try { return localStorage.getItem(KEY) || DEFAULT; } catch (e) { return DEFAULT; } }
+  function store(p) { try { localStorage.setItem(KEY, p); } catch (e) {} }
+
+  function apply(provider) {
+    document.querySelectorAll('[data-provider-tabs]').forEach(function (group) {
+      var panels = Array.prototype.slice.call(group.querySelectorAll('.provider-tab-panel'));
+      var btns = Array.prototype.slice.call(group.querySelectorAll('.provider-tab-btn'));
+      if (!panels.length) return;
+      var keys = panels.map(function (p) { return p.getAttribute('data-provider'); });
+      // Show the global provider if this group has it, else fall back to its
+      // first panel WITHOUT changing the global choice.
+      var chosen = keys.indexOf(provider) !== -1 ? provider : keys[0];
+      panels.forEach(function (p) { p.hidden = p.getAttribute('data-provider') !== chosen; });
+      btns.forEach(function (b) {
+        var sel = b.getAttribute('data-provider') === chosen;
+        b.setAttribute('data-state', sel ? 'selected' : '');
+        b.setAttribute('aria-selected', sel ? 'true' : 'false');
+      });
+    });
+  }
+
+  function select(provider) { store(provider); apply(provider); }
+
+  document.querySelectorAll('[data-provider-tabs] .provider-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { select(btn.getAttribute('data-provider')); });
+  });
+
+  // A "differs" compatibility badge selects that provider and scrolls to the notes.
+  document.querySelectorAll('.compat-differs[data-provider]').forEach(function (badge) {
+    badge.addEventListener('click', function (e) {
+      e.preventDefault();
+      select(badge.getAttribute('data-provider'));
+      var notes = document.querySelector('[data-provider-tabs]');
+      if (notes) notes.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  apply(current());
+});
+</script>

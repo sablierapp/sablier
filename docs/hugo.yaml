@@ -1,0 +1,64 @@
+baseURL: https://sablierapp.dev/
+title: Sablier
+locale: en-us
+
+enableRobotsTXT: true
+enableGitInfo: true
+enableInlineShortcodes: true
+
+# Preserve the docsify slugs (underscores are kept, no forced lowercase) so that
+# the redirect map from the old site stays a trivial 1:1 mapping.
+disablePathToLower: true
+
+markup:
+  goldmark:
+    renderer:
+      # Allow raw HTML (the docs use <img> tags inside tables and headings).
+      unsafe: true
+  highlight:
+    noClasses: false
+    lineNos: false
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+menu:
+  main:
+    - name: Documentation
+      pageRef: /
+      weight: 1
+    - name: Search
+      weight: 2
+      params:
+        type: search
+    - name: GitHub
+      weight: 3
+      url: "https://github.com/sablierapp/sablier"
+      params:
+        icon: github
+
+params:
+  navbar:
+    displayTitle: true
+    displayLogo: true
+    logo:
+      path: assets/img/icon.png
+      width: 32
+  page:
+    width: normal
+  theme:
+    default: system
+    displayToggle: true
+  editURL:
+    enable: true
+    base: "https://github.com/sablierapp/sablier/edit/main/docs/content"
+  search:
+    enable: true
+    type: flexsearch
+    flexsearch:
+      index: content
+  footer:
+    enable: true
+    displayCopyright: true
+    displayPoweredBy: false

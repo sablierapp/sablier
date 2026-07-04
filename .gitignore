@@ -6,3 +6,5 @@ kubeconfig.yaml
 
 # Added by goreleaser init:
 dist/
+.agents
+.github/agents

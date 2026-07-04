@@ -1,0 +1,13 @@
+# Native Hextra glossary source (rendered by content/glossary.md, layout: glossary).
+- term: Session
+  definition: A set of instances started together for a request. A session stays active while requests keep arriving and expires after the configured duration of inactivity.
+- term: Instance
+  definition: A single workload Sablier manages — a Docker container, Docker Swarm service, Kubernetes Deployment or StatefulSet, Podman container, or Proxmox LXC container.
+- term: Provider
+  definition: How Sablier interacts with your instances (start, stop, status, lifecycle events). One provider is configured per Sablier server.
+- term: Group
+  definition: A named set of instances that are started together. A session can target a group instead of individual instance names.
+- term: Strategy
+  definition: How a reverse-proxy plugin waits for a session — dynamic (serve a themed waiting page that self-refreshes) or blocking (hold the request until the instances are ready).
+- term: Reverse proxy plugin
+  definition: The integration that runs inside your reverse proxy (Traefik, Caddy, Nginx, …), intercepts requests, and calls the Sablier API to start instances and check readiness.

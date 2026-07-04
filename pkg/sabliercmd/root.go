@@ -40,7 +40,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	// Provider flags
 	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
 	_ = viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
-	startCmd.Flags().BoolVar(&conf.Provider.AutoStopOnStartup, "provider.auto-stop-on-startup", true, "")
+	startCmd.Flags().BoolVar(&conf.Provider.AutoStopOnStartup, "provider.auto-stop-on-startup", true, "Stop all sablier.enable=true instances running at startup that were not started by Sablier")
 	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
 	startCmd.Flags().BoolVar(&conf.Provider.AutoStopExternallyStarted, "provider.auto-stop-externally-started", false, "Continuously stop instances with sablier.enable=true that are running but were not started by Sablier")
 	_ = viper.BindPFlag("provider.auto-stop-externally-started", startCmd.Flags().Lookup("provider.auto-stop-externally-started"))
@@ -52,7 +52,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.verify-enabled-on-expiration", startCmd.Flags().Lookup("provider.verify-enabled-on-expiration"))
 	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
 	_ = viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
-	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API acees client-side throttling")
+	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API access client-side throttling")
 	_ = viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
 	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
 	_ = viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))

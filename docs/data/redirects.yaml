@@ -1,0 +1,88 @@
+# Redirect map from the old docsify site to the new Hugo site.
+#
+# The old site used docsify HASH routing, so live URLs looked like
+#   https://sablierapp.dev/#/providers/docker
+# The "#/..." fragment is never sent to the server, so these can only be
+# redirected in the browser. This file is the single source of truth consumed
+# by the client-side shim in layouts/partials/custom/head-end.html.
+#
+# `from` is the old hash route (the part after the "#").
+# `to`   is the new Hugo path.
+redirects:
+  - from: /getting-started
+    to: /getting-started/
+  - from: /installation
+    to: /installation/
+  - from: /configuration
+    to: /configuration/
+  - from: /strategies
+    to: /strategies/
+  - from: /themes
+    to: /strategies/themes/
+  - from: /webhooks
+    to: /webhooks/
+  - from: /tracing
+    to: /tracing/
+  - from: /performance
+    to: /performance/
+  - from: /resource-efficiency
+    to: /resource-efficiency/
+  - from: /health
+    to: /health/
+  - from: /versioning
+    to: /versioning/
+  # Providers (the old "overview" page is now the section landing page)
+  - from: /providers/overview
+    to: /providers/
+  - from: /providers/docker
+    to: /providers/docker/
+  - from: /providers/docker_swarm
+    to: /providers/docker_swarm/
+  - from: /providers/kubernetes
+    to: /providers/kubernetes/
+  - from: /providers/podman
+    to: /providers/podman/
+  - from: /providers/proxmox_lxc
+    to: /providers/proxmox_lxc/
+  # Reverse proxy plugins
+  - from: /plugins/overview
+    to: /reverse-proxies/
+  - from: /plugins/apacheapisix
+    to: /reverse-proxies/apacheapisix/
+  - from: /plugins/caddy
+    to: /reverse-proxies/caddy/
+  - from: /plugins/envoy
+    to: /reverse-proxies/envoy/
+  - from: /plugins/istio
+    to: /reverse-proxies/istio/
+  # Old NJS nginx link had no dedicated page; point at the closest match.
+  - from: /plugins/nginx
+    to: /reverse-proxies/nginx_proxywasm/
+  - from: /plugins/nginx_proxywasm
+    to: /reverse-proxies/nginx_proxywasm/
+  - from: /plugins/traefik
+    to: /reverse-proxies/traefik/
+  # Guides
+  - from: /guides/overview
+    to: /guides/
+  - from: /guides/code-server-traefik-kubernetes
+    to: /guides/code-server-traefik-kubernetes/
+  # Feature sections that moved out of configuration.md into their own pages.
+  # Keys include the old docsify "?id=" anchor and are matched exactly by the
+  # redirect shim before the generic path lookup.
+  - from: /configuration?id=multiple-groups-per-instance
+    to: /features/multiple-groups/
+  - from: /configuration?id=sablierready-after
+    to: /features/ready-after/
+  - from: /configuration?id=sablierready-on-start
+    to: /features/ready-on-start/
+  - from: /configuration?id=sablierrunning-hours
+    to: /features/running-hours/
+  - from: /configuration?id=sablierrunning-days
+    to: /features/running-hours/
+  - from: /configuration?id=scale-mode
+    to: /features/scale-mode/
+  - from: /configuration?id=block-io-blkio-throttling
+    to: /features/scale-mode/block-io/
+  - from: /configuration?id=anti-affinity
+    to: /features/anti-affinity/
