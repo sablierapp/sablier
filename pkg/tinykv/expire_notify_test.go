@@ -18,6 +18,11 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 	for trial := 0; trial < 200; trial++ {
 		var mu sync.Mutex
 		notified := map[string]bool{}
+		notifiedCount := func() int {
+			mu.Lock()
+			defer mu.Unlock()
+			return len(notified)
+		}
 		kv := New[int](time.Hour, func(k string, _ int) {
 			mu.Lock()
 			notified[k] = true
@@ -35,10 +40,19 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 			_ = kv.Put(k, i, time.Hour)    // current entry, not expired
 		}
 
+		// expireFunc removes expired entries from the store synchronously and
+		// dispatches onExpire asynchronously. Drain the heap, then wait for the
+		// notifications to catch up rather than sleeping a fixed amount: poll
+		// until every survivor has been notified, up to a generous deadline. A
+		// dropped notification never arrives, so the loop hits the deadline and
+		// the assertions below fail deterministically (not on scheduling jitter).
 		for i := 0; i < survivors+2*reputs+5; i++ {
 			kv.expireFunc()
 		}
-		time.Sleep(15 * time.Millisecond) // let async notifyExpirations run
+		deadline := time.Now().Add(2 * time.Second)
+		for notifiedCount() < survivors && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
 
 		mu.Lock()
 		for i := 0; i < survivors; i++ {
@@ -54,13 +68,21 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 		}
 		mu.Unlock()
 
-		// A re-Put (not-expired) key must never be notified or removed.
+		// A re-Put (not-expired) key must never be removed from the store nor
+		// notified: it still holds a live session.
 		for i := 0; i < reputs; i++ {
 			k := fmt.Sprintf("r%02d", i)
+			kv.mx.Lock()
+			_, inStore := kv.kv[k]
+			kv.mx.Unlock()
 			mu.Lock()
-			wrong := notified[k]
+			wasNotified := notified[k]
 			mu.Unlock()
-			if wrong {
+			if !inStore {
+				kv.Stop()
+				t.Fatalf("trial %d: re-Put key %q was wrongly removed from the store", trial, k)
+			}
+			if wasNotified {
 				kv.Stop()
 				t.Fatalf("trial %d: re-Put key %q was wrongly expired", trial, k)
 			}
