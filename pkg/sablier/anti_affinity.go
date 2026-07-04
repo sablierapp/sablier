@@ -247,7 +247,8 @@ func (s *Sablier) antiAffinityHold(ctx context.Context, name string) string {
 // isGroupActive reports whether any member of group currently holds a live
 // session. A group with no members, or one that is unknown, is not active.
 func (s *Sablier) isGroupActive(ctx context.Context, group string) bool {
-	members, ok := s.groups.Get(group)
+	groups := s.groups.Snapshot()
+	members, ok := groups[group]
 	if !ok {
 		return false
 	}
