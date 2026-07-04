@@ -97,6 +97,8 @@ func Start(ctx context.Context, conf config.Config) error {
 	} else {
 		s.SetGroups(groups)
 	}
+	// Seed the anti-affinity index from pre-existing instances before watching.
+	s.SeedAntiAffinity(ctx)
 
 	go s.GroupWatch(ctx)
 	stream := provider.InstanceEvents(ctx, provpkg.InstanceEventsOptions{

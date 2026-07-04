@@ -21,6 +21,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
 | `sablier.ready-on-start` | No | `"true"` | Treat the instance as ready as soon as the start is dispatched. Useful for background services where the main app doesn't need them healthy to function. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
+| `sablier.anti-affinity` | No | `"streaming"` | Comma-separated group names this instance backs off from. While any listed group has an active session, Sablier forces this instance idle and restores it once none are active. See [Anti-Affinity](#anti-affinity). |
 | `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
 | `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
 | `sablier.idle.replicas` | No | `"1"` | Replica count when idle. Default `0` (stop the workload). Set to `1` or higher to keep the workload running and optionally throttle its resources. |
@@ -284,6 +285,52 @@ metadata:
 > **Note:** Kubernetes resource limit changes trigger a **rolling restart** of the pods. The service remains available during the transition (old pods are replaced with new ones), but there will be brief overlap between old and new pods.
 
 !> Scale mode changes resource **limits**, not requests. Ensure your nodes have sufficient allocatable capacity for the active limits.
+
+### Anti-Affinity
+
+Anti-affinity lets an instance **back off automatically** whenever another workload is in use. It is designed for machines where several heavy services compete for a shared, non-shareable resource — most commonly **GPU VRAM or RAM** — and running two of them at once causes an out-of-memory crash or severe slowdown.
+
+An instance declares the groups it must yield to with the `sablier.anti-affinity` label:
+
+```yaml
+services:
+  # Plex is the "streaming" service.
+  plex:
+    image: plexinc/pms-docker
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=streaming"
+
+  # Nextcloud keeps running in the background, but must free the GPU/RAM
+  # whenever a streaming session is active.
+  nextcloud:
+    image: nextcloud
+    labels:
+      - "sablier.enable=true"
+      - "sablier.anti-affinity=streaming"   # yield to the "streaming" group
+      # Optional: use scale mode so "idle" means throttled instead of stopped.
+      - "sablier.idle.replicas=1"
+      - "sablier.idle.cpu=0.5"
+      - "sablier.active.cpu=4.0"
+```
+
+How it works:
+
+- When a session for the **`streaming`** group becomes active, every instance that declared `sablier.anti-affinity=streaming` is forced to its **idle** state:
+  - a plain instance is **stopped** (or paused, depending on the strategy);
+  - a scale-mode instance (`sablier.idle.replicas >= 1`) has its **idle resource profile** applied instead.
+- When the `streaming` session **expires** and no other listed group is active, the instances Sablier forced idle are **restored** — restarted, or returned to their active resource profile.
+- Multiple antagonist groups can be listed (`sablier.anti-affinity=streaming,transcoding`); the instance stays idle while **any** of them is active.
+
+Behavior notes:
+
+- Only instances Sablier **actually suppressed while they were running** are restored later — an instance that was already idle is left untouched.
+- The relationship is **one-directional**: the declaring instance yields to the group, not the reverse.
+- **Requesting a held instance:** while an antagonist group is active, a request for the backing-off instance does **not** start it. It is reported as `not-ready` with the message *"paused while group \"streaming\" is active (anti-affinity)"*, which appears on the waiting page (with `show_details`) and in the API response. A **blocking** request keeps waiting and will time out if the antagonist outlasts its timeout; the **dynamic** waiting page keeps refreshing and starts the instance automatically once the antagonist expires.
+- Anti-affinity instances must be **Sablier-managed** (`sablier.enable=true`) so Sablier can stop and start them.
+- Reconciliation is reactive (on session start and expiry) with a periodic safety net, so backing off is fast enough to avoid the collision that motivated the feature.
+
+**Supported providers:** the same as scale mode — Docker, Docker Swarm, Kubernetes, and Podman. Proxmox LXC is not supported (tag-based configuration).
 
 ## Configuration File
 

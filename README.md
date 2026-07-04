@@ -20,6 +20,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
 - [OpenTelemetry tracing](#tracing) for end-to-end request observability
 - Stop or pause strategies to maximize resource reclamation on constrained hardware
 - [Scale mode](#scale-mode): throttle CPU and memory when idle instead of stopping, for zero-cold-start workloads
+- [Anti-affinity](#anti-affinity): make a workload back off automatically while another group is active, to avoid GPU/RAM contention
 
 ---
 
@@ -493,6 +494,20 @@ labels:
 > **Docker only:** Block I/O throttling is supported on the Docker provider. Per-device limits (`blkio-*-device`, `blkio-device-*`) require a Docker daemon with API version ≥ 1.55 ([moby/moby#52650](https://github.com/moby/moby/issues/52650)); Sablier logs a warning on older daemons. See the [configuration reference](./docs/configuration.md#block-io-blkio-throttling) for the full list.
 
 📚 **[Full Example](./examples/scale-mode/)**
+
+### Anti-Affinity
+
+On a machine where several heavy services share a non-shareable resource (GPU VRAM, RAM), running two at once can OOM. **Anti-affinity** lets an instance back off automatically while another group is in use:
+
+```yaml
+labels:
+  - "sablier.enable=true"
+  - "sablier.anti-affinity=streaming"   # yield whenever the "streaming" group is active
+```
+
+When any session for the `streaming` group is active, every instance that declared an anti-affinity against it is forced idle (stopped, or throttled to its idle profile in scale mode) and restored once the group is no longer active. Multiple groups can be listed comma-separated.
+
+📚 **[Anti-Affinity documentation](./docs/configuration.md#anti-affinity)** | **[Full Example](./examples/anti-affinity/)**
 
 ---
 

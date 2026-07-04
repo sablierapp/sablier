@@ -190,6 +190,24 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}
 
+	// Anti-affinity: while one of this instance's antagonist groups holds an
+	// active session, it must stay idle. Report it as not-ready with an
+	// explanation rather than starting it — which the background reconcile would
+	// immediately undo — so blocking callers keep waiting and the waiting page
+	// shows why. Once the antagonist expires, a later request proceeds normally.
+	if group := s.antiAffinityHold(ctx, name); group != "" {
+		s.l.DebugContext(ctx, "instance held by anti-affinity, not starting",
+			slog.String("instance", name), slog.String("active_group", group))
+		return InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          InstanceStatusNotReady,
+			Message:         fmt.Sprintf("paused while group %q is active (anti-affinity)", group),
+		}, nil
+	}
+
+	newSession := false
 	state, err := s.sessions.Get(ctx, name)
 	if errors.Is(err, store.ErrKeyNotFound) {
 		s.l.DebugContext(ctx, "request to start instance received", slog.String("instance", name))
@@ -198,6 +216,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		if err != nil {
 			return InstanceInfo{}, err
 		}
+		newSession = true
 
 		s.l.InfoContext(ctx, "request to start instance dispatched", slog.String("instance", name), slog.String("status", string(state.Status)), slog.Duration("expiration", duration))
 	} else if err != nil {
@@ -254,5 +273,12 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		s.l.ErrorContext(ctx, "could not put instance to store, will not expire", slog.Any("error", err), slog.String("instance", state.Name))
 		return InstanceInfo{}, fmt.Errorf("could not put instance to store: %w", err)
 	}
+
+	// A brand-new session may have made this instance's group(s) active; force any
+	// instance that declared an anti-affinity against them to back off.
+	if newSession {
+		s.triggerAntiAffinityReconcile(ctx)
+	}
+
 	return state, nil
 }
