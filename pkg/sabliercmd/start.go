@@ -86,6 +86,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	// up alongside everything else when /metrics is scraped.
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
 		pr.Registry().MustRegister(metrics.NewGroupLockCollector(s, pr))
+		pr.Registry().MustRegister(metrics.NewSessionExpiryCollector(s))
 	}
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 	s.DefaultSessionDuration = conf.Sessions.DefaultDuration
@@ -96,6 +97,8 @@ func Start(ctx context.Context, conf config.Config) error {
 	} else {
 		s.SetGroups(groups)
 	}
+	// Seed the anti-affinity index from pre-existing instances before watching.
+	s.SeedAntiAffinity(ctx)
 
 	go s.GroupWatch(ctx)
 	stream := provider.InstanceEvents(ctx, provpkg.InstanceEventsOptions{

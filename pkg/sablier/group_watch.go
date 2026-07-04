@@ -60,6 +60,12 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 
 		case <-ticker.C:
 			s.reconcileGroups(ctx, "reconciliation")
+			// Once anti-affinity is in use, keep its index fresh (a safety net for
+			// missed events) and re-enforce so a missed suppress/restore self-heals.
+			if s.hasAntiAffinity() {
+				s.reconcileAntiAffinityRegistry(ctx)
+				s.reconcileAntiAffinity(ctx)
+			}
 		}
 	}
 }
@@ -68,6 +74,12 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 func (s *Sablier) handleGroupEvent(ctx context.Context, event InstanceEvent) {
 	info := event.Info
 	reason := string(event.Type)
+
+	// Keep the anti-affinity index in step with the instance's current labels,
+	// independently of group membership (an anti-affinity instance need not
+	// belong to a group). Re-enforce afterwards so a newly declared or removed
+	// anti-affinity takes effect immediately.
+	s.handleAntiAffinityEvent(ctx, event)
 
 	switch event.Type {
 	case provider.InstanceEventCreated:

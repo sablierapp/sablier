@@ -19,6 +19,20 @@ type Sablier struct {
 
 	groups *groupRegistry
 
+	// antiAffinity is the reverse index antagonist-group -> instances that back
+	// off from it, built from the sablier.anti-affinity label. It is kept in
+	// sync alongside groups by GroupWatch.
+	antiAffinity *groupRegistry
+
+	// affinityMu guards suppressed and serialises anti-affinity reconciliations
+	// so concurrent activations/expirations cannot race each other.
+	affinityMu sync.Mutex
+	// suppressed is the set of instances Sablier has currently forced idle
+	// because of an active antagonist group. Only instances recorded here are
+	// restored when their antagonists become inactive, so an instance that was
+	// already idle before suppression is never spuriously started.
+	suppressed map[string]struct{}
+
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
 	// depStarts single-flights InstanceStart calls issued for depends_on
@@ -64,6 +78,8 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		provider:                      provider,
 		sessions:                      store,
 		groups:                        newGroupRegistry(),
+		antiAffinity:                  newGroupRegistry(),
+		suppressed:                    map[string]struct{}{},
 		pendingStarts:                 map[string]*pendingStart{},
 		depStarts:                     map[string]*depStart{},
 		l:                             logger,
@@ -99,6 +115,40 @@ func (s *Sablier) WithMetrics(r metrics.Recorder) {
 // Safe for concurrent use; intended for the metrics GroupLockCollector.
 func (s *Sablier) Groups() map[string][]string {
 	return s.groups.Snapshot()
+}
+
+// Sablier is the source of active-session snapshots for the expiry collector.
+var _ metrics.SessionSource = (*Sablier)(nil)
+
+// SessionsSnapshot returns a point-in-time view of every active session for the
+// metrics SessionExpiryCollector. It is non-destructive: it enumerates the store
+// without renewing any session's timeout. The group label is taken from the
+// instance's first group, or "" when it belongs to none.
+func (s *Sablier) SessionsSnapshot() []metrics.SessionEntry {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var out []metrics.SessionEntry
+	err := s.sessions.Range(ctx, func(info InstanceInfo, expiresAt time.Time) {
+		group := ""
+		if len(info.Groups) > 0 {
+			group = info.Groups[0]
+		}
+		out = append(out, metrics.SessionEntry{
+			Instance:  info.Name,
+			Group:     group,
+			ExpiresAt: expiresAt,
+		})
+	})
+	if err != nil {
+		// Enumeration failed partway through, so out only holds a subset of the
+		// live sessions. Emitting that subset would make the missing sessions
+		// look expired; drop the whole snapshot instead, so a scrape is
+		// all-or-nothing.
+		s.l.Warn("could not snapshot sessions for metrics", slog.Any("error", err))
+		return nil
+	}
+	return out
 }
 
 // SetGroups replaces the entire group registry. Changes are logged with a diff.
