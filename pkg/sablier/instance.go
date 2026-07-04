@@ -63,6 +63,11 @@ type InstanceInfo struct {
 	// the sablier.running-hours label (format: HH:MM-HH:MM).
 	RunningHours string `json:"runningHours,omitempty"`
 
+	// RunningDays restricts the RunningHours window to specific weekdays,
+	// parsed from the sablier.running-days label (e.g. "Mon,Tue,Wed,Thu,Fri").
+	// Empty means the window applies every day.
+	RunningDays string `json:"runningDays,omitempty"`
+
 	// ReadyOnStart indicates the instance should be considered ready as soon as
 	// the start is dispatched, without waiting for health.
 	// Controlled by the sablier.ready-on-start label.
@@ -385,6 +390,17 @@ func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
 			info.RunningHours = v
 		} else {
 			slog.Warn("invalid sablier.running-hours label value, ignoring",
+				slog.String("instance", info.Name),
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		}
+	}
+	if v := labels["sablier.running-days"]; v != "" {
+		if _, err := ParseRunningDays(v); err == nil {
+			info.RunningDays = v
+		} else {
+			slog.Warn("invalid sablier.running-days label value, ignoring",
 				slog.String("instance", info.Name),
 				slog.String("value", v),
 				slog.Any("error", err),

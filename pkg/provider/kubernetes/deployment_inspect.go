@@ -41,7 +41,7 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 		}
 	}
 
-	sablier.PopulateEnabledAndGroup(&info, d.Labels)
+	sablier.PopulateEnabledAndGroup(&info, sablierConfig(d.Labels, d.Annotations))
 
 	var image string
 	if len(d.Spec.Template.Spec.Containers) > 0 {

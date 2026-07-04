@@ -117,6 +117,36 @@ Sablier checks for the deployment replicas. As soon as the current replicas matc
 
 ?> Kubernetes uses the Pod healthcheck to check if the Pod is up and running. So the provider has a native healthcheck support.
 
+## Configure with labels or annotations
+
+On Kubernetes, `sablier.*` keys can be set either as a **label** or as an **annotation**, with one exception: `sablier.enable` must always be a label (see the note below). This applies to Deployments, StatefulSets, CloudNativePG Clusters and OT-CONTAINER-KIT Redis instances.
+
+Annotations are useful because Kubernetes **label values are restricted** (max 63 characters, only `[A-Za-z0-9._-]`, no commas or colons). Some Sablier values cannot be expressed as labels and must use annotations, for example:
+
+- `sablier.group` with multiple comma-separated groups (e.g. `team-a,team-b`)
+- `sablier.running-hours` (e.g. `09:00-18:00`) — the colon is invalid in a label value
+- `sablier.running-days` (e.g. `Mon,Tue,Wed,Thu,Fri`)
+
+When the same key is present as both a label and an annotation, the **annotation takes precedence**.
+
+!> `sablier.enable` must be set as a **label**. Workload discovery relies on a server-side label selector, which cannot match annotations. All other keys work as labels or annotations.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+    sablier.enable: "true"       # must be a label
+  annotations:
+    sablier.group: "team-a,team-b"          # comma is invalid as a label value
+    sablier.running-hours: "09:00-18:00"    # colon is invalid as a label value
+    sablier.running-days: "Mon,Tue,Wed,Thu,Fri"
+spec:
+  # ...existing spec...
+```
+
 ## Register CloudNativePG Clusters
 
 Sablier can also start and stop [CloudNativePG](https://cloudnative-pg.io/) `Cluster` resources. Instead of scaling a replica count, Sablier toggles CloudNativePG's [declarative hibernation](https://cloudnative-pg.io/documentation/current/declarative_hibernation/) annotation:

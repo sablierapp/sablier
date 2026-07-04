@@ -126,7 +126,7 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 					Labels:    labels,
 				},
 			}
-			sablier.PopulateEnabledAndGroup(&info, labels)
+			sablier.PopulateEnabledAndGroup(&info, sablierConfig(labels, u.GetAnnotations()))
 			if wantRemoved {
 				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
 			}

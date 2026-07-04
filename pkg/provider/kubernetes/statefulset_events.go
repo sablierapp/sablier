@@ -84,7 +84,7 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 					Labels:    ss.Labels,
 				},
 			}
-			sablier.PopulateEnabledAndGroup(&info, ss.Labels)
+			sablier.PopulateEnabledAndGroup(&info, sablierConfig(ss.Labels, ss.Annotations))
 			if wantRemoved {
 				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
 			}

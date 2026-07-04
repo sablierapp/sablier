@@ -32,10 +32,11 @@ func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfi
 }
 
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
-	enabled := ss.Labels["sablier.enable"]
+	config := sablierConfig(ss.Labels, ss.Annotations)
+	enabled := config["sablier.enable"]
 	var groups []string
 	if enabled == "true" {
-		groups = sablier.ParseGroups(ss.Labels["sablier.group"])
+		groups = sablier.ParseGroups(config["sablier.group"])
 	}
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
@@ -63,7 +64,8 @@ func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, 
 	groups := make(map[string][]string)
 	for _, ss := range statefulSets.Items {
 		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
-		for _, groupName := range sablier.ParseGroups(ss.Labels["sablier.group"]) {
+		config := sablierConfig(ss.Labels, ss.Annotations)
+		for _, groupName := range sablier.ParseGroups(config["sablier.group"]) {
 			groups[groupName] = append(groups[groupName], parsed.Original)
 		}
 	}

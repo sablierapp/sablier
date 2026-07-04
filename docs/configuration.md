@@ -21,6 +21,7 @@ Instance labels are applied directly to your containers or workloads. They contr
 | `sablier.ready-after` | No | `"30s"` | Minimum duration to wait after the instance first reports ready before Sablier considers it truly ready. Accepts any Go duration string (`"500ms"`, `"1m30s"`, …). Useful for services that are started or pass their health check before they can actually serve traffic. |
 | `sablier.ready-on-start` | No | `"true"` | Treat the instance as ready as soon as the start is dispatched. Useful for background services where the main app doesn't need them healthy to function. |
 | `sablier.running-hours` | No | `"09:00-18:00"` | Daily keep-warm window in local time (`HH:MM-HH:MM`). Sablier starts the instance at window start and keeps it running until window end. Overnight windows like `"22:00-06:00"` are supported. |
+| `sablier.running-days` | No | `"Mon,Tue,Wed,Thu,Fri"` | Restrict the `sablier.running-hours` window to specific weekdays. Comma-separated list accepting full names (`Monday`) and abbreviations (`Mon`). Defaults to every day when unset. |
 | `sablier.anti-affinity` | No | `"streaming"` | Comma-separated group names this instance backs off from. While any listed group has an active session, Sablier forces this instance idle and restores it once none are active. See [Anti-Affinity](#anti-affinity). |
 | `sablier.idle.cpu` | No | `"0.1"` | CPU limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
 | `sablier.idle.memory` | No | `"128m"` | Memory limit applied when the session expires (scale mode). Requires `sablier.idle.replicas >= 1`. |
@@ -147,6 +148,34 @@ Format rules:
 - Use 24-hour format `HH:MM-HH:MM`.
 - If start is later than end (for example `22:00-06:00`), the window spans midnight.
 - If the label cannot be parsed, Sablier ignores it.
+
+### `sablier.running-days`
+
+Use `sablier.running-days` together with `sablier.running-hours` to restrict the keep-warm window to specific weekdays. This is useful to only keep an instance warm during, for example, weekdays.
+
+Behavior:
+
+- When set, the `sablier.running-hours` window only applies on the listed days.
+- When absent, the window applies every day.
+- For overnight windows (e.g. `22:00-06:00`), the day is evaluated against the day the window **starts**. For example, a `Fri` window with `22:00-06:00` keeps the instance warm from Friday 22:00 through Saturday 06:00.
+
+```yaml
+services:
+  myapp:
+    image: myapp:latest
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=myapp"
+      - "sablier.running-hours=09:00-18:00"
+      - "sablier.running-days=Mon,Tue,Wed,Thu,Fri"
+```
+
+Format rules:
+
+- Comma-separated list of days.
+- Accepts full names (`Monday`) and common abbreviations (`Mon`).
+- Matching is case-insensitive; surrounding whitespace is ignored.
+- If the label cannot be parsed, Sablier ignores it (the window then applies every day).
 
 ### Timezone (`TZ`)
 

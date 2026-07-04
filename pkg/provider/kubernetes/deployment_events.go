@@ -83,7 +83,7 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 					Labels:    d.Labels,
 				},
 			}
-			sablier.PopulateEnabledAndGroup(&info, d.Labels)
+			sablier.PopulateEnabledAndGroup(&info, sablierConfig(d.Labels, d.Annotations))
 			if wantRemoved {
 				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
 			}

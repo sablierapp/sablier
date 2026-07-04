@@ -25,5 +25,6 @@ services:
       - "sablier.enable=true"
       - "sablier.group=office-app"
       - "sablier.running-hours=${RUNNING_HOURS:-09:00-18:00}"
+      - "sablier.running-days=${RUNNING_DAYS:-Mon,Tue,Wed,Thu,Fri}"
     ports:
       - "8080:80"

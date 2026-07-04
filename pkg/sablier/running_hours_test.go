@@ -59,3 +59,44 @@ func TestRunningHoursWindowAt(t *testing.T) {
 	assert.Equal(t, overnightEnd.Day(), 6)
 	assert.Equal(t, overnightEnd.Hour(), 6)
 }
+
+func TestParseRunningDays(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  []time.Weekday
+		err   bool
+	}{
+		{name: "abbreviations", value: "Mon,Tue,Wed,Thu,Fri", want: []time.Weekday{time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday}},
+		{name: "full names", value: "Saturday, Sunday", want: []time.Weekday{time.Saturday, time.Sunday}},
+		{name: "case insensitive", value: "mon,SUN", want: []time.Weekday{time.Monday, time.Sunday}},
+		{name: "unknown day", value: "Mon,Funday", err: true},
+		{name: "empty", value: "", err: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			days, err := sablier.ParseRunningDays(tt.value)
+			if tt.err {
+				assert.Assert(t, err != nil)
+				return
+			}
+			assert.NilError(t, err)
+			for _, d := range tt.want {
+				assert.Assert(t, days.Contains(d), "expected %s to be included", d)
+			}
+			// Days not in want must not be present.
+			for d := time.Sunday; d <= time.Saturday; d++ {
+				expected := false
+				for _, w := range tt.want {
+					if w == d {
+						expected = true
+						break
+					}
+				}
+				assert.Equal(t, days.Contains(d), expected)
+			}
+		})
+	}
+}
+

@@ -61,7 +61,7 @@ func (p *Provider) ClusterInspect(ctx context.Context, config ParsedName) (sabli
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	sablier.PopulateEnabledAndGroup(&info, labels)
+	sablier.PopulateEnabledAndGroup(&info, sablierConfig(labels, u.GetAnnotations()))
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      KindCNPGCluster,
