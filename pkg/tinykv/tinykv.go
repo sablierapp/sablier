@@ -364,7 +364,9 @@ func (kv *store[T]) expireFunc() time.Duration {
 		delete(kv.kv, k)
 		toNotify[k] = v
 	}
-	go notifyExpirations(toNotify, kv.onExpire)
+	if len(toNotify) > 0 {
+		go notifyExpirations(toNotify, kv.onExpire)
+	}
 	if interval == 0 && len(kv.heap) > 0 {
 		last := kv.heap[0]
 		interval = time.Until(last.expiresAt)

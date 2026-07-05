@@ -32,12 +32,21 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 		const survivors = 30
 		const reputs = 30
 		for i := 0; i < survivors; i++ {
-			_ = kv.Put(fmt.Sprintf("s%02d", i), i, -time.Second)
+			if err := kv.Put(fmt.Sprintf("s%02d", i), i, -time.Second); err != nil {
+				kv.Stop()
+				t.Fatalf("trial %d: Put survivor failed: %v", trial, err)
+			}
 		}
 		for i := 0; i < reputs; i++ {
 			k := fmt.Sprintf("r%02d", i)
-			_ = kv.Put(k, i, -time.Second) // stale timeout left in the heap
-			_ = kv.Put(k, i, time.Hour)    // current entry, not expired
+			if err := kv.Put(k, i, -time.Second); err != nil { // stale timeout left in the heap
+				kv.Stop()
+				t.Fatalf("trial %d: Put stale re-Put failed: %v", trial, err)
+			}
+			if err := kv.Put(k, i, time.Hour); err != nil { // current entry, not expired
+				kv.Stop()
+				t.Fatalf("trial %d: Put re-Put failed: %v", trial, err)
+			}
 		}
 
 		// expireFunc removes expired entries from the store synchronously and
@@ -54,19 +63,26 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 
+		// Snapshot the notification set once, then verify against the snapshot
+		// without holding mu, so the assertions never contend with the async
+		// onExpire callback (which also takes mu).
 		mu.Lock()
+		notifiedSnapshot := make(map[string]bool, len(notified))
+		for k := range notified {
+			notifiedSnapshot[k] = true
+		}
+		mu.Unlock()
+
 		for i := 0; i < survivors; i++ {
 			k := fmt.Sprintf("s%02d", i)
 			kv.mx.Lock()
 			_, inStore := kv.kv[k]
 			kv.mx.Unlock()
-			if !inStore && !notified[k] {
-				mu.Unlock()
+			if !inStore && !notifiedSnapshot[k] {
 				kv.Stop()
 				t.Fatalf("trial %d: %q was deleted from the store without firing onExpire", trial, k)
 			}
 		}
-		mu.Unlock()
 
 		// A re-Put (not-expired) key must never be removed from the store nor
 		// notified: it still holds a live session.
@@ -75,14 +91,11 @@ func TestExpireFuncNotifiesEveryDeletedEntry(t *testing.T) {
 			kv.mx.Lock()
 			_, inStore := kv.kv[k]
 			kv.mx.Unlock()
-			mu.Lock()
-			wasNotified := notified[k]
-			mu.Unlock()
 			if !inStore {
 				kv.Stop()
 				t.Fatalf("trial %d: re-Put key %q was wrongly removed from the store", trial, k)
 			}
-			if wasNotified {
+			if notifiedSnapshot[k] {
 				kv.Stop()
 				t.Fatalf("trial %d: re-Put key %q was wrongly expired", trial, k)
 			}
