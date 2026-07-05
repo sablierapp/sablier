@@ -27,6 +27,22 @@ func session() *sablier.SessionState {
 	}
 }
 
+func notReadySession() *sablier.SessionState {
+	return &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"test": {
+				Instance: sablier.InstanceInfo{
+					Name:            "test",
+					CurrentReplicas: 0,
+					DesiredReplicas: 1,
+					Status:          sablier.InstanceStatusStarting,
+				},
+				Error: nil,
+			},
+		},
+	}
+}
+
 func TestStartDynamic(t *testing.T) {
 	t.Run("StartDynamicInvalidBind", func(t *testing.T) {
 		app, router, strategy, _ := NewApiTest(t)
@@ -70,6 +86,14 @@ func TestStartDynamic(t *testing.T) {
 		StartDynamic(router, strategy)
 		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(session(), nil)
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test")
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
+	})
+	t.Run("StartDynamicReadyOnStartForcesReady", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartDynamic(router, strategy)
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(notReadySession(), nil)
+		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test&ready_on_start=true")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
 	})

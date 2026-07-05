@@ -23,6 +23,7 @@ type DynamicRequest struct {
 	Theme            string        `form:"theme"`
 	SessionDuration  time.Duration `form:"session_duration"`
 	RefreshFrequency time.Duration `form:"refresh_frequency"`
+	ReadyOnStart     bool          `form:"ready_on_start"`
 }
 
 func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
@@ -74,6 +75,9 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 		}
 
 		AddSablierHeader(c, sessionState)
+		if request.ReadyOnStart {
+			c.Header(SablierStatusHeader, SablierStatusReady)
+		}
 
 		renderOptions := theme.Options{
 			DisplayName:      request.DisplayName,
