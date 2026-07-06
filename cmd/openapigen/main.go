@@ -27,8 +27,10 @@ func main() {
 	out := flag.String("out", "", "output file path (writes to stdout if empty)")
 	flag.Parse()
 
-	// Parse the swaggo annotations into a Swagger 2.0 document.
-	p := swag.New(swag.SetParseDependency(1))
+	// Parse the swaggo annotations into a Swagger 2.0 document. Route swag's
+	// progress logs to stderr so stdout carries only the spec JSON; the
+	// `make check-openapi` freshness test pipes stdout into `diff`.
+	p := swag.New(swag.SetParseDependency(1), swag.SetDebugger(log.New(os.Stderr, "", log.LstdFlags)))
 	if err := p.ParseAPI(*dir, *general, 100); err != nil {
 		log.Fatalf("parse api annotations: %v", err)
 	}

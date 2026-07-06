@@ -57,7 +57,7 @@
             "type": "string"
           },
           "weight": {
-            "description": "valid range: 10–1000",
+            "description": "valid range: 10-1000",
             "type": "integer"
           }
         },
@@ -260,7 +260,7 @@
             "type": "array"
           },
           "blkioWeight": {
-            "description": "BlkioWeight is the relative block I/O scheduling weight (10–1000).\n0 means unset (use the container's current or default weight).\nSupported on Docker and Podman; ignored on Docker Swarm and Kubernetes.",
+            "description": "BlkioWeight is the relative block I/O scheduling weight (10-1000).\n0 means unset (use the container's current or default weight).\nSupported on Docker and Podman; ignored on Docker Swarm and Kubernetes.",
             "type": "integer"
           },
           "blkioWeightDevice": {

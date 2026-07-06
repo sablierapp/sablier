@@ -1,4 +1,4 @@
-.PHONY: run gen build test lint fmt docker docs schema check-schema cli-docs check-cli-docs labels-docs check-labels-docs openapi check-openapi metrics-docs check-metrics-docs
+.PHONY: run gen generate check-generate build test lint fmt docker docs schema check-schema cli-docs check-cli-docs labels-docs check-labels-docs openapi check-openapi metrics-docs check-metrics-docs
 
 .DEFAULT_GOAL := build
 
@@ -39,6 +39,14 @@ metrics-docs:
 
 check-metrics-docs:
 	@go run ./cmd/metricsgen | diff - docs/content/how-to-guides/advanced/observability/metrics.md || (echo "docs/content/how-to-guides/advanced/observability/metrics.md is out of date. Run 'make metrics-docs' to regenerate."; exit 1)
+
+# Regenerate every committed generated file: the CLI, labels and metrics
+# reference docs, the theme JSON schema, and the OpenAPI spec.
+generate: schema cli-docs labels-docs openapi metrics-docs
+
+# Verify every committed generated file is up to date. Used in CI; run
+# `make generate` and commit the result if it fails.
+check-generate: check-schema check-cli-docs check-labels-docs check-openapi check-metrics-docs
 
 .PHONY: build
 build:
