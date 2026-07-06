@@ -80,9 +80,22 @@ You can install Sablier using one of the following methods:
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
 - **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
   
-Choose one of the Docker images and run it with a sample configuration file:
+**With Docker Compose** — copy this into a `compose.yaml` and run `docker compose up -d`:
 
-- [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
+```yaml
+services:
+  sablier:
+    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    command:
+      - start
+      - --provider.name=docker
+    ports:
+      - "10000:10000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+
+**With `docker run`** — using a sample configuration file ([sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)):
 
 <!-- x-release-please-start-version -->
 ```bash

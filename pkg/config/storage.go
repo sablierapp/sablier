@@ -7,6 +7,7 @@ type Storage struct {
 	// Env: SABLIER_STORAGE_FILE
 	// CLI: --storage.file
 	// Default: "" (stateless)
+	// Since: v1.0.0
 	File string
 }
 

@@ -12,6 +12,11 @@ disablePathToLower: true
 
 markup:
   goldmark:
+    parser:
+      attribute:
+        # Allow `{#custom-id}` heading attributes so generated reference pages
+        # (e.g. the CLI reference) can assign stable, predictable anchors.
+        title: true
     renderer:
       # Allow raw HTML (the docs use <img> tags inside tables and headings).
       unsafe: true
@@ -26,17 +31,40 @@ module:
 menu:
   main:
     - name: Documentation
-      pageRef: /
+      url: /tutorials/getting-started/
       weight: 1
-    - name: Search
+    - name: Providers
+      url: /tutorials/providers/
       weight: 2
+    - name: Reverse Proxies
+      url: /tutorials/reverse-proxies/
+      weight: 3
+    - name: Guides
+      url: /guides/
+      weight: 4
+    - name: Search
+      weight: 5
       params:
         type: search
     - name: GitHub
-      weight: 3
+      weight: 6
       url: "https://github.com/sablierapp/sablier"
       params:
         icon: github
+  sidebar:
+    - identifier: more
+      name: More
+      weight: 1
+      params:
+        type: separator
+    - identifier: theme-editor
+      name: "Theme Editor ↗"
+      url: "https://editor.sablierapp.dev/"
+      weight: 2
+    - identifier: video-fr
+      name: "🇫🇷  Video walkthrough ↗"
+      url: "https://www.youtube.com/watch?v=0cPt_w7NIs0"
+      weight: 2
 
 params:
   navbar:
@@ -62,3 +90,11 @@ params:
     enable: true
     displayCopyright: true
     displayPoweredBy: false
+  blog:
+    list:
+      displayTags: false
+      sortBy: date
+      sortOrder: desc
+
+  imageZoom:
+    enable: true

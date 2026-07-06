@@ -6,6 +6,7 @@ tool (
 	github.com/Zxilly/go-size-analyzer/cmd/gsa
 	github.com/codesenberg/bombardier
 	github.com/vakenbolt/go-test-report
+	github.com/wjdp/htmltest
 	go.uber.org/mock/mockgen
 	gotest.tools/gotestsum
 )
@@ -32,6 +33,7 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/badoux/checkmail v1.2.1 // indirect
 	github.com/bitfield/gotestdox v0.2.2 // indirect
 	github.com/blacktop/go-dwarf v1.0.14 // indirect
 	github.com/blacktop/go-macho v1.1.272 // indirect
@@ -54,6 +56,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/dnephin/pflag v1.0.7 // indirect
+	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -66,6 +69,7 @@ require (
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
+	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.7.10 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -99,6 +103,7 @@ require (
 	github.com/vakenbolt/go-test-report v0.9.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.46.0 // indirect
+	github.com/wjdp/htmltest v0.17.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
@@ -112,6 +117,7 @@ require (
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
+	gopkg.in/seborama/govcr.v2 v2.4.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/gotestsum v1.13.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

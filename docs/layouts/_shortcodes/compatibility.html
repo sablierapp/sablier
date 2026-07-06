@@ -1,6 +1,6 @@
 {{- /*
-  Renders the provider-compatibility badges and (optionally) the example link
-  for a feature page, from its front matter:
+  Renders the provider-compatibility badges (and optional example link) for a
+  feature page, from its front matter:
 
     compatibility:
       docker: supported | differs | unsupported | impossible
@@ -8,19 +8,17 @@
       kubernetes: ...
       podman: ...
       proxmox: ...
-    issues:            # optional: existing issue number for an unsupported provider
-      podman: 123
     example: scale-mode  # optional: folder under examples/
 
-  - supported   → static green badge
-  - differs     → blue badge, links to the per-provider notes ({{< provider-tabs >}})
-  - unsupported → amber badge; links to the tracking issue if given, otherwise a
-                  pre-filled "add feature to provider" new-issue URL
-  - impossible  → grey badge (cannot be implemented for this provider)
+  - supported   → green  badge "<Provider> compatible"
+  - differs     → orange badge "Partially <Provider> compatible"
+  - unsupported → grey   badge "<Provider> not yet implemented"
+  - impossible  → red    badge "<Provider> incompatible"
+
+  Badges are static (non-interactive) — no issue-request links.
 */ -}}
 {{- $page := .Page -}}
 {{- $compat := $page.Params.compatibility -}}
-{{- $issues := $page.Params.issues | default dict -}}
 {{- $example := $page.Params.example -}}
 {{- $repo := "https://github.com/sablierapp/sablier" -}}
 <div class="feature-meta">
@@ -30,23 +28,19 @@
     {{- $status := index $compat $p.key -}}
     {{- if $status -}}
       {{- $icon := printf "/assets/img/%s" $p.icon -}}
+      {{- $cls := "" -}}
+      {{- $label := "" -}}
       {{- if eq $status "supported" -}}
-        <span class="compat-badge compat-supported" role="listitem" title="{{ $p.name }}: supported"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span><span class="compat-mark" aria-hidden="true">✓</span></span>
+        {{- $cls = "compat-supported" -}}{{- $label = printf "%s compatible" $p.name -}}
       {{- else if eq $status "differs" -}}
-        <a class="compat-badge compat-differs" data-provider="{{ $p.key }}" href="#provider-notes" title="{{ $p.name }}: supported, with provider-specific details — click for notes"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span><span class="compat-mark" aria-hidden="true">≈</span></a>
-      {{- else if eq $status "impossible" -}}
-        <span class="compat-badge compat-impossible" role="listitem" title="{{ $p.name }}: not possible for this provider"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span><span class="compat-mark" aria-hidden="true">✕</span></span>
+        {{- $cls = "compat-differs" -}}{{- $label = printf "Partially %s compatible" $p.name -}}
       {{- else if eq $status "unsupported" -}}
-        {{- $issue := index $issues $p.key -}}
-        {{- if $issue -}}
-          <a class="compat-badge compat-unsupported" href="{{ $repo }}/issues/{{ $issue }}" target="_blank" rel="noopener" title="{{ $p.name }}: not yet supported — tracked in #{{ $issue }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span><span class="compat-mark" aria-hidden="true">#{{ $issue }}</span></a>
-        {{- else -}}
-          {{- $title := printf "Add `%s` support to the %s provider" $page.Title $p.name -}}
-          {{- $body := printf "### Which feature?\n%s\n%s\n\n### Which provider?\n%s\n\n### Use case\n<!-- Why do you need this feature on this provider? -->\n" $page.Title $page.Permalink $p.name -}}
-          {{- $q := querify "title" $title "body" $body "labels" "enhancement,provider" -}}
-          {{- $href := printf "%s/issues/new?%s" $repo $q -}}
-          <a class="compat-badge compat-unsupported" href="{{ $href | safeURL }}" target="_blank" rel="noopener" title="{{ $p.name }}: not supported — click to request it"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span><span class="compat-mark" aria-hidden="true">+ request</span></a>
-        {{- end -}}
+        {{- $cls = "compat-unsupported" -}}{{- $label = printf "%s not yet implemented" $p.name -}}
+      {{- else if eq $status "impossible" -}}
+        {{- $cls = "compat-impossible" -}}{{- $label = printf "%s incompatible" $p.name -}}
+      {{- end -}}
+      {{- if $cls -}}
+        <span class="compat-badge {{ $cls }}" role="listitem" title="{{ $label }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $label }}</span></span>
       {{- end -}}
     {{- end -}}
   {{- end -}}

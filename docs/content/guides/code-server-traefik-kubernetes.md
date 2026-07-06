@@ -1,7 +1,14 @@
 ---
 title: Code-Server + Traefik + Kubernetes Ingress
+description: An end-to-end walkthrough that scales a code-server Deployment to zero behind a Traefik ingress on a k3s cluster.
+type: blog
+date: 2026-07-04
 weight: 1
 ---
+
+{{< callout type="warning" >}}
+This walkthrough was written against older component versions (k3s 1.23, Traefik 2.9, code-server 4.8). The **Sablier** steps are current, but you may need to adjust the k3s / Traefik / code-server versions and their configuration for your environment.
+{{< /callout >}}
 
 ## 1. Prerequisites
 
@@ -9,15 +16,14 @@ weight: 1
 - `kubectl` command
 - `helm` command
 
-## 2. Create the Kubernetes Cluster using K3S
+## 2. Create the Kubernetes cluster using k3s
 
 1. Copy the following content to a file called `docker-compose.yml` and run `docker compose up -d`
     ```yml
-    version: '3'
     services:
       server:
         image: "rancher/k3s:v1.23.12-k3s1"
-        command: server --no-deploy traefik
+        command: server --disable=traefik
         tmpfs:
           - /run
           - /var/run
@@ -62,7 +68,8 @@ weight: 1
 
     additionalArguments:
       - "--experimental.plugins.sablier.moduleName=github.com/sablierapp/sablier-traefik-plugin"
-      - "--experimental.plugins.sablier.version=v1.0.0 # Check latest version
+      # Replace with the latest release from https://github.com/sablierapp/sablier-traefik-plugin/releases
+      - "--experimental.plugins.sablier.version=v1.0.0"
 
     providers:
       kubernetesIngress:
@@ -74,7 +81,7 @@ weight: 1
     helm install traefik traefik/traefik -f values.yaml --namespace kube-system
     ```
 
-## 3. Deploy Sablier
+## 4. Deploy Sablier
 
 1. Create Sablier Service Account file `sablier-sa.yaml` and then `kubectl apply -f sablier-sa.yaml`
     ```yml
@@ -179,15 +186,14 @@ weight: 1
     ```
     Or getting the logs `kubectl -n kube-system logs deployments/sablier-deployment`
     ```log
-    time="2022-11-14T01:40:49Z" level=info msg="(version=1.1.1, branch=HEAD, revision=a913bc2a3b0f4aca5b9ac7ddc9af5428ef411dba)"
-    time="2022-11-14T01:40:49Z" level=info msg="using provider \"kubernetes\""
-    time="2022-11-14T01:40:49Z" level=info msg="initialized storage to /etc/sablier/state.json"
-    time="2022-11-14T01:40:49Z" level=info msg="server listening :10000"
+    time=2026-01-01T12:00:00Z level=INFO msg="using provider \"kubernetes\""
+    time=2026-01-01T12:00:00Z level=INFO msg="initialized storage to /etc/sablier/state.json"
+    time=2026-01-01T12:00:00Z level=INFO msg="server listening on :10000"
     ```
 
-Great! Now the Sablier API is available at `http://sablier:10000` inside your cluster.
+The Sablier API is now available at `http://sablier:10000` inside your cluster.
 
-## 4. Deploy Code-Server
+## 5. Deploy Code-Server
 
 1. Create Code-Server Deployment `code-server-deployment.yaml` and then `kubectl apply -f code-server-deployment.yaml`
     ```yml
@@ -234,21 +240,10 @@ Great! Now the Sablier API is available at `http://sablier:10000` inside your cl
     NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
     code-server-deployment   1/1     1            1           2m18s
     ```
-    Or getting the logs `kubectl logs deployments/code-server-deployment`
-    ```log
-    [2022-11-14T02:02:20.895Z] info  Wrote default config file to ~/.config/code-server/config.yaml
-    [2022-11-14T02:02:21.084Z] info  code-server 4.8.3 977b853a1e162ab583aed64b1322d1515c57728c
-    [2022-11-14T02:02:21.085Z] info  Using user-data-dir ~/.local/share/code-server
-    [2022-11-14T02:02:21.093Z] info  Using config file ~/.config/code-server/config.yaml
-    [2022-11-14T02:02:21.094Z] info  HTTP server listening on http://0.0.0.0:8080/ 
-    [2022-11-14T02:02:21.094Z] info    - Authentication is enabled
-    [2022-11-14T02:02:21.094Z] info      - Using password from ~/.config/code-server/config.yaml
-    [2022-11-14T02:02:21.094Z] info    - Not serving HTTPS
-    ```
 
-Great! Now the Code-Server instance is available inside your cluster.
+The Code-Server instance is now available inside your cluster.
 
-## 5. Routing Code-Server through Traefik with the Sablier Plugin Middleware
+## 6. Routing Code-Server through Traefik with the Sablier plugin middleware
 
 1. Create Code-Server Ingress `code-server-ingress.yaml` and then `kubectl apply -f code-server-ingress.yaml`
     ```yml
@@ -257,9 +252,8 @@ Great! Now the Code-Server instance is available inside your cluster.
     metadata:
       name: code-server-ingress
       namespace: default
-      annotations:
-        kubernetes.io/ingress.class: traefik
     spec:
+      ingressClassName: traefik
       rules:
       - host: localhost
         http:
@@ -272,8 +266,7 @@ Great! Now the Code-Server instance is available inside your cluster.
                 port:
                   number: 8080
     ```
-2. At this point, the Code-Server is reachable with the following http://localhost:8080
-    ![Code Server Prompt](code-server-prompt.png)
+2. At this point, the Code-Server is reachable at http://localhost:8080.
 3. Scale down the Deployment with `kubectl scale deployment code-server-deployment --replicas=0`
 4. Now, because we configured `--providers.kubernetesIngress.allowEmptyServices=true`, if we `curl` again it should show `Service Unavailable`.
     ```bash
@@ -281,10 +274,10 @@ Great! Now the Code-Server instance is available inside your cluster.
     Service Unavailable
     ```
     This is the key to make it work. Traefik would have evicted the service from its pool showing a 404 otherwise.
-    Right now, we just need to plugin the Middleware and we're good!
+    Now you only need to plug in the middleware.
 5. Create the Traefik Middleware `code-server-sablier-middleware.yaml` and then `kubectl apply -f code-server-sablier-middleware.yaml`
     ```yml
-    apiVersion: traefik.containo.us/v1alpha1
+    apiVersion: traefik.io/v1alpha1
     kind: Middleware
     metadata:
       name: code-server-sablier
@@ -307,13 +300,8 @@ Great! Now the Code-Server instance is available inside your cluster.
       annotations:
         traefik.ingress.kubernetes.io/router.middlewares: default-code-server-sablier@kubernetescrd
     ```
-7. Now you can browse http://localhost:8080 and you will see the loading screen while Sablier scales your deployment
-    ![Sablier Middleware Loading](./sablier-middleware-loading.png)
+7. Now you can browse http://localhost:8080 and you will see the loading screen while Sablier scales your deployment up, and a few seconds later Code-Server is served.
 
-    And a few seconds later...
-    
-    ![Code Server Prompt](code-server-prompt.png)
-
-## 6. Clean up
+## 7. Clean up
 
 1. `docker compose down`

@@ -26,6 +26,10 @@
     },
     "Docker": {
       "Strategy": "stop",
+      "Host": "",
+      "APIVersion": "",
+      "CertPath": "",
+      "TLSVerify": false,
       "HonorRestartPolicy": false
     },
     "ProxmoxLXC": {

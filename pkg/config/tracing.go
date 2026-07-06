@@ -6,6 +6,7 @@ type Tracing struct {
 	// Env: SABLIER_TRACING_ENABLED
 	// CLI: --tracing.enabled
 	// Default: false
+	// Since: v1.13.0
 	Enabled bool
 
 	// ExporterType selects the trace exporter backend.
@@ -13,6 +14,7 @@ type Tracing struct {
 	// Env: SABLIER_TRACING_EXPORTER_TYPE
 	// CLI: --tracing.exporter-type
 	// Default: "otlphttp"
+	// Since: v1.13.0
 	ExporterType string
 
 	// Endpoint is the OTLP collector base URL (scheme + host + optional port).
@@ -21,18 +23,21 @@ type Tracing struct {
 	// Env: SABLIER_TRACING_ENDPOINT
 	// CLI: --tracing.endpoint
 	// Default: "http://localhost:4318"
+	// Since: v1.13.0
 	Endpoint string
 
 	// ServiceName is the logical name of this service as it appears in the tracing backend UI.
 	// Env: SABLIER_TRACING_SERVICE_NAME
 	// CLI: --tracing.service-name
 	// Default: "sablier"
+	// Since: v1.13.0
 	ServiceName string
 
 	// SamplingRate is the fraction of requests to trace, from 0.0 (none) to 1.0 (all).
 	// Env: SABLIER_TRACING_SAMPLING_RATE
 	// CLI: --tracing.sampling-rate
 	// Default: 1.0
+	// Since: v1.13.0
 	SamplingRate float64
 }
 

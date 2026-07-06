@@ -88,7 +88,7 @@ type InstanceInfo struct {
 // BlkioWeightDevice holds a per-device I/O scheduling weight override.
 type BlkioWeightDevice struct {
 	Path   string `json:"path"`
-	Weight uint16 `json:"weight"` // valid range: 10–1000
+	Weight uint16 `json:"weight"` // valid range: 10-1000
 }
 
 // BlkioThrottleDevice holds a per-device I/O rate constraint.
@@ -120,7 +120,7 @@ type ResourceProfile struct {
 	CPU string `json:"cpu,omitempty"`
 	// Memory is the memory limit (e.g. "128m" for Docker/Swarm, "128Mi" for Kubernetes).
 	Memory string `json:"memory,omitempty"`
-	// BlkioWeight is the relative block I/O scheduling weight (10–1000).
+	// BlkioWeight is the relative block I/O scheduling weight (10-1000).
 	// 0 means unset (use the container's current or default weight).
 	// Supported on Docker and Podman; ignored on Docker Swarm and Kubernetes.
 	BlkioWeight uint16 `json:"blkioWeight,omitempty"`
@@ -285,7 +285,7 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 }
 
 // parseWeightDevices parses a comma-separated list of "path:weight" pairs.
-// Entries with out-of-range weights (10–1000) or malformed format are skipped.
+// Entries with out-of-range weights (10-1000) or malformed format are skipped.
 func parseWeightDevices(s string) []BlkioWeightDevice {
 	var out []BlkioWeightDevice
 	for _, entry := range strings.Split(s, ",") {

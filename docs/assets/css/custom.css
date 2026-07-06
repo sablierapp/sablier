@@ -1,19 +1,23 @@
-/* Sablier brand color (#ffd05b — a warm gold).
-   Hextra derives links, active states, buttons, etc. from a single
-   HSL tri:  --primary-hue / --primary-saturation / --primary-lightness.
-   Pure #ffd05b (lightness ~68%) is too pale for link/active text on a white
-   background, so we darken it in light mode for readable contrast and keep it
-   bright in dark mode. */
+/* Sablier brand: an orange hourglass (#EF6C00) with a gold outline (#FFC107).
+   The dominant brand color is the orange of the mark and the "sablier" wordmark,
+   with gold as the secondary accent.
+
+   Hextra derives links, active states, buttons, etc. from a single HSL tri:
+   --primary-hue / --primary-saturation / --primary-lightness. We use the brand
+   orange, darkened a little in light mode for readable contrast on white and
+   kept brighter in dark mode. */
 :root {
-  --primary-hue: 40deg;
-  --primary-saturation: 92%;
+  --sablier-orange: #ef6c00;
+  --sablier-gold: #ffc107;
+  --primary-hue: 30deg;
+  --primary-saturation: 95%;
   --primary-lightness: 44%;
 }
 
 .dark {
-  --primary-hue: 43deg;
+  --primary-hue: 33deg;
   --primary-saturation: 100%;
-  --primary-lightness: 62%;
+  --primary-lightness: 60%;
 }
 
 /* ---------- Feature meta: provider compatibility badges + example link ---------- */
@@ -27,29 +31,30 @@
 .compat-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35em;
-  padding: 0.2em 0.6em;
+  gap: 0.3em;
+  padding: 0.12em 0.5em;
   border-radius: 9999px;
   border: 1px solid transparent;
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  font-size: 0.7rem;
+  line-height: 1.35;
   font-weight: 500;
   text-decoration: none;
 }
-.compat-icon { height: 1.05em; width: auto; display: inline-block; }
-.compat-mark { font-weight: 700; opacity: 0.9; }
-a.compat-badge { cursor: pointer; }
-a.compat-badge:hover { filter: brightness(0.97); text-decoration: none; }
+.compat-icon { height: 0.95em; width: auto; display: inline-block; }
 
+/* full compatibility → green */
 .compat-supported  { background: #dcfce7; border-color: #86efac; color: #166534; }
-.compat-differs    { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
-.compat-unsupported{ background: #fef3c7; border-color: #fcd34d; color: #92400e; }
-.compat-impossible { background: #f3f4f6; border-color: #e5e7eb; color: #6b7280; }
+/* partial compatibility → orange / warning */
+.compat-differs    { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+/* not yet implemented → grey */
+.compat-unsupported{ background: #f3f4f6; border-color: #e5e7eb; color: #6b7280; }
+/* incompatible → red */
+.compat-impossible { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
 
 .dark .compat-supported  { background: rgba(34,197,94,0.15);  border-color: rgba(34,197,94,0.4);  color: #86efac; }
-.dark .compat-differs    { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
-.dark .compat-unsupported{ background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #fcd34d; }
-.dark .compat-impossible { background: rgba(255,255,255,0.06);border-color: rgba(255,255,255,0.12);color: #9ca3af; }
+.dark .compat-differs    { background: rgba(249,115,22,0.15); border-color: rgba(249,115,22,0.4); color: #fdba74; }
+.dark .compat-unsupported{ background: rgba(255,255,255,0.06);border-color: rgba(255,255,255,0.12);color: #9ca3af; }
+.dark .compat-impossible { background: rgba(239,68,68,0.15);  border-color: rgba(239,68,68,0.4);  color: #fca5a5; }
 
 .feature-example { margin: 0.75rem 0 0; font-size: 0.875rem; }
 .feature-example-label {
@@ -114,3 +119,57 @@ a.compat-badge:hover { filter: brightness(0.97); text-decoration: none; }
 .dark .cm-impossible { color: #9ca3af; }
 .compat-legend { font-size: 0.8rem; margin-top: 0.75rem; opacity: 0.9; }
 .compat-legend .cm { font-weight: 700; }
+
+/* ---------- Provider & reverse-proxy icons in the sidebar ----------
+   The icon is drawn on the title <span> (not the <a>, which is a
+   justify-between flex row that would split the icon from the label). */
+.hextra-sidebar-item > a[href$="/tutorials/providers/docker/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/providers/docker_swarm/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/providers/kubernetes/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/providers/podman/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/providers/proxmox_lxc/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/envoy/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/istio/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/apacheapisix/"] > span::before {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.45em;
+  vertical-align: -0.2em;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.hextra-sidebar-item > a[href$="/tutorials/providers/docker/"] > span::before { background-image: url("/assets/img/docker.svg"); }
+.hextra-sidebar-item > a[href$="/tutorials/providers/docker_swarm/"] > span::before { background-image: url("/assets/img/docker_swarm.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/providers/kubernetes/"] > span::before { background-image: url("/assets/img/kubernetes.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/providers/podman/"] > span::before { background-image: url("/assets/img/podman.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/providers/proxmox_lxc/"] > span::before { background-image: url("/assets/img/proxmox.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before { background-image: url("/assets/img/traefik.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before { background-image: url("/assets/img/caddy.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before { background-image: url("/assets/img/nginx.svg"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/envoy/"] > span::before { background-image: url("/assets/img/envoy.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/istio/"] > span::before { background-image: url("/assets/img/istio.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/apacheapisix/"] > span::before { background-image: url("/assets/img/apacheapisix.png"); }
+
+/* ---------- GitHub-changelog-style contrast: muted body, standout bold ----------
+   Dim the article prose so that bold text (and inline code chips) carry the
+   emphasis and the important parts stand out. Scoped to the content column, so
+   headings, links, the sidebar and the TOC keep their own colors. */
+#content p,
+#content li { color: #4b5563; }
+.dark #content p,
+.dark #content li { color: #9ca3af; }
+
+#content p strong,
+#content li strong,
+#content p b,
+#content li b { color: #111827; font-weight: 600; }
+.dark #content p strong,
+.dark #content li strong,
+.dark #content p b,
+.dark #content li b { color: #f4f4f5; }

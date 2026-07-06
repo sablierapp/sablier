@@ -8,7 +8,7 @@ package sablier
 // label read in the code is not declared here - so the code, the constants and
 // the documentation can never drift apart.
 //
-//go:generate go run ../../cmd/labelsgen -src labels.go -out ../../docs/content/labels.md
+//go:generate go run ../../cmd/labelsgen -src labels.go -out ../../docs/content/reference/labels.md
 
 const (
 	// LabelEnable opts the instance into Sablier management. Any value other
@@ -28,7 +28,7 @@ const (
 	// type: comma-separated list
 	// default: "default"
 	// example: "team-a,team-b"
-	// feature: /features/multiple-groups/
+	// feature: /how-to-guides/groups/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
 	// Proxmox LXC uses one `sablier-group-<name>` tag per group.
 	// since: v1.4.0
@@ -39,7 +39,7 @@ const (
 	//
 	// type: Go duration
 	// example: "30s"
-	// feature: /features/ready-after/
+	// feature: /how-to-guides/readiness/ready-after/
 	// since: v1.13.0
 	LabelReadyAfter = "sablier.ready-after"
 
@@ -48,8 +48,8 @@ const (
 	//
 	// type: boolean
 	// example: "true"
-	// feature: /features/ready-on-start/
-	// since: unreleased
+	// feature: /how-to-guides/readiness/ready-on-start/
+	// since: NEXT_RELEASE
 	LabelReadyOnStart = "sablier.ready-on-start"
 
 	// LabelRunningHours is a daily keep-warm window in local time. Overnight
@@ -57,7 +57,7 @@ const (
 	//
 	// type: `HH:MM-HH:MM`
 	// example: "09:00-18:00"
-	// feature: /features/running-hours/
+	// feature: /how-to-guides/lifecycle/running-hours/
 	// providers: Kubernetes must set the colon value as an **annotation**.
 	// since: v1.13.0
 	LabelRunningHours = "sablier.running-hours"
@@ -68,9 +68,9 @@ const (
 	// type: comma-separated weekdays
 	// default: every day
 	// example: "Mon,Tue,Wed,Thu,Fri"
-	// feature: /features/running-hours/
+	// feature: /how-to-guides/lifecycle/running-hours/
 	// providers: Kubernetes must set the comma value as an **annotation**.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelRunningDays = "sablier.running-days"
 
 	// LabelAntiAffinity lists the group names this instance backs off from; it is
@@ -78,10 +78,10 @@ const (
 	//
 	// type: comma-separated list
 	// example: "streaming"
-	// feature: /features/anti-affinity/
+	// feature: /how-to-guides/anti-affinity/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
 	// Not supported on Proxmox LXC.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelAntiAffinity = "sablier.anti-affinity"
 
 	// LabelIdleReplicas is the replica count when idle. `0` stops the workload;
@@ -90,7 +90,7 @@ const (
 	// type: integer
 	// default: `0` (stop)
 	// example: "1"
-	// feature: /features/scale-mode/
+	// feature: /how-to-guides/scaling-resources/scale-mode/
 	// providers: Not supported on Proxmox LXC.
 	// since: v1.13.0
 	LabelIdleReplicas = "sablier.idle.replicas"
@@ -100,7 +100,7 @@ const (
 	//
 	// type: decimal cores / Kubernetes quantity
 	// example: "0.1"
-	// feature: /features/scale-mode/cpu/
+	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `100m`). Not supported
 	// on Proxmox LXC.
 	// since: v1.13.0
@@ -111,7 +111,7 @@ const (
 	//
 	// type: Docker units / Kubernetes quantity
 	// example: "128m"
-	// feature: /features/scale-mode/memory/
+	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `128Mi`). Not
 	// supported on Proxmox LXC.
 	// since: v1.13.0
@@ -123,7 +123,7 @@ const (
 	// type: integer
 	// default: `1`
 	// example: "2"
-	// feature: /features/scale-mode/
+	// feature: /how-to-guides/scaling-resources/scale-mode/
 	// providers: Not supported on Proxmox LXC.
 	// since: v1.13.0
 	LabelActiveReplicas = "sablier.active.replicas"
@@ -132,7 +132,7 @@ const (
 	//
 	// type: decimal cores / Kubernetes quantity
 	// example: "2.0"
-	// feature: /features/scale-mode/cpu/
+	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `2000m`). Not
 	// supported on Proxmox LXC.
 	// since: v1.13.0
@@ -143,7 +143,7 @@ const (
 	//
 	// type: Docker units / Kubernetes quantity
 	// example: "512m"
-	// feature: /features/scale-mode/memory/
+	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `512Mi`). Not
 	// supported on Proxmox LXC.
 	// since: v1.13.0
@@ -154,9 +154,9 @@ const (
 	//
 	// type: integer `10`-`1000`
 	// example: "100"
-	// feature: /features/scale-mode/block-io/
-	// providers: Docker and Podman only.
-	// since: unreleased
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
 	LabelIdleBlkioWeight = "sablier.idle.blkio-weight"
 
 	// LabelActiveBlkioWeight is the relative block I/O scheduling weight restored
@@ -164,9 +164,9 @@ const (
 	//
 	// type: integer `10`-`1000`
 	// example: "500"
-	// feature: /features/scale-mode/block-io/
-	// providers: Docker and Podman only.
-	// since: unreleased
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
 	LabelActiveBlkioWeight = "sablier.active.blkio-weight"
 
 	// LabelIdleBlkioWeightDevice is the per-device I/O scheduling weight applied
@@ -174,9 +174,9 @@ const (
 	//
 	// type: `path:weight` list
 	// example: "/dev/sda:100"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; per-device limits require daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelIdleBlkioWeightDevice = "sablier.idle.blkio-weight-device"
 
 	// LabelActiveBlkioWeightDevice is the per-device I/O scheduling weight
@@ -184,9 +184,9 @@ const (
 	//
 	// type: `path:weight` list
 	// example: "/dev/sda:500"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; per-device limits require daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelActiveBlkioWeightDevice = "sablier.active.blkio-weight-device"
 
 	// LabelIdleBlkioReadBps is the per-device read throughput limit applied when
@@ -194,9 +194,9 @@ const (
 	//
 	// type: `path:rate` list
 	// example: "/dev/sda:10m"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelIdleBlkioReadBps = "sablier.idle.blkio-device-read-bps"
 
 	// LabelActiveBlkioReadBps is the per-device read throughput limit restored
@@ -204,9 +204,9 @@ const (
 	//
 	// type: `path:rate` list
 	// example: "/dev/sda:100m"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelActiveBlkioReadBps = "sablier.active.blkio-device-read-bps"
 
 	// LabelIdleBlkioWriteBps is the per-device write throughput limit applied
@@ -214,9 +214,9 @@ const (
 	//
 	// type: `path:rate` list
 	// example: "/dev/sda:10m"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelIdleBlkioWriteBps = "sablier.idle.blkio-device-write-bps"
 
 	// LabelActiveBlkioWriteBps is the per-device write throughput limit restored
@@ -224,18 +224,18 @@ const (
 	//
 	// type: `path:rate` list
 	// example: "/dev/sda:100m"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelActiveBlkioWriteBps = "sablier.active.blkio-device-write-bps"
 
 	// LabelIdleBlkioReadIOps is the per-device read IOPS limit applied when idle.
 	//
 	// type: `path:iops` list
 	// example: "/dev/sda:100"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelIdleBlkioReadIOps = "sablier.idle.blkio-device-read-iops"
 
 	// LabelActiveBlkioReadIOps is the per-device read IOPS limit restored when
@@ -243,9 +243,9 @@ const (
 	//
 	// type: `path:iops` list
 	// example: "/dev/sda:1000"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelActiveBlkioReadIOps = "sablier.active.blkio-device-read-iops"
 
 	// LabelIdleBlkioWriteIOps is the per-device write IOPS limit applied when
@@ -253,9 +253,9 @@ const (
 	//
 	// type: `path:iops` list
 	// example: "/dev/sda:100"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelIdleBlkioWriteIOps = "sablier.idle.blkio-device-write-iops"
 
 	// LabelActiveBlkioWriteIOps is the per-device write IOPS limit restored when
@@ -263,8 +263,8 @@ const (
 	//
 	// type: `path:iops` list
 	// example: "/dev/sda:1000"
-	// feature: /features/scale-mode/block-io/
+	// feature: /how-to-guides/scaling-resources/scale-blkio/
 	// providers: Docker only; requires daemon API >= 1.55.
-	// since: unreleased
+	// since: NEXT_RELEASE
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
 )

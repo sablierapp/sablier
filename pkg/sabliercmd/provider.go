@@ -3,9 +3,12 @@ package sabliercmd
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/moby/moby/client"
@@ -39,7 +42,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		}
 		return dockerswarm.New(ctx, cli, logger)
 	case "docker":
-		cli, err := client.New(client.FromEnv, client.WithTraceProvider(otel.GetTracerProvider()))
+		cli, err := newDockerClient(config.Docker)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
@@ -104,4 +107,78 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		return proxmoxlxc.New(ctx, cli, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
+}
+
+// newDockerClient builds a moby client from the Docker provider configuration.
+//
+// Each connection setting (host, API version, TLS) is taken from config first
+// (populated by a CLI flag or SABLIER_PROVIDER_DOCKER_* env var) and, when unset,
+// falls back to the standard Docker environment variable (DOCKER_HOST,
+// DOCKER_API_VERSION, DOCKER_CERT_PATH, DOCKER_TLS_VERIFY) via the moby client's
+// per-setting *FromEnv readers. This replaces the aggregate client.FromEnv option
+// so every Docker connection setting is an explicit, documented Sablier option
+// while the standard Docker variables keep working as a fallback.
+func newDockerClient(cfg config.Docker) (*client.Client, error) {
+	// client.WithTraceProvider instruments all Docker API calls via the built-in
+	// otelhttp transport wrapper in the moby client.
+	opts := []client.Opt{client.WithTraceProvider(otel.GetTracerProvider())}
+
+	// TLS must be configured before the host so WithHost can reconfigure the
+	// transport we install here (this mirrors the order moby uses in FromEnv).
+	if cfg.CertPath != "" {
+		httpClient, err := dockerTLSClient(cfg.CertPath, cfg.TLSVerify)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, client.WithHTTPClient(httpClient))
+	} else {
+		opts = append(opts, client.WithTLSClientConfigFromEnv())
+	}
+
+	if cfg.Host != "" {
+		opts = append(opts, client.WithHost(cfg.Host))
+	} else {
+		opts = append(opts, client.WithHostFromEnv())
+	}
+
+	if cfg.APIVersion != "" {
+		opts = append(opts, client.WithAPIVersion(cfg.APIVersion))
+	} else {
+		opts = append(opts, client.WithAPIVersionFromEnv())
+	}
+
+	return client.New(opts...)
+}
+
+// dockerTLSClient builds an HTTP client configured for a TLS-protected Docker
+// daemon, loading ca.pem, cert.pem and key.pem from certPath. It mirrors the
+// behavior of the moby client's WithTLSClientConfigFromEnv: mutual TLS is always
+// set up, and the daemon's certificate is only verified when verify is true.
+func dockerTLSClient(certPath string, verify bool) (*http.Client, error) {
+	cert, err := tls.LoadX509KeyPair(filepath.Join(certPath, "cert.pem"), filepath.Join(certPath, "key.pem"))
+	if err != nil {
+		return nil, fmt.Errorf("load docker TLS client certificate from %q: %w", certPath, err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: !verify, //nolint:gosec // verification is user-controlled via provider.docker.tls-verify / DOCKER_TLS_VERIFY
+	}
+	if verify {
+		caPEM, err := os.ReadFile(filepath.Join(certPath, "ca.pem"))
+		if err != nil {
+			return nil, fmt.Errorf("read docker TLS CA certificate from %q: %w", certPath, err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(caPEM) {
+			return nil, fmt.Errorf("no valid certificates found in %q", filepath.Join(certPath, "ca.pem"))
+		}
+		tlsConfig.RootCAs = pool
+	}
+
+	return &http.Client{
+		Transport:     &http.Transport{TLSClientConfig: tlsConfig},
+		CheckRedirect: client.CheckRedirect,
+	}, nil
 }

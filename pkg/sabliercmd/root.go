@@ -60,6 +60,14 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
 	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
 	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
+	startCmd.Flags().StringVar(&conf.Provider.Docker.Host, "provider.docker.host", "", "Docker daemon socket or address (e.g. unix:///var/run/docker.sock, tcp://127.0.0.1:2375). Falls back to DOCKER_HOST, then the platform default")
+	_ = viper.BindPFlag("provider.docker.host", startCmd.Flags().Lookup("provider.docker.host"))
+	startCmd.Flags().StringVar(&conf.Provider.Docker.APIVersion, "provider.docker.api-version", "", "Docker Engine API version to use (e.g. 1.47). Falls back to DOCKER_API_VERSION, then version negotiation")
+	_ = viper.BindPFlag("provider.docker.api-version", startCmd.Flags().Lookup("provider.docker.api-version"))
+	startCmd.Flags().StringVar(&conf.Provider.Docker.CertPath, "provider.docker.cert-path", "", "Directory holding TLS client material (ca.pem, cert.pem, key.pem) for a TLS Docker daemon. Falls back to DOCKER_CERT_PATH")
+	_ = viper.BindPFlag("provider.docker.cert-path", startCmd.Flags().Lookup("provider.docker.cert-path"))
+	startCmd.Flags().BoolVar(&conf.Provider.Docker.TLSVerify, "provider.docker.tls-verify", false, "Verify the Docker daemon TLS certificate when connecting over TLS. Falls back to DOCKER_TLS_VERIFY")
+	_ = viper.BindPFlag("provider.docker.tls-verify", startCmd.Flags().Lookup("provider.docker.tls-verify"))
 	//nolint:staticcheck // Intentionally binding the deprecated transitional flag until it becomes the default in v2.
 	startCmd.Flags().BoolVar(&conf.Provider.Docker.HonorRestartPolicy, "provider.docker.honor-restart-policy", false, "Honor the container restart policy on successful exit: report \"no\"/\"on-failure\" containers as completed and exited \"always\"/\"unless-stopped\" containers as stopped. Deprecated: will become the default in v2.")
 	_ = viper.BindPFlag("provider.docker.honor-restart-policy", startCmd.Flags().Lookup("provider.docker.honor-restart-policy"))
@@ -88,7 +96,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
 	startCmd.Flags().StringVar(&conf.Tracing.ServiceName, "tracing.service-name", "sablier", "Service name reported to the tracing backend")
 	_ = viper.BindPFlag("tracing.service-name", startCmd.Flags().Lookup("tracing.service-name"))
-	startCmd.Flags().Float64Var(&conf.Tracing.SamplingRate, "tracing.sampling-rate", 1.0, "Fraction of traces to sample (0.0–1.0)")
+	startCmd.Flags().Float64Var(&conf.Tracing.SamplingRate, "tracing.sampling-rate", 1.0, "Fraction of traces to sample (0.0-1.0)")
 	_ = viper.BindPFlag("tracing.sampling-rate", startCmd.Flags().Lookup("tracing.sampling-rate"))
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")

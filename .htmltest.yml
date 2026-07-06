@@ -1,0 +1,15 @@
+# Internal dead-link check for the built Hugo site (docs/public).
+# Run with: go tool -modfile=tools.mod htmltest
+DirectoryPath: docs/public
+CheckExternal: false
+IgnoreInternalEmptyHash: true
+IgnoreAltMissing: true
+IgnoreEmptyHref: true
+IgnoreCanonicalBrokenLinks: true
+# Canonical / OpenGraph tags point at the production URL, which isn't built
+# here; skip anything on that host so only real internal links are checked.
+IgnoreURLs:
+  - "^https?://sablierapp\\.dev"
+# The API page is a Scalar single-page app (script-driven), nothing to link-check.
+IgnoreDirs:
+  - reference/api

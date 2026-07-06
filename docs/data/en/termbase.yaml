@@ -3,6 +3,8 @@
   definition: A set of instances started together for a request. A session stays active while requests keep arriving and expires after the configured duration of inactivity.
 - term: Instance
   definition: A single workload Sablier manages — a Docker container, Docker Swarm service, Kubernetes Deployment or StatefulSet, Podman container, or Proxmox LXC container.
+- term: Label
+  definition: A key/value pair you attach to a workload to opt it into Sablier and configure it (for example `sablier.enable=true`, `sablier.group=web`). Expressed as Docker/Swarm/Podman labels, Kubernetes labels and annotations, or Proxmox tags.
 - term: Provider
   definition: How Sablier interacts with your instances (start, stop, status, lifecycle events). One provider is configured per Sablier server.
 - term: Group

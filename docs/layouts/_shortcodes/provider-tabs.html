@@ -19,7 +19,7 @@
     {{- range $i, $t := $ptabs -}}
       {{- $match := where $providers "key" $t.key -}}
       {{- $p := cond (gt (len $match) 0) (index $match 0) dict -}}
-      <button type="button" class="provider-tab-btn" role="tab" data-provider="{{ $t.key }}"{{ if eq $i 0 }} data-state="selected" aria-selected="true"{{ else }} aria-selected="false"{{ end }}>{{- with $p.icon }}<img class="provider-tab-icon" src="/assets/img/{{ . }}" alt="" loading="lazy" />{{ end }}<span>{{ with $p.name }}{{ . }}{{ else }}{{ $t.key }}{{ end }}</span></button>
+      <button type="button" class="provider-tab-btn" role="tab" data-provider="{{ $t.key }}"{{ if eq $i 0 }} data-state="selected" aria-selected="true"{{ else }} aria-selected="false"{{ end }}>{{- with $p.icon }}<img class="provider-tab-icon" src="/assets/img/{{ . }}" alt="{{ with $p.name }}{{ . }}{{ else }}{{ $t.key }}{{ end }}" loading="lazy" />{{ end }}<span>{{ with $p.name }}{{ . }}{{ else }}{{ $t.key }}{{ end }}</span></button>
     {{- end -}}
   </div>
   <div class="provider-tabs-panels">
