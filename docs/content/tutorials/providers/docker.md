@@ -54,6 +54,19 @@ services:
 ```
 <!-- x-release-please-end -->
 
+## Connecting to a remote or TLS-protected daemon
+
+By default Sablier connects to the local Docker socket. To reach a remote or TLS-protected daemon, set the standard Docker environment variables on the Sablier container; Sablier reads them through the Docker client.
+
+| Variable | Purpose |
+|----------|---------|
+| `DOCKER_HOST` | Daemon socket or address, for example `tcp://127.0.0.1:2376`. |
+| `DOCKER_API_VERSION` | Pin the Docker Engine API version instead of negotiating it. |
+| `DOCKER_CERT_PATH` | Directory holding `ca.pem`, `cert.pem` and `key.pem` for a TLS connection. |
+| `DOCKER_TLS_VERIFY` | Set to a non-empty value to verify the daemon's TLS certificate. |
+
+These are the standard Docker CLI variables, so an environment that already works with the `docker` CLI works with Sablier unchanged.
+
 ## Register a container
 
 For Sablier to work, it needs to know which docker container to start and stop. Register a container by opting in with labels:

@@ -111,45 +111,6 @@ type Docker struct {
 	// Since: v1.11.0
 	Strategy string
 
-	// Host is the Docker daemon socket or address to connect to (for example
-	// "unix:///var/run/docker.sock", "tcp://127.0.0.1:2375" or "ssh://user@host").
-	// When empty, Sablier falls back to the DOCKER_HOST environment variable, then
-	// to the platform default socket.
-	// Env: SABLIER_PROVIDER_DOCKER_HOST (or the standard DOCKER_HOST)
-	// CLI: --provider.docker.host
-	// Default: ""
-	// Since: NEXT_RELEASE
-	Host string
-
-	// APIVersion pins the Docker Engine API version used for requests (for example
-	// "1.47"). When empty, Sablier falls back to the DOCKER_API_VERSION environment
-	// variable, then negotiates the version with the daemon.
-	// Env: SABLIER_PROVIDER_DOCKER_API_VERSION (or the standard DOCKER_API_VERSION)
-	// CLI: --provider.docker.api-version
-	// Default: ""
-	// Since: NEXT_RELEASE
-	APIVersion string
-
-	// CertPath is the directory holding the TLS client material (ca.pem, cert.pem,
-	// key.pem) used to connect to a TLS-protected Docker daemon over TCP. When empty,
-	// Sablier falls back to the DOCKER_CERT_PATH environment variable and, when that
-	// is also empty, uses a plain (non-TLS) connection.
-	// Env: SABLIER_PROVIDER_DOCKER_CERT_PATH (or the standard DOCKER_CERT_PATH)
-	// CLI: --provider.docker.cert-path
-	// Default: ""
-	// Since: NEXT_RELEASE
-	CertPath string
-
-	// TLSVerify enables verification of the Docker daemon's server certificate when
-	// a TLS connection is used (see CertPath). When empty/false, Sablier falls back
-	// to the DOCKER_TLS_VERIFY environment variable; verification is disabled unless
-	// one of them requests it.
-	// Env: SABLIER_PROVIDER_DOCKER_TLS_VERIFY (or the standard DOCKER_TLS_VERIFY)
-	// CLI: --provider.docker.tls-verify
-	// Default: false
-	// Since: NEXT_RELEASE
-	TLSVerify bool
-
 	// HonorRestartPolicy makes Sablier honor a container's restart policy when it
 	// exits successfully (exit code 0). When enabled, a container with a "no" or
 	// "on-failure" policy is reported as completed (a one-shot/init container that

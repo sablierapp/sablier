@@ -16,9 +16,9 @@ func TestSinceByFlag(t *testing.T) {
 	cases := map[string]string{
 		"server.port":              "v1.0.0",
 		"provider.name":            "v1.0.0",
-		"provider.docker.strategy": "v1.11.0",
-		"provider.docker.host":     docsver.NextRelease,
-		"tracing.enabled":          "v1.13.0",
+		"provider.docker.strategy":             "v1.11.0",
+		"provider.docker.honor-restart-policy": docsver.NextRelease,
+		"tracing.enabled":                      "v1.13.0",
 	}
 	for flag, want := range cases {
 		if got := since[flag]; got != want {

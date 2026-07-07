@@ -108,12 +108,8 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.auto-stop-externally-started`](#opt-provider-auto-stop-externally-started) | Continuously stop instances with sablier.enable=true that are running but were not started by Sablier |
 | [`--provider.auto-stop-on-startup`](#opt-provider-auto-stop-on-startup) | Stop all sablier.enable=true instances running at startup that were not started by Sablier |
 | [`--provider.auto-warm-externally-started`](#opt-provider-auto-warm-externally-started) | Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them |
-| [`--provider.docker.api-version`](#opt-provider-docker-api-version) | Docker Engine API version to use (e.g. 1.47). |
-| [`--provider.docker.cert-path`](#opt-provider-docker-cert-path) | Directory holding TLS client material (ca.pem, cert.pem, key.pem) for a TLS Docker daemon. |
 | [`--provider.docker.honor-restart-policy`](#opt-provider-docker-honor-restart-policy) | Honor the container restart policy on successful exit: report "no"/"on-failure" containers as completed and exited "always"/"unless-stopped" containers as stopped. |
-| [`--provider.docker.host`](#opt-provider-docker-host) | Docker daemon socket or address (e.g. unix:///var/run/docker.sock, tcp://127.0.0.1:2375). |
 | [`--provider.docker.strategy`](#opt-provider-docker-strategy) | Strategy to use to stop docker containers (stop or pause) |
-| [`--provider.docker.tls-verify`](#opt-provider-docker-tls-verify) | Verify the Docker daemon TLS certificate when connecting over TLS. |
 | [`--provider.kubernetes.burst`](#opt-provider-kubernetes-burst) | Maximum burst for K8S API access client-side throttling |
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
@@ -186,48 +182,6 @@ SABLIER_PROVIDER_AUTO_WARM_EXTERNALLY_STARTED=false
 --provider.auto-warm-externally-started=false
 ```
 
-### `--provider.docker.api-version` {#opt-provider-docker-api-version}
-
-Docker Engine API version to use (e.g. 1.47). Falls back to DOCKER_API_VERSION, then version negotiation
-
-{{< badge "string" >}} {{< badge content="Next release" >}}
-
-```yaml
-# sablier.yaml
-provider:
-  docker:
-    api-version: <string>
-```
-
-```bash
-# Environment variable
-SABLIER_PROVIDER_DOCKER_API_VERSION=<string>
-
-# Command-line flag
---provider.docker.api-version=<string>
-```
-
-### `--provider.docker.cert-path` {#opt-provider-docker-cert-path}
-
-Directory holding TLS client material (ca.pem, cert.pem, key.pem) for a TLS Docker daemon. Falls back to DOCKER_CERT_PATH
-
-{{< badge "string" >}} {{< badge content="Next release" >}}
-
-```yaml
-# sablier.yaml
-provider:
-  docker:
-    cert-path: <string>
-```
-
-```bash
-# Environment variable
-SABLIER_PROVIDER_DOCKER_CERT_PATH=<string>
-
-# Command-line flag
---provider.docker.cert-path=<string>
-```
-
 ### `--provider.docker.honor-restart-policy` {#opt-provider-docker-honor-restart-policy}
 
 Honor the container restart policy on successful exit: report "no"/"on-failure" containers as completed and exited "always"/"unless-stopped" containers as stopped. Deprecated: will become the default in v2.
@@ -247,27 +201,6 @@ SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY=false
 
 # Command-line flag
 --provider.docker.honor-restart-policy=false
-```
-
-### `--provider.docker.host` {#opt-provider-docker-host}
-
-Docker daemon socket or address (e.g. unix:///var/run/docker.sock, tcp://127.0.0.1:2375). Falls back to DOCKER_HOST, then the platform default
-
-{{< badge "string" >}} {{< badge content="Next release" >}}
-
-```yaml
-# sablier.yaml
-provider:
-  docker:
-    host: <string>
-```
-
-```bash
-# Environment variable
-SABLIER_PROVIDER_DOCKER_HOST=<string>
-
-# Command-line flag
---provider.docker.host=<string>
 ```
 
 ### `--provider.docker.strategy` {#opt-provider-docker-strategy}
@@ -294,27 +227,6 @@ SABLIER_PROVIDER_DOCKER_STRATEGY=stop
 
 # Command-line flag
 --provider.docker.strategy=stop
-```
-
-### `--provider.docker.tls-verify` {#opt-provider-docker-tls-verify}
-
-Verify the Docker daemon TLS certificate when connecting over TLS. Falls back to DOCKER_TLS_VERIFY
-
-{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
-
-```yaml
-# sablier.yaml
-provider:
-  docker:
-    tls-verify: false
-```
-
-```bash
-# Environment variable
-SABLIER_PROVIDER_DOCKER_TLS_VERIFY=false
-
-# Command-line flag
---provider.docker.tls-verify=false
 ```
 
 ### `--provider.kubernetes.burst` {#opt-provider-kubernetes-burst}
