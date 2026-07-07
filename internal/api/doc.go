@@ -1,7 +1,7 @@
 // Package api implements the Sablier HTTP API.
 //
 // The annotations below are the source for the generated OpenAPI contract
-// (see `make swagger`); they are parsed by swaggo/swag.
+// (see `make openapi` / cmd/openapigen); they are parsed by swaggo/swag.
 //
 // @title                     Sablier API
 // @version                   1.0

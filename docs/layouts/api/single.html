@@ -27,7 +27,12 @@
     <a class="back-to-docs" href="{{ "/" | relURL }}">&larr; Docs</a>
     <!-- Scalar renders the OpenAPI 3.0 contract generated from the code (make openapi). -->
     <script id="api-reference" data-url="{{ "/openapi.json" | relURL }}"></script>
-    <!-- Pinned to a specific version for reproducible builds; bump deliberately. -->
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.62.4"></script>
+    <!-- Pinned version + Subresource Integrity so a compromised CDN response cannot
+         execute on the docs origin. To bump: change the version and recompute the hash
+         with `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`. -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.62.4"
+      integrity="sha384-8krtlmjW90KNKDXFfcFls2ueiU+9/jzPmL/C2r7Y2NPh9KWCau8HyweAvBvm/y0y"
+      crossorigin="anonymous"></script>
   </body>
 </html>

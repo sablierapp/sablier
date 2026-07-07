@@ -7,61 +7,61 @@
 # by the client-side shim in layouts/partials/custom/head-end.html.
 #
 # `from` is the old hash route (the part after the "#").
-# `to`   is the new Hugo path.
+# `to`   is the canonical Hugo path on the new site.
 redirects:
   - from: /getting-started
-    to: /getting-started/
+    to: /tutorials/getting-started/
   - from: /installation
-    to: /installation/
+    to: /tutorials/installation/
   - from: /configuration
-    to: /configuration/
+    to: /tutorials/configuration/
   - from: /strategies
-    to: /strategies/
+    to: /concepts/strategies/
   - from: /themes
-    to: /strategies/themes/
+    to: /how-to-guides/loading-strategies/customize-theme/
   - from: /webhooks
-    to: /webhooks/
+    to: /how-to-guides/webhooks/
   - from: /tracing
-    to: /tracing/
+    to: /how-to-guides/advanced/observability/tracing/
   - from: /performance
-    to: /performance/
+    to: /reference/performance/
   - from: /resource-efficiency
-    to: /resource-efficiency/
+    to: /concepts/resource-efficiency/
   - from: /health
-    to: /health/
+    to: /reference/cli/
   - from: /versioning
-    to: /versioning/
+    to: /reference/versioning/
   # Providers (the old "overview" page is now the section landing page)
   - from: /providers/overview
-    to: /providers/
+    to: /tutorials/providers/
   - from: /providers/docker
-    to: /providers/docker/
+    to: /tutorials/providers/docker/
   - from: /providers/docker_swarm
-    to: /providers/docker_swarm/
+    to: /tutorials/providers/docker_swarm/
   - from: /providers/kubernetes
-    to: /providers/kubernetes/
+    to: /tutorials/providers/kubernetes/
   - from: /providers/podman
-    to: /providers/podman/
+    to: /tutorials/providers/podman/
   - from: /providers/proxmox_lxc
-    to: /providers/proxmox_lxc/
+    to: /tutorials/providers/proxmox_lxc/
   # Reverse proxy plugins
   - from: /plugins/overview
-    to: /reverse-proxies/
+    to: /tutorials/reverse-proxies/
   - from: /plugins/apacheapisix
-    to: /reverse-proxies/apacheapisix/
+    to: /tutorials/reverse-proxies/apacheapisix/
   - from: /plugins/caddy
-    to: /reverse-proxies/caddy/
+    to: /tutorials/reverse-proxies/caddy/
   - from: /plugins/envoy
-    to: /reverse-proxies/envoy/
+    to: /tutorials/reverse-proxies/envoy/
   - from: /plugins/istio
-    to: /reverse-proxies/istio/
+    to: /tutorials/reverse-proxies/istio/
   # Old NJS nginx link had no dedicated page; point at the closest match.
   - from: /plugins/nginx
-    to: /reverse-proxies/nginx_proxywasm/
+    to: /tutorials/reverse-proxies/nginx_proxywasm/
   - from: /plugins/nginx_proxywasm
-    to: /reverse-proxies/nginx_proxywasm/
+    to: /tutorials/reverse-proxies/nginx_proxywasm/
   - from: /plugins/traefik
-    to: /reverse-proxies/traefik/
+    to: /tutorials/reverse-proxies/traefik/
   # Guides
   - from: /guides/overview
     to: /guides/
@@ -71,18 +71,18 @@ redirects:
   # Keys include the old docsify "?id=" anchor and are matched exactly by the
   # redirect shim before the generic path lookup.
   - from: /configuration?id=multiple-groups-per-instance
-    to: /features/multiple-groups/
+    to: /how-to-guides/groups/
   - from: /configuration?id=sablierready-after
-    to: /features/ready-after/
+    to: /how-to-guides/readiness/ready-after/
   - from: /configuration?id=sablierready-on-start
-    to: /features/ready-on-start/
+    to: /how-to-guides/readiness/ready-on-start/
   - from: /configuration?id=sablierrunning-hours
-    to: /features/running-hours/
+    to: /how-to-guides/lifecycle/running-hours/
   - from: /configuration?id=sablierrunning-days
-    to: /features/running-hours/
+    to: /how-to-guides/lifecycle/running-hours/
   - from: /configuration?id=scale-mode
-    to: /features/scale-mode/
+    to: /how-to-guides/scaling-resources/scale-mode/
   - from: /configuration?id=block-io-blkio-throttling
-    to: /features/scale-mode/block-io/
+    to: /how-to-guides/scaling-resources/scale-blkio/
   - from: /configuration?id=anti-affinity
-    to: /features/anti-affinity/
+    to: /how-to-guides/anti-affinity/

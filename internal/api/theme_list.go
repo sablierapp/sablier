@@ -13,6 +13,7 @@ import (
 // @Produce      json
 // @Success      200  {object}  ThemesResponse
 // @Router       /api/themes [get]
+// @Router       /api/dynamic/themes [get]
 func ListThemes(router *gin.RouterGroup, s *ServeStrategy) {
 	handler := func(c *gin.Context) {
 		c.JSON(http.StatusOK, map[string]any{

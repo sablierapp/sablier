@@ -21,6 +21,10 @@ import (
 func TestNewDockerClient(t *testing.T) {
 	// Every branch of newDockerClient. moby's client.New is lazy (it does not
 	// dial the daemon), so a client is returned without a running Docker.
+	// Isolate from any ambient Docker TLS environment so the branches are deterministic.
+	t.Setenv("DOCKER_CERT_PATH", "")
+	t.Setenv("DOCKER_TLS_VERIFY", "")
+
 	t.Run("env fallback", func(t *testing.T) {
 		cli, err := newDockerClient(config.Docker{})
 		if err != nil {
@@ -45,6 +49,20 @@ func TestNewDockerClient(t *testing.T) {
 		dir := t.TempDir()
 		writeTestCerts(t, dir)
 		cli, err := newDockerClient(config.Docker{Host: "tcp://127.0.0.1:2376", CertPath: dir, TLSVerify: true})
+		if err != nil {
+			t.Fatalf("newDockerClient: %v", err)
+		}
+		if cli == nil {
+			t.Fatal("expected a client")
+		}
+	})
+
+	t.Run("cert path from DOCKER_CERT_PATH env", func(t *testing.T) {
+		dir := t.TempDir()
+		writeTestCerts(t, dir)
+		// Certificates provided via the standard env var, verification via the flag.
+		t.Setenv("DOCKER_CERT_PATH", dir)
+		cli, err := newDockerClient(config.Docker{Host: "tcp://127.0.0.1:2376", TLSVerify: true})
 		if err != nil {
 			t.Fatalf("newDockerClient: %v", err)
 		}

@@ -125,19 +125,23 @@ func newDockerClient(cfg config.Docker) (*client.Client, error) {
 
 	// TLS must be configured before the host so WithHost can reconfigure the
 	// transport we install here (this mirrors the order moby uses in FromEnv).
-	if cfg.CertPath != "" {
-		// TLSVerify falls back to the standard DOCKER_TLS_VERIFY variable when the
-		// Sablier option is unset, mirroring moby's WithTLSClientConfigFromEnv (which
-		// treats any non-empty value as "verify"). Without this, a user relying on
-		// DOCKER_TLS_VERIFY alone would silently connect with verification disabled.
+	// TLS material comes from the Sablier option or, as a fallback, the standard
+	// DOCKER_CERT_PATH variable. Verification is enabled when either the Sablier
+	// flag (provider.docker.tls-verify) or DOCKER_TLS_VERIFY requests it, so the
+	// flag takes effect no matter how the certificates are provided. Without this
+	// the flag would be ignored whenever certificates came from DOCKER_CERT_PATH,
+	// and a user relying on DOCKER_TLS_VERIFY alone would silently skip verification.
+	certPath := cfg.CertPath
+	if certPath == "" {
+		certPath = os.Getenv("DOCKER_CERT_PATH")
+	}
+	if certPath != "" {
 		verify := cfg.TLSVerify || os.Getenv("DOCKER_TLS_VERIFY") != ""
-		httpClient, err := dockerTLSClient(cfg.CertPath, verify)
+		httpClient, err := dockerTLSClient(certPath, verify)
 		if err != nil {
 			return nil, err
 		}
 		opts = append(opts, client.WithHTTPClient(httpClient))
-	} else {
-		opts = append(opts, client.WithTLSClientConfigFromEnv())
 	}
 
 	if cfg.Host != "" {

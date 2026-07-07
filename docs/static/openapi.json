@@ -404,6 +404,27 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/dynamic/themes": {
+      "get": {
+        "description": "Lists the waiting-page themes available to the dynamic strategy (built-in and custom). Also served at the legacy path `/api/dynamic/themes`.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/api.ThemesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List themes",
+        "tags": [
+          "themes"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "description": "Server-Sent Events stream of instance lifecycle events. Each event is `event: \u003ctype\u003e` followed by `data: \u003cInstanceInfo JSON\u003e`. The stream stays open until the client disconnects.",
