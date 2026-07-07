@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sablierapp/sablier/internal/docsmd"
 	"github.com/sablierapp/sablier/internal/docsver"
 	"github.com/sablierapp/sablier/internal/labeldoc"
 )
@@ -108,7 +109,7 @@ func writeIndex(b *strings.Builder, labels []labeldoc.Label) {
 	b.WriteString("| Label | Description |\n")
 	b.WriteString("|-------|-------------|\n")
 	for _, l := range labels {
-		fmt.Fprintf(b, "| [`%s`](#%s) | %s |\n", l.Name, anchor(l.Name), escapePipe(firstSentence(l.Description)))
+		fmt.Fprintf(b, "| [`%s`](#%s) | %s |\n", l.Name, anchor(l.Name), docsmd.EscapePipe(docsmd.FirstSentence(l.Description)))
 	}
 	b.WriteString("\n")
 }
@@ -151,39 +152,4 @@ func writeLabel(b *strings.Builder, l labeldoc.Label) {
 // anchor returns the stable heading id for a label (set via a `{#id}` attribute).
 func anchor(name string) string {
 	return "label-" + strings.ReplaceAll(name, ".", "-")
-}
-
-// abbreviations are tokens whose trailing period does not end a sentence.
-var abbreviations = []string{"e.g", "i.e", "etc", "vs"}
-
-// firstSentence returns the first sentence of s (up to a sentence-ending ". "),
-// keeping the index table compact. Common abbreviations (e.g., i.e.) do not end
-// a sentence.
-func firstSentence(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	for i := 0; i+1 < len(s); i++ {
-		if s[i] != '.' || s[i+1] != ' ' {
-			continue
-		}
-		fields := strings.Fields(s[:i])
-		last := ""
-		if len(fields) > 0 {
-			last = strings.TrimLeft(fields[len(fields)-1], "([\"'")
-		}
-		abbrev := false
-		for _, a := range abbreviations {
-			if strings.EqualFold(last, a) {
-				abbrev = true
-				break
-			}
-		}
-		if !abbrev {
-			return s[:i+1]
-		}
-	}
-	return s
-}
-
-func escapePipe(s string) string {
-	return strings.ReplaceAll(s, "|", "\\|")
 }

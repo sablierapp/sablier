@@ -33,3 +33,9 @@ func TestSinceByFlag(t *testing.T) {
 		}
 	}
 }
+
+func TestSinceByFlagMissingDir(t *testing.T) {
+	if _, err := configdoc.SinceByFlag("does-not-exist-directory"); err == nil {
+		t.Fatal("expected an error for a missing directory")
+	}
+}

@@ -21,6 +21,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,27 +30,33 @@ import (
 // (without the leading "--") to the "since" value declared in the field's doc
 // comment. Fields without both a "CLI:" and a "Since:" line are skipped.
 func SinceByFlag(dir string) (map[string]string, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, nil, parser.ParseComments)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 
+	fset := token.NewFileSet()
 	out := map[string]string{}
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			ast.Inspect(file, func(n ast.Node) bool {
-				field, ok := n.(*ast.Field)
-				if !ok || field.Doc == nil {
-					return true
-				}
-				cli, since := docMeta(field.Doc.Text())
-				if cli != "" && since != "" {
-					out[strings.TrimPrefix(cli, "--")] = since
-				}
-				return true
-			})
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
 		}
+		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			field, ok := n.(*ast.Field)
+			if !ok || field.Doc == nil {
+				return true
+			}
+			cli, since := docMeta(field.Doc.Text())
+			if cli != "" && since != "" {
+				out[strings.TrimPrefix(cli, "--")] = since
+			}
+			return true
+		})
 	}
 	return out, nil
 }

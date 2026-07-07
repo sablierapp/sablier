@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/sablierapp/sablier/internal/configdoc"
+	"github.com/sablierapp/sablier/internal/docsmd"
 	"github.com/sablierapp/sablier/internal/docsver"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/sabliercmd"
@@ -197,7 +198,7 @@ func writeCategory(b *strings.Builder, cat string, opts []option) {
 	b.WriteString("| Option | Description |\n")
 	b.WriteString("|--------|-------------|\n")
 	for _, o := range opts {
-		fmt.Fprintf(b, "| [`--%s`](#%s) | %s |\n", o.name, optAnchor(o.name), escapePipe(firstSentence(o.usage)))
+		fmt.Fprintf(b, "| [`--%s`](#%s) | %s |\n", o.name, optAnchor(o.name), docsmd.EscapePipe(docsmd.FirstSentence(o.usage)))
 	}
 	b.WriteString("\n")
 
@@ -324,40 +325,4 @@ func envVar(name string) string {
 	s = strings.ReplaceAll(s, "-", "_")
 	s = strings.ReplaceAll(s, ".", "_")
 	return "SABLIER_" + s
-}
-
-// abbreviations are tokens whose trailing period does not end a sentence, so the
-// index truncation must not stop on them.
-var abbreviations = []string{"e.g", "i.e", "etc", "vs"}
-
-// firstSentence returns the first sentence of s (up to a sentence-ending ". "),
-// keeping the index table compact. Common abbreviations (e.g., i.e.) do not end
-// a sentence.
-func firstSentence(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	for i := 0; i+1 < len(s); i++ {
-		if s[i] != '.' || s[i+1] != ' ' {
-			continue
-		}
-		fields := strings.Fields(s[:i])
-		last := ""
-		if len(fields) > 0 {
-			last = strings.TrimLeft(fields[len(fields)-1], "([\"'")
-		}
-		abbrev := false
-		for _, a := range abbreviations {
-			if strings.EqualFold(last, a) {
-				abbrev = true
-				break
-			}
-		}
-		if !abbrev {
-			return s[:i+1]
-		}
-	}
-	return s
-}
-
-func escapePipe(s string) string {
-	return strings.ReplaceAll(s, "|", "\\|")
 }

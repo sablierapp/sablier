@@ -9,12 +9,6 @@ on:
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
-# Grant GITHUB_TOKEN the permissions required for GitHub Pages deployment.
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 # Allow one concurrent deployment; don't cancel an in-progress production deploy.
 concurrency:
   group: pages
@@ -27,13 +21,16 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Least privilege: the build job only reads the repository.
+    permissions:
+      contents: read
     env:
       HUGO_VERSION: 0.163.3
       HUGO_ENVIRONMENT: production
     steps:
       - name: Install Hugo CLI (extended)
         run: |
-          wget -O "${{ runner.temp }}/hugo.deb" \
+          wget --https-only -O "${{ runner.temp }}/hugo.deb" \
             "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
           sudo dpkg -i "${{ runner.temp }}/hugo.deb"
       - name: Checkout
@@ -64,6 +61,10 @@ jobs:
           path: docs/public
 
   deploy:
+    # Least privilege: only the deploy job needs Pages write and the OIDC token.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
