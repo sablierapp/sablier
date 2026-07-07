@@ -17,20 +17,32 @@ import (
 // clusterCRDInstalled reports whether the CloudNativePG Cluster CRD is served by the
 // API server. It lets InstanceEvents avoid starting a dynamic informer (which would
 // otherwise log continuous list/watch errors) on clusters that don't run CloudNativePG.
+//
+// The check goes through the discovery API rather than listing the resource:
+// discovery requires no RBAC on the resource itself, so a ClusterRole scoped to
+// deployments/statefulsets is sufficient. Probing with a List instead turns a
+// missing permission into "Forbidden", which is indistinguishable from a transient
+// error and used to start the informer against a CRD that does not exist - leaving
+// the reflector in a permanent list/watch error loop.
 func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
 	if p.dynamic == nil {
 		return false
 	}
-	_, err := p.dynamic.Resource(cnpgClusterGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{Limit: 1})
+	resources, err := p.Client.Discovery().ServerResourcesForGroupVersion(cnpgClusterGVR.GroupVersion().String())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return false
 		}
-		// Transient or permission errors: assume the CRD exists and let the informer surface them.
+		// Transient errors: assume the CRD exists and let the informer surface them.
 		p.l.WarnContext(ctx, "could not verify cloudnativepg CRD presence, enabling cnpg watcher anyway", "error", err)
 		return true
 	}
-	return true
+	for _, r := range resources.APIResources {
+		if r.Name == cnpgClusterGVR.Resource {
+			return true
+		}
+	}
+	return false
 }
 
 // clusterFromObject extracts the *unstructured.Unstructured from an informer event,
