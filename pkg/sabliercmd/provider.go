@@ -126,7 +126,12 @@ func newDockerClient(cfg config.Docker) (*client.Client, error) {
 	// TLS must be configured before the host so WithHost can reconfigure the
 	// transport we install here (this mirrors the order moby uses in FromEnv).
 	if cfg.CertPath != "" {
-		httpClient, err := dockerTLSClient(cfg.CertPath, cfg.TLSVerify)
+		// TLSVerify falls back to the standard DOCKER_TLS_VERIFY variable when the
+		// Sablier option is unset, mirroring moby's WithTLSClientConfigFromEnv (which
+		// treats any non-empty value as "verify"). Without this, a user relying on
+		// DOCKER_TLS_VERIFY alone would silently connect with verification disabled.
+		verify := cfg.TLSVerify || os.Getenv("DOCKER_TLS_VERIFY") != ""
+		httpClient, err := dockerTLSClient(cfg.CertPath, verify)
 		if err != nil {
 			return nil, err
 		}
@@ -177,8 +182,12 @@ func dockerTLSClient(certPath string, verify bool) (*http.Client, error) {
 		tlsConfig.RootCAs = pool
 	}
 
+	// Clone the default transport so its proxy, timeout and keep-alive settings are
+	// preserved; only the TLS configuration is overridden.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
 	return &http.Client{
-		Transport:     &http.Transport{TLSClientConfig: tlsConfig},
+		Transport:     transport,
 		CheckRedirect: client.CheckRedirect,
 	}, nil
 }
