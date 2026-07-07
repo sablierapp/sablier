@@ -10,6 +10,7 @@ type DynamicStrategy struct {
 	// Env: SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH
 	// CLI: --strategy.dynamic.custom-themes-path
 	// Default: "" (built-in themes only)
+	// Since: v1.0.0
 	CustomThemesPath string
 
 	// ShowDetailsByDefault controls whether the waiting page shows per-instance
@@ -17,12 +18,14 @@ type DynamicStrategy struct {
 	// Env: SABLIER_STRATEGY_DYNAMIC_SHOW_DETAILS_BY_DEFAULT
 	// CLI: --strategy.dynamic.show-details-by-default
 	// Default: true
+	// Since: v1.0.0
 	ShowDetailsByDefault bool
 
 	// DefaultTheme is the name of the waiting-page theme used when the caller does not specify one.
 	// Env: SABLIER_STRATEGY_DYNAMIC_DEFAULT_THEME
 	// CLI: --strategy.dynamic.default-theme
 	// Default: "hacker-terminal"
+	// Since: v1.0.0
 	DefaultTheme string
 
 	// DefaultRefreshFrequency is how often the waiting page polls Sablier for an updated
@@ -30,6 +33,7 @@ type DynamicStrategy struct {
 	// Env: SABLIER_STRATEGY_DYNAMIC_DEFAULT_REFRESH_FREQUENCY
 	// CLI: --strategy.dynamic.default-refresh-frequency
 	// Default: 5s
+	// Since: v1.0.0
 	DefaultRefreshFrequency time.Duration
 }
 
@@ -40,6 +44,7 @@ type BlockingStrategy struct {
 	// Env: SABLIER_STRATEGY_BLOCKING_DEFAULT_TIMEOUT
 	// CLI: --strategy.blocking.default-timeout
 	// Default: 1m
+	// Since: v1.0.0
 	DefaultTimeout time.Duration
 
 	// DefaultRefreshFrequency is how often the blocking strategy polls instance readiness
@@ -47,6 +52,7 @@ type BlockingStrategy struct {
 	// Env: SABLIER_STRATEGY_BLOCKING_DEFAULT_REFRESH_FREQUENCY
 	// CLI: --strategy.blocking.default-refresh-frequency
 	// Default: 5s
+	// Since: v1.9.0
 	DefaultRefreshFrequency time.Duration
 }
 

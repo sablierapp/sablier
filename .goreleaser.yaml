@@ -43,7 +43,7 @@ archives:
       - README.md
       - LICENSE
       - sablier.sample.yaml
-      - docs/theme.schema.json
+      - docs/static/theme.schema.json
 
 snapshot:
   version_template: SNAPSHOT-{{ .Commit }}

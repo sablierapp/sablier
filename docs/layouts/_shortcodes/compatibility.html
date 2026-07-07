@@ -1,0 +1,52 @@
+{{- /*
+  Renders the provider-compatibility badges (and optional example link) for a
+  feature page, from its front matter:
+
+    compatibility:
+      docker: supported | differs | unsupported | impossible
+      swarm: ...
+      kubernetes: ...
+      podman: ...
+      proxmox: ...
+    example: scale-mode  # optional: folder under examples/
+
+  - supported   → green  badge "<Provider> compatible"
+  - differs     → orange badge "Partially <Provider> compatible"
+  - unsupported → grey   badge "<Provider> not yet implemented"
+  - impossible  → red    badge "<Provider> incompatible"
+
+  Badges are static (non-interactive) — no issue-request links.
+*/ -}}
+{{- $page := .Page -}}
+{{- $compat := $page.Params.compatibility -}}
+{{- $example := $page.Params.example -}}
+{{- $repo := "https://github.com/sablierapp/sablier" -}}
+<div class="feature-meta">
+{{- if $compat -}}
+  <div class="compat" role="list" aria-label="Provider compatibility">
+  {{- range $p := hugo.Data.providers -}}
+    {{- $status := index $compat $p.key -}}
+    {{- if $status -}}
+      {{- $icon := printf "/assets/img/%s" $p.icon -}}
+      {{- $cls := "" -}}
+      {{- $label := "" -}}
+      {{- if eq $status "supported" -}}
+        {{- $cls = "compat-supported" -}}{{- $label = printf "%s compatible" $p.name -}}
+      {{- else if eq $status "differs" -}}
+        {{- $cls = "compat-differs" -}}{{- $label = printf "Partially %s compatible" $p.name -}}
+      {{- else if eq $status "unsupported" -}}
+        {{- $cls = "compat-unsupported" -}}{{- $label = printf "%s not yet implemented" $p.name -}}
+      {{- else if eq $status "impossible" -}}
+        {{- $cls = "compat-impossible" -}}{{- $label = printf "%s incompatible" $p.name -}}
+      {{- end -}}
+      {{- if $cls -}}
+        <span class="compat-badge {{ $cls }}" role="listitem" title="{{ $label }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $label }}</span></span>
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  </div>
+{{- end -}}
+{{- with $example -}}
+  <p class="feature-example"><span class="feature-example-label">Example</span><a href="{{ $repo }}/tree/main/examples/{{ . }}" target="_blank" rel="noopener">examples/{{ . }}</a></p>
+{{- end -}}
+</div>

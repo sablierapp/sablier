@@ -1,0 +1,37 @@
+{{- /*
+  Renders a features × providers matrix from every page that declares a
+  `compatibility` map in its front matter. Single source of truth: the same
+  front matter the per-page {{< compatibility >}} badges use.
+*/ -}}
+{{- $providers := hugo.Data.providers -}}
+{{- $rows := where site.Pages "Params.compatibility" "!=" nil -}}
+{{- $rows = sort $rows "RelPermalink" -}}
+<div class="hextra-scrollbar" style="overflow-x:auto;">
+<table class="compat-matrix">
+  <thead>
+    <tr>
+      <th>Feature</th>
+      {{- range $providers }}<th>{{ .name }}</th>{{ end -}}
+    </tr>
+  </thead>
+  <tbody>
+    {{- range $f := $rows -}}
+    <tr>
+      <td><a href="{{ $f.RelPermalink }}">{{ $f.Title }}</a></td>
+      {{- range $p := $providers -}}
+        {{- $s := index $f.Params.compatibility $p.key | default "na" -}}
+        {{- $sym := "—" -}}
+        {{- if eq $s "supported" -}}{{ $sym = "✓" -}}
+        {{- else if eq $s "differs" -}}{{ $sym = "≈" -}}
+        {{- else if eq $s "unsupported" -}}{{ $sym = "✕" -}}
+        {{- else if eq $s "impossible" -}}{{ $sym = "✕" -}}
+        {{- end -}}
+        <td class="cm cm-{{ $s }}" title="{{ $p.name }}: {{ $s }}">{{ $sym }}</td>
+      {{- end -}}
+    </tr>
+    {{- end -}}
+  </tbody>
+</table>
+</div>
+
+<p class="compat-legend"><span class="cm cm-supported">✓</span> supported &nbsp;&nbsp; <span class="cm cm-differs">≈</span> works, provider-specific details &nbsp;&nbsp; <span class="cm cm-unsupported">✕</span> not yet (click a badge on the feature page to request) &nbsp;&nbsp; <span class="cm cm-impossible">✕</span> not possible</p>

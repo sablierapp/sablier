@@ -49,10 +49,10 @@ func (p *Provider) ClusterList(ctx context.Context) ([]sablier.InstanceConfigura
 
 func (p *Provider) clusterToInstance(u *unstructured.Unstructured) sablier.InstanceConfiguration {
 	config := sablierConfig(u.GetLabels(), u.GetAnnotations())
-	enabled := config["sablier.enable"]
+	enabled := config[sablier.LabelEnable]
 	var groups []string
 	if enabled == "true" {
-		groups = sablier.ParseGroups(config["sablier.group"])
+		groups = sablier.ParseGroups(config[sablier.LabelGroup])
 	}
 
 	parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
@@ -75,7 +75,7 @@ func (p *Provider) ClusterGroups(ctx context.Context) (map[string][]string, erro
 		u := &items[i]
 		parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
 		config := sablierConfig(u.GetLabels(), u.GetAnnotations())
-		for _, groupName := range sablier.ParseGroups(config["sablier.group"]) {
+		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
 			groups[groupName] = append(groups[groupName], parsed.Original)
 		}
 	}

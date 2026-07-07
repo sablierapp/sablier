@@ -12,7 +12,7 @@ import (
 func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -33,10 +33,10 @@ func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfig
 
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	config := sablierConfig(d.Labels, d.Annotations)
-	enabled := config["sablier.enable"]
+	enabled := config[sablier.LabelEnable]
 	var groups []string
 	if enabled == "true" {
-		groups = sablier.ParseGroups(config["sablier.group"])
+		groups = sablier.ParseGroups(config[sablier.LabelGroup])
 	}
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
@@ -51,7 +51,7 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -66,7 +66,7 @@ func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, e
 	for _, deployment := range deployments.Items {
 		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
 		config := sablierConfig(deployment.Labels, deployment.Annotations)
-		for _, groupName := range sablier.ParseGroups(config["sablier.group"]) {
+		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
 			groups[groupName] = append(groups[groupName], parsed.Original)
 		}
 	}

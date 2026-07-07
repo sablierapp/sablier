@@ -1,0 +1,162 @@
+{{- /*
+  Client-side redirect shim for the docsify -> Hugo migration.
+
+  The old docsify site used hash routing (e.g. https://sablierapp.dev/#/providers/docker).
+  The "#/..." fragment never reaches the server, so these legacy links can only be
+  rescued in the browser. On load we look up the old route in the redirect map
+  (data/redirects.yaml) and replace the location with the new Hugo path.
+
+  Only hashes starting with "#/" (docsify routes) are touched; ordinary in-page
+  anchors like "#some-heading" are left alone.
+*/ -}}
+{{- $redirects := dict -}}
+{{- range hugo.Data.redirects.redirects -}}
+  {{- $redirects = merge $redirects (dict .from .to) -}}
+{{- end -}}
+<script>
+(function () {
+  var hash = window.location.hash;
+  if (hash.indexOf('#/') !== 0) return;
+
+  var map = {{ $redirects | jsonify | safeJS }};
+
+  var route = hash.slice(1); // drop the leading '#'
+
+  // An exact match on the full old route — including any "?id=" anchor — wins
+  // first. This is how deep links to sections that have since moved to another
+  // page are redirected (e.g. /configuration?id=scale-mode -> /features/scale-mode/).
+  if (map[route]) {
+    window.location.replace(map[route]);
+    return;
+  }
+
+  var anchor = '';
+
+  // docsify anchors look like "?id=some-heading"
+  var q = route.indexOf('?id=');
+  if (q !== -1) {
+    anchor = '#' + route.slice(q + 4);
+    route = route.slice(0, q);
+  }
+
+  // normalize a trailing slash on the old route before lookup
+  if (route.length > 1 && route.charAt(route.length - 1) === '/') {
+    route = route.slice(0, -1);
+  }
+
+  var target = map[route];
+  // best-effort fallback for any route not explicitly mapped
+  if (!target && route.length > 1) {
+    target = route + '/';
+  }
+
+  if (target) {
+    window.location.replace(target + anchor);
+  }
+})();
+</script>
+
+{{- /*
+  Global provider selector for the {{< provider-tabs >}} shortcode. A single
+  choice (localStorage 'sablier-provider') drives which provider panel is shown
+  on every page, so the reader's provider "sticks" across the whole site.
+*/ -}}
+<script>
+(function () {
+  var KEY = 'sablier-provider';
+  var DEFAULT = 'docker';
+  function current() { try { return localStorage.getItem(KEY) || DEFAULT; } catch (e) { return DEFAULT; } }
+  function store(p) { try { localStorage.setItem(KEY, p); } catch (e) {} }
+
+  function apply(provider) {
+    document.querySelectorAll('[data-provider-tabs]').forEach(function (group) {
+      var panels = group.querySelectorAll('.provider-tab-panel');
+      var btns = group.querySelectorAll('.provider-tab-btn');
+      if (!panels.length) return;
+      var keys = Array.prototype.map.call(panels, function (p) { return p.getAttribute('data-provider'); });
+      // Show the global provider if this group has it, else fall back to its
+      // first panel WITHOUT changing the global choice.
+      var chosen = keys.indexOf(provider) !== -1 ? provider : keys[0];
+      panels.forEach(function (p) { p.hidden = p.getAttribute('data-provider') !== chosen; });
+      btns.forEach(function (b) {
+        var sel = b.getAttribute('data-provider') === chosen;
+        b.setAttribute('data-state', sel ? 'selected' : '');
+        b.setAttribute('aria-selected', sel ? 'true' : 'false');
+      });
+    });
+  }
+
+  function select(provider) { store(provider); apply(provider); }
+
+  // Event delegation on the document so the handler works no matter when the
+  // tabs are rendered (including after client-side navigation) and cannot be
+  // detached.
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var btn = t.closest('[data-provider-tabs] .provider-tab-btn');
+    if (btn) { select(btn.getAttribute('data-provider')); return; }
+    // A "differs" compatibility badge selects that provider and scrolls to the notes.
+    var badge = t.closest('.compat-differs[data-provider]');
+    if (badge) {
+      e.preventDefault();
+      select(badge.getAttribute('data-provider'));
+      var notes = document.querySelector('[data-provider-tabs]');
+      if (notes) notes.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  function init() { apply(current()); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+{{- /*
+  Persist the sidebar sections' expanded/collapsed state across page loads.
+  Hextra re-derives which sections are open from the current page on every load;
+  this remembers the reader's manual toggles in localStorage and restores them on
+  refresh, while always keeping the section that contains the current page open.
+*/ -}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var KEY = 'sablier-sidebar-open';
+  var nav = document.querySelector('.hextra-sidebar-container ul[class*="max-md:hidden"]');
+  if (!nav) return;
+
+  // Collapsible sections are the <li> that wrap a children container.
+  function sections() {
+    return Array.prototype.filter.call(nav.querySelectorAll('li'), function (li) {
+      return li.querySelector(':scope > .hextra-sidebar-children');
+    });
+  }
+  function keyOf(li) {
+    var a = li.querySelector(':scope > .hextra-sidebar-item a[href], :scope > a[href]');
+    return a ? a.getAttribute('href') : null;
+  }
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+  function save() {
+    var map = load();
+    sections().forEach(function (li) { var k = keyOf(li); if (k) map[k] = li.classList.contains('open'); });
+    try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  // Restore saved state, but never collapse the section holding the current page.
+  var saved = load();
+  sections().forEach(function (li) {
+    var k = keyOf(li);
+    if (!k || !Object.prototype.hasOwnProperty.call(saved, k)) return;
+    var hasActive = !!li.querySelector('.hextra-sidebar-item[data-active="true"]');
+    if (saved[k]) li.classList.add('open');
+    else if (!hasActive) li.classList.remove('open');
+  });
+
+  // Save whenever a section's "open" class changes (Hextra's own toggle).
+  var observer = new MutationObserver(save);
+  sections().forEach(function (li) { observer.observe(li, { attributes: true, attributeFilter: ['class'] }); });
+});
+</script>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="d7d67c90-e2a3-42b3-8fd7-3bbfc1839277"></script>

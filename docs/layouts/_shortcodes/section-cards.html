@@ -1,0 +1,27 @@
+{{- /*
+  Renders a Hextra card grid for the child pages and sub-sections of the current
+  section, so a section landing page always offers navigation to everything under
+  it without hand-maintaining the list. Each card links to a child, using its
+  title and (description or summary) as the subtitle, and its `icon` front matter
+  if set.
+
+  @param {int} cols  Number of columns (default 3).
+  @example {{< section-cards >}}
+*/ -}}
+{{- $cols := .Get "cols" | default 3 -}}
+{{- $p := .Page -}}
+{{- $children := where (union $p.RegularPages $p.Sections) "Params.sidebar.exclude" "!=" true -}}
+{{- with $children.ByWeight -}}
+<div class="hextra-cards hx:mt-4 hx:gap-4 hx:grid not-prose" style="--hextra-cards-grid-cols: {{ $cols }};">
+  {{- range . -}}
+    {{- $sub := .Params.description | default (.Summary | plainify | truncate 140) -}}
+    {{- partial "shortcodes/card" (dict
+      "page" $p
+      "link" .RelPermalink
+      "title" .Title
+      "subtitle" $sub
+      "icon" (.Params.icon | default "")
+    ) -}}
+  {{- end -}}
+</div>
+{{- end -}}
