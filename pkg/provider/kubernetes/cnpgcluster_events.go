@@ -24,6 +24,9 @@ import (
 // missing permission into "Forbidden", which is indistinguishable from a transient
 // error and used to start the informer against a CRD that does not exist - leaving
 // the reflector in a permanent list/watch error loop.
+//
+// ctx only scopes logging: ServerResourcesForGroupVersion has no context-aware
+// variant, so the underlying GET is bounded by the REST client timeout instead.
 func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
 	if p.dynamic == nil || p.Client == nil {
 		return false
