@@ -25,7 +25,7 @@ import (
 // error and used to start the informer against a CRD that does not exist - leaving
 // the reflector in a permanent list/watch error loop.
 func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
-	if p.dynamic == nil {
+	if p.dynamic == nil || p.Client == nil {
 		return false
 	}
 	resources, err := p.Client.Discovery().ServerResourcesForGroupVersion(cnpgClusterGVR.GroupVersion().String())
@@ -33,7 +33,8 @@ func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
 		if apierrors.IsNotFound(err) {
 			return false
 		}
-		// Transient errors: assume the CRD exists and let the informer surface them.
+		// Any other error (transient, permission, authn, ...): assume the CRD
+		// exists and let the informer surface the underlying problem.
 		p.l.WarnContext(ctx, "could not verify cloudnativepg CRD presence, enabling cnpg watcher anyway", "error", err)
 		return true
 	}
