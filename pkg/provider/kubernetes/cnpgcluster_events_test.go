@@ -34,7 +34,7 @@ func TestProvider_ClusterCRDInstalled(t *testing.T) {
 	t.Run("true when the clusters resource is served", func(t *testing.T) {
 		t.Parallel()
 		client := k8sfake.NewSimpleClientset()
-		client.Fake.Resources = []*metav1.APIResourceList{{
+		client.Resources = []*metav1.APIResourceList{{
 			GroupVersion: cnpgGroupVersion,
 			APIResources: []metav1.APIResource{{Name: "clusters/status"}, {Name: cnpgClusterGVR.Resource}},
 		}}
@@ -46,7 +46,7 @@ func TestProvider_ClusterCRDInstalled(t *testing.T) {
 	t.Run("false when the group version is served without the clusters resource", func(t *testing.T) {
 		t.Parallel()
 		client := k8sfake.NewSimpleClientset()
-		client.Fake.Resources = []*metav1.APIResourceList{{
+		client.Resources = []*metav1.APIResourceList{{
 			GroupVersion: cnpgGroupVersion,
 			APIResources: []metav1.APIResource{{Name: "clusters/status"}},
 		}}
@@ -65,7 +65,7 @@ func TestProvider_ClusterCRDInstalled(t *testing.T) {
 	t.Run("true on non-NotFound discovery error (fail open)", func(t *testing.T) {
 		t.Parallel()
 		client := k8sfake.NewSimpleClientset()
-		client.Fake.PrependReactor("get", "resource", func(k8stesting.Action) (bool, runtime.Object, error) {
+		client.PrependReactor("get", "resource", func(k8stesting.Action) (bool, runtime.Object, error) {
 			return true, nil, apierrors.NewForbidden(schema.GroupResource{}, "", nil)
 		})
 		p := newFakeCNPGProvider(t)
