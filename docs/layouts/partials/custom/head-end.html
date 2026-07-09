@@ -10,7 +10,7 @@
   anchors like "#some-heading" are left alone.
 */ -}}
 {{- $redirects := dict -}}
-{{- range hugo.Data.redirects.redirects -}}
+{{- range site.Data.redirects.redirects -}}
   {{- $redirects = merge $redirects (dict .from .to) -}}
 {{- end -}}
 <script>
