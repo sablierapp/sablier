@@ -74,7 +74,7 @@ You can install Sablier using one of the following methods:
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.14.0)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.15.0)
 <!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
@@ -85,7 +85,7 @@ You can install Sablier using one of the following methods:
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:1.15.0 # x-release-please-version
     command:
       - start
       - --provider.name=docker
@@ -99,13 +99,13 @@ services:
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.14.0
+docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.15.0
 ```
 
 > [!TIP]
 > Verify the image signature to ensure authenticity:
 > ```bash
-> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.14.0
+> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.15.0
 > ```
 
 <!-- x-release-please-end -->
@@ -373,7 +373,7 @@ sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.14.0 --help
+docker run sablierapp/sablier:1.15.0 --help
 ```
 <!-- x-release-please-end -->
 
