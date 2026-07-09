@@ -57,7 +57,7 @@ jobs:
         working-directory: docs
         env:
           HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
-        # build.sh builds the latest stable release at the root, main at /dev/,
+        # build.sh builds the latest stable release at the root, main at /next/,
         # and every released minor at /vX.Y/ (BASE_URL defaults to the custom
         # domain https://sablierapp.dev). See docs/build.sh.
         run: ./build.sh
