@@ -3,11 +3,18 @@ name: Release with GoReleaser
 on:
   pull_request:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
 permissions:
   contents: read
+
+# Isolate runs by ref: cancel superseded main/PR builds, but never a tag release.
+concurrency:
+  group: goreleaser-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   goreleaser:
@@ -44,7 +51,7 @@ jobs:
 
       - name: Login to Docker Hub
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
         with:
           # Should use OIDC, but not yet supported by Docker Hub.
           # See https://github.com/docker/roadmap/issues/314 for more details.
@@ -53,7 +60,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -64,9 +71,44 @@ jobs:
         id: goreleaser
         with:
           distribution: goreleaser
-          args: release --clean ${{ github.ref_type != 'tag' && '--snapshot' || '' }}
+          # tag: full release. main: snapshot without docker (goreleaser OSS can't
+          # push from a branch; we build the moving :next image below from the
+          # binaries it produced). PR: snapshot, for build validation.
+          args: ${{ github.ref_type == 'tag' && 'release --clean' || (github.ref == 'refs/heads/main' && 'release --clean --snapshot --skip=docker' || 'release --clean --snapshot') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish moving :next image from main
+        if: github.ref == 'refs/heads/main'
+        # GoReleaser OSS cannot publish from a branch (nightly is Pro-only,
+        # snapshot never pushes), so we push :next here — but reuse the binaries
+        # GoReleaser just built (same flags as releases) and the SAME
+        # build/Dockerfile, assembling a multi-arch manifest. No separate
+        # Dockerfile or build path.
+        run: |
+          set -euo pipefail
+          ctx="$(mktemp -d)"
+          # Lay the linux binaries out as $TARGETPLATFORM/sablier for build/Dockerfile.
+          jq -r '.[] | select(.type=="Binary" and .goos=="linux") | [.path, .goarch, (.goarm // "")] | @tsv' dist/artifacts.json \
+            | while IFS=$'\t' read -r path arch goarm; do
+                case "$arch" in
+                  amd64) plat=linux/amd64 ;;
+                  arm64) plat=linux/arm64 ;;
+                  arm) [ "$goarm" = "7" ] || continue; plat=linux/arm/v7 ;;
+                  *) continue ;;
+                esac
+                install -D "$path" "$ctx/$plat/sablier"
+              done
+          docker buildx build --push \
+            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            --file build/Dockerfile \
+            --label "org.opencontainers.image.title=sablier" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.version=next" \
+            --tag sablierapp/sablier:next \
+            --tag ghcr.io/sablierapp/sablier:next \
+            "$ctx"
 
       # After GoReleaser runs, attest all the files in ./dist/checksums.txt:
       - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
