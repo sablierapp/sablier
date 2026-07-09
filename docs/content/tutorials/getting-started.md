@@ -107,7 +107,7 @@ services:
     restart: unless-stopped
 
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     command:
         - start
@@ -143,7 +143,7 @@ services:
     restart: unless-stopped
 
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     command:
         - start
@@ -174,7 +174,7 @@ services:
       - sablier.group=demo
 
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     command:
         - start

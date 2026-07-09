@@ -115,7 +115,7 @@ in p50 latency compared to the ready path, a negligible difference in practice.
 cd benchmarks/
 make bench                         # run all four scenarios
 make bench-blocking-warm           # individual scenario
-SABLIER_IMAGE=sablierapp/sablier:1.14.0 make bench # x-release-please-version
+SABLIER_IMAGE=sablierapp/sablier:{{< version >}} make bench
 ```
 
 See the [benchmarks README](https://github.com/sablierapp/sablier/tree/main/benchmarks)

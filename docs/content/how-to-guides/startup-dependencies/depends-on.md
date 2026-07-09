@@ -9,7 +9,7 @@ Bring a managed service's entire `depends_on` graph back up in order, waiting fo
 # compose.yml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker
