@@ -7,6 +7,10 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/docs.yml'
+  # Rebuild when a release is published so the new /vX.Y/ snapshot (and the
+  # updated "latest" at the root) are picked up from the freshly created tag.
+  release:
+    types: [published]
   workflow_dispatch:
 
 # Allow one concurrent deployment; don't cancel an in-progress production deploy.
@@ -36,7 +40,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 0 # needed for .Lastmod / .GitInfo
+          fetch-depth: 0 # needed for .Lastmod / .GitInfo and for build.sh to read every release tag
+          fetch-tags: true # build.sh derives the versioned docs (/vX.Y/) from tags
       - name: Setup Go (required to fetch the Hextra Hugo module)
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -48,13 +53,14 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - name: Build with Hugo
+      - name: Build with Hugo (multi-version)
         working-directory: docs
         env:
           HUGO_CACHEDIR: ${{ runner.temp }}/hugo_cache
-        # baseURL is pinned to the custom domain (sablierapp.dev) in hugo.yaml,
-        # so we intentionally do not override it here.
-        run: hugo --gc --minify
+        # build.sh builds the latest stable release at the root, main at /dev/,
+        # and every released minor at /vX.Y/ (BASE_URL defaults to the custom
+        # domain https://sablierapp.dev). See docs/build.sh.
+        run: ./build.sh
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

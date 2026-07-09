@@ -1,0 +1,23 @@
+{{- /* Overrides Hextra's navbar-title to render the logo + title (unchanged from
+  the theme) followed by the documentation version switcher. The mr-auto that the
+  theme puts on the logo link is moved to the wrapper so the switcher stays next
+  to the title and the rest of the navbar items keep their right alignment. */ -}}
+{{- $logoPath := .Site.Params.navbar.logo.path | default "images/logo.svg" -}}
+{{- $logoLink := .Site.Params.navbar.logo.link | default .Site.Home.RelPermalink -}}
+{{- $logoWidth := .Site.Params.navbar.logo.width | default "20" -}}
+{{- $logoHeight := .Site.Params.navbar.logo.height | default "20" -}}
+{{- $logoDarkPath := .Site.Params.navbar.logo.dark | default $logoPath -}}
+{{- $displayTitle := (.Site.Params.navbar.displayTitle | default true) -}}
+
+<div class="hx:flex hx:items-center hx:gap-2 hx:ltr:mr-auto hx:rtl:ml-auto">
+  <a class="hx:flex hx:items-center hx:hover:opacity-75" href="{{ $logoLink }}">
+    {{- if (.Site.Params.navbar.displayLogo | default true) }}
+      <img class="hx:mr-2 hx:block hx:dark:hidden" src="{{ $logoPath | relURL }}" alt="{{ cond $displayTitle `Logo` .Site.Title }}" height="{{ $logoHeight }}" width="{{ $logoWidth }}" />
+      <img class="hx:mr-2 hx:hidden hx:dark:block" src="{{ $logoDarkPath | relURL }}" alt="{{ cond $displayTitle `Dark Logo` .Site.Title }}" height="{{ $logoHeight }}" width="{{ $logoWidth }}" />
+    {{- end }}
+    {{- if $displayTitle }}
+      <span class="hx:mr-2 hx:font-extrabold hx:inline hx:select-none">{{- .Site.Title -}}</span>
+    {{- end }}
+  </a>
+  {{- partial "version-switch.html" . -}}
+</div>
