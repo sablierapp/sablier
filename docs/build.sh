@@ -93,9 +93,13 @@ build() {
 build_tag() { # <minor> <dest-subpath> <baseurl-suffix>
   local minor="$1" dest="$2" suffix="$3" tag="${MINOR_TAG[$1]}" wt
   wt="$(mktemp -d)"
+  cleanup() {
+    git -C "$REPO_ROOT" worktree remove --force "$wt" 2>/dev/null || true
+    rm -rf "$wt"
+  }
+  trap cleanup RETURN
   git -C "$REPO_ROOT" worktree add --quiet --detach "$wt" "$tag"
   build "$wt/docs" "$dest" "$suffix" "$minor"
-  git -C "$REPO_ROOT" worktree remove --force "$wt"
 }
 
 if [ -z "$LATEST_MINOR" ]; then
