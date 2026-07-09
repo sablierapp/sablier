@@ -67,6 +67,11 @@ menu:
       weight: 2
 
 params:
+  # Single source of truth for the released Sablier version shown throughout the
+  # docs. Referenced via the {{< version >}} shortcode so no page (generated or
+  # authored) hardcodes the version. Bumped automatically by release-please.
+  version: "1.14.0" # x-release-please-version
+
   navbar:
     displayTitle: true
     displayLogo: true

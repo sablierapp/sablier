@@ -41,18 +41,16 @@ SABLIER_PROVIDER_NAME=docker_swarm # or swarm
 
 Run Sablier with the socket mounted:
 
-<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker_swarm # or swarm
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```
-<!-- x-release-please-end -->
 
 ## Register a service
 

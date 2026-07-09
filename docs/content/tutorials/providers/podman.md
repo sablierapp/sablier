@@ -40,11 +40,10 @@ SABLIER_PROVIDER_NAME=podman
 
 Run Sablier with the socket mounted:
 
-<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     command:
       - start
@@ -52,7 +51,6 @@ services:
     volumes:
       - '/run/podman/podman.sock:/run/podman/podman.sock'
 ```
-<!-- x-release-please-end -->
 
 ## Register a container
 

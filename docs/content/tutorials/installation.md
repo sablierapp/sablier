@@ -16,11 +16,10 @@ Pull the image from Docker Hub or the GitHub Container Registry:
 
 **With Docker Compose**, copy this into a `compose.yaml` and run `docker compose up -d`:
 
-<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker
@@ -29,16 +28,13 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 ```
-<!-- x-release-please-end -->
 
 **With `docker run`**, using a sample [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml):
 
-<!-- x-release-please-start-version -->
 ```bash
 docker run -d -p 10000:10000 \
-    -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:1.14.0
+    -v $PWD/sablier.yaml:/etc/sablier/sablier.yaml sablierapp/sablier:{{< version >}}
 ```
-<!-- x-release-please-end -->
 
 The `docker.sock` mount is what lets Sablier start and stop your Docker containers.
 

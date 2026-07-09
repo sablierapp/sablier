@@ -9,7 +9,7 @@ Inspect an instance before stopping it when its session expires, and skip the st
 # compose.yml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker

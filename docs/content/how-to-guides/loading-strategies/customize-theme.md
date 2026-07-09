@@ -8,17 +8,15 @@ aliases:
 
 This guide shows you how to customize the waiting page shown while an instance starts.
 
-<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '/path/to/my/themes:/etc/sablier/themes'
 ```
-<!-- x-release-please-end -->
 
 Sablier comes with a set of default themes that you can use.
 

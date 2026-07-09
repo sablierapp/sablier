@@ -23,7 +23,7 @@ services:
       - socket-proxy
 
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker

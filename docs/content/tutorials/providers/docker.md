@@ -40,11 +40,10 @@ SABLIER_PROVIDER_NAME=docker
 
 Run Sablier with the socket mounted:
 
-<!-- x-release-please-start-version -->
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0
+    image: sablierapp/sablier:{{< version >}}
     restart: always
     command:
       - start
@@ -52,7 +51,6 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
 ```
-<!-- x-release-please-end -->
 
 ## Connecting to a remote or TLS-protected daemon
 

@@ -66,15 +66,13 @@ SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 
 To get the list of all available arguments:
 
-<!-- x-release-please-start-version -->
 ```bash
 sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.14.0 --help
+docker run sablierapp/sablier:{{< version >}} --help
 ```
-<!-- x-release-please-end -->
 
 All configuration options can be used as command-line arguments. The argument name follows the structure of the configuration file.
 

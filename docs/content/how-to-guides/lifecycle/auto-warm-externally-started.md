@@ -9,7 +9,7 @@ Seed a session for managed instances that start without Sablier having initiated
 # compose.yml
 services:
   sablier:
-    image: sablierapp/sablier:1.14.0 # x-release-please-version
+    image: sablierapp/sablier:{{< version >}}
     command:
       - start
       - --provider.name=docker

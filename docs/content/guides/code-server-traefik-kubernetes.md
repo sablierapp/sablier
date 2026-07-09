@@ -152,7 +152,7 @@ This walkthrough was written against older component versions (k3s 1.23, Traefik
           serviceAccountName: sablier
           containers:
           - name: sablier
-            image: sablierapp/sablier:1.14.0 # x-release-please-version
+            image: sablierapp/sablier:{{< version >}}
             args: 
             - "start"
             - "--provider.name=kubernetes"
