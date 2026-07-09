@@ -24,7 +24,7 @@
 <div class="feature-meta">
 {{- if $compat -}}
   <div class="compat" role="list" aria-label="Provider compatibility">
-  {{- range $p := hugo.Data.providers -}}
+  {{- range $p := site.Data.providers -}}
     {{- $status := index $compat $p.key -}}
     {{- if $status -}}
       {{- $icon := printf "/assets/img/%s" $p.icon -}}

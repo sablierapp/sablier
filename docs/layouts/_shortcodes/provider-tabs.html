@@ -13,7 +13,7 @@
 {{- .Inner -}}
 {{- $ptabs := .Store.Get "ptabs" | default slice -}}
 {{- if $ptabs -}}
-{{- $providers := hugo.Data.providers -}}
+{{- $providers := site.Data.providers -}}
 <div class="provider-tabs" id="provider-notes" data-provider-tabs>
   <div class="provider-tabs-nav" role="tablist" aria-label="Provider">
     {{- range $i, $t := $ptabs -}}

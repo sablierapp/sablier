@@ -98,3 +98,23 @@ params:
 
   imageZoom:
     enable: true
+
+  # Comments powered by giscus (GitHub Discussions). Hextra renders these at the
+  # bottom of doc, page, and blog pages when enabled. The giscus theme is synced
+  # automatically with the site's light/dark toggle.
+  #
+  # To disable comments on a specific page, set `comments: false` in its front matter.
+  comments:
+    enable: true
+    type: giscus
+    giscus:
+      repo: "sablierapp/sablier"
+      repoId: "MDEwOlJlcG9zaXRvcnkzMDU3OTM3OTg="
+      category: "Giscus"
+      categoryId: "DIC_kwDOEjoLBs4DAy4-"
+      # Defaults applied by Hextra (uncomment to override):
+      # mapping: pathname          # one discussion per page URL
+      # inputPosition: top
+      # reactionsEnabled: 1
+      # emitMetadata: 0
+      # lang: en

@@ -3,7 +3,7 @@
   `compatibility` map in its front matter. Single source of truth: the same
   front matter the per-page {{< compatibility >}} badges use.
 */ -}}
-{{- $providers := hugo.Data.providers -}}
+{{- $providers := site.Data.providers -}}
 {{- $rows := where site.Pages "Params.compatibility" "!=" nil -}}
 {{- $rows = sort $rows "RelPermalink" -}}
 <div class="hextra-scrollbar" style="overflow-x:auto;">
