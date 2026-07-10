@@ -1,0 +1,19 @@
+# Provider registry — the single source of truth for the compatibility badges
+# ({{< compatibility >}}) and the persistent per-provider tabs
+# ({{< provider-tabs >}}). `key` is used in page front matter and tab names;
+# `icon` is a file under static/assets/img/.
+- key: docker
+  name: Docker
+  icon: docker.svg
+- key: swarm
+  name: Docker Swarm
+  icon: docker_swarm.png
+- key: kubernetes
+  name: Kubernetes
+  icon: kubernetes.png
+- key: podman
+  name: Podman
+  icon: podman.png
+- key: proxmox
+  name: Proxmox LXC
+  icon: proxmox.png

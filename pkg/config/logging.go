@@ -11,6 +11,7 @@ type Logging struct {
 	// Env: SABLIER_LOGGING_LEVEL
 	// CLI: --logging.level
 	// Default: "info"
+	// Since: v1.0.0
 	Level string
 }
 

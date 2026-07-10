@@ -6,6 +6,7 @@ type Server struct {
 	// Env: SABLIER_SERVER_PORT
 	// CLI: --server.port
 	// Default: 10000
+	// Since: v1.0.0
 	Port int
 
 	// BasePath is the URL path prefix for all API routes.
@@ -13,6 +14,7 @@ type Server struct {
 	// Env: SABLIER_SERVER_BASE_PATH
 	// CLI: --server.base-path
 	// Default: "/"
+	// Since: v1.0.0
 	BasePath string
 
 	Metrics MetricsConfig
@@ -24,6 +26,7 @@ type MetricsConfig struct {
 	// Env: SABLIER_SERVER_METRICS_ENABLED
 	// CLI: --server.metrics.enabled
 	// Default: false
+	// Since: v1.12.0
 	Enabled bool
 }
 

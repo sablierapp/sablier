@@ -25,6 +25,24 @@ type DynamicRequest struct {
 	RefreshFrequency time.Duration `form:"refresh_frequency"`
 }
 
+// StartDynamic registers the dynamic strategy endpoint.
+//
+// @Summary      Dynamic strategy
+// @Description  Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.
+// @Tags         strategies
+// @Produce      html
+// @Param        names              query  []string  false  "Instance name(s). Mutually exclusive with group."
+// @Param        group              query  string    false  "Group name. Mutually exclusive with names."
+// @Param        session_duration   query  string    false  "Session duration as a Go duration (e.g. 5m)."
+// @Param        refresh_frequency  query  string    false  "Waiting-page refresh interval as a Go duration (e.g. 5s)."
+// @Param        show_details       query  bool      false  "Show per-instance details on the waiting page."
+// @Param        display_name       query  string    false  "Display name shown on the waiting page."
+// @Param        theme              query  string    false  "Theme name for the waiting page."
+// @Success      200  {string}  string  "HTML waiting page"
+// @Header       200  {string}  X-Sablier-Session-Status  "ready or not-ready"
+// @Failure      404  {object}  rfc7807.Problem  "Group or theme not found"
+// @Failure      500  {object}  rfc7807.Problem  "Internal error"
+// @Router       /api/strategies/dynamic [get]
 func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/dynamic", func(c *gin.Context) {
 		request := DynamicRequest{

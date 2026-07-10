@@ -20,6 +20,7 @@ Thank you for your interest in contributing to Sablier! This guide will help you
       - [Run Locally](#run-locally)
       - [Build Docker Image](#build-docker-image)
     - [Theme Development](#theme-development)
+    - [Generated Files](#generated-files)
     - [Testing](#testing)
       - [Run All Tests](#run-all-tests)
       - [Run Linters](#run-linters)
@@ -191,6 +192,34 @@ This command fails with a clear message if the committed schema does not match t
 
 ---
 
+### Generated Files
+
+Several files under `docs/` are generated from Go source and committed to the repository. Regenerate them whenever their source changes, and commit the result.
+
+| File | Generated from | Individual target |
+|------|----------------|-------------------|
+| `docs/content/reference/cli.md` | the CLI flags and config structs | `make cli-docs` |
+| `docs/content/reference/labels.md` | the label doc comments in [`pkg/sablier/labels.go`](pkg/sablier/labels.go) | `make labels-docs` |
+| `docs/content/how-to-guides/advanced/observability/metrics.md` | the Prometheus collectors in [`pkg/metrics`](pkg/metrics) | `make metrics-docs` |
+| `docs/static/theme.schema.json` | the theme types in [`pkg/theme/types.go`](pkg/theme/types.go) | `make schema` |
+| `docs/static/openapi.json` | the HTTP API definition | `make openapi` |
+
+Regenerate all of them at once:
+
+```bash
+make generate
+```
+
+CI verifies that every generated file is up to date on each pull request:
+
+```bash
+make check-generate
+```
+
+`make check-generate` fails with a message naming the stale file if any generated file no longer matches its source. Run `make generate`, commit the changes, and the check passes.
+
+---
+
 ### Testing
 
 #### Run All Tests
@@ -252,7 +281,10 @@ func TestMyLongRunningTest(t *testing.T) {
 make fmt
 make test
 make lint
+make check-generate
 ```
+
+If you changed CLI flags, labels, metrics, the theme schema, or the HTTP API, run `make generate` and commit the regenerated files.
 
 
 ### Create a Pull Request

@@ -36,6 +36,9 @@ jobs:
           go.sum
           tools.mod
 
+    - name: Verify generated docs are up to date
+      run: make check-generate
+
     - name: Disable AppArmor on the GitHub runner
       uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
 

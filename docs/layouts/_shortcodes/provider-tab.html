@@ -1,0 +1,9 @@
+{{- /*
+  A single panel inside {{< provider-tabs >}}. `name` is a provider key from
+  data/providers.yaml (docker, swarm, kubernetes, podman, proxmox).
+
+  @example {{< provider-tab name="docker" >}}...markdown...{{< /provider-tab >}}
+*/ -}}
+{{- $key := .Get "name" -}}
+{{- $existing := .Parent.Store.Get "ptabs" | default slice -}}
+{{- .Parent.Store.Set "ptabs" ($existing | append (dict "key" $key "content" .InnerDeindent)) -}}

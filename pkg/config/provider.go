@@ -12,6 +12,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_NAME
 	// CLI: --provider.name
 	// Default: "docker"
+	// Since: v1.0.0
 	Name string
 
 	// AutoStopOnStartup stops all instances labelled with sablier.enable=true at
@@ -19,6 +20,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_AUTO_STOP_ON_STARTUP
 	// CLI: --provider.auto-stop-on-startup
 	// Default: true
+	// Since: v1.8.0
 	AutoStopOnStartup bool
 
 	// AutoStopExternallyStarted continuously stops instances with sablier.enable=true
@@ -26,6 +28,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_AUTO_STOP_EXTERNALLY_STARTED
 	// CLI: --provider.auto-stop-externally-started
 	// Default: false
+	// Since: v1.13.0
 	AutoStopExternallyStarted bool
 
 	// AutoWarmExternallyStarted continuously creates a session (with the default
@@ -36,6 +39,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_AUTO_WARM_EXTERNALLY_STARTED
 	// CLI: --provider.auto-warm-externally-started
 	// Default: false
+	// Since: NEXT_RELEASE
 	AutoWarmExternallyStarted bool
 
 	// RejectUnlabeledRequests rejects requests for instances that do not carry
@@ -43,6 +47,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS
 	// CLI: --provider.reject-unlabeled-requests
 	// Default: false
+	// Since: v1.13.0
 	RejectUnlabeledRequests bool
 
 	// VerifyEnabledOnExpiration re-checks the sablier.enable=true label before stopping
@@ -50,6 +55,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_VERIFY_ENABLED_ON_EXPIRATION
 	// CLI: --provider.verify-enabled-on-expiration
 	// Default: false
+	// Since: v1.13.0
 	VerifyEnabledOnExpiration bool
 
 	Kubernetes Kubernetes
@@ -64,6 +70,7 @@ type Kubernetes struct {
 	// Env: SABLIER_PROVIDER_KUBERNETES_QPS
 	// CLI: --provider.kubernetes.qps
 	// Default: 5
+	// Since: v1.4.1-beta.2
 	QPS float32
 
 	// Burst is the maximum number of requests the Kubernetes client can send in a burst
@@ -71,6 +78,7 @@ type Kubernetes struct {
 	// Env: SABLIER_PROVIDER_KUBERNETES_BURST
 	// CLI: --provider.kubernetes.burst
 	// Default: 10
+	// Since: v1.4.1-beta.2
 	Burst int
 
 	// Delimiter separates the namespace, resource type, and name in instance identifiers.
@@ -78,6 +86,7 @@ type Kubernetes struct {
 	// Env: SABLIER_PROVIDER_KUBERNETES_DELIMITER
 	// CLI: --provider.kubernetes.delimiter
 	// Default: "_"
+	// Since: v1.7.0
 	Delimiter string
 }
 
@@ -88,6 +97,7 @@ type Podman struct {
 	// Env: SABLIER_PROVIDER_PODMAN_URI
 	// CLI: --provider.podman.uri
 	// Default: "unix:///run/podman/podman.sock"
+	// Since: v1.10.0
 	Uri string
 }
 
@@ -98,6 +108,7 @@ type Docker struct {
 	// Env: SABLIER_PROVIDER_DOCKER_STRATEGY
 	// CLI: --provider.docker.strategy
 	// Default: "stop"
+	// Since: v1.11.0
 	Strategy string
 
 	// HonorRestartPolicy makes Sablier honor a container's restart policy when it
@@ -118,6 +129,7 @@ type Docker struct {
 	// Env: SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY
 	// CLI: --provider.docker.honor-restart-policy
 	// Default: false
+	// Since: NEXT_RELEASE
 	HonorRestartPolicy bool
 }
 
@@ -127,6 +139,7 @@ type ProxmoxLXC struct {
 	// Env: SABLIER_PROVIDER_PROXMOX_LXC_URL
 	// CLI: --provider.proxmox-lxc.url
 	// Default: ""
+	// Since: v1.12.0
 	URL string
 
 	// TokenID is the Proxmox API token identifier in the form "user@realm!tokenname"
@@ -134,12 +147,14 @@ type ProxmoxLXC struct {
 	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_ID
 	// CLI: --provider.proxmox-lxc.token-id
 	// Default: ""
+	// Since: v1.12.0
 	TokenID string
 
 	// TokenSecret is the UUID secret associated with the Proxmox API token.
 	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_SECRET
 	// CLI: --provider.proxmox-lxc.token-secret
 	// Default: ""
+	// Since: v1.12.0
 	TokenSecret string
 
 	// TLSInsecure disables TLS certificate verification when connecting to the Proxmox API.
@@ -147,6 +162,7 @@ type ProxmoxLXC struct {
 	// Env: SABLIER_PROVIDER_PROXMOX_LXC_TLS_INSECURE
 	// CLI: --provider.proxmox-lxc.tls-insecure
 	// Default: false
+	// Since: v1.12.0
 	TLSInsecure bool
 }
 
@@ -218,4 +234,9 @@ func (p ProxmoxLXC) IsValid() error {
 
 func GetProviders() []string {
 	return providers
+}
+
+// GetDockerStrategies returns the accepted values for the Docker stop strategy.
+func GetDockerStrategies() []string {
+	return dockerStrategies
 }
