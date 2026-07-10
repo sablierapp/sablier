@@ -113,6 +113,7 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.kubernetes.burst`](#opt-provider-kubernetes-burst) | Maximum burst for K8S API access client-side throttling |
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
+| [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
 | [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc] |
 | [`--provider.podman.uri`](#opt-provider-podman-uri) | Uri is the URI to connect to the Podman service. |
 | [`--provider.proxmox-lxc.tls-insecure`](#opt-provider-proxmox-lxc-tls-insecure) | Skip TLS certificate verification for Proxmox VE API |
@@ -290,6 +291,27 @@ SABLIER_PROVIDER_KUBERNETES_QPS=5
 
 # Command-line flag
 --provider.kubernetes.qps=5
+```
+
+### `--provider.kubernetes.ready-on-first-replica` {#opt-provider-kubernetes-ready-on-first-replica}
+
+Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas
+
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    ready-on-first-replica: false
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA=false
+
+# Command-line flag
+--provider.kubernetes.ready-on-first-replica=false
 ```
 
 ### `--provider.name` {#opt-provider-name}

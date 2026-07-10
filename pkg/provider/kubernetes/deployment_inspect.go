@@ -17,8 +17,11 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
 	var info sablier.InstanceInfo
-	// TODO: Should add option to set ready as soon as one replica is ready
-	if *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas {
+	ready := *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas
+	if p.readyOnFirstReplica {
+		ready = d.Status.ReadyReplicas > 0
+	}
+	if ready {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: config.Replicas,

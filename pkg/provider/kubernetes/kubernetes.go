@@ -21,10 +21,11 @@ type Provider struct {
 	// dynamic drives Custom Resources (e.g. CloudNativePG Clusters) that are not
 	// part of the typed clientset. It may be nil when the provider is constructed
 	// without CRD support; CRD-backed operations guard against that.
-	dynamic   dynamic.Interface
-	delimiter string
-	l         *slog.Logger
-	tracer    trace.Tracer
+	dynamic             dynamic.Interface
+	delimiter           string
+	readyOnFirstReplica bool
+	l                   *slog.Logger
+	tracer              trace.Tracer
 }
 
 func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Interface, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
@@ -42,11 +43,12 @@ func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Inter
 	)
 
 	return &Provider{
-		Client:    client,
-		dynamic:   dynamicClient,
-		delimiter: config.Delimiter,
-		l:         logger,
-		tracer:    otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
+		Client:              client,
+		dynamic:             dynamicClient,
+		delimiter:           config.Delimiter,
+		readyOnFirstReplica: config.ReadyOnFirstReplica,
+		l:                   logger,
+		tracer:              otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil
 
 }

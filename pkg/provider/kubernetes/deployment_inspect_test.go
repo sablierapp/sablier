@@ -273,3 +273,52 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 		})
 	}
 }
+
+func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedKinD
+
+	// A pod only becomes healthy 20 seconds after its own start: the first
+	// replica gets ready, and the replica added by the scale-up below stays
+	// unready long enough to observe a stable 1/2-ready deployment.
+	d, err := c.CreateMimicDeployment(ctx, MimicOptions{
+		Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=20s"},
+		Healthcheck: &corev1.Probe{},
+	})
+	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = c.client.AppsV1().Deployments(d.Namespace).Delete(context.Background(), d.Name, metav1.DeleteOptions{})
+	})
+
+	assert.NilError(t, WaitForDeploymentReady(ctx, c.client, "default", d.Name))
+
+	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
+		Spec:       autoscalingv1.ScaleSpec{Replicas: 2},
+	}, metav1.UpdateOptions{})
+	assert.NilError(t, err)
+	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 2))
+
+	name := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
+
+	// Default behavior: 1/2 ready replicas is still starting.
+	p, err := kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	assert.NilError(t, err)
+	got, err := p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStarting)
+
+	// With ready-on-first-replica, one ready replica is enough.
+	cfg := config.NewProviderConfig().Kubernetes
+	cfg.ReadyOnFirstReplica = true
+	p, err = kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), cfg)
+	assert.NilError(t, err)
+	got, err = p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusReady)
+}

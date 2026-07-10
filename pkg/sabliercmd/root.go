@@ -56,6 +56,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
 	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
 	_ = viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
+	startCmd.Flags().BoolVar(&conf.Provider.Kubernetes.ReadyOnFirstReplica, "provider.kubernetes.ready-on-first-replica", false, "Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas")
+	_ = viper.BindPFlag("provider.kubernetes.ready-on-first-replica", startCmd.Flags().Lookup("provider.kubernetes.ready-on-first-replica"))
 	startCmd.Flags().StringVar(&conf.Provider.Podman.Uri, "provider.podman.uri", "unix:///run/podman/podman.sock", "Uri is the URI to connect to the Podman service.")
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
 	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")

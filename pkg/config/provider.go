@@ -88,6 +88,19 @@ type Kubernetes struct {
 	// Default: "_"
 	// Since: v1.7.0
 	Delimiter string
+
+	// ReadyOnFirstReplica reports a Deployment or StatefulSet as ready as soon as
+	// at least one replica is ready, instead of requiring all desired replicas to
+	// be ready. With the default behavior, a single restarting pod of a
+	// multi-replica workload flips the instance back to "starting" (and its
+	// sessions to the waiting page) even though the workload still serves traffic
+	// through its remaining ready replicas. Enabling this also lets traffic flow
+	// during scale-up as soon as the first replica of each workload is up.
+	// Env: SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA
+	// CLI: --provider.kubernetes.ready-on-first-replica
+	// Default: false
+	// Since: NEXT_RELEASE
+	ReadyOnFirstReplica bool
 }
 
 type Podman struct {
