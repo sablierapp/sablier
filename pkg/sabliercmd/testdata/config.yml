@@ -5,6 +5,7 @@ provider:
     qps: 64
     burst: 128
     delimiter: .
+    ready-on-first-replica: true
   podman:
     uri: unix:///run/podman/podman.sock.yml
   docker:

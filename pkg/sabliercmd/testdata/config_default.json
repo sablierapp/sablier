@@ -19,7 +19,8 @@
     "Kubernetes": {
       "QPS": 5,
       "Burst": 10,
-      "Delimiter": "_"
+      "Delimiter": "_",
+      "ReadyOnFirstReplica": false
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock"
