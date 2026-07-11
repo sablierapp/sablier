@@ -3,6 +3,7 @@ package inmemory
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -27,7 +28,8 @@ func TestInMemorySnapshotIsVersioned(t *testing.T) {
 
 		raw, err := s.(*InMemory).MarshalJSON()
 		assert.NilError(t, err)
-		assert.Assert(t, strings.Contains(string(raw), `"v":1`), "snapshot entries must be versioned: %s", raw)
+		versionTag := fmt.Sprintf(`"v":%d`, sablier.SessionRecordVersion)
+		assert.Assert(t, strings.Contains(string(raw), versionTag), "snapshot entries must be versioned: %s", raw)
 	})
 
 	t.Run("legacy snapshot loads and upgrades", func(t *testing.T) {
