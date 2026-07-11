@@ -100,7 +100,7 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 				continue
 			}
 			// Only act on Sablier-managed instances.
-			if info.Info.Enabled != "true" {
+			if !info.Info.IsEnabled() {
 				continue
 			}
 			if s.isStartedByUs(ctx, info.Info.Name) {

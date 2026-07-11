@@ -80,6 +80,57 @@
         },
         "type": "object"
       },
+      "sablier.InstanceConfig": {
+        "properties": {
+          "antiAffinity": {
+            "description": "AntiAffinity lists the groups this instance backs off from\n(sablier.anti-affinity).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "description": "Enabled reports whether the instance opted into Sablier management\n(sablier.enable set to exactly \"true\").",
+            "type": "boolean"
+          },
+          "groups": {
+            "description": "Groups the instance belongs to (sablier.group). Only populated for\nenabled instances; defaults to [\"default\"] when the label is absent.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "readyAfter": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/time.Duration"
+              }
+            ],
+            "description": "ReadyAfter is the settling delay after the instance first reports ready\n(sablier.ready-after). Zero means no extra wait."
+          },
+          "readyOnStart": {
+            "description": "ReadyOnStart marks the instance ready as soon as its start is\ndispatched, skipping the health check (sablier.ready-on-start).",
+            "type": "boolean"
+          },
+          "runningDays": {
+            "description": "RunningDays restricts RunningHours to specific weekdays\n(sablier.running-days). Empty means every day.",
+            "type": "string"
+          },
+          "runningHours": {
+            "description": "RunningHours is the validated daily keep-warm window\n(sablier.running-hours, \"HH:MM-HH:MM\"). It is kept in its validated\nstring form because that is the serializable canonical representation;\nparse it with ParseRunningHours where the window is evaluated.",
+            "type": "string"
+          },
+          "scale": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/sablier.ScaleConfig"
+              }
+            ],
+            "description": "Scale holds the idle/active resource profiles when any non-default\nscale-mode label is present (sablier.idle.* / sablier.active.*)."
+          }
+        },
+        "type": "object"
+      },
       "sablier.InstanceInfo": {
         "properties": {
           "antiAffinity": {
@@ -88,6 +139,14 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "config": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/sablier.InstanceConfig"
+              }
+            ],
+            "description": "Config is the typed, parsed form of the instance's sablier.* labels,\nproduced by InstanceConfigFromLabels at the provider boundary. Prefer it\n(and the accessor methods such as IsEnabled) over the flat fields above,\nwhich are kept for API and store compatibility and will move behind a\ndedicated API DTO in a later stage. Nil on records that predate this\nfield (e.g. sessions persisted by an older version); accessors fall back\nto the flat fields in that case."
           },
           "currentReplicas": {
             "type": "integer"

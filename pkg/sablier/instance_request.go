@@ -103,7 +103,7 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		s.l.DebugContext(ctx, "pre-start inspect failed, using bare info", slog.String("instance", name), slog.Any("error", err))
 		info = InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1}
 	}
-	if rejectUnlabeled && info.Enabled != "true" {
+	if rejectUnlabeled && !info.IsEnabled() {
 		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
 	}
 	info.Status = InstanceStatusStarting

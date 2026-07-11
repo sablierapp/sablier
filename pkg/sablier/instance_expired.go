@@ -38,7 +38,7 @@ func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 					logger.WarnContext(ctx, "instance expired could not be inspected before stop", slog.String("instance", key), slog.Any("error", err))
 					return
 				}
-				if info.Enabled != "true" {
+				if !info.IsEnabled() {
 					logger.WarnContext(ctx, "instance expired but is not managed by sablier, skipping stop", slog.String("instance", key))
 					return
 				}
