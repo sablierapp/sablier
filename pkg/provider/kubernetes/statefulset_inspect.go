@@ -16,7 +16,9 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 	var info sablier.InstanceInfo
 	ready := *ss.Spec.Replicas != 0 && *ss.Spec.Replicas == ss.Status.ReadyReplicas
 	if p.readyOnFirstReplica {
-		ready = ss.Status.ReadyReplicas > 0
+		// A workload scaled to zero must still be reported as stopped, even if
+		// terminating pods transiently keep readyReplicas above zero.
+		ready = *ss.Spec.Replicas != 0 && ss.Status.ReadyReplicas > 0
 	}
 	if ready {
 		info = sablier.InstanceInfo{

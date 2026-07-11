@@ -12,7 +12,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,7 +64,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 				do: func(dind *kindContainer) (string, error) {
 					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
 						Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=10s"},
-						Healthcheck: &corev1.Probe{},
+						Healthcheck: mimicHealthcheck(),
 					})
 					if err != nil {
 						return "", err
@@ -288,7 +287,7 @@ func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) 
 	// unready long enough to observe a stable 1/2-ready deployment.
 	d, err := c.CreateMimicDeployment(ctx, MimicOptions{
 		Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=20s"},
-		Healthcheck: &corev1.Probe{},
+		Healthcheck: mimicHealthcheck(),
 	})
 	assert.NilError(t, err)
 	t.Cleanup(func() {
@@ -321,4 +320,17 @@ func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) 
 	got, err = p.InstanceInspect(ctx, name)
 	assert.NilError(t, err)
 	assert.Equal(t, got.Status, sablier.InstanceStatusReady)
+	assert.Equal(t, got.CurrentReplicas, int32(1))
+
+	// Scaled to zero, the workload must still be reported as stopped.
+	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
+		Spec:       autoscalingv1.ScaleSpec{Replicas: 0},
+	}, metav1.UpdateOptions{})
+	assert.NilError(t, err)
+	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 0))
+
+	got, err = p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStopped)
 }

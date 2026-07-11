@@ -96,6 +96,8 @@ type Kubernetes struct {
 	// sessions to the waiting page) even though the workload still serves traffic
 	// through its remaining ready replicas. Enabling this also lets traffic flow
 	// during scale-up as soon as the first replica of each workload is up.
+	// A workload scaled to zero is always reported as stopped, regardless of
+	// this option.
 	// Env: SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA
 	// CLI: --provider.kubernetes.ready-on-first-replica
 	// Default: false
