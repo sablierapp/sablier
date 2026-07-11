@@ -744,7 +744,7 @@
                 }
               }
             },
-            "description": "Group or instance not found"
+            "description": "Group not found"
           },
           "500": {
             "content": {
