@@ -14,12 +14,24 @@ import (
 )
 
 func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
-	handler := cache.ResourceEventHandlerFuncs{
+	handler := p.statefulSetEventHandler(ctx, instance, wantStopped, wantStarted, wantCreated, wantRemoved)
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
+	informer := factory.Apps().V1().StatefulSets().Informer()
+
+	_, _ = informer.AddEventHandler(handler)
+	return informer
+}
+
+func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			if !wantCreated {
 				return
 			}
-			ss := obj.(*appsv1.StatefulSet)
+			ss, ok := eventObject[*appsv1.StatefulSet](obj)
+			if !ok {
+				return
+			}
 			parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 			info, err := p.InstanceInspect(ctx, parsed.Original)
 			if err != nil {
@@ -30,15 +42,21 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
 		},
 		UpdateFunc: func(old, new any) {
-			newStatefulSet := new.(*appsv1.StatefulSet)
-			oldStatefulSet := old.(*appsv1.StatefulSet)
+			newStatefulSet, ok := eventObject[*appsv1.StatefulSet](new)
+			if !ok {
+				return
+			}
+			oldStatefulSet, ok := eventObject[*appsv1.StatefulSet](old)
+			if !ok {
+				return
+			}
 
 			if newStatefulSet.ResourceVersion == oldStatefulSet.ResourceVersion {
 				return
 			}
 
-			oldReplicas := *oldStatefulSet.Spec.Replicas
-			newReplicas := *newStatefulSet.Spec.Replicas
+			oldReplicas := replicasOf(oldStatefulSet.Spec.Replicas)
+			newReplicas := replicasOf(newStatefulSet.Spec.Replicas)
 
 			if wantStopped && oldReplicas != 0 && newReplicas == 0 {
 				parsed := StatefulSetName(newStatefulSet, ParseOptions{Delimiter: p.delimiter})
@@ -66,7 +84,10 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 			if !wantRemoved && !wantStopped {
 				return
 			}
-			ss := obj.(*appsv1.StatefulSet)
+			ss, ok := eventObject[*appsv1.StatefulSet](obj)
+			if !ok {
+				return
+			}
 			parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 			// StatefulSet is gone; build InstanceInfo from the deleted object directly.
 			var image string
@@ -93,9 +114,4 @@ func (p *Provider) watchStatefulSets(ctx context.Context, instance chan<- sablie
 			}
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(core_v1.NamespaceAll))
-	informer := factory.Apps().V1().StatefulSets().Informer()
-
-	_, _ = informer.AddEventHandler(handler)
-	return informer
 }

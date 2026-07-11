@@ -52,15 +52,7 @@ func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
 // clusterFromObject extracts the *unstructured.Unstructured from an informer event,
 // unwrapping a tombstone when the final state was missed.
 func clusterFromObject(obj any) (*unstructured.Unstructured, bool) {
-	if u, ok := obj.(*unstructured.Unstructured); ok {
-		return u, true
-	}
-	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-	if !ok {
-		return nil, false
-	}
-	u, ok := tombstone.Obj.(*unstructured.Unstructured)
-	return u, ok
+	return eventObject[*unstructured.Unstructured](obj)
 }
 
 func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {

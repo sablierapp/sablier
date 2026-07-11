@@ -14,12 +14,24 @@ import (
 )
 
 func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
-	handler := cache.ResourceEventHandlerFuncs{
+	handler := p.deploymentEventHandler(ctx, instance, wantStopped, wantStarted, wantCreated, wantRemoved)
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))
+	informer := factory.Apps().V1().Deployments().Informer()
+
+	_, _ = informer.AddEventHandler(handler)
+	return informer
+}
+
+func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			if !wantCreated {
 				return
 			}
-			d := obj.(*appsv1.Deployment)
+			d, ok := eventObject[*appsv1.Deployment](obj)
+			if !ok {
+				return
+			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 			info, err := p.InstanceInspect(ctx, parsed.Original)
 			if err != nil {
@@ -30,15 +42,21 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
 		},
 		UpdateFunc: func(old, new any) {
-			newDeployment := new.(*appsv1.Deployment)
-			oldDeployment := old.(*appsv1.Deployment)
+			newDeployment, ok := eventObject[*appsv1.Deployment](new)
+			if !ok {
+				return
+			}
+			oldDeployment, ok := eventObject[*appsv1.Deployment](old)
+			if !ok {
+				return
+			}
 
 			if newDeployment.ResourceVersion == oldDeployment.ResourceVersion {
 				return
 			}
 
-			oldReplicas := *oldDeployment.Spec.Replicas
-			newReplicas := *newDeployment.Spec.Replicas
+			oldReplicas := replicasOf(oldDeployment.Spec.Replicas)
+			newReplicas := replicasOf(newDeployment.Spec.Replicas)
 
 			if wantStopped && oldReplicas != 0 && newReplicas == 0 {
 				parsed := DeploymentName(newDeployment, ParseOptions{Delimiter: p.delimiter})
@@ -65,7 +83,10 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 			if !wantRemoved && !wantStopped {
 				return
 			}
-			d := obj.(*appsv1.Deployment)
+			d, ok := eventObject[*appsv1.Deployment](obj)
+			if !ok {
+				return
+			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 			// Deployment is gone; build InstanceInfo from the deleted object directly.
 			var image string
@@ -92,9 +113,4 @@ func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier
 			}
 		},
 	}
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))
-	informer := factory.Apps().V1().Deployments().Informer()
-
-	_, _ = informer.AddEventHandler(handler)
-	return informer
 }
