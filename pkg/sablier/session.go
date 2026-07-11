@@ -1,7 +1,6 @@
 package sablier
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -60,23 +59,3 @@ func (s *SessionState) Status() string {
 	return "not-ready"
 }
 
-func (s *SessionState) MarshalJSON() ([]byte, error) {
-	type instanceJSON struct {
-		Instance InstanceInfo `json:"instance"`
-		Error    string       `json:"error,omitempty"`
-	}
-
-	instances := make([]instanceJSON, 0, len(s.Instances))
-	for _, v := range s.Instances {
-		item := instanceJSON{Instance: v.Instance}
-		if v.Error != nil {
-			item.Error = v.Error.Error()
-		}
-		instances = append(instances, item)
-	}
-
-	return json.Marshal(map[string]any{
-		"instances": instances,
-		"status":    s.Status(),
-	})
-}

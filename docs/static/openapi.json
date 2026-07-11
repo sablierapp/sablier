@@ -1,10 +1,35 @@
 {
   "components": {
     "schemas": {
+      "api.InstanceEntryResponse": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "instance": {
+            "$ref": "#/components/schemas/sablier.InstanceInfo"
+          }
+        },
+        "type": "object"
+      },
       "api.SessionResponse": {
         "properties": {
           "session": {
-            "$ref": "#/components/schemas/sablier.SessionState"
+            "$ref": "#/components/schemas/api.SessionStateResponse"
+          }
+        },
+        "type": "object"
+      },
+      "api.SessionStateResponse": {
+        "properties": {
+          "instances": {
+            "items": {
+              "$ref": "#/components/schemas/api.InstanceEntryResponse"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -163,15 +188,6 @@
         },
         "type": "object"
       },
-      "sablier.InstanceInfoWithError": {
-        "properties": {
-          "error": {},
-          "instance": {
-            "$ref": "#/components/schemas/sablier.InstanceInfo"
-          }
-        },
-        "type": "object"
-      },
       "sablier.InstanceStatus": {
         "enum": [
           "completed",
@@ -292,17 +308,6 @@
           },
           "idle": {
             "$ref": "#/components/schemas/sablier.ResourceProfile"
-          }
-        },
-        "type": "object"
-      },
-      "sablier.SessionState": {
-        "properties": {
-          "instances": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/sablier.InstanceInfoWithError"
-            },
-            "type": "object"
           }
         },
         "type": "object"

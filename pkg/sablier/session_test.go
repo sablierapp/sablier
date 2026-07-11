@@ -91,30 +91,6 @@ func TestSessionState_Status(t *testing.T) {
 	assert.Equal(t, notReady.Status(), "not-ready")
 }
 
-func TestSessionState_MarshalJSON(t *testing.T) {
-	s := &sablier.SessionState{
-		Instances: map[string]sablier.InstanceInfoWithError{
-			"a": {Instance: sablier.InstanceInfo{Name: "a", Status: sablier.InstanceStatusReady}},
-		},
-	}
-
-	b, err := s.MarshalJSON()
-	assert.NilError(t, err)
-	assert.Assert(t, contains(string(b), `"status":"ready"`))
-}
-
-func TestSessionState_MarshalJSON_ErrorField(t *testing.T) {
-	s := &sablier.SessionState{
-		Instances: map[string]sablier.InstanceInfoWithError{
-			"a": {Instance: sablier.InstanceInfo{Name: "a"}, Error: errors.New("provider unavailable")},
-		},
-	}
-
-	b, err := s.MarshalJSON()
-	assert.NilError(t, err)
-	assert.Assert(t, contains(string(b), `"error":"provider unavailable"`))
-}
-
 func contains(s, sub string) bool {
 	return len(sub) == 0 || (len(s) >= len(sub) && (indexOf(s, sub) >= 0))
 }
