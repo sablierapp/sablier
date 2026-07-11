@@ -235,7 +235,7 @@ The waiting page refreshes on its own. When `whoami` reports ready, Sablier relo
 You have now followed a request through the full path: a stopped service, a waiting page, and the running application. This is scale-to-zero from end to end.
 
 {{< callout type="info" >}}
-To hold the request until the service is ready, instead of showing a waiting page, replace the `dynamic` block with a `blocking` block. See [Loading strategies](/how-to-guides/loading-strategies/) for both strategies.
+To hold the request until the service is ready instead of showing a waiting page, replace the `dynamic` block with a `blocking` block. To start instances without waiting at all, use a `poke` block. See [Loading strategies](/how-to-guides/loading-strategies/) for all three.
 {{< /callout >}}
 
 {{% /steps %}}

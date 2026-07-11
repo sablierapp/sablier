@@ -52,6 +52,8 @@ This strategy is useful for background services whose startup the caller does no
 
 Instances with the `sablier.ready-on-start=true` label are treated as ready as soon as the start is dispatched, even with the dynamic or blocking strategy. See [Configuration](/configuration/#instance-labels) for details.
 
+To set up the poke strategy on a route, see [Start without waiting](/how-to-guides/loading-strategies/start-without-waiting/).
+
 ```mermaid
 sequenceDiagram
     participant User
