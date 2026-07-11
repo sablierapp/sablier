@@ -71,10 +71,14 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 
 		var sessionState *sablier.SessionState
 		var err error
+		// c.Request.Context(), never the *gin.Context itself: without gin's
+		// ContextWithFallback, the gin context has a nil Done() channel and its
+		// Value() does not reach the request context, which silently breaks
+		// cancellation and otel trace propagation for everything downstream.
 		if len(request.Names) > 0 {
-			sessionState, err = s.Sablier.RequestSession(c, request.Names, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSession(c.Request.Context(), request.Names, request.SessionDuration)
 		} else {
-			sessionState, err = s.Sablier.RequestSessionGroup(c, request.Group, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSessionGroup(c.Request.Context(), request.Group, request.SessionDuration)
 			if groupNotFoundError, ok := errors.AsType[sablier.ErrGroupNotFound](err); ok {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
