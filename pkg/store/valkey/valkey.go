@@ -42,17 +42,19 @@ func (v *ValKey) Get(ctx context.Context, s string) (sablier.InstanceInfo, error
 		return sablier.InstanceInfo{}, err
 	}
 
-	var i sablier.InstanceInfo
-	err = json.Unmarshal(b, &i)
+	// Session entries are stored as versioned records; SessionRecord's
+	// unmarshaler transparently upgrades pre-versioning payloads.
+	var r sablier.SessionRecord
+	err = json.Unmarshal(b, &r)
 	if err != nil {
 		return sablier.InstanceInfo{}, err
 	}
 
-	return i, nil
+	return r.Instance, nil
 }
 
 func (v *ValKey) Put(ctx context.Context, state sablier.InstanceInfo, duration time.Duration) error {
-	value, err := json.Marshal(state)
+	value, err := json.Marshal(sablier.NewSessionRecord(state))
 	if err != nil {
 		return err
 	}
@@ -108,18 +110,18 @@ func (v *ValKey) Range(ctx context.Context, f func(sablier.InstanceInfo, time.Ti
 			}
 
 			// The store may share its keyspace with keys that are not Sablier
-			// sessions. Skip anything that is not a valid InstanceInfo, or whose
-			// payload does not belong to this key, instead of aborting the whole
-			// enumeration on a single foreign or corrupt key.
-			var i sablier.InstanceInfo
-			if err = json.Unmarshal(b, &i); err != nil {
+			// sessions. Skip anything that is not a valid session record, or
+			// whose payload does not belong to this key, instead of aborting the
+			// whole enumeration on a single foreign or corrupt key.
+			var r sablier.SessionRecord
+			if err = json.Unmarshal(b, &r); err != nil {
 				continue
 			}
-			if i.Name != key {
+			if r.Instance.Name != key {
 				continue
 			}
 
-			f(i, expiresAt)
+			f(r.Instance, expiresAt)
 		}
 
 		cursor = entry.Cursor
