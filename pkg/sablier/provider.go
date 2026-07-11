@@ -15,9 +15,17 @@ type InstanceEvent struct {
 }
 
 // InstanceEventStream is returned by InstanceEvents.
-// Events carries typed instance lifecycle notifications.
-// Err carries a terminal error when the stream cannot be recovered;
-// after an error is sent both channels are closed.
+//
+// Events carries typed instance lifecycle notifications. Streams are expected
+// to survive transient failures by reconnecting internally (the Docker-API
+// based providers redial with capped backoff, indefinitely) rather than dying
+// on the first hiccup; consumers pair the stream with periodic reconciliation
+// for anything missed while disconnected.
+//
+// Err carries a terminal error only when the provider concludes the stream
+// cannot be recovered; most providers never emit one. After a terminal error
+// both channels are closed. On context cancellation both channels are closed
+// without an error.
 type InstanceEventStream struct {
 	Events <-chan InstanceEvent
 	Err    <-chan error
