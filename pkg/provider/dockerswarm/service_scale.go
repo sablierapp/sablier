@@ -40,7 +40,7 @@ func parseMemoryBytes(memory string) (int64, error) {
 // of a Swarm service in a single service update call. Invalid or empty cpu/memory values
 // are skipped with a warning rather than failing the call.
 func (p *Provider) ServiceUpdateScale(ctx context.Context, name string, replicas uint64, cpu, memory string) error {
-	service, err := p.getServiceByName(name, ctx)
+	service, err := p.getServiceByName(ctx, name)
 	if err != nil {
 		return fmt.Errorf("cannot get service: %w", err)
 	}

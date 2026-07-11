@@ -12,7 +12,7 @@ import (
 )
 
 func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
-	service, err := p.getServiceByName(name, ctx)
+	service, err := p.getServiceByName(ctx, name)
 	if err != nil {
 		return sablier.InstanceInfo{}, err
 	}
@@ -65,7 +65,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	return info, nil
 }
 
-func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Service, error) {
+func (p *Provider) getServiceByName(ctx context.Context, name string) (*swarm.Service, error) {
 	filters := client.Filters{}
 	filters.Add("name", name)
 
@@ -80,21 +80,18 @@ func (p *Provider) getServiceByName(name string, ctx context.Context) (*swarm.Se
 		return nil, fmt.Errorf("error listing services: %w", err)
 	}
 
-	if len(services.Items) == 0 {
-		return nil, fmt.Errorf("service with name %s was not found", name)
-	}
-
-	var svc *swarm.Service = nil
+	// The "name" filter is a substring match, so the list can be non-empty
+	// while containing no service actually named `name`; only an exact name or
+	// ID match counts.
+	var svc *swarm.Service
 	for _, service := range services.Items {
-		// Exact match
-		if service.Spec.Name == name {
+		if service.Spec.Name == name || service.ID == name {
 			svc = &service
 			break
 		}
-		if service.ID == name {
-			svc = &service
-			break
-		}
+	}
+	if svc == nil {
+		return nil, fmt.Errorf("service with name %s was not found", name)
 	}
 
 	p.l.DebugContext(ctx, "service inspected", slog.String("service", name),
