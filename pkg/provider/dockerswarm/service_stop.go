@@ -23,7 +23,7 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
-	service, err := p.getServiceByName(name, ctx)
+	service, err := p.getServiceByName(ctx, name)
 	if err != nil {
 		return fmt.Errorf("cannot get service: %w", err)
 	}
