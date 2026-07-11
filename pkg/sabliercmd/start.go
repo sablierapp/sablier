@@ -183,22 +183,31 @@ func Start(ctx context.Context, conf config.Config) error {
 		SessionsConfig: conf.Sessions,
 	}
 
-	go server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)
+	}()
 
-	// Listen for the interrupt signal.
-	<-ctx.Done()
-
-	stop()
-	logger.InfoContext(ctx, "shutting down gracefully, press Ctrl+C again to force")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
+	// Block until the process is signalled or the HTTP server dies. A serve
+	// failure (e.g. the port is already in use) must terminate the process:
+	// otherwise the watchers keep running with no listener and the instance
+	// looks healthy while serving nothing.
+	select {
+	case <-ctx.Done():
+		stop()
+		logger.Info("shutting down gracefully, press Ctrl+C again to force")
+		// Wait for the server to finish draining in-flight requests before
+		// persisting state and exiting.
+		err = <-serverErr
+	case err = <-serverErr:
+		stop()
+	}
 
 	save()
 
-	logger.InfoContext(ctx, "Server exiting")
+	logger.Info("Server exiting")
 
-	return nil
+	return err
 }
 
 func buildRecorder(enabled bool) metrics.Recorder {
