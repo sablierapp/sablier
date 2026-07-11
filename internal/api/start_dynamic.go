@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"sort"
@@ -67,6 +66,18 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
+		// Validate the theme before any instance is started: a mistyped theme
+		// in the plugin configuration must not start workloads on behalf of a
+		// request that can only ever return 404 (and would start them again on
+		// every retry).
+		if !s.Theme.Exists(request.Theme) {
+			AbortWithProblemDetail(c, ProblemThemeNotFound(theme.ErrThemeNotFound{
+				Theme:           request.Theme,
+				AvailableThemes: s.Theme.List(),
+			}))
+			return
+		}
+
 		recordSessionRequest(s.Metrics, "dynamic", request.Group)
 
 		var sessionState *sablier.SessionState
@@ -105,14 +116,17 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			InstanceStates:   sessionStateToRenderOptionsInstanceState(sessionState),
 		}
 
+		// Render into a plain buffer: rendering must fully succeed before any
+		// byte reaches the client, so a template that fails halfway (easy to
+		// author in a custom theme) surfaces as a 500 problem instead of a 200
+		// with a truncated page.
 		buf := new(bytes.Buffer)
-		writer := bufio.NewWriter(buf)
-		err = s.Theme.Render(request.Theme, renderOptions, writer)
+		err = s.Theme.Render(request.Theme, renderOptions, buf)
 		if themeNotFound, ok := errors.AsType[theme.ErrThemeNotFound](err); ok {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
 		}
-		if err := writer.Flush(); err != nil {
+		if err != nil {
 			AbortWithProblemDetail(c, ProblemError(err))
 			return
 		}

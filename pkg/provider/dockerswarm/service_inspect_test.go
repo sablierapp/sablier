@@ -193,6 +193,19 @@ func TestDockerSwarmProvider_GetState(t *testing.T) {
 			tt.want.Name = name
 			tt.want.Provider = "swarm"
 			tt.want.Swarm = &sablier.SwarmServiceInfo{}
+			// The provider mirrors the parsed label config into Config with the
+			// same values as the flat fields each case already declares, so
+			// derive the expectation instead of repeating it per case.
+			tt.want.Config = &sablier.InstanceConfig{
+				Enabled:      tt.want.Enabled == "true",
+				Groups:       tt.want.Groups,
+				ReadyAfter:   tt.want.ReadyAfter,
+				ReadyOnStart: tt.want.ReadyOnStart,
+				RunningHours: tt.want.RunningHours,
+				RunningDays:  tt.want.RunningDays,
+				AntiAffinity: tt.want.AntiAffinity,
+				Scale:        tt.want.ScaleConfig,
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("Provider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)

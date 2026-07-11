@@ -83,6 +83,25 @@ type InstanceInfo struct {
 	// ScaleConfig configures resource-based scale mode for this instance.
 	// When present, Sablier throttles CPU/memory instead of stopping the container.
 	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`
+
+	// Config is the typed, parsed form of the instance's sablier.* labels,
+	// produced by InstanceConfigFromLabels at the provider boundary. Prefer it
+	// (and the accessor methods such as IsEnabled) over the flat fields above,
+	// which are kept for API and store compatibility and will move behind a
+	// dedicated API DTO in a later stage. Nil on records that predate this
+	// field (e.g. sessions persisted by an older version); accessors fall back
+	// to the flat fields in that case.
+	Config *InstanceConfig `json:"config,omitempty"`
+}
+
+// IsEnabled reports whether the instance opted into Sablier management
+// (sablier.enable set to exactly "true"). It is the single source of that
+// semantics; do not compare the flat Enabled string directly.
+func (instance InstanceInfo) IsEnabled() bool {
+	if instance.Config != nil {
+		return instance.Config.Enabled
+	}
+	return instance.Enabled == "true"
 }
 
 // BlkioWeightDevice holds a per-device I/O scheduling weight override.
@@ -161,6 +180,12 @@ type InstanceConfiguration struct {
 	Name    string
 	Groups  []string
 	Enabled string
+}
+
+// IsEnabled reports whether the listed instance opted into Sablier management
+// (sablier.enable set to exactly "true"), mirroring InstanceInfo.IsEnabled.
+func (c InstanceConfiguration) IsEnabled() bool {
+	return c.Enabled == "true"
 }
 
 func (instance InstanceInfo) IsReady() bool {
@@ -366,68 +391,23 @@ func ParseAntiAffinity(label string) []string {
 	return out
 }
 
-// PopulateEnabledAndGroup reads the sablier.enable and sablier.group labels from
-// labels and writes the results into info. Centralising this logic avoids
-// duplicating the same map lookups in every provider's Inspect implementation.
+// PopulateEnabledAndGroup parses the sablier.* labels into info.Config and
+// mirrors the result into the flat legacy fields, which stay byte-identical
+// on the wire (API responses and persisted session records). All parsing
+// lives in InstanceConfigFromLabels; this is only the compatibility adapter
+// providers call from their Inspect implementations.
 func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
+	cfg := InstanceConfigFromLabels(labels, slog.Default().With(slog.String("instance", info.Name)))
+	info.Config = &cfg
+
+	// Legacy flat fields. Enabled keeps the raw label value (not the parsed
+	// boolean) because the API has always exposed it verbatim.
 	info.Enabled = labels[LabelEnable]
-	if info.Enabled == "true" {
-		info.Groups = ParseGroups(labels[LabelGroup])
-	}
-	if v := labels[LabelReadyAfter]; v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			info.ReadyAfter = d
-		} else {
-			slog.Warn("invalid sablier.ready-after label value, ignoring",
-				slog.String("instance", info.Name),
-				slog.String("value", v),
-				slog.Any("error", err),
-			)
-		}
-	}
-	if v := labels[LabelRunningHours]; v != "" {
-		if _, err := ParseRunningHours(v); err == nil {
-			info.RunningHours = v
-		} else {
-			slog.Warn("invalid sablier.running-hours label value, ignoring",
-				slog.String("instance", info.Name),
-				slog.String("value", v),
-				slog.Any("error", err),
-			)
-		}
-	}
-	if v := labels[LabelRunningDays]; v != "" {
-		if _, err := ParseRunningDays(v); err == nil {
-			info.RunningDays = v
-		} else {
-			slog.Warn("invalid sablier.running-days label value, ignoring",
-				slog.String("instance", info.Name),
-				slog.String("value", v),
-				slog.Any("error", err),
-			)
-		}
-	}
-	if v := labels[LabelReadyOnStart]; v != "" {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			slog.Warn("invalid sablier.ready-on-start label value, ignoring",
-				slog.String("instance", info.Name),
-				slog.String("value", v),
-				slog.Any("error", err),
-			)
-		} else {
-			info.ReadyOnStart = b
-		}
-	}
-	if v := labels[LabelAntiAffinity]; v != "" {
-		info.AntiAffinity = ParseAntiAffinity(v)
-	}
-	// Only expose ScaleConfig in the response when at least one non-default
-	// scale label is present. Detects configuration by checking for values
-	// that differ from the zero-value defaults (Idle.Replicas=0, Active.Replicas=1).
-	sc := ScaleConfigFromLabels(labels)
-	if sc.Idle.Replicas > 0 || sc.Idle.HasResources() ||
-		sc.Active.Replicas > 1 || sc.Active.HasResources() {
-		info.ScaleConfig = &sc
-	}
+	info.Groups = cfg.Groups
+	info.ReadyAfter = cfg.ReadyAfter
+	info.RunningHours = cfg.RunningHours
+	info.RunningDays = cfg.RunningDays
+	info.ReadyOnStart = cfg.ReadyOnStart
+	info.AntiAffinity = cfg.AntiAffinity
+	info.ScaleConfig = cfg.Scale
 }

@@ -37,7 +37,7 @@ func (s *Sablier) reconcileRunningHours(ctx context.Context) {
 
 	now := time.Now()
 	for _, configured := range instances {
-		if configured.Enabled != "true" {
+		if !configured.IsEnabled() {
 			continue
 		}
 
