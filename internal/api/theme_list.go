@@ -16,9 +16,7 @@ import (
 // @Router       /api/dynamic/themes [get]
 func ListThemes(router *gin.RouterGroup, s *ServeStrategy) {
 	handler := func(c *gin.Context) {
-		c.JSON(http.StatusOK, map[string]any{
-			"themes": s.Theme.List(),
-		})
+		c.JSON(http.StatusOK, ThemesResponse{Themes: s.Theme.List()})
 	}
 
 	router.GET("/themes", handler)
