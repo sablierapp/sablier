@@ -32,7 +32,8 @@ func (r *groupRegistry) Snapshot() map[string][]string {
 
 // Set replaces the entire registry with groups. Returns the previous snapshot
 // and whether the content actually changed; the caller is responsible for
-// any logging. A nil map is treated as empty.
+// any logging. A nil map is treated as empty. The input is deep-copied so the
+// registry never shares backing storage with the caller.
 func (r *groupRegistry) Set(groups map[string][]string) (old map[string][]string, changed bool) {
 	if groups == nil {
 		groups = make(map[string][]string)
@@ -50,16 +51,31 @@ func (r *groupRegistry) Set(groups map[string][]string) (old map[string][]string
 		copy(cp, v)
 		old[k] = cp
 	}
-	r.data = groups
+	data := make(map[string][]string, len(groups))
+	for k, v := range groups {
+		cp := make([]string, len(v))
+		copy(cp, v)
+		data[k] = cp
+	}
+	r.data = data
 	return old, true
 }
 
-// Get returns the instance list for a group and whether the group exists.
+// Get returns a copy of the instance list for a group and whether the group
+// exists. It must return a copy: removeFromGroup compacts member slices in
+// place under the write lock, so handing out the internal slice would race
+// with callers that iterate it after this method returns (RequestSessionGroup
+// does exactly that).
 func (r *groupRegistry) Get(group string) ([]string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	names, ok := r.data[group]
-	return names, ok
+	if !ok {
+		return nil, false
+	}
+	out := make([]string, len(names))
+	copy(out, names)
+	return out, true
 }
 
 // Keys returns a snapshot of all current group names.
