@@ -11,47 +11,47 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestPoke(t *testing.T) {
-	t.Run("PokeInvalidBind", func(t *testing.T) {
+func TestStartPoke(t *testing.T) {
+	t.Run("StartPokeInvalidBind", func(t *testing.T) {
 		app, router, strategy, _ := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/poke?session_duration=invalid")
 		assert.Equal(t, http.StatusBadRequest, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
-	t.Run("PokeWithoutNamesOrGroup", func(t *testing.T) {
+	t.Run("StartPokeWithoutNamesOrGroup", func(t *testing.T) {
 		app, router, strategy, _ := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/poke")
 		assert.Equal(t, http.StatusBadRequest, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
-	t.Run("PokeWithNamesAndGroup", func(t *testing.T) {
+	t.Run("StartPokeWithNamesAndGroup", func(t *testing.T) {
 		app, router, strategy, _ := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		r := PerformRequest(app, "GET", "/api/strategies/poke?names=test&group=test")
 		assert.Equal(t, http.StatusBadRequest, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
-	t.Run("PokeByNames", func(t *testing.T) {
+	t.Run("StartPokeByNames", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		m.EXPECT().RequestSession(gomock.Any(), []string{"test"}, gomock.Any()).Return(&sablier.SessionState{}, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/poke?names=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
 	})
-	t.Run("PokeByGroup", func(t *testing.T) {
+	t.Run("StartPokeByGroup", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(&sablier.SessionState{}, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/poke?group=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusReady, r.Header().Get(SablierStatusHeader))
 	})
-	t.Run("PokeNotReadyReturnsNotReady", func(t *testing.T) {
+	t.Run("StartPokeNotReadyReturnsNotReady", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		notReady := &sablier.SessionState{
 			Instances: map[string]sablier.InstanceInfoWithError{
 				"test": {
@@ -64,9 +64,9 @@ func TestPoke(t *testing.T) {
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusNotReady, r.Header().Get(SablierStatusHeader))
 	})
-	t.Run("PokeErrGroupNotFound", func(t *testing.T) {
+	t.Run("StartPokeErrGroupNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, sablier.ErrGroupNotFound{
 			Group:           "test",
 			AvailableGroups: []string{"test1", "test2"},
@@ -75,17 +75,17 @@ func TestPoke(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
-	t.Run("PokeError", func(t *testing.T) {
+	t.Run("StartPokeError", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, errors.New("unknown error"))
 		r := PerformRequest(app, "GET", "/api/strategies/poke?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
-	t.Run("PokeSessionNil", func(t *testing.T) {
+	t.Run("StartPokeSessionNil", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
-		Poke(router, strategy)
+		StartPoke(router, strategy)
 		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(nil, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/poke?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)

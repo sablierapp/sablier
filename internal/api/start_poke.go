@@ -15,7 +15,7 @@ type PokeRequest struct {
 	SessionDuration time.Duration `form:"session_duration"`
 }
 
-// Poke registers the poke strategy endpoint.
+// StartPoke registers the poke strategy endpoint.
 //
 // @Summary      Poke strategy
 // @Description  Starts the requested instances and immediately returns the session status without waiting for readiness. Provide either `names` or `group`, never both.
@@ -30,7 +30,7 @@ type PokeRequest struct {
 // @Failure      404  {object}  rfc7807.Problem  "Group not found"
 // @Failure      500  {object}  rfc7807.Problem  "Internal error"
 // @Router       /api/strategies/poke [get]
-func Poke(router *gin.RouterGroup, s *ServeStrategy) {
+func StartPoke(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/poke", func(c *gin.Context) {
 		request := PokeRequest{
 			SessionDuration: s.SessionsConfig.DefaultDuration,

@@ -50,7 +50,7 @@ The **poke strategy** starts the requested instances and returns the real sessio
 This strategy is useful for background services whose startup the caller does not need to wait for. For example, an NVR that records alongside a smart-home dashboard — you want it started, but you don't want the dashboard to stall while the NVR boots.
 {{< /callout >}}
 
-Instances with the `sablier.ready-on-start=true` label are treated as ready as soon as the start is dispatched, even with the dynamic or blocking strategy. See [Configuration](/configuration/#instance-labels) for details.
+Instances with the `sablier.ready-on-start=true` label are treated as ready as soon as the start is dispatched, even with the dynamic or blocking strategy. See [Configuration](/tutorials/configuration/#instance-labels) for details.
 
 To set up the poke strategy on a route, see [Start without waiting](/how-to-guides/loading-strategies/start-without-waiting/).
 
