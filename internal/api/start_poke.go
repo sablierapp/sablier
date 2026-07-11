@@ -27,7 +27,7 @@ type PokeRequest struct {
 // @Success      200  {object}  SessionResponse
 // @Header       200  {string}  X-Sablier-Session-Status  "ready or not-ready"
 // @Failure      400  {object}  rfc7807.Problem  "Validation error"
-// @Failure      404  {object}  rfc7807.Problem  "Group or instance not found"
+// @Failure      404  {object}  rfc7807.Problem  "Group not found"
 // @Failure      500  {object}  rfc7807.Problem  "Internal error"
 // @Router       /api/strategies/poke [get]
 func Poke(router *gin.RouterGroup, s *ServeStrategy) {
