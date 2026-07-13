@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.15.0](https://github.com/sablierapp/sablier/compare/v1.14.0...v1.15.0) (2026-07-09)
+
+
+### Features
+
+* add anti-affinity ([#997](https://github.com/sablierapp/sablier/issues/997)) ([4c183c2](https://github.com/sablierapp/sablier/commit/4c183c2348c10da39e4ae037975e56854873168f))
+* add next build tag and multi-versionned doc ([#1009](https://github.com/sablierapp/sablier/issues/1009)) ([b14ff78](https://github.com/sablierapp/sablier/commit/b14ff78b3b88ef74fda224f3272b9d6e6a01d1b8))
+* add running-days ([#994](https://github.com/sablierapp/sablier/issues/994)) ([c981a92](https://github.com/sablierapp/sablier/commit/c981a924eff8c95e414b1b135fa20f7961187563))
+* **docker:** add blkio throttling support to scale mode ([#935](https://github.com/sablierapp/sablier/issues/935)) ([60987e2](https://github.com/sablierapp/sablier/commit/60987e2c1536ac4c867332602af8e631184a674a))
+* **docker:** respect restart policy and resolve `depends_on` on start ([#956](https://github.com/sablierapp/sablier/issues/956)) ([b050d14](https://github.com/sablierapp/sablier/commit/b050d1486b2c3882a8f847631a89f20444597ad3))
+* **metrics:** expose per-session expiry as a Prometheus gauge ([#987](https://github.com/sablierapp/sablier/issues/987)) ([89215db](https://github.com/sablierapp/sablier/commit/89215db336b5913e3adb64db4f7b8580782410e6))
+* **provider:** add auto-warm-externally-started option ([#993](https://github.com/sablierapp/sablier/issues/993)) ([26cc2cf](https://github.com/sablierapp/sablier/commit/26cc2cf15b683d4b7c6467226a256fa4695d747a)), closes [#985](https://github.com/sablierapp/sablier/issues/985)
+* **sablier:** add ready-on-start support via sablier.ready-on-start label ([#984](https://github.com/sablierapp/sablier/issues/984)) ([3d700e8](https://github.com/sablierapp/sablier/commit/3d700e8dd7c6b4afb04b82d589f810b5d030cc40))
+
+
+### Bug Fixes
+
+* **kubernetes:** honor names-based replica count on instance start ([#1003](https://github.com/sablierapp/sablier/issues/1003)) ([3e4dab9](https://github.com/sablierapp/sablier/commit/3e4dab9be8c56b2f11ce136852f007160324acd7)), closes [#258](https://github.com/sablierapp/sablier/issues/258)
+
+
+### Documentation
+
+* add giscus ([#1007](https://github.com/sablierapp/sablier/issues/1007)) ([66fdf34](https://github.com/sablierapp/sablier/commit/66fdf34f13f35e4f15b1a879741b568aa21173bd))
+* use version template ([#1008](https://github.com/sablierapp/sablier/issues/1008)) ([e63413f](https://github.com/sablierapp/sablier/commit/e63413fa2d1f1eff6d774ceea889c5daacb3f43c))
+* website rework using Hugo ([#1000](https://github.com/sablierapp/sablier/issues/1000)) ([5abdcbb](https://github.com/sablierapp/sablier/commit/5abdcbb27d9188741e0a92661d3d3392cdb56c4d))
+
+
+### Tests
+
+* fix test failures ([#998](https://github.com/sablierapp/sablier/issues/998)) ([adcb35b](https://github.com/sablierapp/sablier/commit/adcb35bfe40e64aec3c5fc0f300d4c28e5fb70fd))
+
 ## [1.14.0](https://github.com/sablierapp/sablier/compare/v1.13.0...v1.14.0) (2026-06-12)
 
 

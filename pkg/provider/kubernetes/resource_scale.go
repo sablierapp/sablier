@@ -114,7 +114,10 @@ func (p *Provider) scaleStatefulSetResources(ctx context.Context, config ParsedN
 	return nil
 }
 
-// getWorkloadLabels retrieves the labels of a deployment or statefulset.
+// getWorkloadLabels retrieves the Sablier configuration of a deployment or
+// statefulset, merging labels with "sablier.*" annotations (annotations take
+// precedence). This lets scale-mode values that are invalid as label values
+// (e.g. comma-separated blkio device lists) be provided via annotations.
 func (p *Provider) getWorkloadLabels(ctx context.Context, config ParsedName) (map[string]string, error) {
 	switch config.Kind {
 	case "deployment":
@@ -122,19 +125,13 @@ func (p *Provider) getWorkloadLabels(ctx context.Context, config ParsedName) (ma
 		if err != nil {
 			return nil, err
 		}
-		if d.Labels == nil {
-			return map[string]string{}, nil
-		}
-		return d.Labels, nil
+		return sablierConfig(d.Labels, d.Annotations), nil
 	case "statefulset":
 		ss, err := p.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
-		if ss.Labels == nil {
-			return map[string]string{}, nil
-		}
-		return ss.Labels, nil
+		return sablierConfig(ss.Labels, ss.Annotations), nil
 	default:
 		return nil, fmt.Errorf("unsupported kind %q", config.Kind)
 	}

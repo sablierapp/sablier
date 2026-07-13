@@ -5,11 +5,18 @@ import (
 	"net/http"
 )
 
+// ListThemes registers the themes endpoint (also served at the legacy path /api/dynamic/themes).
+//
+// @Summary      List themes
+// @Description  Lists the waiting-page themes available to the dynamic strategy (built-in and custom). Also served at the legacy path `/api/dynamic/themes`.
+// @Tags         themes
+// @Produce      json
+// @Success      200  {object}  ThemesResponse
+// @Router       /api/themes [get]
+// @Router       /api/dynamic/themes [get]
 func ListThemes(router *gin.RouterGroup, s *ServeStrategy) {
 	handler := func(c *gin.Context) {
-		c.JSON(http.StatusOK, map[string]any{
-			"themes": s.Theme.List(),
-		})
+		c.JSON(http.StatusOK, ThemesResponse{Themes: s.Theme.List()})
 	}
 
 	router.GET("/themes", handler)

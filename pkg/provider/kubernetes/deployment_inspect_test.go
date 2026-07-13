@@ -123,8 +123,9 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
 						Cmd: []string{"/mimic"},
 						Labels: map[string]string{
-							"sablier.enable": "true",
-							"sablier.group":  "myapp",
+							"sablier.enable":         "true",
+							"sablier.group":          "myapp",
+							"sablier.ready-on-start": "true",
 						},
 					})
 					if err != nil {
@@ -144,10 +145,92 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 				Status:          sablier.InstanceStatusReady,
 				Enabled:         "true",
 				Groups:          []string{"myapp"},
+				ReadyOnStart:    true,
+			},
+			wantLabels: map[string]string{
+				"sablier.enable":         "true",
+				"sablier.group":          "myapp",
+				"sablier.ready-on-start": "true",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "deployment with sablier config via annotations",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					// sablier.group with a comma-separated value is invalid as a
+					// Kubernetes label, so it can only be expressed as an annotation.
+					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+						},
+						Annotations: map[string]string{
+							"sablier.group":          "group-a,group-b",
+							"sablier.ready-on-start": "true",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"group-a", "group-b"},
+				ReadyOnStart:    true,
+			},
+			// Kubernetes.Labels reflects the raw workload labels only, not the
+			// merged annotation config.
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "deployment annotations override labels",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "from-label",
+						},
+						Annotations: map[string]string{
+							"sablier.group": "from-annotation",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForDeploymentReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for deployment: %w", err)
+					}
+
+					return kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"from-annotation"},
 			},
 			wantLabels: map[string]string{
 				"sablier.enable": "true",
-				"sablier.group":  "myapp",
+				"sablier.group":  "from-label",
 			},
 			wantErr: nil,
 		},
@@ -180,6 +263,19 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 				Kind:      "deployment",
 				Image:     "sablierapp/mimic:v0.3.3",
 				Labels:    labels,
+			}
+			// The provider mirrors the parsed label config into Config with the
+			// same values as the flat fields each case already declares, so
+			// derive the expectation instead of repeating it per case.
+			tt.want.Config = &sablier.InstanceConfig{
+				Enabled:      tt.want.Enabled == "true",
+				Groups:       tt.want.Groups,
+				ReadyAfter:   tt.want.ReadyAfter,
+				ReadyOnStart: tt.want.ReadyOnStart,
+				RunningHours: tt.want.RunningHours,
+				RunningDays:  tt.want.RunningDays,
+				AntiAffinity: tt.want.AntiAffinity,
+				Scale:        tt.want.ScaleConfig,
 			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {

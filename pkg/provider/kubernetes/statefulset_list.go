@@ -12,7 +12,7 @@ import (
 func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -32,10 +32,11 @@ func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfi
 }
 
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
-	enabled := ss.Labels["sablier.enable"]
+	config := sablierConfig(ss.Labels, ss.Annotations)
+	enabled := config[sablier.LabelEnable]
 	var groups []string
 	if enabled == "true" {
-		groups = sablier.ParseGroups(ss.Labels["sablier.group"])
+		groups = sablier.ParseGroups(config[sablier.LabelGroup])
 	}
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
@@ -50,7 +51,7 @@ func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceCon
 func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -63,7 +64,8 @@ func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, 
 	groups := make(map[string][]string)
 	for _, ss := range statefulSets.Items {
 		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
-		for _, groupName := range sablier.ParseGroups(ss.Labels["sablier.group"]) {
+		config := sablierConfig(ss.Labels, ss.Annotations)
+		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
 			groups[groupName] = append(groups[groupName], parsed.Original)
 		}
 	}

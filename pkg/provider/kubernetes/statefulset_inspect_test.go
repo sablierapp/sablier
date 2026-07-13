@@ -151,6 +151,46 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "statefulset with sablier config via annotations",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					// sablier.group with a comma-separated value is invalid as a
+					// Kubernetes label, so it can only be expressed as an annotation.
+					d, err := dind.CreateMimicStatefulSet(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+						},
+						Annotations: map[string]string{
+							"sablier.group": "group-a,group-b",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForStatefulSetReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for statefulset: %w", err)
+					}
+
+					return kubernetes.StatefulSetName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"group-a", "group-b"},
+			},
+			// Kubernetes.Labels reflects the raw workload labels only, not the
+			// merged annotation config.
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+			},
+			wantErr: nil,
+		},
 	}
 	c := sharedKinD
 	for _, tt := range tests {
@@ -180,6 +220,19 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 				Kind:      "statefulset",
 				Image:     "sablierapp/mimic:v0.3.3",
 				Labels:    labels,
+			}
+			// The provider mirrors the parsed label config into Config with the
+			// same values as the flat fields each case already declares, so
+			// derive the expectation instead of repeating it per case.
+			tt.want.Config = &sablier.InstanceConfig{
+				Enabled:      tt.want.Enabled == "true",
+				Groups:       tt.want.Groups,
+				ReadyAfter:   tt.want.ReadyAfter,
+				ReadyOnStart: tt.want.ReadyOnStart,
+				RunningHours: tt.want.RunningHours,
+				RunningDays:  tt.want.RunningDays,
+				AntiAffinity: tt.want.AntiAffinity,
+				Scale:        tt.want.ScaleConfig,
 			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {

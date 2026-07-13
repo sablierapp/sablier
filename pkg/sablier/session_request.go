@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -98,6 +99,12 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 	errch := make(chan error, 1)
 	quit := make(chan struct{})
 
+	// last publishes the most recent not-ready session so the timeout branch can
+	// report which instances were still pending, and why. Each poll produces a
+	// fresh SessionState, so the loaded value is never mutated concurrently.
+	var last atomic.Pointer[SessionState]
+	last.Store(session)
+
 	go func() {
 		for {
 			select {
@@ -115,6 +122,7 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 					errch <- err
 					return
 				}
+				last.Store(session)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -138,7 +146,11 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 		return nil, err
 	case <-time.After(timeout):
 		close(quit)
-		return nil, ErrTimeout{Duration: timeout}
+		timeoutErr := ErrTimeout{Duration: timeout}
+		if ls := last.Load(); ls != nil {
+			timeoutErr.Instances = ls.NotReadyInstances()
+		}
+		return nil, timeoutErr
 	}
 }
 

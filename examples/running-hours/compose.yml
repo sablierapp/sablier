@@ -1,5 +1,6 @@
 services:
   sablier:
+    restart: always
     image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
     command:
       - start
@@ -18,10 +19,12 @@ services:
   # office-app is managed by Sablier and configured to stay warm during
   # sablier.running-hours. Outside this window, normal session expiration applies.
   office-app:
+    restart: unless-stopped
     image: acouvreur/whoami:v1.10.2
     labels:
       - "sablier.enable=true"
       - "sablier.group=office-app"
       - "sablier.running-hours=${RUNNING_HOURS:-09:00-18:00}"
+      - "sablier.running-days=${RUNNING_DAYS:-Mon,Tue,Wed,Thu,Fri}"
     ports:
       - "8080:80"

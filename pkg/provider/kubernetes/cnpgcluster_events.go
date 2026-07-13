@@ -17,34 +17,42 @@ import (
 // clusterCRDInstalled reports whether the CloudNativePG Cluster CRD is served by the
 // API server. It lets InstanceEvents avoid starting a dynamic informer (which would
 // otherwise log continuous list/watch errors) on clusters that don't run CloudNativePG.
+//
+// The check goes through the discovery API rather than listing the resource:
+// discovery requires no RBAC on the resource itself, so a ClusterRole scoped to
+// deployments/statefulsets is sufficient. Probing with a List instead turns a
+// missing permission into "Forbidden", which is indistinguishable from a transient
+// error and used to start the informer against a CRD that does not exist - leaving
+// the reflector in a permanent list/watch error loop.
+//
+// ctx only scopes logging: ServerResourcesForGroupVersion has no context-aware
+// variant, so the underlying GET is bounded by the REST client timeout instead.
 func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
-	if p.dynamic == nil {
+	if p.dynamic == nil || p.Client == nil {
 		return false
 	}
-	_, err := p.dynamic.Resource(cnpgClusterGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{Limit: 1})
+	resources, err := p.Client.Discovery().ServerResourcesForGroupVersion(cnpgClusterGVR.GroupVersion().String())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return false
 		}
-		// Transient or permission errors: assume the CRD exists and let the informer surface them.
+		// Any other error (transient, permission, authn, ...): assume the CRD
+		// exists and let the informer surface the underlying problem.
 		p.l.WarnContext(ctx, "could not verify cloudnativepg CRD presence, enabling cnpg watcher anyway", "error", err)
 		return true
 	}
-	return true
+	for _, r := range resources.APIResources {
+		if r.Name == cnpgClusterGVR.Resource {
+			return true
+		}
+	}
+	return false
 }
 
 // clusterFromObject extracts the *unstructured.Unstructured from an informer event,
 // unwrapping a tombstone when the final state was missed.
 func clusterFromObject(obj any) (*unstructured.Unstructured, bool) {
-	if u, ok := obj.(*unstructured.Unstructured); ok {
-		return u, true
-	}
-	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-	if !ok {
-		return nil, false
-	}
-	u, ok := tombstone.Obj.(*unstructured.Unstructured)
-	return u, ok
+	return eventObject[*unstructured.Unstructured](obj)
 }
 
 func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
@@ -126,7 +134,7 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 					Labels:    labels,
 				},
 			}
-			sablier.PopulateEnabledAndGroup(&info, labels)
+			sablier.PopulateEnabledAndGroup(&info, sablierConfig(labels, u.GetAnnotations()))
 			if wantRemoved {
 				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
 			}

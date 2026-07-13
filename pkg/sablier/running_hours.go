@@ -83,15 +83,68 @@ func (r RunningHours) WindowAt(now time.Time) (start time.Time, end time.Time, i
 	return start, end, !now.Before(start) && now.Before(end)
 }
 
-func runningHoursRemaining(spec string, now time.Time) (time.Duration, bool, error) {
-	rh, err := ParseRunningHours(spec)
+func runningHoursRemaining(hours, days string, now time.Time) (time.Duration, bool, error) {
+	rh, err := ParseRunningHours(hours)
 	if err != nil {
 		return 0, false, err
 	}
-	_, end, in := rh.WindowAt(now)
+	start, end, in := rh.WindowAt(now)
 	if !in {
 		return 0, false, nil
+	}
+	if days != "" {
+		rd, err := ParseRunningDays(days)
+		if err != nil {
+			return 0, false, err
+		}
+		// Evaluate the day against the window's start day so overnight windows
+		// (e.g. Fri 22:00-06:00) are attributed to the day they began.
+		if !rd.Contains(start.Weekday()) {
+			return 0, false, nil
+		}
 	}
 	remaining := max(end.Sub(now), 0)
 	return remaining, true, nil
 }
+
+// RunningDays is the set of weekdays on which a running-hours window applies.
+type RunningDays map[time.Weekday]bool
+
+var weekdayNames = map[string]time.Weekday{
+	"sun": time.Sunday, "sunday": time.Sunday,
+	"mon": time.Monday, "monday": time.Monday,
+	"tue": time.Tuesday, "tuesday": time.Tuesday,
+	"wed": time.Wednesday, "wednesday": time.Wednesday,
+	"thu": time.Thursday, "thursday": time.Thursday,
+	"fri": time.Friday, "friday": time.Friday,
+	"sat": time.Saturday, "saturday": time.Saturday,
+}
+
+// ParseRunningDays parses a comma-separated list of days into a set.
+//
+// It accepts full names ("Monday") and common abbreviations ("Mon"). Matching
+// is case-insensitive and whitespace around entries is ignored.
+func ParseRunningDays(v string) (RunningDays, error) {
+	days := make(RunningDays)
+	for _, p := range strings.Split(v, ",") {
+		token := strings.ToLower(strings.TrimSpace(p))
+		if token == "" {
+			continue
+		}
+		wd, ok := weekdayNames[token]
+		if !ok {
+			return nil, fmt.Errorf("invalid running-days %q: unknown day %q", v, strings.TrimSpace(p))
+		}
+		days[wd] = true
+	}
+	if len(days) == 0 {
+		return nil, fmt.Errorf("invalid running-days %q: no days specified", v)
+	}
+	return days, nil
+}
+
+// Contains reports whether the given weekday is part of the set.
+func (d RunningDays) Contains(day time.Weekday) bool {
+	return d[day]
+}
+

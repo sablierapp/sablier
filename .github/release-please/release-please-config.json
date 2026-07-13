@@ -45,8 +45,7 @@
                 },
                 {
                     "type": "generic",
-                    "glob": true,
-                    "path": "docs/**/*.md"
+                    "path": "docs/hugo.yaml"
                 }
             ]
         }

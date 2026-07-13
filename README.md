@@ -20,6 +20,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
 - [OpenTelemetry tracing](#tracing) for end-to-end request observability
 - Stop or pause strategies to maximize resource reclamation on constrained hardware
 - [Scale mode](#scale-mode): throttle CPU and memory when idle instead of stopping, for zero-cold-start workloads
+- [Anti-affinity](#anti-affinity): make a workload back off automatically while another group is active, to avoid GPU/RAM contention
 
 ---
 
@@ -73,25 +74,38 @@ You can install Sablier using one of the following methods:
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.14.0)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.15.0)
 <!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
 - **GitHub Container Registry**: [ghcr.io/sablierapp/sablier](https://github.com/sablierapp/sablier/pkgs/container/sablier)
   
-Choose one of the Docker images and run it with a sample configuration file:
+**With Docker Compose** — copy this into a `compose.yaml` and run `docker compose up -d`:
 
-- [sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)
+```yaml
+services:
+  sablier:
+    image: sablierapp/sablier:1.15.0 # x-release-please-version
+    command:
+      - start
+      - --provider.name=docker
+    ports:
+      - "10000:10000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+
+**With `docker run`** — using a sample configuration file ([sablier.yaml](https://raw.githubusercontent.com/sablierapp/sablier/main/sablier.sample.yaml)):
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.14.0
+docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.15.0
 ```
 
 > [!TIP]
 > Verify the image signature to ensure authenticity:
 > ```bash
-> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.14.0
+> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.15.0
 > ```
 
 <!-- x-release-please-end -->
@@ -359,7 +373,7 @@ sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.14.0 --help
+docker run sablierapp/sablier:1.15.0 --help
 ```
 <!-- x-release-please-end -->
 
@@ -459,7 +473,7 @@ Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmo
 
 ## Scale Mode
 
-By default, Sablier stops (or pauses) workloads when a session expires and restarts them on the next request. **Scale mode** is an alternative: instead of stopping a container, Sablier throttles its CPU and memory to a minimal idle allocation, then restores full resources the moment a new session arrives.
+By default, Sablier stops (or pauses) workloads when a session expires and restarts them on the next request. **Scale mode** is an alternative: instead of stopping a container, Sablier throttles its CPU, memory, and (on Docker) block I/O to a minimal idle allocation, then restores full resources the moment a new session arrives.
 
 Because the container never stops, there is **no cold-start latency** — ideal for resource-constrained environments like a Raspberry Pi where you want to reclaim most of the hardware while keeping response times acceptable.
 
@@ -487,8 +501,26 @@ labels:
 | `sablier.active.replicas` | Replica count when a session is active. |
 | `sablier.active.cpu` | CPU limit restored when a session is active. |
 | `sablier.active.memory` | Memory limit restored when a session is active. |
+| `sablier.idle.blkio-weight` / `sablier.active.blkio-weight` | Block I/O weight `10`–`1000` (Docker only). |
+| `sablier.idle.blkio-device-{read,write}-{bps,iops}` | Per-device I/O throughput/IOPS limits (Docker only). |
+
+> **Docker only:** Block I/O throttling is supported on the Docker provider. Per-device limits (`blkio-*-device`, `blkio-device-*`) require a Docker daemon with API version ≥ 1.55 ([moby/moby#52650](https://github.com/moby/moby/issues/52650)); Sablier logs a warning on older daemons. See the [configuration reference](./docs/configuration.md#block-io-blkio-throttling) for the full list.
 
 📚 **[Full Example](./examples/scale-mode/)**
+
+### Anti-Affinity
+
+On a machine where several heavy services share a non-shareable resource (GPU VRAM, RAM), running two at once can OOM. **Anti-affinity** lets an instance back off automatically while another group is in use:
+
+```yaml
+labels:
+  - "sablier.enable=true"
+  - "sablier.anti-affinity=streaming"   # yield whenever the "streaming" group is active
+```
+
+When any session for the `streaming` group is active, every instance that declared an anti-affinity against it is forced idle (stopped, or throttled to its idle profile in scale mode) and restored once the group is no longer active. Multiple groups can be listed comma-separated.
+
+📚 **[Anti-Affinity documentation](./docs/configuration.md#anti-affinity)** | **[Full Example](./examples/anti-affinity/)**
 
 ---
 

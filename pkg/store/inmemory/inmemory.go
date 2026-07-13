@@ -15,12 +15,14 @@ var _ json.Unmarshaler = (*InMemory)(nil)
 
 func NewInMemory() sablier.Store {
 	return &InMemory{
-		kv: tinykv.New[sablier.InstanceInfo](1*time.Second, nil),
+		// Values are versioned session records; SessionRecord's unmarshaler
+		// transparently upgrades snapshot files written before versioning.
+		kv: tinykv.New[sablier.SessionRecord](1*time.Second, nil),
 	}
 }
 
 type InMemory struct {
-	kv tinykv.KV[sablier.InstanceInfo]
+	kv tinykv.KV[sablier.SessionRecord]
 }
 
 func (i InMemory) UnmarshalJSON(bytes []byte) error {
@@ -36,11 +38,11 @@ func (i InMemory) Get(_ context.Context, s string) (sablier.InstanceInfo, error)
 	if !ok {
 		return sablier.InstanceInfo{}, store.ErrKeyNotFound
 	}
-	return val, nil
+	return val.Instance, nil
 }
 
 func (i InMemory) Put(_ context.Context, state sablier.InstanceInfo, duration time.Duration) error {
-	return i.kv.Put(state.Name, state, duration)
+	return i.kv.Put(state.Name, sablier.NewSessionRecord(state), duration)
 }
 
 func (i InMemory) Delete(_ context.Context, s string) error {
@@ -48,8 +50,15 @@ func (i InMemory) Delete(_ context.Context, s string) error {
 	return nil
 }
 
+func (i InMemory) Range(_ context.Context, f func(sablier.InstanceInfo, time.Time)) error {
+	i.kv.Range(func(_ string, value sablier.SessionRecord, expiresAt time.Time) {
+		f(value.Instance, expiresAt)
+	})
+	return nil
+}
+
 func (i InMemory) OnExpire(_ context.Context, f func(string)) error {
-	i.kv.SetOnExpire(func(k string, _ sablier.InstanceInfo) {
+	i.kv.SetOnExpire(func(k string, _ sablier.SessionRecord) {
 		f(k)
 	})
 	return nil

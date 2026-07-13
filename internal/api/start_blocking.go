@@ -17,6 +17,23 @@ type BlockingRequest struct {
 	Timeout         time.Duration `form:"timeout"`
 }
 
+// StartBlocking registers the blocking strategy endpoint.
+//
+// @Summary      Blocking strategy
+// @Description  Holds the request until the requested instances are ready, or until the timeout elapses. Provide either `names` (one or more) or `group`, never both.
+// @Tags         strategies
+// @Produce      json
+// @Param        names             query  []string  false  "Instance name(s); repeat for multiple. Mutually exclusive with group."
+// @Param        group             query  string    false  "Group name. Mutually exclusive with names."
+// @Param        session_duration  query  string    false  "Session duration as a Go duration (e.g. 5m). Defaults to the server default."
+// @Param        timeout           query  string    false  "Maximum time to wait as a Go duration (e.g. 1m)."
+// @Success      200  {object}  SessionResponse
+// @Header       200  {string}  X-Sablier-Session-Status  "ready or not-ready"
+// @Failure      400  {object}  rfc7807.Problem  "Validation error"
+// @Failure      404  {object}  rfc7807.Problem  "Group or instance not found"
+// @Failure      500  {object}  rfc7807.Problem  "Internal error"
+// @Failure      504  {object}  rfc7807.Problem  "Session was not ready before the timeout"
+// @Router       /api/strategies/blocking [get]
 func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/blocking", func(c *gin.Context) {
 		request := BlockingRequest{
@@ -78,6 +95,6 @@ func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		c.JSON(http.StatusOK, map[string]any{"session": sessionState})
+		c.JSON(http.StatusOK, NewSessionResponse(sessionState))
 	})
 }

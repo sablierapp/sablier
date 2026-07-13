@@ -26,6 +26,14 @@ type InstanceEventsRequest struct {
 //
 // The stream stays open until the client disconnects or the server shuts down.
 // Filter by event type with the repeated `types` query parameter.
+//
+// @Summary      Instance events (SSE)
+// @Description  Server-Sent Events stream of instance lifecycle events. Each event is `event: <type>` followed by `data: <InstanceInfo JSON>`. The stream stays open until the client disconnects.
+// @Tags         events
+// @Produce      text/event-stream
+// @Param        types  query  []string  false  "Event types to include (created, updated, removed, started, stopped). Repeat for multiple."
+// @Success      200  {string}  string  "SSE stream (text/event-stream)"
+// @Router       /api/events [get]
 func InstanceEvents(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/events", func(c *gin.Context) {
 		var req InstanceEventsRequest

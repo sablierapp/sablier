@@ -17,7 +17,15 @@ func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 }
 
 func (s *Sablier) OnInstanceExpired(ctx context.Context) func(string) {
-	return onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.verifyEnabledOnExpiration)
+	base := onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.verifyEnabledOnExpiration)
+	return func(key string) {
+		base(key)
+		// The expired session may have been the last one keeping a group active;
+		// restore any instance we forced idle because of an anti-affinity to it.
+		// The store key is already gone by the time this callback runs, so the
+		// reconcile sees the group as inactive.
+		s.triggerAntiAffinityReconcile(ctx)
+	}
 }
 
 func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.Recorder, logger *slog.Logger, verifyEnabled bool) func(string) {
@@ -30,7 +38,7 @@ func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 					logger.WarnContext(ctx, "instance expired could not be inspected before stop", slog.String("instance", key), slog.Any("error", err))
 					return
 				}
-				if info.Enabled != "true" {
+				if !info.IsEnabled() {
 					logger.WarnContext(ctx, "instance expired but is not managed by sablier, skipping stop", slog.String("instance", key))
 					return
 				}

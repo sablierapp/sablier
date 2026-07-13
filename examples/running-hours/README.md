@@ -12,6 +12,9 @@ When the current time is outside the window:
 
 - The instance behaves normally and can expire according to session settings.
 
+The optional `sablier.running-days` label further restricts the window to
+specific weekdays (this example uses `Mon,Tue,Wed,Thu,Fri`).
+
 ## Services
 
 | Service | Role |
@@ -26,6 +29,7 @@ labels:
   - "sablier.enable=true"
   - "sablier.group=office-app"
   - "sablier.running-hours=09:00-18:00"
+  - "sablier.running-days=Mon,Tue,Wed,Thu,Fri"
 ```
 
 ## Prerequisites
@@ -42,9 +46,12 @@ This compose stack supports both values as environment variables:
 ```bash
 export TZ=Europe/Paris
 export RUNNING_HOURS=09:00-18:00
+export RUNNING_DAYS=Mon,Tue,Wed,Thu,Fri
 ```
 
-You can keep defaults by leaving them unset (`TZ=UTC`, `RUNNING_HOURS=09:00-18:00`).
+You can keep defaults by leaving them unset (`TZ=UTC`, `RUNNING_HOURS=09:00-18:00`, `RUNNING_DAYS=Mon,Tue,Wed,Thu,Fri`).
+
+`RUNNING_DAYS` accepts a comma-separated list of days (full names like `Monday` or abbreviations like `Mon`).
 
 ## Walkthrough
 

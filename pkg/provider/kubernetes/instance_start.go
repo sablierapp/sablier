@@ -12,6 +12,26 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+func (p *Provider) InstanceDependencies(_ context.Context, _ string) ([]sablier.InstanceDependency, error) {
+	return nil, nil
+}
+
+// activeReplicas resolves the replica count used when starting an instance.
+// The sablier.active.replicas label on the workload stays authoritative when
+// present. Without it, an explicit count from the names-based API
+// (kind_namespace_name_replicas, e.g. reverse-proxy plugin middlewares) is
+// honored, so `deployment_ns_name_2` scales to 2 as documented instead of
+// silently falling back to the default of 1.
+func activeReplicas(sc sablier.ScaleConfig, labels map[string]string, parsed ParsedName) int32 {
+	if _, hasLabel := labels["sablier.active.replicas"]; hasLabel {
+		return sc.Active.Replicas
+	}
+	if parsed.Replicas > 1 {
+		return parsed.Replicas
+	}
+	return sc.Active.Replicas
+}
+
 func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "kubernetes.instance.start",
 		trace.WithAttributes(attribute.String("instance", name)))
@@ -60,6 +80,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	}
 
 	sc := sablier.ScaleConfigFromLabels(labels)
+	sc.Active.Replicas = activeReplicas(sc, labels, parsed)
 	if sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
 		span.SetAttributes(
 			attribute.String("operation", "scale_mode"),

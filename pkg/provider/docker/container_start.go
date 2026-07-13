@@ -24,30 +24,48 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
+	return p.startSingle(ctx, name)
+}
+
+// startSingle starts a single container, applying the configured scale mode or
+// strategy. It does not resolve depends_on dependencies.
+func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
+	span := trace.SpanFromContext(ctx)
+
 	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot inspect container: %w", err)
 	}
 
 	sc := sablier.ScaleConfigFromLabels(spec.Container.Config.Labels)
-	if sc.Idle.Replicas >= 1 || sc.Active.CPU != "" || sc.Active.Memory != "" {
-		if sc.Active.CPU != "" || sc.Active.Memory != "" {
+	if sc.Idle.Replicas >= 1 || sc.Active.HasResources() {
+		if sc.Active.HasResources() {
 			span.SetAttributes(
 				attribute.String("operation", "scale_mode.apply_resources"),
 				attribute.String("cpu", sc.Active.CPU),
 				attribute.String("memory", sc.Active.Memory),
+				attribute.Int("blkio_weight", int(sc.Active.BlkioWeight)),
 			)
 			p.l.DebugContext(ctx, "applying active resources (scale mode)",
 				slog.String("name", name),
 				slog.String("cpu", sc.Active.CPU),
 				slog.String("memory", sc.Active.Memory),
+				slog.Int("blkio_weight", int(sc.Active.BlkioWeight)),
 			)
-			return p.applyResources(ctx, name, sc.Active.CPU, sc.Active.Memory)
+			return p.applyResources(ctx, name, sc.Active)
 		}
 		span.SetAttributes(
 			attribute.String("operation", "scale_mode.noop"),
 			attribute.Int("idle_replicas", int(sc.Idle.Replicas)),
 		)
+		return nil
+	}
+
+	// A container that is already running (and not paused) needs no action.
+	// This is common for always-on depends_on dependencies that Sablier does
+	// not manage; starting them again would fail with a conflict error.
+	if spec.Container.State.Running && !spec.Container.State.Paused {
+		span.SetAttributes(attribute.String("operation", "noop.already_running"))
 		return nil
 	}
 

@@ -8,6 +8,7 @@ type Sessions struct {
 	// Env: SABLIER_SESSIONS_DEFAULT_DURATION
 	// CLI: --sessions.default-duration
 	// Default: 5m
+	// Since: v1.0.0
 	DefaultDuration time.Duration
 
 	// ExpirationInterval is how often Sablier checks for and stops expired sessions.
@@ -16,6 +17,7 @@ type Sessions struct {
 	// Env: SABLIER_SESSIONS_EXPIRATION_INTERVAL
 	// CLI: --sessions.expiration-interval
 	// Default: 20s
+	// Since: v1.0.0
 	ExpirationInterval time.Duration
 }
 

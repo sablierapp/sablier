@@ -105,6 +105,46 @@ func TestEntries(t *testing.T) {
 	assert.NotNil(entries["3"])
 }
 
+func TestRange(t *testing.T) {
+	assert := assert.New(t)
+	rg := New[int](0, nil)
+	defer rg.Stop()
+
+	require.NoError(t, rg.Put("live1", 1, time.Minute*50))
+	require.NoError(t, rg.Put("live2", 2, time.Minute*50))
+	require.NoError(t, rg.Put("expired", 3, time.Millisecond))
+
+	<-time.After(time.Millisecond * 20)
+
+	got := make(map[string]int)
+	expiries := make(map[string]time.Time)
+	rg.Range(func(key string, value int, expiresAt time.Time) {
+		got[key] = value
+		expiries[key] = expiresAt
+	})
+
+	// Expired entries must never be yielded.
+	assert.Len(got, 2)
+	assert.Equal(1, got["live1"])
+	assert.Equal(2, got["live2"])
+	_, ok := got["expired"]
+	assert.False(ok, "expired entries must not be yielded by Range")
+
+	// The reported expiry is in the future for live entries.
+	assert.True(expiries["live1"].After(time.Now()))
+
+	// Range must not renew timeouts: the reported expiry is stable across calls.
+	first := expiries["live1"]
+	<-time.After(time.Millisecond * 20)
+	var second time.Time
+	rg.Range(func(key string, _ int, expiresAt time.Time) {
+		if key == "live1" {
+			second = expiresAt
+		}
+	})
+	assert.Equal(first, second, "Range must not renew an entry's timeout")
+}
+
 func TestMarshalJSON(t *testing.T) {
 	require.NoError(t, os.Setenv("TZ", ""))
 	assert := assert.New(t)

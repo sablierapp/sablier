@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
@@ -54,12 +55,41 @@ func ProblemThemeNotFound(e theme.ErrThemeNotFound) rfc7807.Problem {
 }
 
 func ProblemTimeout(e sablier.ErrTimeout) rfc7807.Problem {
-	return rfc7807.Problem{
+	detail := fmt.Sprintf("session was not ready after %s", e.Duration)
+	if reasons := e.InstanceReasons(); len(reasons) > 0 {
+		detail = fmt.Sprintf("%s: %s", detail, strings.Join(reasons, "; "))
+	}
+
+	pb := rfc7807.Problem{
 		Type:   "https://sablierapp.dev/#/errors?id=timeout",
 		Title:  http.StatusText(http.StatusGatewayTimeout),
 		Status: http.StatusGatewayTimeout,
-		Detail: fmt.Sprintf("session was not ready after %s", e.Duration),
+		Detail: detail,
 	}
+
+	if len(e.Instances) > 0 {
+		type instanceDetail struct {
+			Name    string `json:"name"`
+			Status  string `json:"status"`
+			Message string `json:"message,omitempty"`
+			Error   string `json:"error,omitempty"`
+		}
+		details := make([]instanceDetail, 0, len(e.Instances))
+		for _, i := range e.Instances {
+			d := instanceDetail{
+				Name:    i.Instance.Name,
+				Status:  string(i.Instance.Status),
+				Message: i.Instance.Message,
+			}
+			if i.Error != nil {
+				d.Error = i.Error.Error()
+			}
+			details = append(details, d)
+		}
+		_ = pb.Extend("instances", details)
+	}
+
+	return pb
 }
 
 func ProblemInstanceNotManaged(e sablier.ErrInstanceNotManaged) rfc7807.Problem {

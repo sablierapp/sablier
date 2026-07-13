@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"sort"
@@ -25,6 +24,24 @@ type DynamicRequest struct {
 	RefreshFrequency time.Duration `form:"refresh_frequency"`
 }
 
+// StartDynamic registers the dynamic strategy endpoint.
+//
+// @Summary      Dynamic strategy
+// @Description  Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.
+// @Tags         strategies
+// @Produce      html
+// @Param        names              query  []string  false  "Instance name(s). Mutually exclusive with group."
+// @Param        group              query  string    false  "Group name. Mutually exclusive with names."
+// @Param        session_duration   query  string    false  "Session duration as a Go duration (e.g. 5m)."
+// @Param        refresh_frequency  query  string    false  "Waiting-page refresh interval as a Go duration (e.g. 5s)."
+// @Param        show_details       query  bool      false  "Show per-instance details on the waiting page."
+// @Param        display_name       query  string    false  "Display name shown on the waiting page."
+// @Param        theme              query  string    false  "Theme name for the waiting page."
+// @Success      200  {string}  string  "HTML waiting page"
+// @Header       200  {string}  X-Sablier-Session-Status  "ready or not-ready"
+// @Failure      404  {object}  rfc7807.Problem  "Group or theme not found"
+// @Failure      500  {object}  rfc7807.Problem  "Internal error"
+// @Router       /api/strategies/dynamic [get]
 func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/dynamic", func(c *gin.Context) {
 		request := DynamicRequest{
@@ -49,13 +66,29 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
+		// Validate the theme before any instance is started: a mistyped theme
+		// in the plugin configuration must not start workloads on behalf of a
+		// request that can only ever return 404 (and would start them again on
+		// every retry).
+		if !s.Theme.Exists(request.Theme) {
+			AbortWithProblemDetail(c, ProblemThemeNotFound(theme.ErrThemeNotFound{
+				Theme:           request.Theme,
+				AvailableThemes: s.Theme.List(),
+			}))
+			return
+		}
+
 		var sessionState *sablier.SessionState
 		var err error
+		// c.Request.Context(), never the *gin.Context itself: without gin's
+		// ContextWithFallback, the gin context has a nil Done() channel and its
+		// Value() does not reach the request context, which silently breaks
+		// cancellation and otel trace propagation for everything downstream.
 		if len(request.Names) > 0 {
 			recordSessionRequest(s.Metrics, "dynamic", "")
-			sessionState, err = s.Sablier.RequestSession(c, request.Names, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSession(c.Request.Context(), request.Names, request.SessionDuration)
 		} else {
-			sessionState, err = s.Sablier.RequestSessionGroup(c, request.Group, request.SessionDuration)
+			sessionState, err = s.Sablier.RequestSessionGroup(c.Request.Context(), request.Group, request.SessionDuration)
 			if groupNotFoundError, ok := errors.AsType[sablier.ErrGroupNotFound](err); ok {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
@@ -85,14 +118,17 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			InstanceStates:   sessionStateToRenderOptionsInstanceState(sessionState),
 		}
 
+		// Render into a plain buffer: rendering must fully succeed before any
+		// byte reaches the client, so a template that fails halfway (easy to
+		// author in a custom theme) surfaces as a 500 problem instead of a 200
+		// with a truncated page.
 		buf := new(bytes.Buffer)
-		writer := bufio.NewWriter(buf)
-		err = s.Theme.Render(request.Theme, renderOptions, writer)
+		err = s.Theme.Render(request.Theme, renderOptions, buf)
 		if themeNotFound, ok := errors.AsType[theme.ErrThemeNotFound](err); ok {
 			AbortWithProblemDetail(c, ProblemThemeNotFound(themeNotFound))
 			return
 		}
-		if err := writer.Flush(); err != nil {
+		if err != nil {
 			AbortWithProblemDetail(c, ProblemError(err))
 			return
 		}

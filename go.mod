@@ -3,13 +3,14 @@ module github.com/sablierapp/sablier
 go 1.26.3
 
 require (
+	github.com/getkin/kin-openapi v0.140.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/go-cmp v0.7.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/luthermonson/go-proxmox v0.5.1
-	github.com/moby/moby/api v1.54.2
-	github.com/moby/moby/client v0.4.1
+	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
@@ -19,33 +20,42 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/testcontainers/testcontainers-go v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/dind v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/k3s v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/valkey v0.42.0
+	github.com/swaggo/swag v1.16.6
+	github.com/testcontainers/testcontainers-go v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/dind v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/k3s v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/valkey v0.43.0
 	github.com/tniswong/go.rfcx v0.0.0-20181019234604-07783c52761f
-	github.com/valkey-io/valkey-go v1.0.75
+	github.com/valkey-io/valkey-go v1.0.76
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/sync v0.21.0
-	google.golang.org/grpc v1.81.1
+	golang.org/x/sync v0.22.0
+	google.golang.org/grpc v1.82.0
 	gotest.tools/v3 v3.5.2
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
-	k8s.io/client-go v0.36.1
+	k8s.io/api v0.36.2
+	k8s.io/apimachinery v0.36.2
+	k8s.io/client-go v0.36.2
 )
 
 require (
+	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
+	github.com/go-openapi/spec v0.20.4 // indirect
+	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
+	github.com/oasdiff/yaml v0.1.0 // indirect
+	github.com/oasdiff/yaml3 v0.0.13 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 )
@@ -83,7 +93,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect; indirectit
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonpointer v0.22.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -131,7 +141,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
-	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.5 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

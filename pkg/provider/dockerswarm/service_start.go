@@ -12,6 +12,10 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+func (p *Provider) InstanceDependencies(_ context.Context, _ string) ([]sablier.InstanceDependency, error) {
+	return nil, nil
+}
+
 func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "swarm.instance.start",
 		trace.WithAttributes(attribute.String("instance", name)))
@@ -23,7 +27,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
-	service, err := p.getServiceByName(name, ctx)
+	service, err := p.getServiceByName(ctx, name)
 	if err != nil {
 		return fmt.Errorf("cannot get service: %w", err)
 	}

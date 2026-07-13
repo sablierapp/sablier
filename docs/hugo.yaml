@@ -1,0 +1,125 @@
+baseURL: https://sablierapp.dev/
+title: Sablier
+locale: en-us
+
+enableRobotsTXT: true
+enableGitInfo: true
+enableInlineShortcodes: true
+
+# Preserve the docsify slugs (underscores are kept, no forced lowercase) so that
+# the redirect map from the old site stays a trivial 1:1 mapping.
+disablePathToLower: true
+
+markup:
+  goldmark:
+    parser:
+      attribute:
+        # Allow `{#custom-id}` heading attributes so generated reference pages
+        # (e.g. the CLI reference) can assign stable, predictable anchors.
+        title: true
+    renderer:
+      # Allow raw HTML (the docs use <img> tags inside tables and headings).
+      unsafe: true
+  highlight:
+    noClasses: false
+    lineNos: false
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+menu:
+  main:
+    - name: Documentation
+      url: /tutorials/getting-started/
+      weight: 1
+    - name: Providers
+      url: /tutorials/providers/
+      weight: 2
+    - name: Reverse Proxies
+      url: /tutorials/reverse-proxies/
+      weight: 3
+    - name: Guides
+      url: /guides/
+      weight: 4
+    - name: Search
+      weight: 5
+      params:
+        type: search
+    - name: GitHub
+      weight: 6
+      url: "https://github.com/sablierapp/sablier"
+      params:
+        icon: github
+  sidebar:
+    - identifier: more
+      name: More
+      weight: 1
+      params:
+        type: separator
+    - identifier: theme-editor
+      name: "Theme Editor ↗"
+      url: "https://editor.sablierapp.dev/"
+      weight: 2
+    - identifier: video-fr
+      name: "🇫🇷  Video walkthrough ↗"
+      url: "https://www.youtube.com/watch?v=0cPt_w7NIs0"
+      weight: 2
+
+params:
+  # Single source of truth for the released Sablier version shown throughout the
+  # docs. Referenced via the {{< version >}} shortcode so no page (generated or
+  # authored) hardcodes the version. Bumped automatically by release-please.
+  version: "1.15.0" # x-release-please-version
+
+  navbar:
+    displayTitle: true
+    displayLogo: true
+    logo:
+      path: assets/img/icon.png
+      width: 32
+  page:
+    width: normal
+  theme:
+    default: system
+    displayToggle: true
+  editURL:
+    enable: true
+    base: "https://github.com/sablierapp/sablier/edit/main/docs/content"
+  search:
+    enable: true
+    type: flexsearch
+    flexsearch:
+      index: content
+  footer:
+    enable: true
+    displayCopyright: true
+    displayPoweredBy: false
+  blog:
+    list:
+      displayTags: false
+      sortBy: date
+      sortOrder: desc
+
+  imageZoom:
+    enable: true
+
+  # Comments powered by giscus (GitHub Discussions). Hextra renders these at the
+  # bottom of doc, page, and blog pages when enabled. The giscus theme is synced
+  # automatically with the site's light/dark toggle.
+  #
+  # To disable comments on a specific page, set `comments: false` in its front matter.
+  comments:
+    enable: true
+    type: giscus
+    giscus:
+      repo: "sablierapp/sablier"
+      repoId: "MDEwOlJlcG9zaXRvcnkzMDU3OTM3OTg="
+      category: "Giscus"
+      categoryId: "DIC_kwDOEjoLBs4DAy4-"
+      # Defaults applied by Hextra (uncomment to override):
+      # mapping: pathname          # one discussion per page URL
+      # inputPosition: top
+      # reactionsEnabled: 1
+      # emitMetadata: 0
+      # lang: en

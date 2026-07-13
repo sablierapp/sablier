@@ -43,7 +43,7 @@ archives:
       - README.md
       - LICENSE
       - sablier.sample.yaml
-      - docs/theme.schema.json
+      - docs/static/theme.schema.json
 
 snapshot:
   version_template: SNAPSHOT-{{ .Commit }}
@@ -67,7 +67,7 @@ dockers_v2:
       'org.opencontainers.image.description': 'Start your containers on demand, shut them down automatically when there is no activity'
       'org.opencontainers.image.source': '{{.GitURL}}'
       'org.opencontainers.image.url': '{{.GitURL}}'
-      'org.opencontainers.image.documentation': 'https://sablier.dev'
+      'org.opencontainers.image.documentation': 'https://sablierapp.dev'
       'org.opencontainers.image.created': '{{.Date}}'
       'org.opencontainers.image.revision': '{{.FullCommit}}'
       'org.opencontainers.image.version': '{{.Version}}'
