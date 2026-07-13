@@ -96,7 +96,14 @@ func (c *InstanceGroupCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (c *InstanceGroupCollector) Collect(ch chan<- prometheus.Metric) {
 	for group, members := range c.groups.Groups() {
+		// Deduplicate members: a duplicate (instance, group) labelset makes
+		// Prometheus' Gather() fail and takes down the /metrics endpoint.
+		seen := make(map[string]struct{}, len(members))
 		for _, instance := range members {
+			if _, ok := seen[instance]; ok {
+				continue
+			}
+			seen[instance] = struct{}{}
 			ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, 1, instance, group)
 		}
 	}
