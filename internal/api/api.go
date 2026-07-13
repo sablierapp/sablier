@@ -18,6 +18,8 @@ type Sablier interface {
 	RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (*sablier.SessionState, error)
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
+	ExtendSession(ctx context.Context, names []string, duration time.Duration) (*sablier.SessionState, error)
+	ExtendSessionGroup(ctx context.Context, group string, duration time.Duration) (*sablier.SessionState, error)
 	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream
 }
 
