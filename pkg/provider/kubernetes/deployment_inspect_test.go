@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
@@ -279,14 +280,18 @@ func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) 
 	}
 	t.Parallel()
 
-	ctx := context.Background()
+	// Bound the waits below so a readiness regression fails this test instead
+	// of hanging until the package test timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 	c := sharedKinD
 
-	// A pod only becomes healthy 20 seconds after its own start: the first
-	// replica gets ready, and the replica added by the scale-up below stays
-	// unready long enough to observe a stable 1/2-ready deployment.
+	// A pod only becomes healthy 20 seconds after its own start (mimic serves
+	// 200 on /health once -healthy-after elapses): the first replica gets
+	// ready, and the replica added by the scale-up below stays unready long
+	// enough to observe a stable 1/2-ready deployment.
 	d, err := c.CreateMimicDeployment(ctx, MimicOptions{
-		Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=20s"},
+		Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy", "-healthy-after=20s"},
 		Healthcheck: mimicHealthcheck(),
 	})
 	assert.NilError(t, err)
