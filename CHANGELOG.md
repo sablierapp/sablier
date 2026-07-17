@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.16.0](https://github.com/sablierapp/sablier/compare/v1.15.0...v1.16.0) (2026-07-17)
+
+
+### Features
+
+* **kubernetes:** add ready-on-first-replica option ([#1011](https://github.com/sablierapp/sablier/issues/1011)) ([c059946](https://github.com/sablierapp/sablier/commit/c059946d8f27ff478245070a74b0ca0afa2020d5))
+
+
+### Bug Fixes
+
+* **api:** pass the request context, not the gin context, to session requests ([#1019](https://github.com/sablierapp/sablier/issues/1019)) ([0fb0079](https://github.com/sablierapp/sablier/commit/0fb00795edfec9047dee716e62bc215187c69b79))
+* **api:** surface theme render errors and validate the theme before starting instances ([#1021](https://github.com/sablierapp/sablier/issues/1021)) ([8efa983](https://github.com/sablierapp/sablier/commit/8efa9831d68eac74ac80f6f65f205d1fe17f15c7))
+* **dockerswarm:** nil-service panic when the name filter has no exact match ([#1017](https://github.com/sablierapp/sablier/issues/1017)) ([3d704f1](https://github.com/sablierapp/sablier/commit/3d704f17a86a328c9f2d0a341c4c16cb0a873964))
+* **kubernetes:** detect CloudNativePG CRD via discovery instead of List ([#1002](https://github.com/sablierapp/sablier/issues/1002)) ([c2673cf](https://github.com/sablierapp/sablier/commit/c2673cfacae4ae2a58ef460653cadae6c685c743))
+* **kubernetes:** handle informer tombstones in deployment/statefulset watchers ([#1018](https://github.com/sablierapp/sablier/issues/1018)) ([8b93854](https://github.com/sablierapp/sablier/commit/8b93854fdcd111dbc411e0c1b84947b521e6b20a))
+* **sablier:** copy group member slices at the registry boundary ([#1016](https://github.com/sablierapp/sablier/issues/1016)) ([8e1df8b](https://github.com/sablierapp/sablier/commit/8e1df8bd222d5298a9e039759894f821c411a790))
+* **server:** drain in-flight requests on shutdown and fail fast on bind errors ([#1020](https://github.com/sablierapp/sablier/issues/1020)) ([5bb95c9](https://github.com/sablierapp/sablier/commit/5bb95c97b9cb97d493ad6ab49731384869b143cf))
+
+
+### Code Refactoring
+
+* **api:** return an explicit session DTO instead of the domain struct ([#1024](https://github.com/sablierapp/sablier/issues/1024)) ([5b9fcb0](https://github.com/sablierapp/sablier/commit/5b9fcb0ce6b9a10d632281cf0e9d4006b89ca020))
+* **provider:** one event-stream loop for the Docker-API providers ([#1022](https://github.com/sablierapp/sablier/issues/1022)) ([642d0fa](https://github.com/sablierapp/sablier/commit/642d0fae84a10af6de307d33a5f8806f60804efd))
+* **sablier:** typed InstanceConfig with one parser and one enabled-semantics ([#1023](https://github.com/sablierapp/sablier/issues/1023)) ([65b82c2](https://github.com/sablierapp/sablier/commit/65b82c236a691a69132182660407462b3399a1c5))
+* **store:** persist sessions as explicit versioned records ([#1025](https://github.com/sablierapp/sablier/issues/1025)) ([57b9fe4](https://github.com/sablierapp/sablier/commit/57b9fe41c05a009a809967e5e5124943fb7ba1ae))
+
 ## [1.15.0](https://github.com/sablierapp/sablier/compare/v1.14.0...v1.15.0) (2026-07-09)
 
 
