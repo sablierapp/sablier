@@ -17,11 +17,16 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
 	var info sablier.InstanceInfo
-	// TODO: Should add option to set ready as soon as one replica is ready
-	if *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas {
+	ready := *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas
+	if p.readyOnFirstReplica {
+		// A workload scaled to zero must still be reported as stopped, even if
+		// terminating pods transiently keep readyReplicas above zero.
+		ready = *d.Spec.Replicas != 0 && d.Status.ReadyReplicas > 0
+	}
+	if ready {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
-			CurrentReplicas: config.Replicas,
+			CurrentReplicas: d.Status.ReadyReplicas,
 			DesiredReplicas: config.Replicas,
 			Status:          sablier.InstanceStatusReady,
 		}

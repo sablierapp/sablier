@@ -12,7 +12,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,7 +64,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 				do: func(dind *kindContainer) (string, error) {
 					d, err := dind.CreateMimicStatefulSet(ctx, MimicOptions{
 						Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=10s"},
-						Healthcheck: &corev1.Probe{},
+						Healthcheck: mimicHealthcheck(),
 					})
 					if err != nil {
 						return "", err

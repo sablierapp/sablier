@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
@@ -12,7 +13,6 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,7 +65,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 				do: func(dind *kindContainer) (string, error) {
 					d, err := dind.CreateMimicDeployment(ctx, MimicOptions{
 						Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=10s"},
-						Healthcheck: &corev1.Probe{},
+						Healthcheck: mimicHealthcheck(),
 					})
 					if err != nil {
 						return "", err
@@ -285,4 +285,70 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			assert.DeepEqual(t, got, tt.want)
 		})
 	}
+}
+
+func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	// Bound the waits below so a readiness regression fails this test instead
+	// of hanging until the package test timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	c := sharedKinD
+
+	// A pod only becomes healthy 20 seconds after its own start (mimic serves
+	// 200 on /health once -healthy-after elapses): the first replica gets
+	// ready, and the replica added by the scale-up below stays unready long
+	// enough to observe a stable 1/2-ready deployment.
+	d, err := c.CreateMimicDeployment(ctx, MimicOptions{
+		Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy", "-healthy-after=20s"},
+		Healthcheck: mimicHealthcheck(),
+	})
+	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_ = c.client.AppsV1().Deployments(d.Namespace).Delete(context.Background(), d.Name, metav1.DeleteOptions{})
+	})
+
+	assert.NilError(t, WaitForDeploymentReady(ctx, c.client, "default", d.Name))
+
+	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
+		Spec:       autoscalingv1.ScaleSpec{Replicas: 2},
+	}, metav1.UpdateOptions{})
+	assert.NilError(t, err)
+	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 2))
+
+	name := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
+
+	// Default behavior: 1/2 ready replicas is still starting.
+	p, err := kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
+	assert.NilError(t, err)
+	got, err := p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStarting)
+
+	// With ready-on-first-replica, one ready replica is enough.
+	cfg := config.NewProviderConfig().Kubernetes
+	cfg.ReadyOnFirstReplica = true
+	p, err = kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), cfg)
+	assert.NilError(t, err)
+	got, err = p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusReady)
+	assert.Equal(t, got.CurrentReplicas, int32(1))
+
+	// Scaled to zero, the workload must still be reported as stopped.
+	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
+		Spec:       autoscalingv1.ScaleSpec{Replicas: 0},
+	}, metav1.UpdateOptions{})
+	assert.NilError(t, err)
+	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 0))
+
+	got, err = p.InstanceInspect(ctx, name)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStopped)
 }

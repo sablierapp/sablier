@@ -43,6 +43,20 @@ type MimicOptions struct {
 	Annotations map[string]string
 }
 
+// mimicHealthcheck returns a readiness probe wired to the mimic health
+// endpoint, so pod readiness follows the -healthy/-healthy-after flags
+// instead of flipping to Ready as soon as the container is running.
+func mimicHealthcheck() *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"/mimic", "healthcheck"},
+			},
+		},
+		PeriodSeconds: 1,
+	}
+}
+
 func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOptions) (*v1.Deployment, error) {
 	if len(opts.Cmd) == 0 {
 		opts.Cmd = []string{"/mimic", "-running", "-running-after=1s", "-healthy=false"}
@@ -70,9 +84,10 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.3",
-							Command: opts.Cmd,
+							Name:           "mimic",
+							Image:          "sablierapp/mimic:v0.3.3",
+							Command:        opts.Cmd,
+							ReadinessProbe: opts.Healthcheck,
 						},
 					},
 				},
@@ -113,9 +128,10 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.3",
-							Command: opts.Cmd,
+							Name:           "mimic",
+							Image:          "sablierapp/mimic:v0.3.3",
+							Command:        opts.Cmd,
+							ReadinessProbe: opts.Healthcheck,
 						},
 					},
 				},
