@@ -267,3 +267,31 @@ func TestWatchAndStopExternallyStarted_EventStreamClosed(t *testing.T) {
 		t.Fatal("timed out waiting for reconciliation after stream closure")
 	}
 }
+
+// TestStopAllUnregisteredInstances_Delegated emits a deactivate intent for an
+// unregistered delegated instance instead of scaling it to zero directly (the
+// absence of an InstanceStop EXPECT makes gomock fail if it is called).
+func TestStopAllUnregisteredInstances_Delegated(t *testing.T) {
+	manager, sessions, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	provider.EXPECT().InstanceList(ctx, gomock.Any()).Return([]sablier.InstanceConfiguration{
+		{Name: "app", Enabled: "true", Delegated: true},
+	}, nil)
+	sessions.EXPECT().Get(ctx, "app").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+
+	stream := manager.IntentEvents(ctx)
+
+	err := manager.StopAllUnregisteredInstances(ctx)
+	assert.NilError(t, err)
+
+	select {
+	case ev := <-stream.Events:
+		assert.Equal(t, string(ev.Type), "deactivate")
+		assert.Equal(t, ev.Info.Name, "app")
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected a deactivate intent event")
+	}
+
+	assert.Assert(t, containsCall(rec.snapshot(), "stop:app/unregistered"))
+}

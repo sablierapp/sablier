@@ -742,3 +742,39 @@ func TestInstanceRequest_ReadyAfter_GracePeriodRespectedByPolling(t *testing.T) 
 	assert.NilError(t, err)
 	assert.Assert(t, session.IsReady())
 }
+
+// TestInstanceRequest_Delegated_EmitsActivateNoStart verifies that requesting a
+// delegated instance emits an activate intent and never calls the provider's
+// InstanceStart (the absence of an EXPECT makes gomock fail if it is called).
+func TestInstanceRequest_Delegated_EmitsActivateNoStart(t *testing.T) {
+	manager, sessions, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	info := sablier.InstanceInfo{
+		Name: "deployment_ns_app_1", Enabled: "true",
+		Config:          &sablier.InstanceConfig{Enabled: true, DelegateScaling: true},
+		CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+	}
+	starting := info
+	starting.Status = sablier.InstanceStatusStarting
+
+	sessions.EXPECT().Get(ctx, info.Name).Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(gomock.Any(), info.Name).Return(info, nil)
+	sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+
+	stream := manager.IntentEvents(ctx)
+
+	got, err := manager.InstanceRequest(ctx, info.Name, time.Minute)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+	select {
+	case ev := <-stream.Events:
+		assert.Equal(t, string(ev.Type), "activate")
+		assert.Equal(t, ev.Info.Name, info.Name)
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected an activate intent event")
+	}
+
+	assert.Assert(t, containsCall(rec.snapshot(), "active+:"+info.Name))
+}

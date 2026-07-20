@@ -149,6 +149,10 @@ func Start(ctx context.Context, conf config.Config) error {
 			},
 		})
 		go d.Watch(ctx, stream)
+		// Delegated-scaling intent events (activate/deactivate) are delivered on a
+		// separate ordered, retrying watch so a deactivate→activate cannot be
+		// reordered and a dropped delivery does not strand the external scaler.
+		go d.WatchOrdered(ctx, s.IntentEvents(ctx))
 		for i, ep := range conf.Webhooks.Endpoints {
 			events := ep.Events
 			if len(events) == 0 {

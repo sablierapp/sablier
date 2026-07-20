@@ -11,7 +11,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/sablierapp/sablier/pkg/metrics"
+	"github.com/sablierapp/sablier/pkg/provider"
 )
+
+// intentEventsBuffer sizes the internal channel that carries delegated-scaling
+// intent events to the webhook dispatcher. It is drained continuously by
+// WatchOrdered, so it only ever buffers a transient burst.
+const intentEventsBuffer = 256
 
 type Sablier struct {
 	provider Provider
@@ -67,6 +73,10 @@ type Sablier struct {
 	// verifyEnabledOnExpiration re-checks sablier.enable before stopping expired instances.
 	verifyEnabledOnExpiration bool
 
+	// intentEvents carries delegated-scaling intent events (activate/deactivate)
+	// from the orchestration layer to the webhook dispatcher. See emitIntent.
+	intentEvents chan InstanceEvent
+
 	metrics metrics.Recorder
 	tracer  trace.Tracer
 
@@ -82,6 +92,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		suppressed:                    map[string]struct{}{},
 		pendingStarts:                 map[string]*pendingStart{},
 		depStarts:                     map[string]*depStart{},
+		intentEvents:                  make(chan InstanceEvent, intentEventsBuffer),
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
@@ -182,4 +193,36 @@ func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
 	return s.sessions.Delete(ctx, name)
+}
+
+// IntentEvents returns the stream of delegated-scaling intent events
+// (activate/deactivate). It is meant to be consumed by a single watcher (the
+// webhook dispatcher's ordered watch); the stream has no error channel.
+func (s *Sablier) IntentEvents(_ context.Context) InstanceEventStream {
+	return InstanceEventStream{Events: s.intentEvents}
+}
+
+// emitIntent publishes a delegated-scaling intent event for the named instance.
+// It blocks only until the event is buffered or ctx is cancelled.
+func (s *Sablier) emitIntent(ctx context.Context, name string, eventType provider.InstanceEventType) {
+	event := InstanceEvent{Type: eventType, Info: InstanceInfo{Name: name}}
+	select {
+	case s.intentEvents <- event:
+	case <-ctx.Done():
+		s.l.WarnContext(ctx, "dropped scaling intent event, context cancelled",
+			slog.String("instance", name),
+			slog.String("event", string(eventType)),
+		)
+	}
+}
+
+// stop idles the named instance. For delegated-scaling instances it emits a
+// deactivate intent (an external scaler owns the replica count); otherwise it
+// scales the instance to zero via the provider.
+func (s *Sablier) stop(ctx context.Context, name string, info InstanceInfo) error {
+	if info.IsDelegated() {
+		s.emitIntent(ctx, name, provider.InstanceEventDeactivate)
+		return nil
+	}
+	return s.provider.InstanceStop(ctx, name)
 }
