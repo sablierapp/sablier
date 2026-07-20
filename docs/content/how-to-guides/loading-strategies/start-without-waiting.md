@@ -59,17 +59,24 @@ flowchart LR
     end
 ```
 
-Traefik
+#### Traefik
+
+If a user accesses `LiteLLM` directly, the waiting page is shown instead — the second router below handles that case.
 ```yaml
 http:
   routers:
     open-webui:
       rule: "Host(`open-webui.example.com`)"
       middlewares:
-        - open-webui-sablier # dynamic
-        - ollama-sablier # poke
-        - litellm-sablier # poke
-        - searxng-sablier # poke
+        - open-webui-dynamic-sablier
+        - ollama-poke-sablier
+        - litellm-poke-sablier
+        - searxng-poke-sablier
+
+    litellm:
+      rule: "Host(`litellm.example.com`)"
+      middlewares:
+        - litellm-dynamic-sablier
 ```
 
 ## Related
