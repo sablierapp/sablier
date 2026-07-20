@@ -24,6 +24,7 @@ func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.S
 	APIv1 := base.Group("/api")
 	api.StartDynamic(APIv1, s)
 	api.StartBlocking(APIv1, s)
+	api.StartPoke(APIv1, s)
 	api.ListThemes(APIv1, s)
 	api.InstanceEvents(APIv1, s)
 }

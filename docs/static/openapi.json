@@ -739,6 +739,94 @@
         ]
       }
     },
+    "/api/strategies/poke": {
+      "get": {
+        "description": "Starts the requested instances and immediately returns the session status without waiting for readiness. Provide either `names` or `group`, never both.",
+        "parameters": [
+          {
+            "description": "Instance name(s); repeat for multiple. Mutually exclusive with group.",
+            "in": "query",
+            "name": "names",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Group name. Mutually exclusive with names.",
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Session duration as a Go duration (e.g. 5m). Defaults to the server default.",
+            "in": "query",
+            "name": "session_duration",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/api.SessionResponse"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "X-Sablier-Session-Status": {
+                "description": "ready or not-ready",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Group not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Internal error"
+          }
+        },
+        "summary": "Poke strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
     "/api/themes": {
       "get": {
         "description": "Lists the waiting-page themes available to the dynamic strategy (built-in and custom). Also served at the legacy path `/api/dynamic/themes`.",
