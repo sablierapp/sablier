@@ -39,6 +39,11 @@ type InstanceConfig struct {
 	// AntiAffinity lists the groups this instance backs off from
 	// (sablier.anti-affinity).
 	AntiAffinity []string `json:"antiAffinity,omitempty"`
+	// DelegateScaling opts the instance into delegated scaling
+	// (sablier.delegate-scaling): Sablier never writes the replica count and
+	// instead emits activate/deactivate intent webhooks for an external scaler
+	// (e.g. a KEDA ScaledObject) to act on.
+	DelegateScaling bool `json:"delegateScaling,omitempty"`
 	// Scale holds the idle/active resource profiles when any non-default
 	// scale-mode label is present (sablier.idle.* / sablier.active.*).
 	Scale *ScaleConfig `json:"scale,omitempty"`
@@ -101,6 +106,17 @@ func InstanceConfigFromLabels(labels map[string]string, l *slog.Logger) Instance
 	}
 	if v := labels[LabelAntiAffinity]; v != "" {
 		cfg.AntiAffinity = ParseAntiAffinity(v)
+	}
+	if v := labels[LabelDelegateScaling]; v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			l.Warn("invalid sablier.delegate-scaling label value, ignoring",
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		} else {
+			cfg.DelegateScaling = b
+		}
 	}
 	// Only expose Scale when at least one non-default scale label is present,
 	// detected by values that differ from the zero-value defaults

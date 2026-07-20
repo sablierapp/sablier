@@ -23,11 +23,11 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 		return err
 	}
 
-	unregistered := make([]string, 0)
+	unregistered := make([]InstanceConfiguration, 0)
 	for _, instance := range instances {
 		_, err = s.sessions.Get(ctx, instance.Name)
 		if errors.Is(err, store.ErrKeyNotFound) {
-			unregistered = append(unregistered, instance.Name)
+			unregistered = append(unregistered, instance)
 		}
 	}
 
@@ -35,22 +35,25 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 
 	waitGroup := errgroup.Group{}
 
-	for _, name := range unregistered {
-		waitGroup.Go(s.stopFunc(ctx, name))
+	for _, instance := range unregistered {
+		waitGroup.Go(s.stopFunc(ctx, instance))
 	}
 
 	return waitGroup.Wait()
 }
 
-func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
+func (s *Sablier) stopFunc(ctx context.Context, instance InstanceConfiguration) func() error {
 	return func() error {
-		err := s.provider.InstanceStop(ctx, name)
-		if err != nil {
-			s.l.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
+		// Route through s.stop so delegated instances are deactivated via an intent
+		// event (the Delegated flag comes from the list, no extra inspect needed)
+		// rather than scaled to zero directly.
+		info := InstanceInfo{Name: instance.Name, Config: &InstanceConfig{DelegateScaling: instance.Delegated}}
+		if err := s.stop(ctx, instance.Name, info); err != nil {
+			s.l.ErrorContext(ctx, "failed to stop instance", slog.String("instance", instance.Name), slog.Any("error", err))
 			return err
 		}
-		s.metrics.RecordInstanceStop(name, "unregistered")
-		s.l.InfoContext(ctx, "stopped unregistered instance", slog.String("instance", name), slog.String("reason", "instance is enabled but not started by Sablier"))
+		s.metrics.RecordInstanceStop(instance.Name, "unregistered")
+		s.l.InfoContext(ctx, "stopped unregistered instance", slog.String("instance", instance.Name), slog.String("reason", "instance is enabled but not started by Sablier"))
 		return nil
 	}
 }
@@ -101,6 +104,13 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 			}
 			// Only act on Sablier-managed instances.
 			if !info.Info.IsEnabled() {
+				continue
+			}
+			// Delegated instances are scaled by an external scaler (e.g. KEDA),
+			// which legitimately owns their replica count while active. Never
+			// force-stop them here, or we would fight that scaler.
+			if info.Info.IsDelegated() {
+				s.l.DebugContext(ctx, "externally started instance is delegated, leaving to external scaler", slog.String("instance", info.Info.Name))
 				continue
 			}
 			if s.isStartedByUs(ctx, info.Info.Name) {

@@ -33,9 +33,22 @@ Common uses:
 |-------|----------|---------|-------------|
 | `url` | Yes | None | Full HTTP(S) URL to POST events to. |
 | `headers` | No | `{}` | Key/value map of HTTP request headers (e.g. `Authorization`). |
-| `events` | No | all | Event types that trigger this endpoint. Accepted values: `started`, `stopped`. Omit or leave empty to receive **all** events. |
+| `events` | No | all | Event types that trigger this endpoint. Accepted values: `started`, `stopped` (lifecycle) and `activate`, `deactivate` (intent). Omit or leave empty to receive **all lifecycle** events. |
 
 Multiple endpoints are supported. Each endpoint is evaluated independently so you can send different event types to different targets.
+
+### Event types
+
+| Event | Kind | Fired when |
+|-------|------|-----------|
+| `started` | Lifecycle | Sablier observes a managed instance scale up. |
+| `stopped` | Lifecycle | Sablier observes a managed instance scale to zero. |
+| `activate` | Intent | Sablier wants a [delegated-scaling](/how-to-guides/scaling-resources/delegated-scaling/) instance brought up (an external scaler owns the replica count). |
+| `deactivate` | Intent | Sablier wants a delegated-scaling instance idled. |
+
+**Lifecycle** events (`started`/`stopped`) are observations of an actual scale transition. An endpoint with an empty `events` filter receives all of them.
+
+**Intent** events (`activate`/`deactivate`) are emitted only for workloads labelled `sablier.delegate-scaling=true`. They require an **explicit subscription**: an endpoint receives them **only** if its `events` filter lists them — there is no empty-means-all fallback, so existing unfiltered endpoints see zero intent traffic. See [Delegated scaling](/how-to-guides/scaling-resources/delegated-scaling/).
 
 ### CLI / environment variables
 
@@ -63,7 +76,7 @@ Every delivery is an HTTP `POST` with `Content-Type: application/json`. The body
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `event` | `string` | Normalized event type: `"started"` or `"stopped"`. |
+| `event` | `string` | Normalized event type: `"started"` or `"stopped"` (lifecycle), or `"activate"` / `"deactivate"` (intent). |
 | `instance.name` | `string` | Name of the container / service / workload as known to Sablier. |
 | `timestamp` | RFC 3339 UTC | Time at which Sablier processed the event. |
 
@@ -71,11 +84,23 @@ The payload is intentionally minimal and **provider-agnostic**. The same structu
 
 ## Delivery semantics
 
-- Webhooks are delivered **asynchronously** (fire-and-forget). They do not block the event loop.
+Delivery guarantees differ by event kind.
+
+**Lifecycle events** (`started`/`stopped`) are best-effort:
+
+- Delivered **asynchronously** (fire-and-forget). They do not block the event loop.
 - Each endpoint is called in its own goroutine.
 - HTTP errors (status 400 or above) and network errors are **logged** but do **not** affect Sablier's behavior.
 - The HTTP client uses a **10-second timeout** per request.
-- There is no built-in retry. If a delivery fails, the event is lost. Use an intermediary queue (e.g., a message broker) in front of your endpoint if at-least-once delivery is required.
+- There is **no retry**. If a delivery fails, the event is lost. Use an intermediary queue (e.g., a message broker) in front of your endpoint if at-least-once delivery is required.
+
+**Intent events** (`activate`/`deactivate`) are delivered with stronger guarantees, because a reordered or dropped delivery would leave the external scaler in the wrong state:
+
+- Delivered **strictly in order**, one event at a time — the receiver observes them in the exact order Sablier emitted them.
+- Each delivery is retried up to **5 attempts** with a linear backoff before Sablier gives up and moves on.
+- The same 10-second per-request timeout applies.
+
+See [Delegated scaling](/how-to-guides/scaling-resources/delegated-scaling/) for the full picture.
 
 ## Example: Uptime Kuma integration
 

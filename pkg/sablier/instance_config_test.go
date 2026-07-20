@@ -37,32 +37,45 @@ func TestInstanceConfigFromLabels(t *testing.T) {
 		{
 			name: "full configuration",
 			labels: map[string]string{
-				LabelEnable:       "true",
-				LabelGroup:        "team-a,team-b",
-				LabelReadyAfter:   "30s",
-				LabelReadyOnStart: "true",
-				LabelRunningHours: "09:00-18:00",
-				LabelRunningDays:  "Mon,Tue",
-				LabelAntiAffinity: "streaming",
+				LabelEnable:          "true",
+				LabelGroup:           "team-a,team-b",
+				LabelReadyAfter:      "30s",
+				LabelReadyOnStart:    "true",
+				LabelRunningHours:    "09:00-18:00",
+				LabelRunningDays:     "Mon,Tue",
+				LabelAntiAffinity:    "streaming",
+				LabelDelegateScaling: "true",
 			},
 			want: InstanceConfig{
-				Enabled:      true,
-				Groups:       []string{"team-a", "team-b"},
-				ReadyAfter:   30 * time.Second,
-				ReadyOnStart: true,
-				RunningHours: "09:00-18:00",
-				RunningDays:  "Mon,Tue",
-				AntiAffinity: []string{"streaming"},
+				Enabled:         true,
+				Groups:          []string{"team-a", "team-b"},
+				ReadyAfter:      30 * time.Second,
+				ReadyOnStart:    true,
+				RunningHours:    "09:00-18:00",
+				RunningDays:     "Mon,Tue",
+				AntiAffinity:    []string{"streaming"},
+				DelegateScaling: true,
 			},
+		},
+		{
+			name:   "delegate-scaling parses a boolean",
+			labels: map[string]string{LabelEnable: "true", LabelDelegateScaling: "true"},
+			want:   InstanceConfig{Enabled: true, Groups: []string{"default"}, DelegateScaling: true},
+		},
+		{
+			name:   "delegate-scaling false leaves scaling to Sablier",
+			labels: map[string]string{LabelEnable: "true", LabelDelegateScaling: "false"},
+			want:   InstanceConfig{Enabled: true, Groups: []string{"default"}},
 		},
 		{
 			name: "invalid values are ignored, valid ones kept",
 			labels: map[string]string{
-				LabelEnable:       "true",
-				LabelReadyAfter:   "soon",
-				LabelReadyOnStart: "yes-please",
-				LabelRunningHours: "9am-6pm",
-				LabelRunningDays:  "Someday",
+				LabelEnable:          "true",
+				LabelReadyAfter:      "soon",
+				LabelReadyOnStart:    "yes-please",
+				LabelRunningHours:    "9am-6pm",
+				LabelRunningDays:     "Someday",
+				LabelDelegateScaling: "maybe",
 			},
 			want: InstanceConfig{Enabled: true, Groups: []string{"default"}},
 		},
@@ -107,6 +120,16 @@ func TestInstanceInfoIsEnabled(t *testing.T) {
 	t.Run("list entries share the semantics", func(t *testing.T) {
 		assert.Assert(t, InstanceConfiguration{Enabled: "true"}.IsEnabled())
 		assert.Assert(t, !InstanceConfiguration{Enabled: "1"}.IsEnabled())
+	})
+}
+
+func TestInstanceInfoIsDelegated(t *testing.T) {
+	t.Run("parsed config drives the flag", func(t *testing.T) {
+		assert.Assert(t, InstanceInfo{Config: &InstanceConfig{DelegateScaling: true}}.IsDelegated())
+		assert.Assert(t, !InstanceInfo{Config: &InstanceConfig{DelegateScaling: false}}.IsDelegated())
+	})
+	t.Run("nil config is never delegated", func(t *testing.T) {
+		assert.Assert(t, !InstanceInfo{}.IsDelegated())
 	})
 }
 

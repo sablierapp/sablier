@@ -1,6 +1,11 @@
 package kubernetes
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/sablierapp/sablier/pkg/sablier"
+)
 
 // sablierConfigPrefix is the common prefix for all Sablier configuration keys.
 const sablierConfigPrefix = "sablier."
@@ -36,3 +41,10 @@ func sablierConfig(labels, annotations map[string]string) map[string]string {
 	return merged
 }
 
+// delegatedScaling reports whether the merged Sablier config opts the workload
+// into delegated scaling (sablier.delegate-scaling). Invalid values are treated
+// as false, mirroring the warn-and-skip parsing in InstanceConfigFromLabels.
+func delegatedScaling(config map[string]string) bool {
+	b, _ := strconv.ParseBool(config[sablier.LabelDelegateScaling])
+	return b
+}

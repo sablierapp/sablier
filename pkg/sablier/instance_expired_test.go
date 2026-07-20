@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"go.uber.org/mock/gomock"
@@ -14,17 +13,17 @@ import (
 )
 
 func TestOnInstanceExpired_StopsAndRecordsMetrics(t *testing.T) {
-	_, _, p, rec := setupSablierWithMetrics(t)
+	manager, _, p, rec := setupSablierWithMetrics(t)
 	ctx := t.Context()
 
+	p.EXPECT().InstanceInspect(gomock.Any(), "i1").Return(sablier.InstanceInfo{Name: "i1"}, nil)
 	stopped := make(chan struct{}, 1)
 	p.EXPECT().InstanceStop(gomock.Any(), "i1").DoAndReturn(func(_ any, _ string) error {
 		stopped <- struct{}{}
 		return nil
 	})
 
-	cb := sablier.OnInstanceExpired(ctx, p, rec, slogt.New(t))
-	cb("i1")
+	manager.OnInstanceExpired(ctx)("i1")
 
 	select {
 	case <-stopped:
@@ -41,17 +40,17 @@ func TestOnInstanceExpired_StopsAndRecordsMetrics(t *testing.T) {
 }
 
 func TestOnInstanceExpired_ProviderStopErrorStillRecordsMetrics(t *testing.T) {
-	_, _, p, rec := setupSablierWithMetrics(t)
+	manager, _, p, rec := setupSablierWithMetrics(t)
 	ctx := t.Context()
 
+	p.EXPECT().InstanceInspect(gomock.Any(), "i2").Return(sablier.InstanceInfo{Name: "i2"}, nil)
 	stopped := make(chan struct{}, 1)
 	p.EXPECT().InstanceStop(gomock.Any(), "i2").DoAndReturn(func(_ any, _ string) error {
 		stopped <- struct{}{}
 		return errors.New("cannot stop")
 	})
 
-	cb := sablier.OnInstanceExpired(ctx, p, rec, slogt.New(t))
-	cb("i2")
+	manager.OnInstanceExpired(ctx)("i2")
 
 	select {
 	case <-stopped:
@@ -122,4 +121,34 @@ func assertNoExpirationMetrics(t *testing.T, rec metrics.Recorder) {
 
 func containsCall(calls []string, want string) bool {
 	return slices.Contains(calls, want)
+}
+
+// TestSablierOnInstanceExpired_Delegated emits a deactivate intent and does not
+// call the provider's InstanceStop (the absence of an EXPECT makes gomock fail
+// if it is called).
+func TestSablierOnInstanceExpired_Delegated(t *testing.T) {
+	manager, _, provider, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	provider.EXPECT().InstanceInspect(gomock.Any(), "app").Return(sablier.InstanceInfo{
+		Name: "app", Enabled: "true", Config: &sablier.InstanceConfig{Enabled: true, DelegateScaling: true},
+	}, nil)
+
+	stream := manager.IntentEvents(ctx)
+	manager.OnInstanceExpired(ctx)("app")
+
+	select {
+	case ev := <-stream.Events:
+		assert.Equal(t, string(ev.Type), "deactivate")
+		assert.Equal(t, ev.Info.Name, "app")
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected a deactivate intent event")
+	}
+
+	assert.Assert(t, checkWithTimeout(20*time.Millisecond, 2*time.Second, func() bool {
+		calls := rec.snapshot()
+		return containsCall(calls, "stop:app/expired") &&
+			containsCall(calls, "active-:app") &&
+			containsCall(calls, "ready_discard:app")
+	}), "expected expiration metrics")
 }
