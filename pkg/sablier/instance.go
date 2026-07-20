@@ -104,6 +104,14 @@ func (instance InstanceInfo) IsEnabled() bool {
 	return instance.Enabled == "true"
 }
 
+// IsDelegated reports whether the instance uses delegated scaling
+// (sablier.delegate-scaling=true): Sablier emits activate/deactivate intent
+// webhooks instead of writing the replica count, leaving the actual scaling to
+// an external scaler.
+func (instance InstanceInfo) IsDelegated() bool {
+	return instance.Config != nil && instance.Config.DelegateScaling
+}
+
 // BlkioWeightDevice holds a per-device I/O scheduling weight override.
 type BlkioWeightDevice struct {
 	Path   string `json:"path"`
@@ -180,6 +188,9 @@ type InstanceConfiguration struct {
 	Name    string
 	Groups  []string
 	Enabled string
+	// Delegated mirrors sablier.delegate-scaling on the list path so autostop can
+	// route through an intent event without an extra inspect. See InstanceInfo.IsDelegated.
+	Delegated bool
 }
 
 // IsEnabled reports whether the listed instance opted into Sablier management

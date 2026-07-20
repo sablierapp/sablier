@@ -114,6 +114,10 @@
             },
             "type": "array"
           },
+          "delegateScaling": {
+            "description": "DelegateScaling opts the instance into delegated scaling\n(sablier.delegate-scaling): Sablier never writes the replica count and\ninstead emits activate/deactivate intent webhooks for an external scaler\n(e.g. a KEDA ScaledObject) to act on.",
+            "type": "boolean"
+          },
           "enabled": {
             "description": "Enabled reports whether the instance opted into Sablier management\n(sablier.enable set to exactly \"true\").",
             "type": "boolean"
