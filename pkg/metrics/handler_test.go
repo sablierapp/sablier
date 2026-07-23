@@ -12,7 +12,7 @@ import (
 
 func TestNewHandler_ServesPrometheusExposition(t *testing.T) {
 	r := metrics.NewPromRecorder()
-	r.RecordSessionRequest("dynamic", "names")
+	r.RecordSessionRequest("dynamic", "names", "")
 
 	srv := httptest.NewServer(metrics.NewHandler(r))
 	defer srv.Close()

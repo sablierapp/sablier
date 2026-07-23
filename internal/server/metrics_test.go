@@ -17,7 +17,7 @@ func TestMetricsEndpoint_EnabledServesPrometheusExposition(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	rec := metrics.NewPromRecorder()
-	rec.RecordSessionRequest("dynamic", "names")
+	rec.RecordSessionRequest("dynamic", "names", "")
 
 	strategy := &api.ServeStrategy{
 		Metrics: rec,

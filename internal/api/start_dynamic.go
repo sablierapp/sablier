@@ -78,8 +78,6 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 			return
 		}
 
-		recordSessionRequest(s.Metrics, "dynamic", request.Group)
-
 		var sessionState *sablier.SessionState
 		var err error
 		// c.Request.Context(), never the *gin.Context itself: without gin's
@@ -87,6 +85,7 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 		// Value() does not reach the request context, which silently breaks
 		// cancellation and otel trace propagation for everything downstream.
 		if len(request.Names) > 0 {
+			recordSessionRequest(s.Metrics, "dynamic", "")
 			sessionState, err = s.Sablier.RequestSession(c.Request.Context(), request.Names, request.SessionDuration)
 		} else {
 			sessionState, err = s.Sablier.RequestSessionGroup(c.Request.Context(), request.Group, request.SessionDuration)
@@ -94,6 +93,9 @@ func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 				AbortWithProblemDetail(c, ProblemGroupNotFound(groupNotFoundError))
 				return
 			}
+			// Record only after the group is known to exist: an unbounded group
+			// label value would let arbitrary query params blow up cardinality.
+			recordSessionRequest(s.Metrics, "dynamic", request.Group)
 		}
 
 		if err != nil {

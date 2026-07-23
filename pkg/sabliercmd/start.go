@@ -86,6 +86,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	// up alongside everything else when /metrics is scraped.
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
 		pr.Registry().MustRegister(metrics.NewGroupLockCollector(s, pr))
+		pr.Registry().MustRegister(metrics.NewInstanceGroupCollector(s))
 		pr.Registry().MustRegister(metrics.NewSessionExpiryCollector(s))
 	}
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency

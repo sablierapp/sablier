@@ -31,11 +31,12 @@ type ServeStrategy struct {
 }
 
 // recordSessionRequest emits the session-request counter for the given strategy
-// based on whether the request targets named instances or a group.
+// based on whether the request targets named instances or a group. The group
+// name (empty for names-based requests) is recorded as a label.
 func recordSessionRequest(rec metrics.Recorder, strategy, group string) {
 	target := "names"
 	if group != "" {
 		target = "group"
 	}
-	rec.RecordSessionRequest(strategy, target)
+	rec.RecordSessionRequest(strategy, target, group)
 }
