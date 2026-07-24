@@ -130,3 +130,58 @@ func TestDockerClassicProvider_GetGroups(t *testing.T) {
 
 	assert.DeepEqual(t, got, want)
 }
+
+func TestDockerSwarmProvider_InstanceList_OnlyRunning(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx := t.Context()
+	dind := sharedDinD
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	running, err := dind.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.enable": "true",
+		},
+	})
+	assert.NilError(t, err)
+
+	runningResult, err := dind.client.ServiceInspect(ctx, running.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	runningService := runningResult.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), runningService.ID, client.ServiceRemoveOptions{})
+	})
+
+	var zero uint64
+	scaledToZero, err := dind.CreateMimic(ctx, MimicOptions{
+		Replicas: &zero,
+		Labels: map[string]string{
+			"sablier.enable": "true",
+		},
+	})
+	assert.NilError(t, err)
+
+	scaledResult, err := dind.client.ServiceInspect(ctx, scaledToZero.ID, client.ServiceInspectOptions{})
+	assert.NilError(t, err)
+	scaledService := scaledResult.Service
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), scaledService.ID, client.ServiceRemoveOptions{})
+	})
+
+	err = WaitForServiceRunning(ctx, dind.client, runningService.Spec.Name, 1)
+	assert.NilError(t, err)
+
+	// All includes the scaled-to-zero service
+	got, err := p.InstanceList(ctx, provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.Equal(t, len(got), 2)
+
+	// Only running excludes the scaled-to-zero service
+	got, err = p.InstanceList(ctx, provider.InstanceListOptions{All: false})
+	assert.NilError(t, err)
+	assert.Equal(t, len(got), 1)
+	assert.Equal(t, got[0].Name, runningService.Spec.Name)
+}

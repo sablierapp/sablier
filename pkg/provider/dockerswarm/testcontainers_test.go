@@ -30,6 +30,7 @@ type MimicOptions struct {
 	Healthcheck   *container.HealthConfig
 	RestartPolicy *swarm.RestartPolicy
 	Labels        map[string]string
+	Replicas      *uint64
 }
 
 func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ServiceCreateResult, error) {
@@ -38,6 +39,9 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (cli
 	}
 
 	var replicas uint64 = 1
+	if opts.Replicas != nil {
+		replicas = *opts.Replicas
+	}
 	return d.client.ServiceCreate(ctx, client.ServiceCreateOptions{
 		Spec: swarm.ServiceSpec{
 			Mode: swarm.ServiceMode{
