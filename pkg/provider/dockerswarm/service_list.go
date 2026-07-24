@@ -11,12 +11,12 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) InstanceList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	filters := client.Filters{}
 	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
 	filters.Add("mode", "replicated")
 
-	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("all", opts.All), slog.Bool("status", true), slog.Any("filters", filters)))
 	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
 		Status:  true,
 		Filters: filters,
@@ -29,6 +29,12 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(services.Items))
 	for _, s := range services.Items {
+		// A service scaled to zero has no running tasks and is not a running
+		// instance: mirror the docker provider, which only lists running
+		// containers unless All is requested.
+		if !opts.All && (s.ServiceStatus == nil || s.ServiceStatus.RunningTasks == 0) {
+			continue
+		}
 		instance := p.serviceToInstance(s)
 		instances = append(instances, instance)
 	}
