@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/sablierapp/sablier/compare/v1.16.0...v1.16.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **dockerswarm:** honor the running-only filter in InstanceList ([#1041](https://github.com/sablierapp/sablier/issues/1041)) ([7bc1459](https://github.com/sablierapp/sablier/commit/7bc14595ceff9c5cb1dbcc64b5afa1355f832b0a))
+
 ## [1.16.0](https://github.com/sablierapp/sablier/compare/v1.15.0...v1.16.0) (2026-07-17)
 
 
