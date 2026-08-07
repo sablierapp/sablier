@@ -15,7 +15,7 @@
 // implementation; the file example_pq_test.go has the complete source.
 package tinykv
 
-type Val = interface{}
+type Val = any
 
 // Any type that implements heap.Interface may be used as a
 // min-heap with the following invariants (established after

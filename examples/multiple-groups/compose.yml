@@ -1,0 +1,39 @@
+services:
+  sablier:
+    restart: always
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=30s
+      - --sessions.expiration-interval=5s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # frontend is exclusive to team-a.
+  frontend:
+    restart: unless-stopped
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=team-a"
+
+  # backend is exclusive to team-b.
+  backend:
+    restart: unless-stopped
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=team-b"
+
+  # shared-api is a central service used by both teams.
+  # A comma-separated list puts it in both groups at once.
+  shared-api:
+    restart: unless-stopped
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=team-a,team-b"

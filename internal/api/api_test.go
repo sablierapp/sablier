@@ -5,6 +5,7 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/internal/api/apitest"
 	config2 "github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/metrics"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
@@ -26,6 +27,7 @@ func NewApiTest(t *testing.T) (app *gin.Engine, router *gin.RouterGroup, strateg
 	strategy = &ServeStrategy{
 		Theme:          th,
 		Sablier:        mock,
+		Metrics:        metrics.Noop{},
 		StrategyConfig: config2.NewStrategyConfig(),
 		SessionsConfig: config2.NewSessionsConfig(),
 	}

@@ -1,0 +1,44 @@
+services:
+  sablier:
+    restart: always
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      - --sessions.default-duration=30s
+      - --sessions.expiration-interval=5s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # The "streaming" service (think Plex / a transcoding job). Requesting a
+  # session for the "streaming" group makes it active.
+  streaming:
+    restart: unless-stopped
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=streaming"
+    ports:
+      - "8081:80"
+
+  # A background service (think Nextcloud) that shares a non-shareable resource
+  # with "streaming" — e.g. GPU VRAM. It must yield while streaming is in use.
+  #
+  # While any session for the "streaming" group is active, Sablier forces this
+  # container idle (here: stopped, because no scale-mode idle profile is set).
+  # Once the streaming session expires, the container is restored.
+  #
+  # Add scale-mode labels (sablier.idle.replicas=1, sablier.idle.cpu=...) to make
+  # "idle" mean "throttled and still running" instead of "stopped".
+  background:
+    restart: unless-stopped
+    image: acouvreur/whoami:v1.10.2
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=background"
+      - "sablier.anti-affinity=streaming"
+    ports:
+      - "8082:80"

@@ -1,0 +1,16 @@
+provider:
+  name: docker
+server:
+  port: 10000
+  base-path: /
+  metrics:
+    enabled: true
+sessions:
+  default-duration: 1m
+  expiration-interval: 5s
+logging:
+  level: info
+strategy:
+  blocking:
+    default-timeout: 30s
+    default-refresh-frequency: 1s

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,7 @@ import (
 func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -31,28 +32,26 @@ func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfi
 }
 
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
-	var group string
-
-	if _, ok := ss.Labels["sablier.enable"]; ok {
-		if g, ok := ss.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+	config := sablierConfig(ss.Labels, ss.Annotations)
+	enabled := config[sablier.LabelEnable]
+	var groups []string
+	if enabled == "true" {
+		groups = sablier.ParseGroups(config[sablier.LabelGroup])
 	}
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:  parsed.Original,
-		Group: group,
+		Name:    parsed.Original,
+		Groups:  groups,
+		Enabled: enabled,
 	}
 }
 
 func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -64,15 +63,11 @@ func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, 
 
 	groups := make(map[string][]string)
 	for _, ss := range statefulSets.Items {
-		groupName := ss.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
-		}
-
-		group := groups[groupName]
 		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
-		group = append(group, parsed.Original)
-		groups[groupName] = group
+		config := sablierConfig(ss.Labels, ss.Annotations)
+		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
+			groups[groupName] = append(groups[groupName], parsed.Original)
+		}
 	}
 
 	return groups, nil

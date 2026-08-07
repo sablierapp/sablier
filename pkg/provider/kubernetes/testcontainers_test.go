@@ -2,34 +2,59 @@ package kubernetes_test
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/k3s"
-	"gotest.tools/v3/assert"
-	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"log"
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/k3s"
+	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 var mu sync.Mutex // r is not safe for concurrent use
 
+// sharedKinD is the single k3s cluster shared across all tests in this package.
+// It is initialized by TestMain, which avoids the overhead of starting a new cluster per test.
+var sharedKinD *kindContainer
+
 type kindContainer struct {
 	testcontainers.Container
-	client *kubernetes.Clientset
-	t      *testing.T
+	client  *kubernetes.Clientset
+	dynamic dynamic.Interface
+	restcfg *rest.Config
 }
 
 type MimicOptions struct {
 	Cmd         []string
 	Healthcheck *corev1.Probe
 	Labels      map[string]string
+	Annotations map[string]string
+}
+
+// mimicHealthcheck returns a readiness probe wired to the mimic health
+// endpoint, so pod readiness follows the -healthy/-healthy-after flags
+// instead of flipping to Ready as soon as the container is running.
+func mimicHealthcheck() *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"/mimic", "healthcheck"},
+			},
+		},
+		PeriodSeconds: 1,
+	}
 }
 
 func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOptions) (*v1.Deployment, error) {
@@ -38,16 +63,15 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 	}
 
 	name := generateRandomName()
-	// Add the app label to the deployment for matching the selector
 	if opts.Labels == nil {
 		opts.Labels = make(map[string]string)
 	}
-	d.t.Log("Creating mimic deployment with options", name, opts)
 	replicas := int32(1)
 	return d.client.AppsV1().Deployments("default").Create(ctx, &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: opts.Labels,
+			Name:        name,
+			Labels:      opts.Labels,
+			Annotations: opts.Annotations,
 		},
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
@@ -60,10 +84,10 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.1",
-							Command: opts.Cmd,
-							// ReadinessProbe: opts.Healthcheck,
+							Name:           "mimic",
+							Image:          "sablierapp/mimic:v0.3.3",
+							Command:        opts.Cmd,
+							ReadinessProbe: opts.Healthcheck,
 						},
 					},
 				},
@@ -83,16 +107,15 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 	}
 
 	name := generateRandomName()
-	// Add the app label to the deployment for matching the selector
 	if opts.Labels == nil {
 		opts.Labels = make(map[string]string)
 	}
-	d.t.Log("Creating mimic deployment with options", name, opts)
 	replicas := int32(1)
 	return d.client.AppsV1().StatefulSets("default").Create(ctx, &v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: opts.Labels,
+			Name:        name,
+			Labels:      opts.Labels,
+			Annotations: opts.Annotations,
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas: &replicas,
@@ -105,10 +128,10 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "mimic",
-							Image:   "sablierapp/mimic:v0.3.1",
-							Command: opts.Cmd,
-							// ReadinessProbe: opts.Healthcheck,
+							Name:           "mimic",
+							Image:          "sablierapp/mimic:v0.3.3",
+							Command:        opts.Cmd,
+							ReadinessProbe: opts.Healthcheck,
 						},
 					},
 				},
@@ -122,36 +145,75 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 	}, metav1.CreateOptions{})
 }
 
-func setupKinD(t *testing.T, ctx context.Context) *kindContainer {
-	t.Helper()
+func TestMain(m *testing.M) {
+	// flag.Parse must be called before testing.Short() is usable.
+	flag.Parse()
 
-	kind, err := k3s.Run(ctx, "rancher/k3s:v1.32.2-k3s1")
-	testcontainers.CleanupContainer(t, kind)
-	assert.NilError(t, err)
+	// Skip the expensive container setup when running in short mode.
+	if testing.Short() {
+		os.Exit(m.Run())
+	}
+
+	ctx := context.Background()
+
+	kind, err := k3s.Run(ctx, "rancher/k3s:v1.36.0-k3s1")
+	if err != nil {
+		log.Fatalf("failed to start k3s: %v", err)
+	}
 
 	kubeConfigYaml, err := kind.GetKubeConfig(ctx)
-	assert.NilError(t, err)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to get kubeconfig: %v", err)
+	}
 
 	restcfg, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigYaml)
-	assert.NilError(t, err)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to build rest config: %v", err)
+	}
+	// Raise rate limits to avoid client-side throttling when tests run in parallel.
+	restcfg.QPS = 100
+	restcfg.Burst = 200
 
 	provider, err := testcontainers.ProviderDocker.GetProvider()
-	assert.NilError(t, err)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to get docker provider: %v", err)
+	}
 
-	err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.1")
-	assert.NilError(t, err)
+	if err = provider.PullImage(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to pull mimic image: %v", err)
+	}
 
-	err = kind.LoadImages(ctx, "sablierapp/mimic:v0.3.1")
-	assert.NilError(t, err)
+	if err = kind.LoadImages(ctx, "sablierapp/mimic:v0.3.3"); err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to load mimic image: %v", err)
+	}
 
 	k8s, err := kubernetes.NewForConfig(restcfg)
-	assert.NilError(t, err)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to create kubernetes client: %v", err)
+	}
 
-	return &kindContainer{
+	dyn, err := dynamic.NewForConfig(restcfg)
+	if err != nil {
+		_ = kind.Terminate(ctx)
+		log.Fatalf("failed to create dynamic client: %v", err)
+	}
+
+	sharedKinD = &kindContainer{
 		Container: kind,
 		client:    k8s,
-		t:         t,
+		dynamic:   dyn,
+		restcfg:   restcfg,
 	}
+
+	code := m.Run()
+	_ = kind.Terminate(ctx)
+	os.Exit(code)
 }
 
 func generateRandomName() string {

@@ -2,14 +2,17 @@ package docker_test
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
+	"testing"
+	"time"
+
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
-	"testing"
-	"time"
 )
 
 func TestDockerClassicProvider_GetState(t *testing.T) {
@@ -17,15 +20,19 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
+	t.Parallel()
+
 	ctx := context.Background()
 	type args struct {
 		do func(dind *dindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name               string
+		args               args
+		honorRestartPolicy bool
+		want               sablier.InstanceInfo
+		wantLabels         map[string]string
+		wantErr            error
 	}{
 		{
 			name: "created container",
@@ -41,7 +48,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -57,7 +64,8 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
@@ -87,13 +95,14 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					return c.ID, dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					return c.ID, err
 				},
 			},
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -116,21 +125,25 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, dind.client, c.ID, "unhealthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},
 			},
+			// A running-but-unhealthy container is still starting (it may become
+			// healthy), with the health state surfaced as a message — not an error.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
-				Message:         "container is unhealthy",
+				Status:          sablier.InstanceStatusStarting,
+				Message:         "container is running but not healthy yet",
 			},
 			wantErr: nil,
 		},
@@ -153,12 +166,14 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					<-time.After(2 * time.Second)
+					if err = WaitForContainerHealth(ctx, dind.client, c.ID, "healthy"); err != nil {
+						return "", err
+					}
 
 					return c.ID, nil
 				},
@@ -179,12 +194,12 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					err = dind.client.ContainerPause(ctx, c.ID)
+					_, err = dind.client.ContainerPause(ctx, c.ID, client.ContainerPauseOptions{})
 					if err != nil {
 						return "", err
 					}
@@ -195,7 +210,7 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -210,21 +225,194 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
-					<-waitC
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
 
 					return c.ID, nil
 				},
 			},
+			// With HonorRestartPolicy disabled (the default), a container that
+			// exited successfully keeps the historical behavior and is reported
+			// as stopped, so Sablier keeps managing its lifecycle.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited container with status code 0 and honor restart policy enabled",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running=false", "-exit-code=0"},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// Same container as above, but with HonorRestartPolicy enabled. The
+			// container has no explicit restart policy, which Docker normalizes
+			// to "no". Since "no" does not restart a successfully exited
+			// container, it is reported as a completed one-shot container
+			// instead of stopped.
+			honorRestartPolicy: true,
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusCompleted,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited init container with status code 0 and restart policy on-failure",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyOnFailure},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// With HonorRestartPolicy enabled, on-failure does not restart a
+			// container that exited successfully, so it is reported as a
+			// completed init container. It is no longer running, so
+			// CurrentReplicas is 0.
+			honorRestartPolicy: true,
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusCompleted,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited init container with status code 0 and restart policy no",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyDisabled},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					return c.ID, nil
+				},
+			},
+			// With HonorRestartPolicy enabled, a "no" restart policy is honored:
+			// the completed one-shot container is reported as completed instead
+			// of stopped.
+			honorRestartPolicy: true,
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusCompleted,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "exited container with status code 0 and restart policy unless-stopped",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd:           []string{"/mimic", "-running=false", "-exit-code=0"},
+						RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return "", err
+					}
+
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
+
+					// unless-stopped makes Docker auto-restart a container that exits
+					// on its own, leaving it looping through the restarting state.
+					// Manually stopping it — exactly what Sablier's InstanceStop does —
+					// suppresses the restart so it settles into a stable exited state,
+					// which is the scenario this case exercises. The container exits
+					// with code 0 on its own, so the manual stop preserves that code.
+					if _, err = dind.client.ContainerStop(ctx, c.ID, client.ContainerStopOptions{}); err != nil {
+						return "", err
+					}
+
+					return c.ID, nil
+				},
+			},
+			// An unless-stopped (or always) container that is *exited* was stopped
+			// (Docker does not auto-restart a manually stopped container), so even
+			// with HonorRestartPolicy enabled it is reported as stopped — not
+			// starting — and Sablier restarts it on demand. It is not a completed
+			// one-shot either, since its policy would keep it running.
+			honorRestartPolicy: true,
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},
@@ -239,13 +427,17 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 						return "", err
 					}
 
-					err = dind.client.ContainerStart(ctx, c.ID, container.StartOptions{})
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
 					if err != nil {
 						return "", err
 					}
 
-					waitC, _ := dind.client.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
-					<-waitC
+					wait := dind.client.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+					select {
+					case err := <-wait.Error:
+						return "", err
+					case <-wait.Result:
+					}
 
 					return c.ID, nil
 				},
@@ -253,28 +445,90 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusUnrecoverable,
+				Status:          sablier.InstanceStatusError,
 				Message:         "container exited with code \"137\"",
 			},
 			wantErr: nil,
 		},
+		{
+			name: "running container with sablier labels",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{
+						Cmd: []string{"/mimic", "-running", "-running-after=1ms"},
+						Labels: map[string]string{
+							"sablier.enable":         "true",
+							"sablier.group":          "myapp",
+							"sablier.ready-on-start": "true",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+					_, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{})
+					if err != nil {
+						return c.ID, err
+					}
+					return c.ID, WaitForContainerRunning(ctx, dind.client, c.ID)
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"myapp"},
+				ReadyOnStart:    true,
+			},
+			wantLabels: map[string]string{
+				"sablier.enable":         "true",
+				"sablier.group":          "myapp",
+				"sablier.ready-on-start": "true",
+			},
+			wantErr: nil,
+		},
 	}
-	c := setupDinD(t)
+	c := sharedDinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := docker.New(ctx, c.client, slogt.New(t))
+			p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+			assert.NilError(t, err)
+			p.HonorRestartPolicy = tt.honorRestartPolicy
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
 			tt.want.Name = name
+			tt.want.Provider = "docker"
+			tt.want.Docker = &sablier.DockerContainerInfo{
+				ID:    name,
+				Image: "sablierapp/mimic:v0.3.3",
+			}
+			// The provider mirrors the parsed label config into Config with the
+			// same values as the flat fields each case already declares, so
+			// derive the expectation instead of repeating it per case.
+			tt.want.Config = &sablier.InstanceConfig{
+				Enabled:      tt.want.Enabled == "true",
+				Groups:       tt.want.Groups,
+				ReadyAfter:   tt.want.ReadyAfter,
+				ReadyOnStart: tt.want.ReadyOnStart,
+				RunningHours: tt.want.RunningHours,
+				RunningDays:  tt.want.RunningDays,
+				AntiAffinity: tt.want.AntiAffinity,
+				Scale:        tt.want.ScaleConfig,
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("DockerClassicProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.DeepEqual(t, got, tt.want)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreFields(sablier.DockerContainerInfo{}, "Labels"))
+			for k, v := range tt.wantLabels {
+				if got.Docker.Labels[k] != v {
+					t.Errorf("Docker.Labels[%q] = %q, want %q", k, got.Docker.Labels[k], v)
+				}
+			}
 		})
 	}
 }

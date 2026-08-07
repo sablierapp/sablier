@@ -1,0 +1,31 @@
+# Sablier benchmark stack
+#
+# Set SABLIER_IMAGE to override the Sablier image (default: sablierapp/sablier:latest).
+# The target is a lightweight container managed by Sablier.  bombardier
+# (via `go tool bombardier`) runs on the host against http://localhost:10000.
+#
+# Use the Makefile targets rather than running docker compose directly.
+
+name: sablier-benchmark
+
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    ports:
+      - "10000:10000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      SABLIER_PROVIDER_NAME: docker
+      SABLIER_LOGGING_LEVEL: warn
+
+  # The benchmark target.  A fixed container_name lets bombardier address it
+  # with ?names=bench-target without depending on the compose project name.
+  target:
+    image: sablierapp/mimic:v0.3.3
+    container_name: bench-target
+    # Becomes "running" after 1 s — realistic without being slow.
+    entrypoint: ["/mimic", "-running-after=1s"]
+    labels:
+      sablier.enable: "true"
+      sablier.group: "benchmark"

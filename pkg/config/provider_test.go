@@ -1,0 +1,208 @@
+package config
+
+import (
+	"fmt"
+	"testing"
+
+	"gotest.tools/v3/assert"
+)
+
+func TestProvider_IsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider Provider
+		wantErr  error
+	}{
+		{
+			name: "valid docker provider with stop strategy",
+			provider: Provider{
+				Name: "docker",
+				Docker: Docker{
+					Strategy: "stop",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid docker provider with pause strategy",
+			provider: Provider{
+				Name: "docker",
+				Docker: Docker{
+					Strategy: "pause",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid docker strategy",
+			provider: Provider{
+				Name: "docker",
+				Docker: Docker{
+					Strategy: "invalid",
+				},
+			},
+			wantErr: fmt.Errorf("unrecognized docker strategy invalid. strategies available: [stop pause]"),
+		},
+		{
+			name: "auto-stop and auto-warm externally started are mutually exclusive",
+			provider: Provider{
+				Name:                      "docker",
+				AutoStopExternallyStarted: true,
+				AutoWarmExternallyStarted: true,
+				Docker: Docker{
+					Strategy: "stop",
+				},
+			},
+			wantErr: fmt.Errorf("provider.auto-stop-externally-started and provider.auto-warm-externally-started are mutually exclusive"),
+		},
+		{
+			name: "valid kubernetes provider",
+			provider: Provider{
+				Name: "kubernetes",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid swarm provider",
+			provider: Provider{
+				Name: "swarm",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid docker_swarm provider",
+			provider: Provider{
+				Name: "docker_swarm",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid podman provider",
+			provider: Provider{
+				Name: "podman",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid proxmox_lxc provider",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL:         "https://proxmox:8006/api2/json",
+					TokenID:     "root@pam!sablier",
+					TokenSecret: "secret",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "proxmox_lxc provider missing url",
+			provider: Provider{
+				Name:       "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a URL"),
+		},
+		{
+			name: "proxmox_lxc provider missing token id",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL: "https://proxmox:8006/api2/json",
+				},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a token ID"),
+		},
+		{
+			name: "proxmox_lxc provider missing token secret",
+			provider: Provider{
+				Name: "proxmox_lxc",
+				ProxmoxLXC: ProxmoxLXC{
+					URL:     "https://proxmox:8006/api2/json",
+					TokenID: "root@pam!sablier",
+				},
+			},
+			wantErr: fmt.Errorf("proxmox_lxc provider requires a token secret"),
+		},
+		{
+			name: "invalid provider name",
+			provider: Provider{
+				Name: "invalid",
+			},
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc]"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.provider.IsValid()
+			if tt.wantErr != nil {
+				assert.Error(t, err, tt.wantErr.Error())
+			} else {
+				assert.NilError(t, err)
+			}
+		})
+	}
+}
+
+func TestDocker_IsValid(t *testing.T) {
+	tests := []struct {
+		name    string
+		docker  Docker
+		wantErr error
+	}{
+		{
+			name: "valid stop strategy",
+			docker: Docker{
+				Strategy: "stop",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid pause strategy",
+			docker: Docker{
+				Strategy: "pause",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid strategy",
+			docker: Docker{
+				Strategy: "restart",
+			},
+			wantErr: fmt.Errorf("unrecognized docker strategy restart. strategies available: [stop pause]"),
+		},
+		{
+			name: "empty strategy",
+			docker: Docker{
+				Strategy: "",
+			},
+			wantErr: fmt.Errorf("unrecognized docker strategy . strategies available: [stop pause]"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.docker.IsValid()
+			if tt.wantErr != nil {
+				assert.Error(t, err, tt.wantErr.Error())
+			} else {
+				assert.NilError(t, err)
+			}
+		})
+	}
+}
+
+func TestNewProviderConfig_Defaults(t *testing.T) {
+	c := NewProviderConfig()
+
+	assert.Equal(t, c.Name, "docker")
+	assert.Equal(t, c.AutoStopOnStartup, true)
+	assert.Equal(t, c.AutoStopExternallyStarted, false)
+	assert.Equal(t, c.AutoWarmExternallyStarted, false)
+	assert.Equal(t, c.Docker.Strategy, "stop")
+	assert.Equal(t, c.Kubernetes.QPS, float32(5))
+	assert.Equal(t, c.Kubernetes.Burst, 10)
+	assert.Equal(t, c.Kubernetes.Delimiter, "_")
+	assert.Equal(t, c.Podman.Uri, "unix:///run/podman/podman.sock")
+}

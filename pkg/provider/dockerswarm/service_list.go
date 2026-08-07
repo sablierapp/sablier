@@ -3,28 +3,38 @@ package dockerswarm
 import (
 	"context"
 	"fmt"
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/swarm"
+	"log/slog"
+
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	args := filters.NewArgs()
-	args.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
-	args.Add("mode", "replicated")
+func (p *Provider) InstanceList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
+	filters.Add("mode", "replicated")
 
-	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
-		Filters: args,
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("all", opts.All), slog.Bool("status", true), slog.Any("filters", filters)))
+	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
+		Status:  true,
+		Filters: filters,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services.Items)), slog.Any("services", services))
 
-	instances := make([]sablier.InstanceConfiguration, 0, len(services))
-	for _, s := range services {
+	instances := make([]sablier.InstanceConfiguration, 0, len(services.Items))
+	for _, s := range services.Items {
+		// A service scaled to zero has no running tasks and is not a running
+		// instance: mirror the docker provider, which only lists running
+		// containers unless All is requested.
+		if !opts.All && (s.ServiceStatus == nil || s.ServiceStatus.RunningTasks == 0) {
+			continue
+		}
 		instance := p.serviceToInstance(s)
 		instances = append(instances, instance)
 	}
@@ -33,44 +43,39 @@ func (p *Provider) InstanceList(ctx context.Context, _ provider.InstanceListOpti
 }
 
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
-	var group string
-
-	if _, ok := s.Spec.Labels["sablier.enable"]; ok {
-		if g, ok := s.Spec.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+	enabled := s.Spec.Labels[sablier.LabelEnable]
+	var groups []string
+	if enabled == "true" {
+		groups = sablier.ParseGroups(s.Spec.Labels[sablier.LabelGroup])
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:  s.Spec.Name,
-		Group: group,
+		Name:    s.Spec.Name,
+		Groups:  groups,
+		Enabled: enabled,
 	}
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
-	f := filters.NewArgs()
-	f.Add("label", fmt.Sprintf("%s=true", "sablier.enable"))
-
-	services, err := p.Client.ServiceList(ctx, dockertypes.ServiceListOptions{
-		Filters: f,
+	filters := client.Filters{}
+	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
+	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
+	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
+		Status:  true,
+		Filters: filters,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list services: %w", err)
 	}
 
-	groups := make(map[string][]string)
-	for _, service := range services {
-		groupName := service.Spec.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
-		}
+	p.l.DebugContext(ctx, "services listed", slog.Int("count", len(services.Items)))
 
-		group := groups[groupName]
-		group = append(group, service.Spec.Name)
-		groups[groupName] = group
+	groups := make(map[string][]string)
+	for _, service := range services.Items {
+		for _, groupName := range sablier.ParseGroups(service.Spec.Labels[sablier.LabelGroup]) {
+			groups[groupName] = append(groups[groupName], service.Spec.Name)
+		}
 	}
 
 	return groups, nil

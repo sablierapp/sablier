@@ -1,0 +1,79 @@
+{
+  "Server": {
+    "Port": 3333,
+    "BasePath": "/cli/",
+    "Metrics": {
+      "Enabled": false
+    }
+  },
+  "Storage": {
+    "File": "/tmp/cli.json"
+  },
+  "Provider": {
+    "Name": "cli",
+    "AutoStopOnStartup": false,
+    "AutoStopExternallyStarted": false,
+    "AutoWarmExternallyStarted": false,
+    "RejectUnlabeledRequests": false,
+    "VerifyEnabledOnExpiration": false,
+    "Kubernetes": {
+      "QPS": 256,
+      "Burst": 512,
+      "Delimiter": "_",
+      "ReadyOnFirstReplica": true
+    },
+    "Podman": {
+      "Uri": "unix:///run/podman/podman.sock.cli"
+    },
+    "Docker": {
+      "Strategy": "pause",
+      "HonorRestartPolicy": false
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
+    }
+  },
+  "Sessions": {
+    "DefaultDuration": 10800000000000,
+    "ExpirationInterval": 10800000000000
+  },
+  "Logging": {
+    "Level": "info"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "/tmp/cli/themes",
+      "ShowDetailsByDefault": false,
+      "DefaultTheme": "cli",
+      "DefaultRefreshFrequency": 10800000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 10800000000000,
+      "DefaultRefreshFrequency": 10800000000000
+    }
+  },
+  "Webhooks": {
+    "Endpoints": [
+      {
+        "URL": "https://example.com/webhook",
+        "Headers": {
+          "authorization": "Bearer test-token"
+        },
+        "Events": [
+          "started",
+          "stopped"
+        ]
+      }
+    ]
+  },
+  "Tracing": {
+    "Enabled": false,
+    "ExporterType": "otlphttp",
+    "Endpoint": "http://localhost:4318",
+    "ServiceName": "sablier",
+    "SamplingRate": 1
+  }
+}

@@ -53,6 +53,30 @@ func TestInMemory(t *testing.T) {
 		_, err = vk.Get(ctx, "test")
 		assert.ErrorIs(t, err, store.ErrKeyNotFound)
 	})
+	t.Run("InMemoryRange", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		vk := NewInMemory()
+
+		err := vk.Put(ctx, sablier.InstanceInfo{Name: "live", Groups: []string{"demo"}}, 30*time.Second)
+		assert.NilError(t, err)
+		err = vk.Put(ctx, sablier.InstanceInfo{Name: "expired"}, 10*time.Millisecond)
+		assert.NilError(t, err)
+
+		<-time.After(30 * time.Millisecond)
+
+		got := make(map[string]time.Time)
+		err = vk.Range(ctx, func(info sablier.InstanceInfo, expiresAt time.Time) {
+			got[info.Name] = expiresAt
+		})
+		assert.NilError(t, err)
+
+		// Only the live session is enumerated; the expired one is skipped.
+		assert.Equal(t, len(got), 1)
+		exp, ok := got["live"]
+		assert.Assert(t, ok)
+		assert.Assert(t, exp.After(time.Now()))
+	})
 	t.Run("InMemoryOnExpire", func(t *testing.T) {
 		t.Parallel()
 		vk := NewInMemory()

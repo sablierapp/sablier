@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sablierapp.dev/theme.schema.json",
+  "$defs": {
+    "DockerContainerInfo": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Container ID (template access: .Docker.ID)",
+          "examples": [
+            "a1b2c3d4e5f6"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image (template access: .Docker.Image)",
+          "examples": [
+            "nginx:latest"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Container labels (template access: .Docker.Labels)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "image"
+      ]
+    },
+    "Instance": {
+      "properties": {
+        "Name": {
+          "type": "string",
+          "description": "Name of the instance as registered with the provider",
+          "examples": [
+            "nginx"
+          ]
+        },
+        "Status": {
+          "type": "string",
+          "description": "Current status of the instance (starting|ready|not-ready|error|not-found)",
+          "examples": [
+            "starting"
+          ]
+        },
+        "Error": {
+          "description": "Error encountered while resolving the instance state if any"
+        },
+        "CurrentReplicas": {
+          "type": "integer",
+          "description": "Current number of running replicas",
+          "examples": [
+            0
+          ]
+        },
+        "DesiredReplicas": {
+          "type": "integer",
+          "description": "Target number of replicas to reach before the session is considered ready",
+          "examples": [
+            1
+          ]
+        },
+        "Provider": {
+          "type": "string",
+          "description": "Provider type (docker|swarm|kubernetes|podman)",
+          "examples": [
+            "docker"
+          ]
+        },
+        "Docker": {
+          "$ref": "#/$defs/DockerContainerInfo",
+          "description": "Docker-specific container metadata (only set when Provider is docker). Fields are accessible in templates as .Docker.ID .Docker.Image .Docker.Labels"
+        },
+        "Swarm": {
+          "$ref": "#/$defs/SwarmServiceInfo",
+          "description": "Docker Swarm-specific service metadata (only set when Provider is swarm). Fields are accessible in templates as .Swarm.ID .Swarm.Image .Swarm.Labels"
+        },
+        "Kubernetes": {
+          "$ref": "#/$defs/KubernetesWorkloadInfo",
+          "description": "Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Image .Kubernetes.Labels"
+        },
+        "Podman": {
+          "$ref": "#/$defs/PodmanContainerInfo",
+          "description": "Podman-specific container metadata (only set when Provider is podman). Fields are accessible in templates as .Podman.ID .Podman.Image .Podman.Labels"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "Name",
+        "Status",
+        "CurrentReplicas",
+        "DesiredReplicas",
+        "Provider"
+      ]
+    },
+    "KubernetesWorkloadInfo": {
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "Kubernetes namespace (template access: .Kubernetes.Namespace)",
+          "examples": [
+            "default"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "description": "Workload kind (template access: .Kubernetes.Kind)",
+          "examples": [
+            "Deployment"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "description": "Workload image (template access: .Kubernetes.Image)",
+          "examples": [
+            "nginx:latest"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Workload labels (template access: .Kubernetes.Labels)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "namespace",
+        "kind",
+        "image"
+      ]
+    },
+    "PodmanContainerInfo": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Container ID (template access: .Podman.ID)",
+          "examples": [
+            "a1b2c3d4e5f6"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image (template access: .Podman.Image)",
+          "examples": [
+            "nginx:latest"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Container labels (template access: .Podman.Labels)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "image"
+      ]
+    },
+    "SwarmServiceInfo": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Service ID (template access: .Swarm.ID)",
+          "examples": [
+            "a1b2c3d4e5f6"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "description": "Service image (template access: .Swarm.Image)",
+          "examples": [
+            "nginx:latest"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Service labels (template access: .Swarm.Labels)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "image"
+      ]
+    }
+  },
+  "properties": {
+    "DisplayName": {
+      "type": "string",
+      "description": "Optional title shown on the loading page. Empty when no display name was configured.",
+      "examples": [
+        "My Application"
+      ]
+    },
+    "InstanceStates": {
+      "items": {
+        "$ref": "#/$defs/Instance"
+      },
+      "type": "array",
+      "description": "Current state of each requested instance. Only populated when the request includes show_details=true."
+    },
+    "SessionDuration": {
+      "type": "string",
+      "description": "Human-readable remaining session duration (e.g. '1 hour 30 minutes').",
+      "examples": [
+        "1 hour 30 minutes"
+      ]
+    },
+    "RefreshFrequency": {
+      "type": "string",
+      "description": "Page auto-refresh interval in whole seconds as a string (e.g. '30').",
+      "examples": [
+        "5"
+      ]
+    },
+    "Version": {
+      "type": "string",
+      "description": "Current Sablier server version string (e.g. '1.8.0').",
+      "examples": [
+        "1.8.0"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "DisplayName",
+    "InstanceStates",
+    "SessionDuration",
+    "RefreshFrequency",
+    "Version"
+  ]
+}

@@ -1,0 +1,92 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+}
+
+.logo {
+  width: 56px;
+  height: 56px;
+}
+
+.spinner {
+  width: 120px;
+  height: 120px;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.instances {
+  list-style: none;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.instances li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.instances li:last-child {
+  border-bottom: none;
+}
+
+.instances .name {
+  color: #334155;
+  font-family: 'Courier New', monospace;
+  text-align: left;
+}
+
+.instances .status {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pending  .status { color: #d97706; }
+.ready    .status { color: #059669; }
+.error    .status { color: #dc2626; }
+
+footer {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}

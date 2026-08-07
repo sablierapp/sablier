@@ -11,7 +11,7 @@ type Duration struct {
 }
 
 func (duration *Duration) UnmarshalJSON(b []byte) error {
-	var unmarshalledJson interface{}
+	var unmarshalledJson any
 
 	err := json.Unmarshal(b, &unmarshalledJson)
 	if err != nil {

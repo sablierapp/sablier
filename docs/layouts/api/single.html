@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ .Title }} · {{ .Site.Title }}</title>
+    <link rel="icon" href="{{ "/favicon.ico" | relURL }}" />
+    <style>
+      body { margin: 0; }
+      .back-to-docs {
+        position: fixed;
+        top: 0.6rem;
+        left: 0.8rem;
+        z-index: 60;
+        font: 500 14px/1 system-ui, sans-serif;
+        text-decoration: none;
+        color: #374151;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 0.4rem 0.7rem;
+        border-radius: 6px;
+        backdrop-filter: blur(4px);
+      }
+    </style>
+  </head>
+  <body>
+    <a class="back-to-docs" href="{{ "/" | relURL }}">&larr; Docs</a>
+    <!-- Scalar renders the OpenAPI 3.0 contract generated from the code (make openapi). -->
+    <script id="api-reference" data-url="{{ "/openapi.json" | relURL }}"></script>
+    <!-- Pinned version + Subresource Integrity so a compromised CDN response cannot
+         execute on the docs origin. To bump: change the version and recompute the hash
+         with `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`. -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.62.4"
+      integrity="sha384-8krtlmjW90KNKDXFfcFls2ueiU+9/jzPmL/C2r7Y2NPh9KWCau8HyweAvBvm/y0y"
+      crossorigin="anonymous"></script>
+  </body>
+</html>

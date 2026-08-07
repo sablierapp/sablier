@@ -3,17 +3,19 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"gotest.tools/v3/assert"
-	"testing"
 )
 
 func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
@@ -36,14 +38,15 @@ func TestKubernetesProvider_InstanceInspect(t *testing.T) {
 			args: args{
 				name: "service_default_my-service_1",
 			},
-			want: fmt.Errorf("unsupported kind \"service\" must be one of \"deployment\", \"statefulset\""),
+			want: fmt.Errorf("unsupported kind \"service\" must be one of \"deployment\", \"statefulset\", \"cnpgcluster\""),
 		},
 	}
-	c := setupKinD(t, ctx)
+	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			assert.NilError(t, err)
 
 			_, err = p.InstanceInspect(ctx, tt.args.name)
 			assert.Error(t, err, tt.want.Error())

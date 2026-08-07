@@ -1,0 +1,39 @@
+provider:
+  name: configfile
+  auto-stop-on-startup: false
+  kubernetes:
+    qps: 64
+    burst: 128
+    delimiter: .
+    ready-on-first-replica: true
+  podman:
+    uri: unix:///run/podman/podman.sock.yml
+  docker:
+    strategy: pause
+server:
+  port: 1111
+  base-path: /configfile/
+storage:
+  file: /tmp/configfile.json
+sessions:
+  default-duration: 1h
+  expiration-interval: 1h
+logging:
+  level: debug
+strategy:
+  dynamic:
+    custom-themes-path: /tmp/configfile/themes
+    show-details-by-default: false
+    default-theme: configfile
+    default-refresh-frequency: 1h
+  blocking:
+    default-timeout: 1h
+    default-refresh-frequency: 1h
+webhooks:
+  endpoints:
+    - url: https://example.com/webhook
+      headers:
+        Authorization: Bearer test-token
+      events:
+        - started
+        - stopped

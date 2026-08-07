@@ -1,0 +1,190 @@
+package sabliercmd
+
+import (
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
+	"time"
+
+	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+)
+
+const (
+	// The name of our config file, without the file extension because viper supports many different config file languages.
+	defaultConfigFilename = "sablier"
+)
+
+var conf = config.NewConfig()
+var cfgFile string
+
+// NewRootCommand creates the root cobra command
+func NewRootCommand() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "sablier",
+		Short: "A webserver to start container on demand",
+		Long: `Sablier is an API that starts containers on demand.
+It provides integrations with multiple reverse proxies and different loading strategies.`,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
+			return initializeConfig(cmd)
+		},
+	}
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "configFile", "", "Config file path. If not defined, looks for sablier.(yml|yaml|toml) in /etc/sablier/ > $XDG_CONFIG_HOME > $HOME/.config/ and current directory")
+
+	startCmd := newStartCommand()
+	// Provider flags
+	startCmd.Flags().StringVar(&conf.Provider.Name, "provider.name", "docker", fmt.Sprintf("Provider to use to manage containers %v", config.GetProviders()))
+	_ = viper.BindPFlag("provider.name", startCmd.Flags().Lookup("provider.name"))
+	startCmd.Flags().BoolVar(&conf.Provider.AutoStopOnStartup, "provider.auto-stop-on-startup", true, "Stop all sablier.enable=true instances running at startup that were not started by Sablier")
+	_ = viper.BindPFlag("provider.auto-stop-on-startup", startCmd.Flags().Lookup("provider.auto-stop-on-startup"))
+	startCmd.Flags().BoolVar(&conf.Provider.AutoStopExternallyStarted, "provider.auto-stop-externally-started", false, "Continuously stop instances with sablier.enable=true that are running but were not started by Sablier")
+	_ = viper.BindPFlag("provider.auto-stop-externally-started", startCmd.Flags().Lookup("provider.auto-stop-externally-started"))
+	startCmd.Flags().BoolVar(&conf.Provider.AutoWarmExternallyStarted, "provider.auto-warm-externally-started", false, "Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them")
+	_ = viper.BindPFlag("provider.auto-warm-externally-started", startCmd.Flags().Lookup("provider.auto-warm-externally-started"))
+	startCmd.Flags().BoolVar(&conf.Provider.RejectUnlabeledRequests, "provider.reject-unlabeled-requests", false, "Reject direct named requests for instances without sablier.enable=true")
+	_ = viper.BindPFlag("provider.reject-unlabeled-requests", startCmd.Flags().Lookup("provider.reject-unlabeled-requests"))
+	startCmd.Flags().BoolVar(&conf.Provider.VerifyEnabledOnExpiration, "provider.verify-enabled-on-expiration", false, "Verify sablier.enable=true before stopping expired instances")
+	_ = viper.BindPFlag("provider.verify-enabled-on-expiration", startCmd.Flags().Lookup("provider.verify-enabled-on-expiration"))
+	startCmd.Flags().Float32Var(&conf.Provider.Kubernetes.QPS, "provider.kubernetes.qps", 5, "QPS limit for K8S API access client-side throttling")
+	_ = viper.BindPFlag("provider.kubernetes.qps", startCmd.Flags().Lookup("provider.kubernetes.qps"))
+	startCmd.Flags().IntVar(&conf.Provider.Kubernetes.Burst, "provider.kubernetes.burst", 10, "Maximum burst for K8S API access client-side throttling")
+	_ = viper.BindPFlag("provider.kubernetes.burst", startCmd.Flags().Lookup("provider.kubernetes.burst"))
+	startCmd.Flags().StringVar(&conf.Provider.Kubernetes.Delimiter, "provider.kubernetes.delimiter", "_", "Delimiter used for namespace/resource type/name resolution. Defaults to \"_\" for backward compatibility. But you should use \"/\" or \".\"")
+	_ = viper.BindPFlag("provider.kubernetes.delimiter", startCmd.Flags().Lookup("provider.kubernetes.delimiter"))
+	startCmd.Flags().BoolVar(&conf.Provider.Kubernetes.ReadyOnFirstReplica, "provider.kubernetes.ready-on-first-replica", false, "Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas")
+	_ = viper.BindPFlag("provider.kubernetes.ready-on-first-replica", startCmd.Flags().Lookup("provider.kubernetes.ready-on-first-replica"))
+	startCmd.Flags().StringVar(&conf.Provider.Podman.Uri, "provider.podman.uri", "unix:///run/podman/podman.sock", "Uri is the URI to connect to the Podman service.")
+	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
+	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
+	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
+	//nolint:staticcheck // Intentionally binding the deprecated transitional flag until it becomes the default in v2.
+	startCmd.Flags().BoolVar(&conf.Provider.Docker.HonorRestartPolicy, "provider.docker.honor-restart-policy", false, "Honor the container restart policy on successful exit: report \"no\"/\"on-failure\" containers as completed and exited \"always\"/\"unless-stopped\" containers as stopped. Deprecated: will become the default in v2.")
+	_ = viper.BindPFlag("provider.docker.honor-restart-policy", startCmd.Flags().Lookup("provider.docker.honor-restart-policy"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.URL, "provider.proxmox-lxc.url", "", "Proxmox VE API URL (e.g. https://proxmox:8006/api2/json)")
+	_ = viper.BindPFlag("provider.proxmox-lxc.url", startCmd.Flags().Lookup("provider.proxmox-lxc.url"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.TokenID, "provider.proxmox-lxc.token-id", "", "Proxmox VE API token ID (e.g. root@pam!sablier)")
+	_ = viper.BindPFlag("provider.proxmox-lxc.token-id", startCmd.Flags().Lookup("provider.proxmox-lxc.token-id"))
+	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.TokenSecret, "provider.proxmox-lxc.token-secret", "", "Proxmox VE API token secret")
+	_ = viper.BindPFlag("provider.proxmox-lxc.token-secret", startCmd.Flags().Lookup("provider.proxmox-lxc.token-secret"))
+	startCmd.Flags().BoolVar(&conf.Provider.ProxmoxLXC.TLSInsecure, "provider.proxmox-lxc.tls-insecure", false, "Skip TLS certificate verification for Proxmox VE API")
+	_ = viper.BindPFlag("provider.proxmox-lxc.tls-insecure", startCmd.Flags().Lookup("provider.proxmox-lxc.tls-insecure"))
+
+	// Server flags
+	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
+	_ = viper.BindPFlag("server.port", startCmd.Flags().Lookup("server.port"))
+	startCmd.Flags().StringVar(&conf.Server.BasePath, "server.base-path", "/", "The base path for the API")
+	_ = viper.BindPFlag("server.base-path", startCmd.Flags().Lookup("server.base-path"))
+	startCmd.Flags().BoolVar(&conf.Server.Metrics.Enabled, "server.metrics.enabled", false, "Enable the Prometheus /metrics endpoint")
+	_ = viper.BindPFlag("server.metrics.enabled", startCmd.Flags().Lookup("server.metrics.enabled"))
+	// Tracing flags
+	startCmd.Flags().BoolVar(&conf.Tracing.Enabled, "tracing.enabled", false, "Enable OpenTelemetry distributed tracing")
+	_ = viper.BindPFlag("tracing.enabled", startCmd.Flags().Lookup("tracing.enabled"))
+	startCmd.Flags().StringVar(&conf.Tracing.ExporterType, "tracing.exporter-type", "otlphttp", "Trace exporter backend: otlphttp or stdout")
+	_ = viper.BindPFlag("tracing.exporter-type", startCmd.Flags().Lookup("tracing.exporter-type"))
+	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "http://localhost:4318", "OTLP collector base URL (used when tracing.exporter-type=otlphttp)")
+	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
+	startCmd.Flags().StringVar(&conf.Tracing.ServiceName, "tracing.service-name", "sablier", "Service name reported to the tracing backend")
+	_ = viper.BindPFlag("tracing.service-name", startCmd.Flags().Lookup("tracing.service-name"))
+	startCmd.Flags().Float64Var(&conf.Tracing.SamplingRate, "tracing.sampling-rate", 1.0, "Fraction of traces to sample (0.0-1.0)")
+	_ = viper.BindPFlag("tracing.sampling-rate", startCmd.Flags().Lookup("tracing.sampling-rate"))
+	// Storage flags
+	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
+	_ = viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))
+	// Sessions flags
+	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.default-duration", time.Duration(5)*time.Minute, "The default session duration")
+	_ = viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))
+	startCmd.Flags().DurationVar(&conf.Sessions.ExpirationInterval, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
+	_ = viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
+
+	// logging level
+	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", strings.ToLower(slog.LevelInfo.String()), "The logging level. Can be one of [error, warn, info, debug]")
+	_ = viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("logging.level"))
+
+	// strategy
+	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.CustomThemesPath, "strategy.dynamic.custom-themes-path", "", "Custom themes folder, will load all .html files recursively")
+	_ = viper.BindPFlag("strategy.dynamic.custom-themes-path", startCmd.Flags().Lookup("strategy.dynamic.custom-themes-path"))
+	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.DefaultTheme, "strategy.dynamic.default-theme", "hacker-terminal", "Default theme used for dynamic strategy")
+	_ = viper.BindPFlag("strategy.dynamic.default-theme", startCmd.Flags().Lookup("strategy.dynamic.default-theme"))
+	startCmd.Flags().BoolVar(&conf.Strategy.Dynamic.ShowDetailsByDefault, "strategy.dynamic.show-details-by-default", true, "Show the loading instances details by default")
+	_ = viper.BindPFlag("strategy.dynamic.show-details-by-default", startCmd.Flags().Lookup("strategy.dynamic.show-details-by-default"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Dynamic.DefaultRefreshFrequency, "strategy.dynamic.default-refresh-frequency", 5*time.Second, "Default refresh frequency in the HTML page for dynamic strategy")
+	_ = viper.BindPFlag("strategy.dynamic.default-refresh-frequency", startCmd.Flags().Lookup("strategy.dynamic.default-refresh-frequency"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")
+	_ = viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
+	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Default refresh frequency at which the instances status are checked for blocking strategy")
+	_ = viper.BindPFlag("strategy.blocking.default-refresh-frequency", startCmd.Flags().Lookup("strategy.blocking.default-refresh-frequency"))
+
+	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(NewVersionCmd())
+
+	healthCmd := NewHealthCmd()
+	healthCmd.Flags().String("url", "http://localhost:10000/health", "Sablier health endpoint")
+	rootCmd.AddCommand(healthCmd)
+
+	return rootCmd
+}
+
+func initializeConfig(cmd *cobra.Command) error {
+	v := viper.New()
+
+	// Set the base name of the config file, without the file extension.
+	v.SetConfigName(defaultConfigFilename)
+
+	v.AddConfigPath("/etc/sablier/")
+	v.AddConfigPath("$XDG_CONFIG_HOME")
+	v.AddConfigPath("$HOME/.config/")
+	v.AddConfigPath(".")
+
+	if cfgFile != "" {
+		v.SetConfigFile(cfgFile)
+	}
+
+	// Attempt to read the config file, gracefully ignoring errors
+	// caused by a config file not being found. Return an error
+	// if we cannot parse the config file.
+	if err := v.ReadInConfig(); err != nil {
+		// It's okay if there isn't a config file
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
+			return err
+		}
+	}
+
+	// Bind to environment variables
+	// Works great for simple config names, but needs help for names
+	// like --favorite-color which we fix in the bindFlags function
+	v.AutomaticEnv()
+
+	// Bind the current command's flags to viper
+	bindFlags(cmd, v)
+
+	// Apply configuration sections that have no corresponding CLI flag.
+	// Fields bound to cobra flags are fully handled by bindFlags above (CLI >
+	// env > config file > default). Sections like Webhooks are config-file-only
+	// and must be unmarshalled directly from the local viper that read the file,
+	// because the global viper used in start.go only knows about pflag-bound keys.
+	if err := v.UnmarshalKey("webhooks", &conf.Webhooks); err != nil {
+		return fmt.Errorf("failed to parse webhooks configuration: %w", err)
+	}
+
+	return nil
+}
+
+// Bind each cobra flag to its associated viper configuration (config file and environment variable)
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		envVar := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+		envVar = strings.ToUpper(strings.ReplaceAll(envVar, ".", "_"))
+		_ = v.BindEnv(f.Name, envVar, "SABLIER_"+envVar)
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+}

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,7 @@ import (
 func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -31,28 +32,26 @@ func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfig
 }
 
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
-	var group string
-
-	if _, ok := d.Labels["sablier.enable"]; ok {
-		if g, ok := d.Labels["sablier.group"]; ok {
-			group = g
-		} else {
-			group = "default"
-		}
+	config := sablierConfig(d.Labels, d.Annotations)
+	enabled := config[sablier.LabelEnable]
+	var groups []string
+	if enabled == "true" {
+		groups = sablier.ParseGroups(config[sablier.LabelGroup])
 	}
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:  parsed.Original,
-		Group: group,
+		Name:    parsed.Original,
+		Groups:  groups,
+		Enabled: enabled,
 	}
 }
 
 func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			"sablier.enable": "true",
+			sablier.LabelEnable: "true",
 		},
 	}
 	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -65,15 +64,11 @@ func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, e
 
 	groups := make(map[string][]string)
 	for _, deployment := range deployments.Items {
-		groupName := deployment.Labels["sablier.group"]
-		if len(groupName) == 0 {
-			groupName = "default"
-		}
-
-		group := groups[groupName]
 		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
-		group = append(group, parsed.Original)
-		groups[groupName] = group
+		config := sablierConfig(deployment.Labels, deployment.Annotations)
+		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
+			groups[groupName] = append(groups[groupName], parsed.Original)
+		}
 	}
 
 	return groups, nil

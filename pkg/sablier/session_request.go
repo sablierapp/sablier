@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"maps"
-	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,6 +15,11 @@ type InstanceInfoWithError struct {
 }
 
 func (s *Sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
+	return s.requestSession(ctx, names, duration, s.rejectUnlabeledRequests)
+}
+
+func (s *Sablier) requestSession(ctx context.Context, names []string, duration time.Duration, rejectUnlabeled bool) (sessionState *SessionState, err error) {
+	s.l.DebugContext(ctx, "requesting session", slog.Any("names", names), slog.Duration("duration", duration))
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names cannot be empty")
 	}
@@ -29,10 +33,10 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 
 	wg.Add(len(names))
 
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		go func(name string) {
 			defer wg.Done()
-			state, err := s.InstanceRequest(ctx, name, duration)
+			state, err := s.instanceRequest(ctx, name, duration, rejectUnlabeled)
 			mx.Lock()
 			defer mx.Unlock()
 			sessionState.Instances[name] = InstanceInfoWithError{
@@ -48,15 +52,16 @@ func (s *Sablier) RequestSession(ctx context.Context, names []string, duration t
 }
 
 func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duration time.Duration) (sessionState *SessionState, err error) {
+	s.l.DebugContext(ctx, "requesting session for group", slog.String("group", group), slog.Duration("duration", duration))
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names, ok := s.groups[group]
+	names, ok := s.groups.Get(group)
 	if !ok {
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: s.groups.Keys(),
 		}
 	}
 
@@ -64,11 +69,16 @@ func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.RequestSession(ctx, names, duration)
+	return s.requestSession(ctx, names, duration, false)
 }
 
 func (s *Sablier) RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*SessionState, error) {
-	session, err := s.RequestSession(ctx, names, duration)
+	return s.requestReadySession(ctx, names, duration, timeout, s.rejectUnlabeledRequests)
+}
+
+func (s *Sablier) requestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration, rejectUnlabeled bool) (*SessionState, error) {
+	s.l.DebugContext(ctx, "requesting ready session", slog.Any("names", names), slog.Duration("duration", duration), slog.Duration("timeout", timeout))
+	session, err := s.requestSession(ctx, names, duration, rejectUnlabeled)
 	if err != nil {
 		return nil, err
 	}
@@ -77,23 +87,42 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 		return session, nil
 	}
 
+	if err := session.InstanceErrors(); err != nil {
+		return nil, err
+	}
+
 	ticker := time.NewTicker(s.BlockingRefreshFrequency)
-	readiness := make(chan *SessionState)
-	errch := make(chan error)
+	// Buffered capacity 1: the goroutine can complete its send even when the
+	// outer select has already chosen a different case (timeout, cancellation).
+	// Without the buffer the goroutine would block forever on the channel send.
+	readiness := make(chan *SessionState, 1)
+	errch := make(chan error, 1)
 	quit := make(chan struct{})
+
+	// last publishes the most recent not-ready session so the timeout branch can
+	// report which instances were still pending, and why. Each poll produces a
+	// fresh SessionState, so the loaded value is never mutated concurrently.
+	var last atomic.Pointer[SessionState]
+	last.Store(session)
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				session, err := s.RequestSession(ctx, names, duration)
+				session, err := s.requestSession(ctx, names, duration, rejectUnlabeled)
 				if err != nil {
 					errch <- err
 					return
 				}
 				if session.IsReady() {
 					readiness <- session
+					return
 				}
+				if err := session.InstanceErrors(); err != nil {
+					errch <- err
+					return
+				}
+				last.Store(session)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -117,21 +146,25 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 		return nil, err
 	case <-time.After(timeout):
 		close(quit)
-		return nil, fmt.Errorf("session was not ready after %s", timeout.String())
+		timeoutErr := ErrTimeout{Duration: timeout}
+		if ls := last.Load(); ls != nil {
+			timeoutErr.Instances = ls.NotReadyInstances()
+		}
+		return nil, timeoutErr
 	}
 }
 
 func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (sessionState *SessionState, err error) {
-
+	s.l.DebugContext(ctx, "requesting ready session for group", slog.String("group", group), slog.Duration("duration", duration), slog.Duration("timeout", timeout))
 	if len(group) == 0 {
 		return nil, fmt.Errorf("group is mandatory")
 	}
 
-	names, ok := s.groups[group]
+	names, ok := s.groups.Get(group)
 	if !ok {
 		return nil, ErrGroupNotFound{
 			Group:           group,
-			AvailableGroups: slices.Collect(maps.Keys(s.groups)),
+			AvailableGroups: s.groups.Keys(),
 		}
 	}
 
@@ -139,5 +172,5 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 		return nil, fmt.Errorf("group has no member")
 	}
 
-	return s.RequestReadySession(ctx, names, duration, timeout)
+	return s.requestReadySession(ctx, names, duration, timeout, false)
 }

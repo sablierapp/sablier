@@ -1,0 +1,79 @@
+{
+  "Server": {
+    "Port": 2222,
+    "BasePath": "/envvar/",
+    "Metrics": {
+      "Enabled": false
+    }
+  },
+  "Storage": {
+    "File": "/tmp/envvar.json"
+  },
+  "Provider": {
+    "Name": "envvar",
+    "AutoStopOnStartup": false,
+    "AutoStopExternallyStarted": false,
+    "AutoWarmExternallyStarted": false,
+    "RejectUnlabeledRequests": false,
+    "VerifyEnabledOnExpiration": false,
+    "Kubernetes": {
+      "QPS": 16,
+      "Burst": 32,
+      "Delimiter": "/",
+      "ReadyOnFirstReplica": true
+    },
+    "Podman": {
+      "Uri": "unix:///run/podman/podman.sock.env"
+    },
+    "Docker": {
+      "Strategy": "pause",
+      "HonorRestartPolicy": false
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
+    }
+  },
+  "Sessions": {
+    "DefaultDuration": 7200000000000,
+    "ExpirationInterval": 7200000000000
+  },
+  "Logging": {
+    "Level": "debug"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "/tmp/envvar/themes",
+      "ShowDetailsByDefault": false,
+      "DefaultTheme": "envvar",
+      "DefaultRefreshFrequency": 7200000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 7200000000000,
+      "DefaultRefreshFrequency": 7200000000000
+    }
+  },
+  "Webhooks": {
+    "Endpoints": [
+      {
+        "URL": "https://example.com/webhook",
+        "Headers": {
+          "authorization": "Bearer test-token"
+        },
+        "Events": [
+          "started",
+          "stopped"
+        ]
+      }
+    ]
+  },
+  "Tracing": {
+    "Enabled": false,
+    "ExporterType": "otlphttp",
+    "Endpoint": "http://localhost:4318",
+    "ServiceName": "sablier",
+    "SamplingRate": 1
+  }
+}

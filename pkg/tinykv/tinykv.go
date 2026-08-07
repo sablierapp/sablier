@@ -62,6 +62,7 @@ type KV[T any] interface {
 	Keys() (keys []string)
 	Values() (values []T)
 	Entries() (entries map[string]entry[T])
+	Range(f func(key string, value T, expiresAt time.Time))
 	Put(k string, v T, expiresAfter time.Duration) error
 	Stop()
 	SetOnExpire(onExpire func(k string, v T))
@@ -177,6 +178,34 @@ func (kv *store[T]) Entries() (entries map[string]entry[T]) {
 	return entries
 }
 
+// Range calls f for every non-expired entry, passing the key, its value and its
+// absolute expiration time. It takes an instant snapshot under the store lock
+// and then invokes f for each item with the lock released, so f may be slow and
+// may safely call back into the store. Entries without a timeout or already past
+// their expiration are skipped. Range only reads: it never renews an entry's
+// timeout, so it is safe to use for observing sessions without extending them.
+func (kv *store[T]) Range(f func(key string, value T, expiresAt time.Time)) {
+	type snapshotItem struct {
+		key       string
+		value     T
+		expiresAt time.Time
+	}
+
+	kv.mx.Lock()
+	snapshot := make([]snapshotItem, 0, len(kv.kv))
+	for k, e := range kv.kv {
+		if e.timeout == nil || e.expired() {
+			continue
+		}
+		snapshot = append(snapshot, snapshotItem{key: k, value: e.value, expiresAt: e.expiresAt})
+	}
+	kv.mx.Unlock()
+
+	for _, it := range snapshot {
+		f(it.key, it.value, it.expiresAt)
+	}
+}
+
 // Put puts an entry inside kv store with provided options
 func (kv *store[T]) Put(k string, v T, expiresAfter time.Duration) error {
 	e := &entry[T]{
@@ -227,7 +256,9 @@ func (kv *store[T]) UnmarshalJSON(b []byte) error {
 
 	for k, v := range entries {
 		if !v.expired {
-			kv.Put(k, v.Value, v.ExpiresAfter)
+			if err := kv.Put(k, v.Value, v.ExpiresAfter); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -290,10 +321,7 @@ func (kv *store[T]) expireFunc() time.Duration {
 	}
 	expired := make(map[string]T)
 	c := -1
-	for {
-		if len(kv.heap) == 0 {
-			break
-		}
+	for len(kv.heap) > 0 {
 		c++
 		if c >= len(kv.heap) {
 			break
@@ -345,8 +373,7 @@ func notifyExpirations[T any](
 		return
 	}
 	for k, v := range expired {
-		k, v := k, v
-		try(func() error {
+		_ = try(func() error {
 			onExpire(k, v)
 			return nil
 		})

@@ -1,21 +1,8 @@
-PLATFORMS := linux/amd64 linux/arm64 linux/arm/v7 linux/arm
+.PHONY: run gen generate check-generate build test lint fmt docker docs schema check-schema cli-docs check-cli-docs labels-docs check-labels-docs openapi check-openapi metrics-docs check-metrics-docs
 
-temp = $(subst /, ,$@)
-os = $(word 1, $(temp))
-arch = $(word 2, $(temp))
-VERSION = draft
+.DEFAULT_GOAL := build
 
-# Version info for binaries
-GIT_REVISION := $(shell git rev-parse --short HEAD)
-GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BUILDUSER := $(shell whoami)@$(shell hostname)
-
-VPREFIX := github.com/sablierapp/sablier/pkg/version
-GO_LDFLAGS := -s -w -X $(VPREFIX).Branch=$(GIT_BRANCH) -X $(VPREFIX).Version=$(VERSION) -X $(VPREFIX).Revision=$(GIT_REVISION) -X $(VPREFIX).BuildUser=$(BUILDUSER) -X $(VPREFIX).BuildDate=$(BUILDTIME)
-
-$(PLATFORMS):
-	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) go build -trimpath -tags=nomsgpack -v -ldflags="${GO_LDFLAGS}" -o 'sablier_$(VERSION)_$(os)-$(arch)' ./cmd/sablier
+export GOFLAGS=-tags=nomsgpack
 
 run:
 	go run ./cmd/sablier start --storage.file=state.json --logging.level=debug
@@ -23,92 +10,62 @@ run:
 gen:
 	go generate -v ./...
 
+schema:
+	go run ./cmd/schemagen -out docs/static/theme.schema.json
+
+check-schema:
+	@go run ./cmd/schemagen | diff - docs/static/theme.schema.json || (echo "docs/static/theme.schema.json is out of date. Run 'make schema' to regenerate."; exit 1)
+
+cli-docs:
+	go run ./cmd/docgen -out docs/content/reference/cli.md
+
+check-cli-docs:
+	@go run ./cmd/docgen | diff - docs/content/reference/cli.md || (echo "docs/content/reference/cli.md is out of date. Run 'make cli-docs' to regenerate."; exit 1)
+
+labels-docs:
+	go run ./cmd/labelsgen -src pkg/sablier/labels.go -out docs/content/reference/labels.md
+
+check-labels-docs:
+	@go run ./cmd/labelsgen -src pkg/sablier/labels.go | diff - docs/content/reference/labels.md || (echo "docs/content/reference/labels.md is out of date. Run 'make labels-docs' to regenerate."; exit 1)
+
+openapi:
+	go run ./cmd/openapigen -out docs/static/openapi.json
+
+check-openapi:
+	@go run ./cmd/openapigen | diff - docs/static/openapi.json || (echo "docs/static/openapi.json is out of date. Run 'make openapi' to regenerate."; exit 1)
+
+metrics-docs:
+	go run ./cmd/metricsgen -out docs/content/how-to-guides/advanced/observability/metrics.md
+
+check-metrics-docs:
+	@go run ./cmd/metricsgen | diff - docs/content/how-to-guides/advanced/observability/metrics.md || (echo "docs/content/how-to-guides/advanced/observability/metrics.md is out of date. Run 'make metrics-docs' to regenerate."; exit 1)
+
+# Regenerate every committed generated file: the CLI, labels and metrics
+# reference docs, the theme JSON schema, and the OpenAPI spec.
+generate: schema cli-docs labels-docs openapi metrics-docs
+
+# Verify every committed generated file is up to date. Used in CI; run
+# `make generate` and commit the result if it fails.
+check-generate: check-schema check-cli-docs check-labels-docs check-openapi check-metrics-docs
+
+.PHONY: build
 build:
-	go build -v ./cmd/sablier
+	goreleaser build --single-target --snapshot --clean --output .
 
 test:
 	go test ./...
 
-plugins: build-plugin-traefik test-plugin-traefik build-plugin-caddy test-plugin-caddy
+lint:
+	golangci-lint run
 
-build-plugin-traefik:
-	cd plugins/traefik && go build -v .
+fix:
+	golangci-lint run --fix
 
-test-plugin-traefik:
-	cd plugins/traefik && go test -v ./...
+fmt:
+	golangci-lint fmt ./...
 
-build-plugin-caddy:
-	cd plugins/caddy && go build -v .
-
-test-plugin-caddy:
-	cd plugins/caddy && go test -v .
-
-.PHONY: docker
 docker:
-	docker build --build-arg BUILDTIME=$(BUILDTIME) --build-arg VERSION=$(VERSION) --build-arg REVISION=$(GIT_REVISION) -t sablierapp/sablier:local .
+	goreleaser release --snapshot --clean --skip=publish
 
-caddy:
-	docker build -t caddy:local plugins/caddy
-
-release: $(PLATFORMS)
-
-proxywasm:
-	go generate ./plugins/proxywasm
-	env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ./plugins/proxywasm/sablierproxywasm.wasm ./plugins/proxywasm
-	cp ./plugins/proxywasm/sablierproxywasm.wasm ./sablierproxywasm_$(VERSION).wasm
-
-.PHONY: release $(PLATFORMS)
-
-LAST = 0.0.0
-NEXT = 1.0.0
-update-doc-version:
-	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/sablierapp\/sablier:$(LAST)/sablierapp\/sablier:$(NEXT)/g' {} +
-
-update-doc-version-middleware:
-	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/version: "v$(LAST)"/version: "v$(NEXT)"/g' {} +
-	find . -type f \( -name "*.md" -o -name "*.yml" \) -exec sed -i 's/version=v$(LAST)/version=v$(NEXT)/g' {} +
-	sed -i 's/SABLIER_VERSION=v$(LAST)/SABLIER_VERSION=v$(NEXT)/g' plugins/caddy/remote.Dockerfile
-	sed -i 's/v$(LAST)/v$(NEXT)/g' plugins/caddy/README.md
-
-.PHONY: docs
 docs:
-	npx --yes docsify-cli serve docs
-
-# End to end tests
-e2e: e2e-caddy e2e-nginx e2e-traefik
-
-## Caddy
-e2e-caddy-docker:
-	cd plugins/caddy/e2e/docker && bash ./run.sh
-	
-e2e-caddy-swarm:
-	cd plugins/caddy/e2e/docker_swarm && bash ./run.sh
-
-# e2e-caddy-kubernetes:
-#   	cd plugins/caddy/e2e/kubernetes && bash ./run.sh
-
-e2e-caddy: e2e-caddy-docker e2e-caddy-swarm # e2e-caddy-kubernetes
-
-## NGinx
-e2e-nginx-docker:
-	cd plugins/nginx/e2e/docker && bash ./run.sh
-	
-e2e-nginx-swarm:
-	cd plugins/nginx/e2e/docker_swarm && bash ./run.sh
-
-e2e-nginx-kubernetes:
-	cd plugins/nginx/e2e/kubernetes && bash ./run.sh
-
-e2e-nginx: e2e-nginx-docker e2e-nginx-swarm e2e-nginx-kubernetes
-
-## Traefik
-e2e-traefik-docker:
-	cd plugins/traefik/e2e/docker && bash ./run.sh
-	
-e2e-traefik-swarm:
-	cd plugins/traefik/e2e/docker_swarm && bash ./run.sh
-
-e2e-traefik-kubernetes:
-	cd plugins/traefik/e2e/kubernetes && bash ./run.sh
-
-e2e-traefik: e2e-traefik-docker e2e-traefik-swarm e2e-traefik-kubernetes
+	cd docs && hugo server

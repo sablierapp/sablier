@@ -32,6 +32,15 @@ func (h *Health) ServeHTTP(c *gin.Context) {
 	c.String(statusCode, http.StatusText(statusCode))
 }
 
+// Healthcheck registers the health endpoint.
+//
+// @Summary      Health check
+// @Description  Liveness endpoint. Returns 200 while serving and 503 while the server is terminating.
+// @Tags         system
+// @Produce      plain
+// @Success      200  {string}  string  "OK"
+// @Failure      503  {string}  string  "Service Unavailable"
+// @Router       /health [get]
 func Healthcheck(router *gin.RouterGroup, ctx context.Context) {
 	health := Health{}
 	health.SetDefaults()

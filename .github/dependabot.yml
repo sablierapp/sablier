@@ -3,9 +3,6 @@ updates:
   - package-ecosystem: "gomod"
     directories:
       - "/"
-      - "/plugins/caddy"
-      - "/plugins/proxywasm"
-      - "/plugins/traefik"
     schedule:
       interval: "daily"
     groups:
@@ -13,6 +10,9 @@ updates:
         patterns:
           - "github.com/testcontainers/testcontainers-go"
           - "github.com/testcontainers/testcontainers-go/modules/*"
+      go.opentelemetry.io:
+        patterns:
+          - "go.opentelemetry.io/*"
       k8s.io:
         patterns:
           - "k8s.io/api"
@@ -22,15 +22,11 @@ updates:
           - "k8s.io/cli-runtime"
           - "k8s.io/client-go"
           - "k8s.io/kubectl"
-    assignees:
-      - "acouvreur"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
-    assignees:
-      - "acouvreur"
 
   # Enable version updates for Docker
   - package-ecosystem: "docker"
@@ -40,5 +36,3 @@ updates:
     # Check for updates once a week
     schedule:
       interval: "weekly"
-    assignees:
-      - "acouvreur"

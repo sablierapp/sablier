@@ -1,54 +1,413 @@
 package sablier
 
+import (
+	"log/slog"
+	"strconv"
+	"strings"
+	"time"
+)
+
 type InstanceStatus string
 
 const (
-	InstanceStatusReady         = "ready"
-	InstanceStatusNotReady      = "not-ready"
-	InstanceStatusUnrecoverable = "unrecoverable"
+	InstanceStatusStopped  InstanceStatus = "stopped"
+	InstanceStatusStarting InstanceStatus = "starting"
+	InstanceStatusReady    InstanceStatus = "ready"
+	InstanceStatusError    InstanceStatus = "error"
+	// InstanceStatusCompleted is the terminal state of a one-shot / init
+	// workload that ran and exited successfully (exit code 0) and is not
+	// expected to run again. It is distinct from Ready (running and serving
+	// traffic): a completed instance is not running. It satisfies a
+	// service_completed_successfully dependency but never a service_healthy one.
+	InstanceStatusCompleted InstanceStatus = "completed"
+	// InstanceStatusNotReady marks an instance that Sablier is deliberately not
+	// starting yet — currently only when it is held back by an active
+	// anti-affinity antagonist group. It carries a Message explaining why, is
+	// never persisted or seen by providers, and is treated as not ready.
+	InstanceStatusNotReady InstanceStatus = "not-ready"
+)
+
+// ProviderType identifies the infrastructure provider that manages an instance.
+type ProviderType = string
+
+const (
+	ProviderDocker     ProviderType = "docker"
+	ProviderSwarm      ProviderType = "swarm"
+	ProviderKubernetes ProviderType = "kubernetes"
+	ProviderPodman     ProviderType = "podman"
 )
 
 type InstanceInfo struct {
-	Name            string         `json:"name"`
-	CurrentReplicas int32          `json:"currentReplicas"`
-	DesiredReplicas int32          `json:"desiredReplicas"`
-	Status          InstanceStatus `json:"status"`
-	Message         string         `json:"message,omitempty"`
+	Name            string                  `json:"name"`
+	CurrentReplicas int32                   `json:"currentReplicas"`
+	DesiredReplicas int32                   `json:"desiredReplicas"`
+	Status          InstanceStatus          `json:"status"`
+	Groups          []string                `json:"groups,omitempty"`
+	Enabled         string                  `json:"enabled,omitempty"`
+	Message         string                  `json:"message,omitempty"`
+	Provider        ProviderType            `json:"provider,omitempty"`
+	Docker          *DockerContainerInfo    `json:"docker,omitempty"`
+	Swarm           *SwarmServiceInfo       `json:"swarm,omitempty"`
+	Kubernetes      *KubernetesWorkloadInfo `json:"kubernetes,omitempty"`
+	Podman          *PodmanContainerInfo    `json:"podman,omitempty"`
+
+	// ReadyAfter is the minimum duration to wait after the instance first
+	// reports ready before Sablier considers it truly ready. Set via the
+	// sablier.ready-after label (e.g. "30s"). Zero means no extra wait.
+	ReadyAfter time.Duration `json:"readyAfter,omitempty"`
+	// ReadyAt records when the instance first transitioned to InstanceStatusReady.
+	// It is set internally by Sablier and is never populated by a provider.
+	ReadyAt *time.Time `json:"readyAt,omitempty"`
+
+	// RunningHours is a daily keep-warm window in local time, parsed from
+	// the sablier.running-hours label (format: HH:MM-HH:MM).
+	RunningHours string `json:"runningHours,omitempty"`
+
+	// RunningDays restricts the RunningHours window to specific weekdays,
+	// parsed from the sablier.running-days label (e.g. "Mon,Tue,Wed,Thu,Fri").
+	// Empty means the window applies every day.
+	RunningDays string `json:"runningDays,omitempty"`
+
+	// ReadyOnStart indicates the instance should be considered ready as soon as
+	// the start is dispatched, without waiting for health.
+	// Controlled by the sablier.ready-on-start Label
+	ReadyOnStart bool `json:"readyOnStart,omitempty"`
+
+	// AntiAffinity lists the groups this instance backs off from. Whenever any
+	// listed group has an active session, Sablier forces this instance to its
+	// idle state (stopped, or idle resources in scale mode) and restores it once
+	// none of the listed groups are active anymore. Parsed from the
+	// sablier.anti-affinity label (comma-separated group names).
+	AntiAffinity []string `json:"antiAffinity,omitempty"`
+
+	// ScaleConfig configures resource-based scale mode for this instance.
+	// When present, Sablier throttles CPU/memory instead of stopping the container.
+	ScaleConfig *ScaleConfig `json:"scaleConfig,omitempty"`
+
+	// Config is the typed, parsed form of the instance's sablier.* labels,
+	// produced by InstanceConfigFromLabels at the provider boundary. Prefer it
+	// (and the accessor methods such as IsEnabled) over the flat fields above,
+	// which are kept for API and store compatibility and will move behind a
+	// dedicated API DTO in a later stage. Nil on records that predate this
+	// field (e.g. sessions persisted by an older version); accessors fall back
+	// to the flat fields in that case.
+	Config *InstanceConfig `json:"config,omitempty"`
+}
+
+// IsEnabled reports whether the instance opted into Sablier management
+// (sablier.enable set to exactly "true"). It is the single source of that
+// semantics; do not compare the flat Enabled string directly.
+func (instance InstanceInfo) IsEnabled() bool {
+	if instance.Config != nil {
+		return instance.Config.Enabled
+	}
+	return instance.Enabled == "true"
+}
+
+// BlkioWeightDevice holds a per-device I/O scheduling weight override.
+type BlkioWeightDevice struct {
+	Path   string `json:"path"`
+	Weight uint16 `json:"weight"` // valid range: 10-1000
+}
+
+// BlkioThrottleDevice holds a per-device I/O rate constraint.
+// Rate is the raw label value: human-readable bytes for bps (e.g. "10m", "100k")
+// or a plain integer for iops (e.g. "100"). Conversion to the numeric wire format
+// is performed by the provider.
+type BlkioThrottleDevice struct {
+	Path string `json:"path"`
+	Rate string `json:"rate"`
+}
+
+// ScaleConfig defines the idle and active resource profiles used in scale mode.
+// In scale mode, the container keeps running but its resources are adjusted:
+// idle resources are applied when the session expires, active resources when
+// a new session is requested.
+type ScaleConfig struct {
+	Idle   ResourceProfile `json:"idle"`
+	Active ResourceProfile `json:"active"`
+}
+
+// ResourceProfile holds the CPU, memory, and I/O limits for a single resource profile.
+type ResourceProfile struct {
+	// Replicas is the desired replica count for this profile.
+	// For idle: 0 (default) stops the workload; ≥ 1 keeps it running with
+	// throttled resources (resource scaling mode).
+	// For active: defaults to 1.
+	Replicas int32 `json:"replicas,omitempty"`
+	// CPU is the CPU limit (e.g. "0.5" for Docker/Swarm, "500m" for Kubernetes).
+	CPU string `json:"cpu,omitempty"`
+	// Memory is the memory limit (e.g. "128m" for Docker/Swarm, "128Mi" for Kubernetes).
+	Memory string `json:"memory,omitempty"`
+	// BlkioWeight is the relative block I/O scheduling weight (10-1000).
+	// 0 means unset (use the container's current or default weight).
+	// Supported on Docker and Podman; ignored on Docker Swarm and Kubernetes.
+	BlkioWeight uint16 `json:"blkioWeight,omitempty"`
+	// BlkioWeightDevice overrides the I/O scheduling weight per block device.
+	BlkioWeightDevice []BlkioWeightDevice `json:"blkioWeightDevice,omitempty"`
+	// BlkioDeviceReadBps limits the read throughput per block device (bytes/s).
+	// Rate values use human-readable suffixes, e.g. "10m" = 10 MB/s.
+	BlkioDeviceReadBps []BlkioThrottleDevice `json:"blkioDeviceReadBps,omitempty"`
+	// BlkioDeviceWriteBps limits the write throughput per block device (bytes/s).
+	BlkioDeviceWriteBps []BlkioThrottleDevice `json:"blkioDeviceWriteBps,omitempty"`
+	// BlkioDeviceReadIOps limits the read IOPS per block device.
+	// Rate values are plain integers, e.g. "100".
+	BlkioDeviceReadIOps []BlkioThrottleDevice `json:"blkioDeviceReadIOps,omitempty"`
+	// BlkioDeviceWriteIOps limits the write IOPS per block device.
+	BlkioDeviceWriteIOps []BlkioThrottleDevice `json:"blkioDeviceWriteIOps,omitempty"`
+}
+
+// HasResources reports whether any resource constraint (CPU, memory, or any
+// blkio field) is set on this profile. It does not consider Replicas.
+func (r ResourceProfile) HasResources() bool {
+	return r.CPU != "" || r.Memory != "" || r.BlkioWeight != 0 ||
+		r.HasBlkioDeviceLimits()
+}
+
+// HasBlkioDeviceLimits reports whether any per-device blkio constraint is set on
+// this profile. These fields require a Docker daemon API version >= 1.55 to be
+// honored on a running container (see moby/moby#52650); the global BlkioWeight
+// field is not affected.
+func (r ResourceProfile) HasBlkioDeviceLimits() bool {
+	return len(r.BlkioWeightDevice) > 0 ||
+		len(r.BlkioDeviceReadBps) > 0 ||
+		len(r.BlkioDeviceWriteBps) > 0 ||
+		len(r.BlkioDeviceReadIOps) > 0 ||
+		len(r.BlkioDeviceWriteIOps) > 0
 }
 
 type InstanceConfiguration struct {
-	Name  string
-	Group string
+	Name    string
+	Groups  []string
+	Enabled string
+}
+
+// IsEnabled reports whether the listed instance opted into Sablier management
+// (sablier.enable set to exactly "true"), mirroring InstanceInfo.IsEnabled.
+func (c InstanceConfiguration) IsEnabled() bool {
+	return c.Enabled == "true"
 }
 
 func (instance InstanceInfo) IsReady() bool {
-	return instance.Status == InstanceStatusReady
+	if instance.ReadyOnStart {
+		return true
+	}
+	if instance.Status != InstanceStatusReady {
+		return false
+	}
+	if instance.ReadyAfter == 0 || instance.ReadyAt == nil {
+		return true
+	}
+	return time.Since(*instance.ReadyAt) >= instance.ReadyAfter
 }
 
-func UnrecoverableInstanceState(name string, message string, desiredReplicas int32) InstanceInfo {
-	return InstanceInfo{
-		Name:            name,
-		CurrentReplicas: 0,
-		DesiredReplicas: desiredReplicas,
-		Status:          InstanceStatusUnrecoverable,
-		Message:         message,
+// ScaleConfigFromLabels extracts a ScaleConfig from the given label map.
+// It always returns a value. When none of the scale labels
+// (sablier.idle.{cpu,memory,replicas,blkio-weight}, sablier.active.{cpu,memory,replicas,blkio-weight})
+// are present it returns a zero-value struct with defaults:
+//   - Idle.Replicas = 0 (workload is stopped when idle)
+//   - Active.Replicas = 1 (workload runs with a single replica when active)
+//
+// Callers detect whether scale mode is active via field values:
+//   - Stop path:  sc.Idle.Replicas >= 1
+//   - Start path: sc.Idle.Replicas >= 1 || sc.Active.Replicas > 1 || sc.Active.CPU != "" || sc.Active.Memory != "" || sc.Active.BlkioWeight != 0
+//
+// Resource scaling (CPU/memory/blkio throttling instead of stopping) is only applied
+// when Idle.Replicas ≥ 1.
+func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
+	idleCPU := labels[LabelIdleCPU]
+	idleMemory := labels[LabelIdleMemory]
+	activeCPU := labels[LabelActiveCPU]
+	activeMemory := labels[LabelActiveMemory]
+
+	idleReplicas := int32(0) // default: stop the workload
+	if v, ok := labels[LabelIdleReplicas]; ok {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			idleReplicas = int32(n)
+		}
+	}
+
+	activeReplicas := int32(1) // default: one running replica
+	if v, ok := labels[LabelActiveReplicas]; ok {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			activeReplicas = int32(n)
+		}
+	}
+
+	var idleBlkioWeight, activeBlkioWeight uint16
+	if v, ok := labels[LabelIdleBlkioWeight]; ok {
+		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
+			idleBlkioWeight = uint16(n)
+		}
+	}
+	if v, ok := labels[LabelActiveBlkioWeight]; ok {
+		if n, err := strconv.ParseUint(v, 10, 16); err == nil && n >= 10 && n <= 1000 {
+			activeBlkioWeight = uint16(n)
+		}
+	}
+
+	var idleWeightDevice []BlkioWeightDevice
+	var idleReadBps, idleWriteBps, idleReadIOps, idleWriteIOps []BlkioThrottleDevice
+	var activeWeightDevice []BlkioWeightDevice
+	var activeReadBps, activeWriteBps, activeReadIOps, activeWriteIOps []BlkioThrottleDevice
+
+	if v := labels[LabelIdleBlkioWeightDevice]; v != "" {
+		idleWeightDevice = parseWeightDevices(v)
+	}
+	if v := labels[LabelIdleBlkioReadBps]; v != "" {
+		idleReadBps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelIdleBlkioWriteBps]; v != "" {
+		idleWriteBps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelIdleBlkioReadIOps]; v != "" {
+		idleReadIOps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelIdleBlkioWriteIOps]; v != "" {
+		idleWriteIOps = parseThrottleDevices(v)
+	}
+
+	if v := labels[LabelActiveBlkioWeightDevice]; v != "" {
+		activeWeightDevice = parseWeightDevices(v)
+	}
+	if v := labels[LabelActiveBlkioReadBps]; v != "" {
+		activeReadBps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelActiveBlkioWriteBps]; v != "" {
+		activeWriteBps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelActiveBlkioReadIOps]; v != "" {
+		activeReadIOps = parseThrottleDevices(v)
+	}
+	if v := labels[LabelActiveBlkioWriteIOps]; v != "" {
+		activeWriteIOps = parseThrottleDevices(v)
+	}
+
+	return ScaleConfig{
+		Idle: ResourceProfile{
+			Replicas:             idleReplicas,
+			CPU:                  idleCPU,
+			Memory:               idleMemory,
+			BlkioWeight:          idleBlkioWeight,
+			BlkioWeightDevice:    idleWeightDevice,
+			BlkioDeviceReadBps:   idleReadBps,
+			BlkioDeviceWriteBps:  idleWriteBps,
+			BlkioDeviceReadIOps:  idleReadIOps,
+			BlkioDeviceWriteIOps: idleWriteIOps,
+		},
+		Active: ResourceProfile{
+			Replicas:             activeReplicas,
+			CPU:                  activeCPU,
+			Memory:               activeMemory,
+			BlkioWeight:          activeBlkioWeight,
+			BlkioWeightDevice:    activeWeightDevice,
+			BlkioDeviceReadBps:   activeReadBps,
+			BlkioDeviceWriteBps:  activeWriteBps,
+			BlkioDeviceReadIOps:  activeReadIOps,
+			BlkioDeviceWriteIOps: activeWriteIOps,
+		},
 	}
 }
 
-func ReadyInstanceState(name string, replicas int32) InstanceInfo {
-	return InstanceInfo{
-		Name:            name,
-		CurrentReplicas: replicas,
-		DesiredReplicas: replicas,
-		Status:          InstanceStatusReady,
+// parseWeightDevices parses a comma-separated list of "path:weight" pairs.
+// Entries with out-of-range weights (10-1000) or malformed format are skipped.
+func parseWeightDevices(s string) []BlkioWeightDevice {
+	var out []BlkioWeightDevice
+	for _, entry := range strings.Split(s, ",") {
+		entry = strings.TrimSpace(entry)
+		i := strings.LastIndex(entry, ":")
+		if i <= 0 {
+			continue
+		}
+		path, wstr := entry[:i], strings.TrimSpace(entry[i+1:])
+		n, err := strconv.ParseUint(wstr, 10, 16)
+		if err != nil || n < 10 || n > 1000 {
+			continue
+		}
+		out = append(out, BlkioWeightDevice{Path: path, Weight: uint16(n)})
 	}
+	return out
 }
 
-func NotReadyInstanceState(name string, currentReplicas int32, desiredReplicas int32) InstanceInfo {
-	return InstanceInfo{
-		Name:            name,
-		CurrentReplicas: currentReplicas,
-		DesiredReplicas: desiredReplicas,
-		Status:          InstanceStatusNotReady,
+// parseThrottleDevices parses a comma-separated list of "path:rate" pairs.
+// The rate is kept as a raw string; conversion to bytes or IOPS is the
+// provider's responsibility. Entries with a missing path or empty rate are skipped.
+func parseThrottleDevices(s string) []BlkioThrottleDevice {
+	var out []BlkioThrottleDevice
+	for _, entry := range strings.Split(s, ",") {
+		entry = strings.TrimSpace(entry)
+		i := strings.LastIndex(entry, ":")
+		if i <= 0 {
+			continue
+		}
+		path, rate := entry[:i], strings.TrimSpace(entry[i+1:])
+		if path == "" || rate == "" {
+			continue
+		}
+		out = append(out, BlkioThrottleDevice{Path: path, Rate: rate})
 	}
+	return out
+}
+
+// ParseGroups parses a comma-separated group label value into a deduplicated slice.
+// Returns []string{"default"} if the label is empty.
+func ParseGroups(label string) []string {
+	if label == "" {
+		return []string{"default"}
+	}
+	parts := strings.Split(label, ",")
+	seen := make(map[string]bool, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return []string{"default"}
+	}
+	return out
+}
+
+// ParseAntiAffinity parses a comma-separated anti-affinity label value into a
+// deduplicated slice of group names. Unlike ParseGroups it has no "default"
+// fallback: an empty or whitespace-only value yields nil (no anti-affinity).
+func ParseAntiAffinity(label string) []string {
+	parts := strings.Split(label, ",")
+	seen := make(map[string]bool, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// PopulateEnabledAndGroup parses the sablier.* labels into info.Config and
+// mirrors the result into the flat legacy fields, which stay byte-identical
+// on the wire (API responses and persisted session records). All parsing
+// lives in InstanceConfigFromLabels; this is only the compatibility adapter
+// providers call from their Inspect implementations.
+func PopulateEnabledAndGroup(info *InstanceInfo, labels map[string]string) {
+	cfg := InstanceConfigFromLabels(labels, slog.Default().With(slog.String("instance", info.Name)))
+	info.Config = &cfg
+
+	// Legacy flat fields. Enabled keeps the raw label value (not the parsed
+	// boolean) because the API has always exposed it verbatim.
+	info.Enabled = labels[LabelEnable]
+	info.Groups = cfg.Groups
+	info.ReadyAfter = cfg.ReadyAfter
+	info.RunningHours = cfg.RunningHours
+	info.RunningDays = cfg.RunningDays
+	info.ReadyOnStart = cfg.ReadyOnStart
+	info.AntiAffinity = cfg.AntiAffinity
+	info.ScaleConfig = cfg.Scale
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTimeoutHeap(t *testing.T) {
@@ -20,7 +21,7 @@ func TestTimeoutHeap(t *testing.T) {
 	r := rand.New(rand.NewSource(now.Unix()))
 	n := r.Intn(10000) + 10
 	var h th = []*timeout{}
-	for i := 0; i < n; i++ {
+	for range n {
 		to := &timeout{expiresAt: now.Add(time.Duration(r.Intn(100000)) * time.Second)}
 		timeheapPush(&h, to)
 	}
@@ -44,12 +45,12 @@ func TestGetPut(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
+	require.NoError(t, rg.Put("1", 1, time.Minute*50))
 	v, ok := rg.Get("1")
 	assert.True(ok)
 	assert.Equal(1, v)
 
-	rg.Put("2", 2, time.Millisecond*50)
+	require.NoError(t, rg.Put("2", 2, time.Millisecond*50))
 	v, ok = rg.Get("2")
 	assert.True(ok)
 	assert.Equal(2, v)
@@ -65,8 +66,8 @@ func TestKeys(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
+	require.NoError(t, rg.Put("1", 1, time.Minute*50))
+	require.NoError(t, rg.Put("2", 2, time.Minute*50))
 
 	keys := rg.Keys()
 	assert.NotEmpty(keys)
@@ -79,8 +80,8 @@ func TestValues(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
+	assert.NoError(rg.Put("1", 1, time.Minute*50))
+	assert.NoError(rg.Put("2", 2, time.Minute*50))
 
 	values := rg.Values()
 	assert.NotEmpty(values)
@@ -93,9 +94,9 @@ func TestEntries(t *testing.T) {
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("1", 1, time.Minute*50)
-	rg.Put("2", 2, time.Minute*50)
-	rg.Put("3", 3, time.Minute*50)
+	assert.NoError(rg.Put("1", 1, time.Minute*50))
+	assert.NoError(rg.Put("2", 2, time.Minute*50))
+	assert.NoError(rg.Put("3", 3, time.Minute*50))
 
 	entries := rg.Entries()
 	assert.NotEmpty(entries)
@@ -104,18 +105,58 @@ func TestEntries(t *testing.T) {
 	assert.NotNil(entries["3"])
 }
 
-func TestMarshalJSON(t *testing.T) {
-	os.Setenv("TZ", "")
+func TestRange(t *testing.T) {
 	assert := assert.New(t)
 	rg := New[int](0, nil)
 	defer rg.Stop()
 
-	rg.Put("3", 3, time.Minute*50)
+	require.NoError(t, rg.Put("live1", 1, time.Minute*50))
+	require.NoError(t, rg.Put("live2", 2, time.Minute*50))
+	require.NoError(t, rg.Put("expired", 3, time.Millisecond))
+
+	<-time.After(time.Millisecond * 20)
+
+	got := make(map[string]int)
+	expiries := make(map[string]time.Time)
+	rg.Range(func(key string, value int, expiresAt time.Time) {
+		got[key] = value
+		expiries[key] = expiresAt
+	})
+
+	// Expired entries must never be yielded.
+	assert.Len(got, 2)
+	assert.Equal(1, got["live1"])
+	assert.Equal(2, got["live2"])
+	_, ok := got["expired"]
+	assert.False(ok, "expired entries must not be yielded by Range")
+
+	// The reported expiry is in the future for live entries.
+	assert.True(expiries["live1"].After(time.Now()))
+
+	// Range must not renew timeouts: the reported expiry is stable across calls.
+	first := expiries["live1"]
+	<-time.After(time.Millisecond * 20)
+	var second time.Time
+	rg.Range(func(key string, _ int, expiresAt time.Time) {
+		if key == "live1" {
+			second = expiresAt
+		}
+	})
+	assert.Equal(first, second, "Range must not renew an entry's timeout")
+}
+
+func TestMarshalJSON(t *testing.T) {
+	require.NoError(t, os.Setenv("TZ", ""))
+	assert := assert.New(t)
+	rg := New[int](0, nil)
+	defer rg.Stop()
+
+	assert.NoError(rg.Put("3", 3, time.Minute*50))
 
 	jsonb, err := json.Marshal(rg)
 	assert.Nil(err)
 	json := string(jsonb)
-	assert.Regexp(`{"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z"}}`, json)
+	assert.Regexp(`{"3":{"value":3,"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\.\d]*(Z|[+-]\d{2}:\d{2})"}}`, json)
 }
 
 func TestUnmarshalJSON(t *testing.T) {
@@ -153,13 +194,13 @@ func TestUnmarshalJSONExpired(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	assert := assert.New(t)
 	rcvd := make(chan string, 100)
-	notify := func(k string, v interface{}) {
+	notify := func(k string, v any) {
 		rcvd <- k
 	}
 	rg := New(time.Millisecond*10, notify)
 	n := 1000
 	for i := n; i < 2*n; i++ {
-		rg.Put(strconv.Itoa(i), i, time.Millisecond*10)
+		assert.NoError(rg.Put(strconv.Itoa(i), i, time.Millisecond*10))
 	}
 	got := make([]string, n)
 OUT01:
@@ -178,7 +219,7 @@ OUT01:
 		}
 	}
 	assert.Equal(len(got), n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if got[i] != "" {
 			continue
 		}
@@ -192,12 +233,12 @@ func Test03(t *testing.T) {
 	elapsed := make(chan time.Duration, 1)
 	kv := New(
 		time.Millisecond*50,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			elapsed <- time.Since(putAt)
 		})
 
 	putAt = time.Now()
-	kv.Put("1", 1, time.Millisecond*10)
+	require.NoError(t, kv.Put("1", 1, time.Millisecond*10))
 
 	<-time.After(time.Millisecond * 100)
 	assert.WithinDuration(putAt, putAt.Add(<-elapsed), time.Millisecond*60)
@@ -207,7 +248,7 @@ func Test04(t *testing.T) {
 	assert := assert.New(t)
 	kv := New(
 		time.Millisecond*10,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			t.Fatal(k, v)
 		})
 
@@ -228,20 +269,20 @@ func Test05(t *testing.T) {
 	var cnt int64
 	kv := New(
 		time.Millisecond*10,
-		func(k string, v interface{}) {
+		func(k string, v any) {
 			atomic.AddInt64(&cnt, 1)
 		})
 
 	src := rand.NewSource(time.Now().Unix())
 	rnd := rand.New(src)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		k := fmt.Sprintf("%d", i)
-		kv.Put(k, fmt.Sprintf("VAL::%v", k),
-			time.Millisecond*time.Duration(rnd.Intn(10)+1))
+		require.NoError(t, kv.Put(k, fmt.Sprintf("VAL::%v", k),
+			time.Millisecond*time.Duration(rnd.Intn(10)+1)))
 	}
 
 	<-time.After(time.Millisecond * 100)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		k := fmt.Sprintf("%d", i)
 		_, ok := kv.Get(k)
 		assert.False(ok)
@@ -254,7 +295,7 @@ func Test11(t *testing.T) {
 	key := "QQG"
 
 	var expiredKey = make(chan string, 100)
-	onExpired := func(k string, v interface{}) { expiredKey <- k }
+	onExpired := func(k string, v any) { expiredKey <- k }
 
 	kv := New(time.Millisecond*100, onExpired)
 	err := kv.Put(
@@ -286,7 +327,7 @@ func Test12(t *testing.T) {
 
 	key := "QQG"
 
-	onExpired := func(k string, v interface{}) {}
+	onExpired := func(k string, v any) {}
 
 	kv := New(time.Millisecond*100, onExpired)
 	err := kv.Put(
@@ -304,8 +345,8 @@ func Test12(t *testing.T) {
 func Test13(t *testing.T) {
 	assert := assert.New(t)
 
-	got := make(chan interface{}, 10)
-	onExpired := func(k string, v interface{}) {
+	got := make(chan any, 10)
+	onExpired := func(k string, v any) {
 		got <- v
 	}
 
@@ -330,10 +371,10 @@ func TestOrdering(t *testing.T) {
 
 	type data struct {
 		key   string
-		value interface{}
+		value any
 	}
 	got := make(chan data, 100)
-	onExpired := func(k string, v interface{}) {
+	onExpired := func(k string, v any) {
 		got <- data{k, v}
 	}
 
@@ -342,7 +383,7 @@ func TestOrdering(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		k := strconv.Itoa(i)
 		v := i
-		kv.Put(k, v, time.Millisecond*time.Duration(i)*50)
+		assert.NoError(kv.Put(k, v, time.Millisecond*time.Duration(i)*50))
 	}
 
 	var order = make([]int, 10)
@@ -371,31 +412,31 @@ func TestOrdering(t *testing.T) {
 }
 
 func BenchmarkGetNoValue(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
 }
 
 func BenchmarkGetValue(b *testing.B) {
-	rg := New[interface{}](-1, nil)
-	rg.Put("1", 1, time.Minute*50)
+	rg := New[any](-1, nil)
+	assert.NoError(b, rg.Put("1", 1, time.Minute*50))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
 }
 
 func BenchmarkGetSlidingTimeout(b *testing.B) {
-	rg := New[interface{}](-1, nil)
-	rg.Put("1", 1, time.Second*10)
+	rg := New[any](-1, nil)
+	assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	for n := 0; n < b.N; n++ {
 		rg.Get("1")
 	}
 }
 
 func BenchmarkPutExpire(b *testing.B) {
-	rg := New[interface{}](-1, nil)
+	rg := New[any](-1, nil)
 	for n := 0; n < b.N; n++ {
-		rg.Put("1", 1, time.Second*10)
+		assert.NoError(b, rg.Put("1", 1, time.Second*10))
 	}
 }

@@ -7,6 +7,8 @@ type Config struct {
 	Sessions Sessions
 	Logging  Logging
 	Strategy Strategy
+	Webhooks Webhooks
+	Tracing  Tracing
 }
 
 func NewConfig() Config {
@@ -17,5 +19,7 @@ func NewConfig() Config {
 		Sessions: NewSessionsConfig(),
 		Logging:  NewLoggingConfig(),
 		Strategy: NewStrategyConfig(),
+		Webhooks: NewWebhooksConfig(),
+		Tracing:  NewTracingConfig(),
 	}
 }

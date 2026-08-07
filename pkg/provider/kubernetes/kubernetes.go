@@ -2,23 +2,33 @@ package kubernetes
 
 import (
 	"context"
-	providerConfig "github.com/sablierapp/sablier/pkg/config"
-	"github.com/sablierapp/sablier/pkg/sablier"
 	"log/slog"
 
-	"k8s.io/client-go/kubernetes"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+	"k8s.io/client-go/dynamic"
+	k8s "k8s.io/client-go/kubernetes"
+
+	providerConfig "github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 // Interface guard
 var _ sablier.Provider = (*Provider)(nil)
 
 type Provider struct {
-	Client    kubernetes.Interface
-	delimiter string
-	l         *slog.Logger
+	Client k8s.Interface
+	// dynamic drives Custom Resources (e.g. CloudNativePG Clusters) that are not
+	// part of the typed clientset. It may be nil when the provider is constructed
+	// without CRD support; CRD-backed operations guard against that.
+	dynamic             dynamic.Interface
+	delimiter           string
+	readyOnFirstReplica bool
+	l                   *slog.Logger
+	tracer              trace.Tracer
 }
 
-func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
+func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Interface, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
 	logger = logger.With(slog.String("provider", "kubernetes"))
 
 	info, err := client.ServerVersion()
@@ -33,9 +43,12 @@ func New(ctx context.Context, client *kubernetes.Clientset, logger *slog.Logger,
 	)
 
 	return &Provider{
-		Client:    client,
-		delimiter: config.Delimiter,
-		l:         logger,
+		Client:              client,
+		dynamic:             dynamicClient,
+		delimiter:           config.Delimiter,
+		readyOnFirstReplica: config.ReadyOnFirstReplica,
+		l:                   logger,
+		tracer:              otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil
 
 }

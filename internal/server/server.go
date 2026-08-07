@@ -4,17 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/sablierapp/sablier/internal/api"
-	"github.com/sablierapp/sablier/pkg/config"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
+	"github.com/sablierapp/sablier/internal/api"
+	"github.com/sablierapp/sablier/pkg/config"
 )
 
-func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) *gin.Engine {
+func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Server, tracingConf config.Tracing, s *api.ServeStrategy) *gin.Engine {
 	r := gin.New()
 
+	// OpenTelemetry span-per-request middleware. Uses the global TracerProvider,
+	// which is a no-op when tracing is disabled.
+	r.Use(otelgin.Middleware(tracingConf.ServiceName))
 	r.Use(StructuredLogger(logger))
 	r.Use(gin.Recovery())
 
@@ -23,7 +29,19 @@ func setupRouter(ctx context.Context, logger *slog.Logger, serverConf config.Ser
 	return r
 }
 
-func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s *api.ServeStrategy) {
+// minDrainTimeout is the floor for the shutdown drain window, and drainGrace
+// is added on top of the blocking strategy's default timeout so a request held
+// right up to that timeout still has time to write its response.
+const (
+	minDrainTimeout = 15 * time.Second
+	drainGrace      = 5 * time.Second
+)
+
+// Start runs the HTTP server until ctx is cancelled, then drains in-flight
+// requests before returning. It returns nil after a clean shutdown, or the
+// fatal serve error (e.g. the port is already in use) so the caller can
+// terminate the process instead of running on without a listener.
+func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, tracingConf config.Tracing, s *api.ServeStrategy) error {
 	start := time.Now()
 
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -32,10 +50,9 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := setupRouter(ctx, logger, serverConf, s)
+	r := setupRouter(ctx, logger, serverConf, tracingConf, s)
 
-	var server *http.Server
-	server = &http.Server{
+	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", serverConf.Port),
 		Handler: r,
 	}
@@ -46,24 +63,44 @@ func Start(ctx context.Context, logger *slog.Logger, serverConf config.Server, s
 		slog.String("mode", gin.Mode()),
 	)
 
-	go StartHttp(server, logger)
+	errC := make(chan error, 1)
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errC <- err
+		}
+	}()
 
-	// Graceful web server shutdown.
-	<-ctx.Done()
-	logger.Info("server: shutting down")
-	err := server.Close()
-	if err != nil {
-		logger.Error("server: shutdown failed", slog.Any("error", err))
+	select {
+	case err := <-errC:
+		// ListenAndServe failed outright (port in use, bad address, ...).
+		return fmt.Errorf("server: %w", err)
+	case <-ctx.Done():
 	}
+
+	// Drain in-flight requests instead of resetting them: the blocking
+	// strategy holds requests open up to its configured timeout by design, so
+	// the drain window must outlive it. The health endpoint already reports
+	// 503 once ctx is cancelled, taking the instance out of rotation while it
+	// drains.
+	drain := drainTimeout(s.StrategyConfig.Blocking.DefaultTimeout)
+	logger.Info("server: shutting down, draining in-flight requests", slog.Duration("drain_timeout", drain))
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), drain)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("server: drain did not complete in time, closing remaining connections", slog.Any("error", err))
+		_ = server.Close()
+		return nil
+	}
+	logger.Info("server: shutdown complete")
+	return nil
 }
 
-// StartHttp starts the Web server in http mode.
-func StartHttp(s *http.Server, logger *slog.Logger) {
-	if err := s.ListenAndServe(); err != nil {
-		if errors.Is(err, http.ErrServerClosed) {
-			logger.Info("server: shutdown complete")
-		} else {
-			logger.Error("server failed to start", slog.Any("error", err))
-		}
+// drainTimeout returns the shutdown drain window for the given blocking-
+// strategy default timeout: the timeout plus a response grace, never below
+// minDrainTimeout.
+func drainTimeout(blockingTimeout time.Duration) time.Duration {
+	if d := blockingTimeout + drainGrace; d > minDrainTimeout {
+		return d
 	}
+	return minDrainTimeout
 }

@@ -5,8 +5,14 @@ import (
 	"strings"
 )
 
+// Logging holds the logging configuration.
 type Logging struct {
-	Level string `mapstructure:"LEVEL" yaml:"level" default:"info"`
+	// Level sets the minimum log severity. Accepted values: debug, info, warn, error.
+	// Env: SABLIER_LOGGING_LEVEL
+	// CLI: --logging.level
+	// Default: "info"
+	// Since: v1.0.0
+	Level string
 }
 
 func NewLoggingConfig() Logging {

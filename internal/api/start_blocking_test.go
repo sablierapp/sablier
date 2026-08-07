@@ -1,13 +1,16 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/tniswong/go.rfcx/rfc7807"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
-	"net/http"
-	"testing"
 )
 
 func TestStartBlocking(t *testing.T) {
@@ -73,6 +76,30 @@ func TestStartBlocking(t *testing.T) {
 		m.EXPECT().RequestReadySessionGroup(gomock.Any(), "test", gomock.Any(), gomock.Any()).Return(nil, nil)
 		r := PerformRequest(app, "GET", "/api/strategies/blocking?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)
+		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
+	})
+	t.Run("StartBlockingErrTimeout", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartBlocking(router, strategy)
+		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(nil, sablier.ErrTimeout{Duration: 30 * time.Second})
+		r := PerformRequest(app, "GET", "/api/strategies/blocking?names=test")
+		assert.Equal(t, http.StatusGatewayTimeout, r.Code)
+		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
+	})
+	t.Run("StartBlockingErrInstanceNotManaged", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartBlocking(router, strategy)
+		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(nil, sablier.ErrInstanceNotManaged{Name: "test"})
+		r := PerformRequest(app, "GET", "/api/strategies/blocking?names=test")
+		assert.Equal(t, http.StatusNotFound, r.Code)
+		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
+	})
+	t.Run("StartBlockingErrRequestCancelled", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartBlocking(router, strategy)
+		m.EXPECT().RequestReadySession(gomock.Any(), []string{"test"}, gomock.Any(), gomock.Any()).Return(nil, context.Canceled)
+		r := PerformRequest(app, "GET", "/api/strategies/blocking?names=test")
+		assert.Equal(t, http.StatusServiceUnavailable, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
 	})
 }

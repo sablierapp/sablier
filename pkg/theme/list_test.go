@@ -24,3 +24,18 @@ func TestList(t *testing.T) {
 
 	assert.ElementsMatch(t, []string{"theme1", "theme2", "ghost", "hacker-terminal", "matrix", "shuffle"}, list)
 }
+
+func TestExists(t *testing.T) {
+	themes, err := theme.NewWithCustomThemes(
+		fstest.MapFS{
+			"custom.html": &fstest.MapFile{},
+		}, slogt.New(t))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	assert.True(t, themes.Exists("custom"))
+	assert.True(t, themes.Exists("ghost")) // embedded
+	assert.False(t, themes.Exists("nope"))
+}

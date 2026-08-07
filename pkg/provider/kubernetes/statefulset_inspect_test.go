@@ -3,6 +3,8 @@ package kubernetes_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
@@ -10,25 +12,25 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	t.Parallel()
 
 	ctx := context.Background()
 	type args struct {
 		do func(dind *kindContainer) (string, error)
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sablier.InstanceInfo
-		wantErr error
+		name       string
+		args       args
+		want       sablier.InstanceInfo
+		wantLabels map[string]string
+		wantErr    error
 	}{
 		{
 			name: "statefulSet with 1/1 replicas",
@@ -62,7 +64,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 				do: func(dind *kindContainer) (string, error) {
 					d, err := dind.CreateMimicStatefulSet(ctx, MimicOptions{
 						Cmd:         []string{"/mimic", "-running-after=1ms", "-healthy=false", "-healthy-after=10s"},
-						Healthcheck: &corev1.Probe{},
+						Healthcheck: mimicHealthcheck(),
 					})
 					if err != nil {
 						return "", err
@@ -74,7 +76,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStarting,
 			},
 			wantErr: nil,
 		},
@@ -109,21 +111,128 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusNotReady,
+				Status:          sablier.InstanceStatusStopped,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "statefulset with sablier labels",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					d, err := dind.CreateMimicStatefulSet(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+							"sablier.group":  "myapp",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForStatefulSetReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for statefulset: %w", err)
+					}
+
+					return kubernetes.StatefulSetName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"myapp"},
+			},
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
+				"sablier.group":  "myapp",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "statefulset with sablier config via annotations",
+			args: args{
+				do: func(dind *kindContainer) (string, error) {
+					// sablier.group with a comma-separated value is invalid as a
+					// Kubernetes label, so it can only be expressed as an annotation.
+					d, err := dind.CreateMimicStatefulSet(ctx, MimicOptions{
+						Cmd: []string{"/mimic"},
+						Labels: map[string]string{
+							"sablier.enable": "true",
+						},
+						Annotations: map[string]string{
+							"sablier.group": "group-a,group-b",
+						},
+					})
+					if err != nil {
+						return "", err
+					}
+
+					if err = WaitForStatefulSetReady(ctx, dind.client, "default", d.Name); err != nil {
+						return "", fmt.Errorf("error waiting for statefulset: %w", err)
+					}
+
+					return kubernetes.StatefulSetName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original, nil
+				},
+			},
+			want: sablier.InstanceInfo{
+				CurrentReplicas: 1,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"group-a", "group-b"},
+			},
+			// Kubernetes.Labels reflects the raw workload labels only, not the
+			// merged annotation config.
+			wantLabels: map[string]string{
+				"sablier.enable": "true",
 			},
 			wantErr: nil,
 		},
 	}
-	c := setupKinD(t, ctx)
+	c := sharedKinD
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			p, err := kubernetes.New(ctx, c.client, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			p, err := kubernetes.New(ctx, c.client, c.dynamic, slogt.New(t), config.NewProviderConfig().Kubernetes)
+			assert.NilError(t, err)
 
 			name, err := tt.args.do(c)
 			assert.NilError(t, err)
 
+			// Clean up the statefulset created by this subtest.
+			if parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"}); parseErr == nil {
+				t.Cleanup(func() {
+					_ = c.client.AppsV1().StatefulSets(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
+				})
+			}
+
 			tt.want.Name = name
+			tt.want.Provider = "kubernetes"
+			labels := tt.wantLabels
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			tt.want.Kubernetes = &sablier.KubernetesWorkloadInfo{
+				Namespace: "default",
+				Kind:      "statefulset",
+				Image:     "sablierapp/mimic:v0.3.3",
+				Labels:    labels,
+			}
+			// The provider mirrors the parsed label config into Config with the
+			// same values as the flat fields each case already declares, so
+			// derive the expectation instead of repeating it per case.
+			tt.want.Config = &sablier.InstanceConfig{
+				Enabled:      tt.want.Enabled == "true",
+				Groups:       tt.want.Groups,
+				ReadyAfter:   tt.want.ReadyAfter,
+				ReadyOnStart: tt.want.ReadyOnStart,
+				RunningHours: tt.want.RunningHours,
+				RunningDays:  tt.want.RunningDays,
+				AntiAffinity: tt.want.AntiAffinity,
+				Scale:        tt.want.ScaleConfig,
+			}
 			got, err := p.InstanceInspect(ctx, name)
 			if !cmp.Equal(err, tt.wantErr) {
 				t.Errorf("DockerSwarmProvider.InstanceInspect() error = %v, wantErr %v", err, tt.wantErr)

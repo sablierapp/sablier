@@ -1,0 +1,31 @@
+package sabliercmd
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/theme"
+)
+
+func setupTheme(ctx context.Context, conf config.Config, logger *slog.Logger) (*theme.Themes, error) {
+	if conf.Strategy.Dynamic.CustomThemesPath != "" {
+		logger.DebugContext(ctx, "loading themes from custom theme path", slog.String("path", conf.Strategy.Dynamic.CustomThemesPath))
+		t, err := theme.NewWithCustomThemesFromPath(conf.Strategy.Dynamic.CustomThemesPath, logger)
+		if err != nil {
+			logger.WarnContext(ctx, "loading themes without custom theme path", slog.String("reason", "failed to load custom themes"), slog.String("error", err.Error()))
+			t, err = theme.New(logger)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return t, nil
+	}
+	logger.DebugContext(ctx, "loading themes without custom theme path", slog.String("reason", "--strategy.dynamic.custom-themes-path is empty"))
+	t, err := theme.New(logger)
+	if err != nil {
+		return nil, err
+
+	}
+	return t, nil
+}
