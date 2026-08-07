@@ -63,6 +63,7 @@ sablier-group-my-group  # one tag per group
 | [`sablier.running-hours`](#label-sablier-running-hours) | A daily keep-warm window in local time. |
 | [`sablier.running-days`](#label-sablier-running-days) | Restricts the `sablier.running-hours` window to specific weekdays. |
 | [`sablier.anti-affinity`](#label-sablier-anti-affinity) | Lists the group names this instance backs off from; it is forced idle while any listed group has an active session. |
+| [`sablier.delegate-scaling`](#label-sablier-delegate-scaling) | Opts the instance into delegated scaling: Sablier never writes the replica count and instead emits "activate"/"deactivate" intent webhooks for an external scaler (e.g. a KEDA ScaledObject) to act on. |
 | [`sablier.idle.replicas`](#label-sablier-idle-replicas) | The replica count when idle. |
 | [`sablier.idle.cpu`](#label-sablier-idle-cpu) | The CPU limit applied when the session expires. |
 | [`sablier.idle.memory`](#label-sablier-idle-memory) | The memory limit applied when the session expires. |
@@ -169,6 +170,20 @@ Kubernetes must set a multi-value list as an **annotation**. Not supported on Pr
 {{< /callout >}}
 
 [Learn more](/how-to-guides/anti-affinity/)
+
+### `sablier.delegate-scaling` {#label-sablier-delegate-scaling}
+
+Opts the instance into delegated scaling: Sablier never writes the replica count and instead emits "activate"/"deactivate" intent webhooks for an external scaler (e.g. a KEDA ScaledObject) to act on.
+
+{{< badge "boolean" >}} {{< badge content="Next release" >}}
+
+Example: `"true"`
+
+{{< callout type="info" >}}
+Kubernetes only.
+{{< /callout >}}
+
+[Learn more](/how-to-guides/scaling-resources/delegated-scaling/)
 
 ### `sablier.idle.replicas` {#label-sablier-idle-replicas}
 
