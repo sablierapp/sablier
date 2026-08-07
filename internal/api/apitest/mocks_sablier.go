@@ -57,6 +57,36 @@ func (mr *MockSablierMockRecorder) InstanceEvents(ctx, opts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceEvents", reflect.TypeOf((*MockSablier)(nil).InstanceEvents), ctx, opts)
 }
 
+// ExtendSession mocks base method.
+func (m *MockSablier) ExtendSession(ctx context.Context, names []string, duration time.Duration) (*sablier.SessionState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtendSession", ctx, names, duration)
+	ret0, _ := ret[0].(*sablier.SessionState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtendSession indicates an expected call of ExtendSession.
+func (mr *MockSablierMockRecorder) ExtendSession(ctx, names, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtendSession", reflect.TypeOf((*MockSablier)(nil).ExtendSession), ctx, names, duration)
+}
+
+// ExtendSessionGroup mocks base method.
+func (m *MockSablier) ExtendSessionGroup(ctx context.Context, group string, duration time.Duration) (*sablier.SessionState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtendSessionGroup", ctx, group, duration)
+	ret0, _ := ret[0].(*sablier.SessionState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtendSessionGroup indicates an expected call of ExtendSessionGroup.
+func (mr *MockSablierMockRecorder) ExtendSessionGroup(ctx, group, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtendSessionGroup", reflect.TypeOf((*MockSablier)(nil).ExtendSessionGroup), ctx, group, duration)
+}
+
 // RequestReadySession mocks base method.
 func (m *MockSablier) RequestReadySession(ctx context.Context, names []string, duration, timeout time.Duration) (*sablier.SessionState, error) {
 	m.ctrl.T.Helper()
