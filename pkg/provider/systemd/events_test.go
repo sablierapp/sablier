@@ -5,140 +5,103 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
-func TestClassifyChange(t *testing.T) {
+func TestUnitStatusChanged(t *testing.T) {
+	status := func(state string) *dbus.UnitStatus {
+		return &dbus.UnitStatus{ActiveState: state}
+	}
 	tests := []struct {
-		name        string
-		prev        string
-		prevSeen    bool
-		activeState string
-		baseline    bool
-		wantStopped bool
-		wantStarted bool
-		wantCreated bool
-		wantKinds   []provider.InstanceEventType
+		name string
+		u1   *dbus.UnitStatus
+		u2   *dbus.UnitStatus
+		want bool
 	}{
 		{
-			name:        "baseline active reports started",
-			activeState: "active",
-			baseline:    true,
-			wantStarted: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventStarted},
+			name: "settle into active reports",
+			u1:   status("inactive"),
+			u2:   status("active"),
+			want: true,
 		},
 		{
-			name:        "baseline inactive reports nothing",
-			activeState: "inactive",
-			baseline:    true,
-			wantStopped: true,
+			name: "settle into inactive reports",
+			u1:   status("active"),
+			u2:   status("inactive"),
+			want: true,
 		},
 		{
-			name:        "baseline without started filter",
-			activeState: "active",
-			baseline:    true,
+			name: "unchanged state reports nothing",
+			u1:   status("active"),
+			u2:   status("active"),
+			want: false,
 		},
 		{
-			name:        "new active unit reports created and started",
-			activeState: "active",
-			wantStarted: true,
-			wantCreated: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventStarted},
+			name: "non-final new state reports nothing",
+			u1:   status("active"),
+			u2:   status("deactivating"),
+			want: false,
 		},
 		{
-			name:        "new inactive unit reports created only",
-			activeState: "inactive",
-			wantStopped: true,
-			wantCreated: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventCreated},
+			name: "activating to active reports settle",
+			u1:   status("activating"),
+			u2:   status("active"),
+			want: true,
 		},
 		{
-			name:        "new transient unit reports nothing",
-			activeState: "activating",
-			wantStarted: true,
-			wantCreated: true,
+			name: "deactivating to inactive reports settle",
+			u1:   status("deactivating"),
+			u2:   status("inactive"),
+			want: true,
 		},
 		{
-			name:        "new unit without created filter reports started",
-			activeState: "active",
-			wantStarted: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventStarted},
+			name: "reloading to active reports settle",
+			u1:   status("reloading"),
+			u2:   status("active"),
+			want: true,
 		},
 		{
-			name:        "stop reports stopped",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "inactive",
-			wantStopped: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventStopped},
+			name: "same transient reports nothing",
+			u1:   status("activating"),
+			u2:   status("activating"),
+			want: false,
 		},
 		{
-			name:        "start reports started",
-			prev:        "inactive",
-			prevSeen:    true,
-			activeState: "active",
-			wantStarted: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventStarted},
+			name: "failed is settled",
+			u1:   status("active"),
+			u2:   status("failed"),
+			want: true,
 		},
 		{
-			name:        "unchanged state reports nothing",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "active",
-			wantStopped: true,
-			wantStarted: true,
+			name: "maintenance is settled",
+			u1:   status("active"),
+			u2:   status("maintenance"),
+			want: true,
 		},
 		{
-			name:        "transient state reports nothing",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "activating",
-			wantStopped: true,
-			wantStarted: true,
-		},
-		{
-			name:        "deactivating waits for stopped boundary",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "deactivating",
-			wantStopped: true,
-		},
-		{
-			name:        "reloading does not leave running state",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "reloading",
-			wantStarted: true,
-		},
-		{
-			name:        "failed state reports stopped",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "failed",
-			wantStopped: true,
-			wantKinds:   []provider.InstanceEventType{provider.InstanceEventStopped},
-		},
-		{
-			name:        "stop without stopped filter",
-			prev:        "active",
-			prevSeen:    true,
-			activeState: "inactive",
-			wantStarted: true,
+			name: "nil guards",
+			u1:   nil,
+			u2:   status("active"),
+			want: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lastState := make(map[string]lifecycleState)
-			if tt.prevSeen {
-				classifyChange("test.service", tt.prev, lastState, eventFilters{stopped: true, started: true, created: true}, true)
-			}
-			filters := eventFilters{stopped: tt.wantStopped, started: tt.wantStarted, created: tt.wantCreated}
-			got := classifyChange("test.service", tt.activeState, lastState, filters, tt.baseline)
-			assert.DeepEqual(t, got, tt.wantKinds)
+			assert.Equal(t, unitStatusChanged(tt.u1, tt.u2), tt.want)
 		})
+	}
+}
+
+func TestIsFinalState(t *testing.T) {
+	for _, s := range []string{"activating", "deactivating", "reloading", "refreshing"} {
+		assert.Assert(t, !isFinalState(s), "expected %q to be non-final", s)
+	}
+	for _, s := range []string{"active", "inactive", "failed", "maintenance", ""} {
+		assert.Assert(t, isFinalState(s), "expected %q to be final", s)
 	}
 }
 
@@ -232,24 +195,18 @@ func TestSystemdProvider_InstanceEvents_Stopped(t *testing.T) {
 	assert.Equal(t, ev.Info.Name, "web.service")
 }
 
-func TestSystemdProvider_InstanceEvents_Created(t *testing.T) {
+func TestSystemdProvider_InstanceEvents_NewUnit(t *testing.T) {
 	m := newMockSystemd(t, nil)
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventStarted},
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
-	m.AddUnit(mockUnitConfig{
-		name:         "web.service",
-		active:       true,
-		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
-	})
+	m.AddUnit(mockUnitConfig{name: "web.service", active: true})
 
-	// SubscribeUnitsContext has no empty-batch signal. The first unit it sees
-	// is therefore the baseline, even though the manager began empty.
 	expectStarted(t, stream, "web.service")
 }
 
@@ -273,7 +230,7 @@ func TestSystemdProvider_InstanceEvents_DeactivatingEmitsOneStopped(t *testing.T
 	expectNoEvent(t, stream)
 }
 
-func TestSystemdProvider_InstanceEvents_ReloadDoesNotEmitStarted(t *testing.T) {
+func TestSystemdProvider_InstanceEvents_ReloadSettlesEmitsStarted(t *testing.T) {
 	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
@@ -287,7 +244,10 @@ func TestSystemdProvider_InstanceEvents_ReloadDoesNotEmitStarted(t *testing.T) {
 	m.SetStatus("web.service", "reloading")
 	expectNoEvent(t, stream)
 	m.SetStatus("web.service", "active")
-	expectNoEvent(t, stream)
+
+	// Transient states are skipped; the settle back into active is reported
+	// as a start.
+	expectStarted(t, stream, "web.service")
 }
 
 func TestSystemdProvider_InstanceEvents_BaselineReloadingEmitsStartedWhenActive(t *testing.T) {
@@ -328,25 +288,24 @@ func TestSystemdProvider_InstanceEvents_BaselineDeactivatingEmitsStopped(t *test
 	assert.Equal(t, event.Info.Name, "web.service")
 }
 
-func TestSystemdProvider_InstanceEvents_UnloadRunningUnitEmitsStoppedNotRemoved(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{
-		name:         "web.service",
-		active:       true,
-		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
-	}})
+func TestSystemdProvider_InstanceEvents_UnloadEmitsRemoved(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventStopped, provider.InstanceEventRemoved},
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventRemoved},
 	})
 
 	expectStarted(t, stream, "web.service")
 	m.UnloadUnit("web.service")
+
+	// systemd unloads inactive units, which removes them from the listing;
+	// the subscription reports that as a removal.
 	ev := expectEvent(t, stream)
-	assert.Equal(t, ev.Type, provider.InstanceEventStopped)
-	expectNoEvent(t, stream)
+	assert.Equal(t, ev.Type, provider.InstanceEventRemoved)
+	assert.Equal(t, ev.Info.Name, "web.service")
 }
 
 func TestSystemdProvider_InstanceEvents_Removed(t *testing.T) {
@@ -365,28 +324,6 @@ func TestSystemdProvider_InstanceEvents_Removed(t *testing.T) {
 	ev := expectEvent(t, stream)
 	assert.Equal(t, ev.Type, provider.InstanceEventRemoved)
 	assert.Equal(t, ev.Info.Name, "web.service")
-}
-
-func TestSystemdProvider_InstanceEvents_UnloadedNotRemoved(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{
-		name:         "web.service",
-		active:       true,
-		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
-	}})
-	p := newProviderForTest(t, m, eventInterval, nil)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventRemoved},
-	})
-
-	expectStarted(t, stream, "web.service")
-	m.UnloadUnit("web.service")
-
-	// systemd unloads inactive units, which removes them from the listing;
-	// the unit file still exists, so no removed event may be emitted.
-	expectNoEvent(t, stream)
 }
 
 func TestSystemdProvider_InstanceEvents_ContextCancel(t *testing.T) {
