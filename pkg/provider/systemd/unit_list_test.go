@@ -76,16 +76,83 @@ func TestSystemdProvider_InstanceGroups(t *testing.T) {
 	})
 }
 
-func TestSystemdProvider_InstanceList_AllIncludesUnloadedUnitFile(t *testing.T) {
-	path := writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a\n")
+func TestSystemdProvider_InstanceList_All_SkipsNotFoundUnits(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{
+			name:         "ghost.service",
+			loadState:    "not-found",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+		{
+			name:         "web.service",
+			active:       true,
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+	})
+	p := newProviderForTest(t, m, time.Second, nil)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	// All=true lists all loaded units; the not-found ghost must not appear.
+	all, err := p.InstanceList(ctx, provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, all, []sablier.InstanceConfiguration{
+		{Name: "web.service", Groups: []string{"default"}, Enabled: "true"},
+	})
+
+	// All=false lists only active units; the ghost is inactive and excluded.
+	active, err := p.InstanceList(ctx, provider.InstanceListOptions{})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, active, []sablier.InstanceConfiguration{
+		{Name: "web.service", Groups: []string{"default"}, Enabled: "true"},
+	})
+}
+
+func TestSystemdProvider_InstanceList_All_NotLoadedExcluded(t *testing.T) {
+	path := writeUnitFile(t, "[X-Sablier]\nEnable=true\n")
 	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", fragmentPath: path}})
 	m.UnloadUnit("web.service")
 	p := newProviderForTest(t, m, time.Second, nil)
 
+	// All=true is based on loaded units; a unit that was never loaded (or
+	// has already been garbage-collected) is not listed.
 	instances, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
 	assert.NilError(t, err)
-	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
-		{Name: "web.service", Groups: []string{"team-a"}, Enabled: "true"},
+	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{})
+}
+
+func TestSystemdProvider_InstanceList_UnitPatterns(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{
+			name:         "web.service",
+			active:       true,
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+		{
+			name:         "db.service",
+			active:       true,
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+		{
+			name:         "ghost.service",
+			loadState:    "not-found",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+	})
+	p := newProviderForTest(t, m, time.Second, nil)
+	p.unitPatterns = []string{"web.service"}
+
+	active, err := p.InstanceList(t.Context(), provider.InstanceListOptions{})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, active, []sablier.InstanceConfiguration{
+		{Name: "web.service", Groups: []string{"default"}, Enabled: "true"},
+	})
+
+	all, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, all, []sablier.InstanceConfiguration{
+		{Name: "web.service", Groups: []string{"default"}, Enabled: "true"},
 	})
 }
 

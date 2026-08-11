@@ -1,6 +1,7 @@
 package sabliercmd
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -75,6 +76,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.proxmox-lxc.tls-insecure", startCmd.Flags().Lookup("provider.proxmox-lxc.tls-insecure"))
 	startCmd.Flags().BoolVar(&conf.Provider.Systemd.UserInstance, "provider.systemd.user-instance", false, "Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode)")
 	_ = viper.BindPFlag("provider.systemd.user-instance", startCmd.Flags().Lookup("provider.systemd.user-instance"))
+	startCmd.Flags().StringSliceVar(&conf.Provider.Systemd.UnitPatterns, "provider.systemd.unit-patterns", nil, "Restrict managed units to those matching the given glob patterns (e.g. podman-*.service)")
+	_ = viper.BindPFlag("provider.systemd.unit-patterns", startCmd.Flags().Lookup("provider.systemd.unit-patterns"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
@@ -185,8 +188,25 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
-			val := v.Get(f.Name)
-			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			if f.Value.Type() == "stringSlice" {
+				// A slice must be re-encoded as CSV (with quoting when
+				// needed); fmt.Sprintf("%v", ...) would produce Go slice
+				// syntax like "[a b c]" that the flag cannot parse back.
+				_ = cmd.Flags().Set(f.Name, stringSliceToString(v.GetStringSlice(f.Name)))
+			} else {
+				val := v.Get(f.Name)
+				_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			}
 		}
 	})
+}
+
+// stringSliceToString encodes a string slice as the CSV representation that
+// pflag StringSlice flags expect.
+func stringSliceToString(values []string) string {
+	var b strings.Builder
+	w := csv.NewWriter(&b)
+	_ = w.Write(values)
+	w.Flush()
+	return strings.TrimSuffix(b.String(), "\n")
 }

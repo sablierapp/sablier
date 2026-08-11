@@ -36,7 +36,8 @@
       "TLSInsecure": false
     },
     "Systemd": {
-      "UserInstance": false
+      "UserInstance": false,
+      "UnitPatterns": null
     }
   },
   "Sessions": {

@@ -10,7 +10,7 @@ import (
 
 // NewForTest creates a Provider with a custom poll interval for testing.
 func NewForTest(ctx context.Context, con *dbus.Conn, logger *slog.Logger, pollInterval time.Duration) (*Provider, error) {
-	p, err := New(ctx, con, logger)
+	p, err := New(ctx, con, logger, nil)
 	if err != nil {
 		return nil, err
 	}

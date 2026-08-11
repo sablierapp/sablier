@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -25,6 +26,8 @@ type mockUnitConfig struct {
 	name         string
 	active       bool
 	fragmentPath string
+	// loadState overrides the derived LoadState when set (default "loaded").
+	loadState string
 	// status overrides the derived ActiveState when set.
 	status string
 }
@@ -50,6 +53,7 @@ type mockSystemd struct {
 type mockUnit struct {
 	active       bool
 	fragmentPath string
+	loadState    string
 	status       string
 }
 
@@ -169,7 +173,7 @@ func newProviderForTest(t *testing.T, m *mockSystemd, interval time.Duration, lo
 	})
 	assert.NilError(t, err)
 	t.Cleanup(con.Close)
-	p, err := New(t.Context(), con, logger)
+	p, err := New(t.Context(), con, logger, nil)
 	assert.NilError(t, err)
 	p.pollInterval = interval
 	return p
@@ -223,7 +227,7 @@ func (m *mockSystemd) AddUnit(c mockUnitConfig) {
 		assert.NilError(m.t, os.WriteFile(fragmentPath, content, 0o644))
 		m.files[c.name] = fragmentPath
 	}
-	m.units[c.name] = &mockUnit{active: c.active, fragmentPath: fragmentPath, status: c.status}
+	m.units[c.name] = &mockUnit{active: c.active, fragmentPath: fragmentPath, loadState: c.loadState, status: c.status}
 	assert.NilError(m.t, m.conn.ExportAll(&mockUnitObject{m: m, name: c.name}, unitObjectPath(c.name), "org.freedesktop.DBus.Properties"))
 }
 
@@ -279,10 +283,14 @@ func unitState(u *mockUnit) (string, string) {
 
 func (m *mockSystemd) statusOf(name string, u *mockUnit) unitStatus {
 	activeState, subState := unitState(u)
+	loadState := u.loadState
+	if loadState == "" {
+		loadState = "loaded"
+	}
 	return unitStatus{
 		Name:        name,
 		Description: name,
-		LoadState:   "loaded",
+		LoadState:   loadState,
 		ActiveState: activeState,
 		SubState:    subState,
 		Path:        unitObjectPath(name),
@@ -337,9 +345,42 @@ func (m *mockSystemd) ListUnitsFiltered(states []string) ([]unitStatus, error) {
 	}
 	out := make([]unitStatus, 0)
 	for _, u := range units {
-		for _, s := range states {
-			if u.ActiveState == s {
+		if stateOverlaps(states, u) {
+			out = append(out, u)
+		}
+	}
+	return out, nil
+}
+
+// stateOverlaps mirrors systemd's unit_passes_filter: a unit passes the
+// states filter if any requested state equals its LoadState, ActiveState or
+// SubState (logical OR across all three).
+func stateOverlaps(states []string, u unitStatus) bool {
+	candidates := []string{u.LoadState, u.ActiveState, u.SubState}
+	for _, s := range states {
+		for _, c := range candidates {
+			if s == c {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *mockSystemd) ListUnitsByPatterns(states []string, patterns []string) ([]unitStatus, error) {
+	units, err := m.ListUnitsFiltered(states)
+	if err != nil {
+		return nil, err
+	}
+	if len(patterns) == 0 {
+		return units, nil
+	}
+	out := make([]unitStatus, 0)
+	for _, u := range units {
+		for _, pattern := range patterns {
+			if ok, err := path.Match(pattern, u.Name); err == nil && ok {
 				out = append(out, u)
+				break
 			}
 		}
 	}

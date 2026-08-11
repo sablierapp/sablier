@@ -21,8 +21,14 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	errC := make(chan error, 1)
 
 	// The subscription polls ListUnits every pollInterval and reports changed
-	// units; removed units arrive with a nil status.
-	changes, errs := p.Con.SubscribeUnitsCustomContext(ctx, p.pollInterval, eventBufferSize, unitStatusChanged, nil)
+	// units; removed units arrive with a nil status. When unit patterns are
+	// configured, unrelated units are filtered out before the diff so the
+	// baseline and every poll only touch matching units.
+	var filter func(string) bool
+	if len(p.unitPatterns) > 0 {
+		filter = func(name string) bool { return !p.matchUnitPattern(name) }
+	}
+	changes, errs := p.Con.SubscribeUnitsCustomContext(ctx, p.pollInterval, eventBufferSize, unitStatusChanged, filter)
 
 	go func() {
 		defer close(eventsC)
@@ -82,6 +88,8 @@ func (p *Provider) buildEvent(ctx context.Context, name string, status *dbus.Uni
 			Type: provider.InstanceEventRemoved,
 			Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSystemd},
 		}, true
+	case status.LoadState == "not-found":
+		return sablier.InstanceEvent{}, false
 	case status.ActiveState == "active":
 		if !wantStarted {
 			return sablier.InstanceEvent{}, false

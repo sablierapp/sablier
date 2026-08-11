@@ -58,11 +58,17 @@ func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, err
 }
 
 func (p *Provider) listUnits(ctx context.Context, options provider.InstanceListOptions) ([]Unit, error) {
+
+	states := []string{"active"}
 	if options.All {
-		return p.listUnitFiles(ctx)
+		states = []string{"loaded"}
 	}
 
-	unitStatuses, err := p.Con.ListUnitsFilteredContext(ctx, []string{"active"})
+	patterns := p.unitPatterns
+	if len(patterns) == 0 {
+		patterns = nil
+	}
+	unitStatuses, err := p.Con.ListUnitsByPatternsContext(ctx, states, patterns)
 	if err != nil {
 		return nil, err
 	}
@@ -80,41 +86,6 @@ func (p *Provider) listUnits(ctx context.Context, options provider.InstanceListO
 				labels: labels,
 			})
 		}
-	}
-
-	return units, nil
-}
-
-func (p *Provider) listUnitFiles(ctx context.Context) ([]Unit, error) {
-	files, err := p.Con.ListUnitFilesContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	units := make([]Unit, 0)
-	seen := make(map[string]struct{})
-	for _, file := range files {
-		name := unitNameFromPath(file.Path)
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-
-		labels, err := labelsFromUnitFile(file.Path)
-		if err != nil {
-			p.l.DebugContext(ctx, "cannot read unit file, skipping unit", slog.String("name", name), slog.Any("error", err))
-			continue
-		}
-		if labels[sablier.LabelEnable] != "true" {
-			continue
-		}
-		seen[name] = struct{}{}
-		units = append(units, Unit{
-			status: dbus.UnitStatus{Name: name},
-			labels: labels,
-		})
 	}
 
 	slices.SortFunc(units, func(a, b Unit) int { return cmp.Compare(a.status.Name, b.status.Name) })

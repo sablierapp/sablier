@@ -37,7 +37,9 @@
     },
     "Systemd": {
       "UserInstance": false,
-      "UnitPatterns": null
+      "UnitPatterns": [
+        "podman-*.service"
+      ]
     }
   },
   "Sessions": {

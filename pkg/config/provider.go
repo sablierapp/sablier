@@ -160,6 +160,18 @@ type Systemd struct {
 	// Default: false
 	// Since: NEXT_RELEASE
 	UserInstance bool
+
+	// UnitPatterns optionally restricts the units Sablier manages to those
+	// matching any of the given glob patterns (e.g. "podman-*.service").
+	// When non-empty it is applied as a server-side pre-filter on listing
+	// and as a filter on the event stream, which reduces the amount of unit
+	// files Sablier has to inspect. Units still need the X-Sablier section
+	// with Enable=true to be considered managed.
+	// Env: SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS
+	// CLI: --provider.systemd.unit-patterns
+	// Default: []
+	// Since: NEXT_RELEASE
+	UnitPatterns []string
 }
 
 // ProxmoxLXC holds the Proxmox VE LXC provider configuration.

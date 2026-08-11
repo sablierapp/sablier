@@ -120,7 +120,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, fmt.Errorf("cannot connect to systemd dbus: %w", err)
 		}
 
-		provider, err := systemd.New(ctx, con, logger)
+		provider, err := systemd.New(ctx, con, logger, config.Systemd.UnitPatterns)
 		if err != nil {
 			con.Close()
 			return nil, err

@@ -1,0 +1,4 @@
+provider:
+  systemd:
+    unit-patterns:
+      - podman-*.service

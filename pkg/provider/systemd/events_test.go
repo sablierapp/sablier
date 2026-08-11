@@ -326,6 +326,26 @@ func TestSystemdProvider_InstanceEvents_Removed(t *testing.T) {
 	assert.Equal(t, ev.Info.Name, "web.service")
 }
 
+func TestSystemdProvider_InstanceEvents_SkipsNotFoundUnits(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{name: "ghost.service", loadState: "not-found"},
+		{name: "web.service", active: true},
+	})
+	p := newProviderForTest(t, m, eventInterval, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventStopped},
+	})
+
+	// The baseline reports both units; the not-found ghost must be silently
+	// skipped (no bogus stopped event, no failed inspect warning) while the
+	// real unit still produces its started event.
+	expectStarted(t, stream, "web.service")
+	expectNoEvent(t, stream)
+}
+
 func TestSystemdProvider_InstanceEvents_ContextCancel(t *testing.T) {
 	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
 	p := newProviderForTest(t, m, eventInterval, nil)
