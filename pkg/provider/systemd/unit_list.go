@@ -75,7 +75,7 @@ func (p *Provider) listUnits(ctx context.Context, options provider.InstanceListO
 
 	units := make([]Unit, 0)
 	for _, unitStatus := range unitStatuses {
-		labels, err := p.readLabels(ctx, unitStatus.Name)
+		labels, err := p.getLabels(ctx, unitStatus.Name)
 		if err != nil {
 			p.l.DebugContext(ctx, "cannot read unit file, skipping unit", slog.String("name", unitStatus.Name), slog.Any("error", err))
 			continue

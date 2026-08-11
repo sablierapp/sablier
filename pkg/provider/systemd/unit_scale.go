@@ -192,9 +192,12 @@ func deviceProperties(profile sablier.ResourceProfile) []string {
 }
 
 func (p *Provider) scaleConfig(ctx context.Context, name string) (sablier.ScaleConfig, error) {
-	labels, err := p.readManagedLabels(ctx, name)
+	labels, err := p.getLabels(ctx, name)
 	if err != nil {
 		return sablier.ScaleConfig{}, err
+	}
+	if labels[sablier.LabelEnable] != "true" {
+		return sablier.ScaleConfig{}, fmt.Errorf("systemd unit %q is not enabled for Sablier", name)
 	}
 	return sablier.ScaleConfigFromLabels(labels), nil
 }

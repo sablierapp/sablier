@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -152,4 +153,37 @@ func TestSystemdProvider_InstanceInspect_UnloadedUnitFile(t *testing.T) {
 	assert.Equal(t, info.Status, sablier.InstanceStatusStopped)
 	assert.Equal(t, info.Enabled, "true")
 	assert.DeepEqual(t, info.Groups, []string{"team-a"})
+}
+
+func TestSystemdProvider_InstanceInspect_UsesLabelCache(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{{
+		name:         "web.service",
+		active:       true,
+		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a\n"),
+	}})
+	p := newProviderForTest(t, m, time.Second, nil)
+	// The mock serves the unit's fragment path from its own unit dir copy.
+	path := m.files["web.service"]
+
+	// First inspect populates the cache.
+	info, err := p.InstanceInspect(t.Context(), "web.service")
+	assert.NilError(t, err)
+	assert.DeepEqual(t, info.Groups, []string{"team-a"})
+
+	// Rewrite the file with identical length and restore the mtime so the
+	// cache considers it unchanged: labels must come from the cache.
+	before, err := os.Stat(path)
+	assert.NilError(t, err)
+	assert.NilError(t, os.WriteFile(path, []byte("[X-Sablier]\nEnable=true\nGroup=team-b\n"), 0o644))
+	assert.NilError(t, os.Chtimes(path, before.ModTime(), before.ModTime()))
+
+	info, err = p.InstanceInspect(t.Context(), "web.service")
+	assert.NilError(t, err)
+	assert.DeepEqual(t, info.Groups, []string{"team-a"})
+
+	// A real edit (mtime change) invalidates the cache entry.
+	assert.NilError(t, os.WriteFile(path, []byte("[X-Sablier]\nEnable=true\nGroup=team-c\n"), 0o644))
+	info, err = p.InstanceInspect(t.Context(), "web.service")
+	assert.NilError(t, err)
+	assert.DeepEqual(t, info.Groups, []string{"team-c"})
 }

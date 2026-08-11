@@ -73,12 +73,7 @@ func (p *Provider) getUnit(ctx context.Context, name string) (Unit, error) {
 		return Unit{}, fmt.Errorf("unit %q not found", name)
 	}
 
-	dbusProps, err := p.Con.GetUnitPropertiesContext(ctx, name)
-	if err != nil {
-		return Unit{}, err
-	}
-
-	labels, err := labelsFromProperties(dbusProps)
+	labels, err := p.getLabels(ctx, name)
 	if err != nil {
 		return Unit{}, err
 	}

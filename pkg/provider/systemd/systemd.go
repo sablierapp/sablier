@@ -66,7 +66,10 @@ func (p *Provider) matchUnitPattern(name string) bool {
 	return false
 }
 
-func (p *Provider) readLabels(ctx context.Context, name string) (map[string]string, error) {
+// getLabels returns the parsed [X-Sablier] labels for the named unit. It
+// fetches the unit's D-Bus properties for the fragment path and serves the
+// parsed labels through the label cache.
+func (p *Provider) getLabels(ctx context.Context, name string) (map[string]string, error) {
 	props, err := p.Con.GetUnitPropertiesContext(ctx, name)
 	if err != nil {
 		return nil, err
@@ -116,26 +119,6 @@ func (p *Provider) labelsFromUnitFileCached(path string) (map[string]string, err
 
 	p.labelCache.units[path] = labelCacheEntry{labels: labels, mtime: info.ModTime(), size: info.Size()}
 	return labels, nil
-}
-
-func (p *Provider) readManagedLabels(ctx context.Context, name string) (map[string]string, error) {
-	labels, err := p.readLabels(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	if labels[sablier.LabelEnable] != "true" {
-		return nil, fmt.Errorf("systemd unit %q is not enabled for Sablier", name)
-	}
-	return labels, nil
-}
-
-func labelsFromProperties(dbusProps map[string]any) (map[string]string, error) {
-	fragmentPath, ok := dbusProps["FragmentPath"].(string)
-	if !ok || fragmentPath == "" {
-		return nil, nil
-	}
-
-	return labelsFromUnitFile(fragmentPath)
 }
 
 func labelsFromUnitFile(path string) (map[string]string, error) {
