@@ -27,17 +27,20 @@ type SessionStateResponse struct {
 }
 
 // InstanceEntryResponse is one instance of the session, with the error that
-// prevented it from starting, if any.
+// prevented it from starting, if any. Optional marks a best-effort instance
+// (requested with the "optional:" name prefix) whose readiness and error do
+// not gate the session status.
 type InstanceEntryResponse struct {
 	Instance sablier.InstanceInfo `json:"instance"`
 	Error    string               `json:"error,omitempty"`
+	Optional bool                 `json:"optional,omitempty"`
 }
 
 // NewSessionResponse maps a domain session to its wire representation.
 func NewSessionResponse(s *sablier.SessionState) SessionResponse {
 	instances := make([]InstanceEntryResponse, 0, len(s.Instances))
 	for _, v := range s.Instances {
-		entry := InstanceEntryResponse{Instance: v.Instance}
+		entry := InstanceEntryResponse{Instance: v.Instance, Optional: v.Optional}
 		if v.Error != nil {
 			entry.Error = v.Error.Error()
 		}
