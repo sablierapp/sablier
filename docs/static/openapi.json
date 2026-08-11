@@ -300,7 +300,8 @@
           "docker",
           "kubernetes",
           "podman",
-          "swarm"
+          "swarm",
+          "systemd"
         ],
         "type": "string"
       },

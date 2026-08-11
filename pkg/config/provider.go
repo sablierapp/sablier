@@ -8,7 +8,7 @@ import (
 // Provider holds the provider configurations.
 type Provider struct {
 	// Name selects the container runtime to manage workloads.
-	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc.
+	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd.
 	// Env: SABLIER_PROVIDER_NAME
 	// CLI: --provider.name
 	// Default: "docker"

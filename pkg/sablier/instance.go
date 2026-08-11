@@ -35,6 +35,7 @@ const (
 	ProviderSwarm      ProviderType = "swarm"
 	ProviderKubernetes ProviderType = "kubernetes"
 	ProviderPodman     ProviderType = "podman"
+	ProviderSystemd    ProviderType = "systemd"
 )
 
 type InstanceInfo struct {

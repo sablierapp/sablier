@@ -1,6 +1,6 @@
 ---
 title: Scale block I/O
-description: Throttle a workload's block I/O while idle (Docker only).
+description: Throttle a workload's block I/O while idle on Docker or systemd.
 weight: 124
 aliases:
   - /features/scale-mode/block-io/
@@ -10,12 +10,13 @@ compatibility:
   kubernetes: unsupported
   podman: unsupported
   proxmox: impossible
+  systemd: supported
 example: scale-mode
 ---
 
 {{< compatibility >}}
 
-This guide shows you how to throttle an instance's **block I/O** when idle on the **Docker** provider, using the `sablier.idle.blkio-*` and `sablier.active.blkio-*` labels:
+This guide shows you how to throttle an instance's **block I/O** when idle on the **Docker or systemd** provider, using the `sablier.idle.blkio-*` and `sablier.active.blkio-*` labels:
 
 ```yaml
 # compose.yml
@@ -47,7 +48,7 @@ flowchart LR
 ```
 
 {{< callout type="info" >}}
-Block I/O throttling is currently **Docker only**. Docker Swarm, Kubernetes and Podman ignore these labels.
+Block I/O throttling is supported by Docker and systemd. Docker Swarm, Kubernetes and Podman ignore these labels.
 {{< /callout >}}
 
 ## Labels
@@ -65,9 +66,11 @@ Block I/O throttling is currently **Docker only**. Docker Swarm, Kubernetes and 
 - `*-bps` rates accept Docker-style byte units (`10m` = 10 MB/s, `100k` = 100 KB/s).
 - `*-iops` rates are plain integers.
 - Per-device values are `path:value` pairs; separate multiple devices with commas.
-- As with CPU/memory, a limit set on the idle profile is **not** cleared automatically on wake-up. To restore full I/O, set the corresponding `sablier.active.*` label (e.g. a higher `blkio-weight` or a larger rate).
+- As with CPU/memory, Docker does not automatically clear a limit set on the idle profile. Set the corresponding `sablier.active.*` label to restore it. Systemd clears omitted active per-device limits.
 
 See [Applying labels](/reference/labels/#applying-labels) for how each provider expresses labels.
+
+For systemd, use the equivalent `[X-Sablier]` keys, such as `IdleBlkioWeight` and `ActiveBlkioDeviceReadBps`. The values are passed to systemd's `IOWeight` and `IO*Max` resource-control properties.
 
 {{< callout type="warning" >}}
 **Per-device blkio limits require a Docker daemon with API version 1.55 or newer.** Older daemons accept the update request but silently ignore the per-device fields (`blkio-weight-device`, `blkio-device-read-bps`, `blkio-device-write-bps`, `blkio-device-read-iops`, `blkio-device-write-iops`). The container's cgroup is left unchanged. See [moby/moby#52650](https://github.com/moby/moby/issues/52650). Sablier logs a warning when it detects this situation. The global `blkio-weight` label is unaffected and works on all supported Docker versions.

@@ -114,13 +114,14 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
-| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc] |
+| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd] |
 | [`--provider.podman.uri`](#opt-provider-podman-uri) | Uri is the URI to connect to the Podman service. |
 | [`--provider.proxmox-lxc.tls-insecure`](#opt-provider-proxmox-lxc-tls-insecure) | Skip TLS certificate verification for Proxmox VE API |
 | [`--provider.proxmox-lxc.token-id`](#opt-provider-proxmox-lxc-token-id) | Proxmox VE API token ID (e.g. root@pam!sablier) |
 | [`--provider.proxmox-lxc.token-secret`](#opt-provider-proxmox-lxc-token-secret) | Proxmox VE API token secret |
 | [`--provider.proxmox-lxc.url`](#opt-provider-proxmox-lxc-url) | Proxmox VE API URL (e.g. https://proxmox:8006/api2/json) |
 | [`--provider.reject-unlabeled-requests`](#opt-provider-reject-unlabeled-requests) | Reject direct named requests for instances without sablier.enable=true |
+| [`--provider.systemd.user-instance`](#opt-provider-systemd-user-instance) | Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode) |
 | [`--provider.verify-enabled-on-expiration`](#opt-provider-verify-enabled-on-expiration) | Verify sablier.enable=true before stopping expired instances |
 
 ### `--provider.auto-stop-externally-started` {#opt-provider-auto-stop-externally-started}
@@ -316,7 +317,7 @@ SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA=false
 
 ### `--provider.name` {#opt-provider-name}
 
-Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc]
+Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd]
 
 {{< badge "string" >}} {{< badge content="Default: docker" >}} {{< badge content="Since v1.0.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.0.0" >}}
 
@@ -328,6 +329,7 @@ Accepted values:
 - `kubernetes`
 - `podman`
 - `proxmox_lxc`
+- `systemd`
 
 ```yaml
 # sablier.yaml
@@ -466,6 +468,27 @@ SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS=false
 
 # Command-line flag
 --provider.reject-unlabeled-requests=false
+```
+
+### `--provider.systemd.user-instance` {#opt-provider-systemd-user-instance}
+
+Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode)
+
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  systemd:
+    user-instance: false
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_SYSTEMD_USER_INSTANCE=false
+
+# Command-line flag
+--provider.systemd.user-instance=false
 ```
 
 ### `--provider.verify-enabled-on-expiration` {#opt-provider-verify-enabled-on-expiration}

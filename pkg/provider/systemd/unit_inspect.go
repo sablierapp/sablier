@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -13,17 +14,63 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot inspect systemd unit: %w", err)
 	}
 
-	// "active", "inactive", "failed", "activating", "deactivating", "maintenance", "reloading" or "refreshing"
-	switch unit.status.ActiveState {
-	case "inactive", "deactivating", "maintenance", "reloading", "refreshing":
-		return sablier.NotReadyInstanceState(name, 0, p.desiredReplicas), nil
-	case "active":
-		return sablier.ReadyInstanceState(name, p.desiredReplicas), nil
-	case "failed":
-		return sablier.UnrecoverableInstanceState(name, fmt.Sprintf("system unit failed"), p.desiredReplicas), nil
-	default:
-		return sablier.UnrecoverableInstanceState(name, fmt.Sprintf("systemd unit status \"%s\" not handled", unit.status.ActiveState), p.desiredReplicas), nil
+	return p.infoFromUnit(unit), nil
+}
+
+func (p *Provider) infoFromStatus(ctx context.Context, status dbus.UnitStatus) (sablier.InstanceInfo, error) {
+	labels, err := p.readLabels(ctx, status.Name)
+	if err != nil {
+		return sablier.InstanceInfo{}, err
 	}
+	return p.infoFromUnit(Unit{status: status, labels: labels}), nil
+}
+
+func (p *Provider) infoFromUnit(unit Unit) sablier.InstanceInfo {
+	name := unit.status.Name
+	var info sablier.InstanceInfo
+	switch unit.status.ActiveState {
+	case "inactive", "deactivating", "maintenance":
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
+		}
+	case "activating", "reloading", "refreshing":
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStarting,
+		}
+	case "active":
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 1,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusReady,
+		}
+	case "failed":
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusError,
+			Message:         "systemd unit failed",
+		}
+	default:
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusError,
+			Message:         fmt.Sprintf("systemd unit status %q not handled", unit.status.ActiveState),
+		}
+	}
+
+	info.Provider = sablier.ProviderSystemd
+	sablier.PopulateEnabledAndGroup(&info, unit.labels)
+	return info
 }
 
 func (p *Provider) getUnit(ctx context.Context, name string) (Unit, error) {
@@ -31,19 +78,22 @@ func (p *Provider) getUnit(ctx context.Context, name string) (Unit, error) {
 	if err != nil {
 		return Unit{}, err
 	}
-
-	if len(unitStatuses) == 0 {
-		return Unit{}, fmt.Errorf("unit %s not found", name)
+	if len(unitStatuses) == 0 || unitStatuses[0].LoadState == "not-found" {
+		return Unit{}, fmt.Errorf("unit %q not found", name)
 	}
 
-	unitStatus := unitStatuses[0]
-	props, err := p.parseSablierProperties(unitStatus)
+	dbusProps, err := p.Con.GetUnitPropertiesContext(ctx, name)
+	if err != nil {
+		return Unit{}, err
+	}
+
+	labels, err := labelsFromProperties(dbusProps)
 	if err != nil {
 		return Unit{}, err
 	}
 
 	return Unit{
-		status: unitStatus,
-		props:  props,
+		status: unitStatuses[0],
+		labels: labels,
 	}, nil
 }

@@ -73,6 +73,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.proxmox-lxc.token-secret", startCmd.Flags().Lookup("provider.proxmox-lxc.token-secret"))
 	startCmd.Flags().BoolVar(&conf.Provider.ProxmoxLXC.TLSInsecure, "provider.proxmox-lxc.tls-insecure", false, "Skip TLS certificate verification for Proxmox VE API")
 	_ = viper.BindPFlag("provider.proxmox-lxc.tls-insecure", startCmd.Flags().Lookup("provider.proxmox-lxc.tls-insecure"))
+	startCmd.Flags().BoolVar(&conf.Provider.Systemd.UserInstance, "provider.systemd.user-instance", false, "Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode)")
+	_ = viper.BindPFlag("provider.systemd.user-instance", startCmd.Flags().Lookup("provider.systemd.user-instance"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")

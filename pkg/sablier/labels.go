@@ -155,7 +155,7 @@ const (
 	// type: integer `10`-`1000`
 	// example: "100"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only.
+	// providers: Docker and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioWeight = "sablier.idle.blkio-weight"
 
@@ -165,7 +165,7 @@ const (
 	// type: integer `10`-`1000`
 	// example: "500"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only.
+	// providers: Docker and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioWeight = "sablier.active.blkio-weight"
 
@@ -175,7 +175,7 @@ const (
 	// type: `path:weight` list
 	// example: "/dev/sda:100"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; per-device limits require daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioWeightDevice = "sablier.idle.blkio-weight-device"
 
@@ -185,7 +185,7 @@ const (
 	// type: `path:weight` list
 	// example: "/dev/sda:500"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; per-device limits require daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioWeightDevice = "sablier.active.blkio-weight-device"
 
@@ -195,7 +195,7 @@ const (
 	// type: `path:rate` list
 	// example: "/dev/sda:10m"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioReadBps = "sablier.idle.blkio-device-read-bps"
 
@@ -205,7 +205,7 @@ const (
 	// type: `path:rate` list
 	// example: "/dev/sda:100m"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioReadBps = "sablier.active.blkio-device-read-bps"
 
@@ -215,7 +215,7 @@ const (
 	// type: `path:rate` list
 	// example: "/dev/sda:10m"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioWriteBps = "sablier.idle.blkio-device-write-bps"
 
@@ -225,7 +225,7 @@ const (
 	// type: `path:rate` list
 	// example: "/dev/sda:100m"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioWriteBps = "sablier.active.blkio-device-write-bps"
 
@@ -234,7 +234,7 @@ const (
 	// type: `path:iops` list
 	// example: "/dev/sda:100"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioReadIOps = "sablier.idle.blkio-device-read-iops"
 
@@ -244,7 +244,7 @@ const (
 	// type: `path:iops` list
 	// example: "/dev/sda:1000"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioReadIOps = "sablier.active.blkio-device-read-iops"
 
@@ -254,7 +254,7 @@ const (
 	// type: `path:iops` list
 	// example: "/dev/sda:100"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelIdleBlkioWriteIOps = "sablier.idle.blkio-device-write-iops"
 
@@ -264,7 +264,7 @@ const (
 	// type: `path:iops` list
 	// example: "/dev/sda:1000"
 	// feature: /how-to-guides/scaling-resources/scale-blkio/
-	// providers: Docker only; requires daemon API >= 1.55.
+	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: NEXT_RELEASE
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
 )

@@ -134,6 +134,7 @@ func TestPrecedence(t *testing.T) {
 			"--provider.kubernetes.delimiter", "_",
 			"--provider.kubernetes.ready-on-first-replica=true",
 			"--provider.podman.uri", "unix:///run/podman/podman.sock.cli",
+			"--provider.systemd.user-instance=true",
 			"--provider.docker.strategy", "pause",
 			"--server.port", "3333",
 			"--server.base-path", "/cli/",

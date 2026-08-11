@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: differs
   proxmox: impossible
+  systemd: differs
 example: scale-mode
 ---
 
@@ -58,7 +59,7 @@ Every scale-mode label comes in an `idle` and an `active` variant:
 
 When `sablier.idle.replicas` is `0` (the default), Sablier stops the workload on session expiry and restarts it on demand. Set it to `1` or higher to keep the workload running with optional resource throttling.
 
-A limit set on the `idle` profile is **not** cleared automatically on wake-up. Set the corresponding `active` label to restore it.
+A limit set on the `idle` profile is generally **not** cleared automatically on wake-up, so set the corresponding `active` label to restore it. The systemd provider clears omitted active CPU, memory, and per-device I/O limits.
 
 ## Provider specifics
 
@@ -84,6 +85,9 @@ Scale mode changes resource **limits**, not requests. Ensure your nodes have suf
 {{< /provider-tab >}}
 {{< provider-tab name="podman" >}}
 Identical to Docker: decimal CPU cores and Docker-style memory units, same labels.
+{{< /provider-tab >}}
+{{< provider-tab name="systemd" >}}
+Use decimal CPU cores and Docker-style memory units in `[X-Sablier]` keys such as `IdleCPU` and `ActiveMemory`. Systemd supports CPU, memory, and block-I/O profiles for one running unit; replica values above `1` are capped at `1`.
 {{< /provider-tab >}}
 {{< /provider-tabs >}}
 

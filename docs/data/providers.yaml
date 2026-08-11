@@ -17,3 +17,6 @@
 - key: proxmox
   name: Proxmox LXC
   icon: proxmox.png
+- key: systemd
+  name: Systemd
+  icon: systemd.svg
