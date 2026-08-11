@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -15,14 +14,6 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	}
 
 	return p.infoFromUnit(unit), nil
-}
-
-func (p *Provider) infoFromStatus(ctx context.Context, status dbus.UnitStatus) (sablier.InstanceInfo, error) {
-	labels, err := p.readLabels(ctx, status.Name)
-	if err != nil {
-		return sablier.InstanceInfo{}, err
-	}
-	return p.infoFromUnit(Unit{status: status, labels: labels}), nil
 }
 
 func (p *Provider) infoFromUnit(unit Unit) sablier.InstanceInfo {

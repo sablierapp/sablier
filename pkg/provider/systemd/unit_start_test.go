@@ -100,7 +100,7 @@ func TestSystemdProvider_InstanceStart_LoadsUnloadedUnit(t *testing.T) {
 		name:         "web.service",
 		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
 	}})
-	m.UnloadUnitObject("web.service")
+	m.UnloadUnit("web.service")
 	p := newProviderForTest(t, m, time.Second, nil)
 
 	assert.NilError(t, p.InstanceStart(t.Context(), "web.service"))

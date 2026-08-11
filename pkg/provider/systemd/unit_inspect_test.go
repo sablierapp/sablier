@@ -144,7 +144,7 @@ func TestSystemdProvider_InstanceInspect_UnloadedUnitFile(t *testing.T) {
 		name:         "web.service",
 		fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a\n"),
 	}})
-	m.UnloadUnitObject("web.service")
+	m.UnloadUnit("web.service")
 	p := newProviderForTest(t, m, time.Second, nil)
 
 	info, err := p.InstanceInspect(t.Context(), "web.service")

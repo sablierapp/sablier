@@ -36,20 +36,12 @@ func New(ctx context.Context, con *dbus.Conn, logger *slog.Logger) (*Provider, e
 }
 
 func (p *Provider) readLabels(ctx context.Context, name string) (map[string]string, error) {
-	statuses, err := p.Con.ListUnitsByNamesContext(ctx, []string{name})
-	if err != nil {
-		return nil, err
-	}
-	if len(statuses) == 0 || statuses[0].LoadState == "not-found" {
-		return nil, fmt.Errorf("unit %q not found", name)
-	}
-
-	dbusProps, err := p.Con.GetUnitPropertiesContext(ctx, name)
+	props, err := p.Con.GetUnitPropertiesContext(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	return labelsFromProperties(dbusProps)
+	return labelsFromProperties(props)
 }
 
 func (p *Provider) readManagedLabels(ctx context.Context, name string) (map[string]string, error) {

@@ -242,11 +242,6 @@ func (m *mockSystemd) UnloadUnit(name string) {
 	delete(m.units, name)
 }
 
-func (m *mockSystemd) UnloadUnitObject(name string) {
-	m.UnloadUnit(name)
-	assert.NilError(m.t, m.conn.ExportAll(nil, unitObjectPath(name), "org.freedesktop.DBus.Properties"))
-}
-
 func (m *mockSystemd) Started() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -427,7 +422,13 @@ func (o *mockUnitObject) GetAll(iface string) (map[string]godbus.Variant, error)
 	}
 	u, ok := o.m.units[o.name]
 	if !ok {
-		return nil, fmt.Errorf("unit %s not loaded", o.name)
+		fragmentPath, ok := o.m.files[o.name]
+		if !ok {
+			return nil, fmt.Errorf("unit %s not loaded", o.name)
+		}
+		u = &mockUnit{fragmentPath: fragmentPath}
+		o.m.units[o.name] = u
+		assert.NilError(o.m.t, o.m.conn.ExportAll(o, unitObjectPath(o.name), "org.freedesktop.DBus.Properties"))
 	}
 	activeState, subState := unitState(u)
 	return map[string]godbus.Variant{
