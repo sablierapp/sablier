@@ -51,6 +51,11 @@ menu:
       url: "https://github.com/sablierapp/sablier"
       params:
         icon: github
+    - name: Discord
+      weight: 7
+      url: "https://discord.gg/WXYp59KeK9"
+      params:
+        icon: discord
   sidebar:
     - identifier: more
       name: More
