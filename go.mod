@@ -34,7 +34,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.22.0
-	google.golang.org/grpc v1.82.1
+	google.golang.org/grpc v1.83.0
 	gopkg.in/ini.v1 v1.67.3
 	gotest.tools/v3 v3.5.2
 	k8s.io/api v0.36.3

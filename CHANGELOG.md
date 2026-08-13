@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.2](https://github.com/sablierapp/sablier/compare/v1.16.1...v1.16.2) (2026-08-12)
+
+
+### Documentation
+
+* add Discord link to the website navigation bar ([#1069](https://github.com/sablierapp/sablier/issues/1069)) ([88504de](https://github.com/sablierapp/sablier/commit/88504de63452b9b425f8a55fd28a04b960e332db))
+
 ## [1.16.1](https://github.com/sablierapp/sablier/compare/v1.16.0...v1.16.1) (2026-07-24)
 
 

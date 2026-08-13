@@ -51,6 +51,11 @@ menu:
       url: "https://github.com/sablierapp/sablier"
       params:
         icon: github
+    - name: Discord
+      weight: 7
+      url: "https://discord.gg/WXYp59KeK9"
+      params:
+        icon: discord
   sidebar:
     - identifier: more
       name: More
@@ -70,7 +75,7 @@ params:
   # Single source of truth for the released Sablier version shown throughout the
   # docs. Referenced via the {{< version >}} shortcode so no page (generated or
   # authored) hardcodes the version. Bumped automatically by release-please.
-  version: "1.16.1" # x-release-please-version
+  version: "1.16.2" # x-release-please-version
 
   navbar:
     displayTitle: true
