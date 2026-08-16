@@ -17,7 +17,3 @@ func NewForTest(ctx context.Context, con *dbus.Conn, logger *slog.Logger, pollIn
 	p.pollInterval = pollInterval
 	return p, nil
 }
-
-func (p *Provider) UnitTypePropertiesForTest(ctx context.Context, name, unitType string) (map[string]any, error) {
-	return p.Con.GetUnitTypePropertiesContext(ctx, name, unitType)
-}

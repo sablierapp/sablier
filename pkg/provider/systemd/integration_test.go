@@ -134,21 +134,21 @@ func TestSystemdProvider_Integration(t *testing.T) {
 		shared.CreateUnit(t, resourceUnit, "Enable=true\nIdleReplicas=1\nIdleCPU=0.25\nIdleMemory=32m\nIdleBlkioDeviceReadBps=/dev/null:1m\nActiveCPU=0.5\nActiveMemory=64m\nActiveBlkioDeviceReadBps=/dev/null:2m")
 
 		assert.NilError(t, p.InstanceStart(ctx, resourceUnit))
-		props, err := p.UnitTypePropertiesForTest(ctx, resourceUnit, "Service")
+		props, err := p.Con.GetUnitTypePropertiesContext(ctx, resourceUnit, "Service")
 		assert.NilError(t, err)
 		assert.Equal(t, props["CPUQuotaPerSecUSec"], uint64(500_000))
 		assert.Equal(t, props["MemoryMax"], uint64(64*1024*1024))
 		assert.DeepEqual(t, props["IOReadBandwidthMax"], [][]any{{"/dev/null", uint64(2 * 1024 * 1024)}})
 
 		assert.NilError(t, p.InstanceStop(ctx, resourceUnit))
-		props, err = p.UnitTypePropertiesForTest(ctx, resourceUnit, "Service")
+		props, err = p.Con.GetUnitTypePropertiesContext(ctx, resourceUnit, "Service")
 		assert.NilError(t, err)
 		assert.Equal(t, props["CPUQuotaPerSecUSec"], uint64(250_000))
 		assert.Equal(t, props["MemoryMax"], uint64(32*1024*1024))
 		assert.DeepEqual(t, props["IOReadBandwidthMax"], [][]any{{"/dev/null", uint64(1024 * 1024)}})
 
 		assert.NilError(t, p.InstanceStart(ctx, resourceUnit))
-		props, err = p.UnitTypePropertiesForTest(ctx, resourceUnit, "Service")
+		props, err = p.Con.GetUnitTypePropertiesContext(ctx, resourceUnit, "Service")
 		assert.NilError(t, err)
 		assert.DeepEqual(t, props["IOReadBandwidthMax"], [][]any{{"/dev/null", uint64(2 * 1024 * 1024)}})
 	})
@@ -161,7 +161,7 @@ func TestSystemdProvider_Integration(t *testing.T) {
 		assert.NilError(t, p.InstanceStop(ctx, resourceUnit))
 		assert.NilError(t, p.InstanceStart(ctx, resourceUnit))
 
-		props, err := p.UnitTypePropertiesForTest(ctx, resourceUnit, "Service")
+		props, err := p.Con.GetUnitTypePropertiesContext(ctx, resourceUnit, "Service")
 		assert.NilError(t, err)
 		assert.Equal(t, props["CPUQuotaPerSecUSec"], uint64(math.MaxUint64))
 		assert.Equal(t, props["MemoryMax"], uint64(math.MaxUint64))
