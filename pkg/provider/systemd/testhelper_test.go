@@ -480,3 +480,21 @@ func (o *mockUnitObject) GetAll(iface string) (map[string]godbus.Variant, error)
 		"FragmentPath": godbus.MakeVariant(u.fragmentPath),
 	}, nil
 }
+
+// Get serves the singular org.freedesktop.DBus.Properties.Get, which the real
+// systemd D-Bus API exposes alongside GetAll. It is needed for providers that
+// fetch a single unit property (e.g. FragmentPath) instead of the whole set.
+func (o *mockUnitObject) Get(iface string, property string) (godbus.Variant, error) {
+	if iface != "org.freedesktop.systemd1.Unit" {
+		return godbus.Variant{}, nil
+	}
+	props, err := o.GetAll(iface)
+	if err != nil {
+		return godbus.Variant{}, err
+	}
+	v, ok := props[property]
+	if !ok {
+		return godbus.Variant{}, fmt.Errorf("unknown property %s", property)
+	}
+	return v, nil
+}

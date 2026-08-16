@@ -70,12 +70,12 @@ func (p *Provider) matchUnitPattern(name string) bool {
 // fetches the unit's D-Bus properties for the fragment path and serves the
 // parsed labels through the label cache.
 func (p *Provider) getLabels(ctx context.Context, name string) (map[string]string, error) {
-	props, err := p.Con.GetUnitPropertiesContext(ctx, name)
+	prop, err := p.Con.GetUnitPropertyContext(ctx, name, "FragmentPath")
 	if err != nil {
 		return nil, err
 	}
 
-	fragmentPath, ok := props["FragmentPath"].(string)
+	fragmentPath, ok := prop.Value.Value().(string)
 	if !ok || fragmentPath == "" {
 		return nil, nil
 	}
