@@ -38,7 +38,7 @@ When a request arrives, Sablier asks the provider to start the associated instan
 
 This makes `poke` suitable for background startup scenarios where the request itself does not depend on the instance being available.
 
-If you need per-container control instead of per-route behavior, use the `sablier.ready-on-start=true` label with the `dynamic` or `blocking` strategy. See [Configuration](/tutorials/configuration/#instance-labels).
+If you need per-container control instead of per-route behavior, use the `sablier.ready-on-start=true` label with the `dynamic` or `blocking` strategy. See the [Label reference](/reference/labels/#label-sablier-ready-on-start).
 
 ## Start companion services in the background
 
