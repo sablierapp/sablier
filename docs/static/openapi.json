@@ -8,6 +8,9 @@
           },
           "instance": {
             "$ref": "#/components/schemas/sablier.InstanceInfo"
+          },
+          "optional": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -528,7 +531,7 @@
         "description": "Holds the request until the requested instances are ready, or until the timeout elapses. Provide either `names` (one or more) or `group`, never both.",
         "parameters": [
           {
-            "description": "Instance name(s); repeat for multiple. Mutually exclusive with group.",
+            "description": "Instance name(s); repeat for multiple. Mutually exclusive with group. Prefix a name with 'optional:' to mark it best-effort: it is started with the session but its readiness and errors never gate it.",
             "in": "query",
             "name": "names",
             "schema": {
@@ -634,7 +637,7 @@
         "description": "Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.",
         "parameters": [
           {
-            "description": "Instance name(s). Mutually exclusive with group.",
+            "description": "Instance name(s). Mutually exclusive with group. Prefix a name with 'optional:' to mark it best-effort: it is started with the session but its readiness and errors never gate it.",
             "in": "query",
             "name": "names",
             "schema": {

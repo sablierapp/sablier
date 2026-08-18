@@ -153,6 +153,48 @@ func TestRequestSession_RejectsUnlabeledInstances(t *testing.T) {
 	assert.Equal(t, notManaged.Name, "nginx")
 }
 
+// The "optional:" prefix is stripped before the name reaches the store and
+// the provider, the session entry is keyed by the clean name, and the entry
+// carries the Optional flag so it never gates readiness.
+func TestRequestSession_OptionalPrefix(t *testing.T) {
+	manager, sessions, provider := setupSablier(t)
+	ctx := t.Context()
+	startCalled := make(chan struct{})
+
+	stoppedInfo := sablier.InstanceInfo{
+		Name:            "nginx",
+		CurrentReplicas: 0,
+		DesiredReplicas: 1,
+		Status:          sablier.InstanceStatusStopped,
+	}
+	notReady := stoppedInfo
+	notReady.Status = sablier.InstanceStatusStarting
+
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+		close(startCalled)
+		return nil
+	})
+	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+	session, err := manager.RequestSession(ctx, []string{sablier.OptionalPrefix + "nginx"}, time.Minute)
+	assert.NilError(t, err)
+
+	entry, ok := session.Instances["nginx"]
+	assert.Assert(t, ok, "session entry must be keyed by the clean name")
+	assert.Assert(t, entry.Optional)
+	// The instance is only starting, but as the sole (optional) member it
+	// cannot gate the session.
+	assert.Assert(t, session.IsReady())
+
+	select {
+	case <-startCalled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("InstanceStart was never called asynchronously")
+	}
+}
+
 func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
 	manager, sessions, provider := setupSablier(t)
 	manager.WithRejectUnlabeledRequests(true)

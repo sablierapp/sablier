@@ -75,6 +75,71 @@ func TestSessionState_InstanceErrors(t *testing.T) {
 	assert.Assert(t, contains(err.Error(), "a: first") || contains(err.Error(), "b: second"))
 }
 
+// Optional (best-effort) instances never gate a session: their errors and
+// readiness are ignored by IsReady, InstanceErrors and NotReadyInstances.
+func TestSessionState_OptionalInstancesDoNotGate(t *testing.T) {
+	s := &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"gold": {
+				Instance: sablier.InstanceInfo{Name: "gold", Status: sablier.InstanceStatusReady},
+			},
+			"silver-starting": {
+				Instance: sablier.InstanceInfo{Name: "silver-starting", Status: sablier.InstanceStatusStarting},
+				Optional: true,
+			},
+			"silver-error": {
+				Instance: sablier.InstanceInfo{Name: "silver-error", Status: sablier.InstanceStatusError},
+				Error:    errors.New("boom"),
+				Optional: true,
+			},
+		},
+	}
+
+	assert.Assert(t, s.IsReady())
+	assert.NilError(t, s.InstanceErrors())
+	assert.Equal(t, len(s.NotReadyInstances()), 0)
+}
+
+func TestSessionState_RequiredInstanceStillGatesAlongsideOptional(t *testing.T) {
+	s := &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"gold": {
+				Instance: sablier.InstanceInfo{Name: "gold", Status: sablier.InstanceStatusStarting},
+			},
+			"silver": {
+				Instance: sablier.InstanceInfo{Name: "silver", Status: sablier.InstanceStatusReady},
+				Optional: true,
+			},
+		},
+	}
+
+	assert.Assert(t, !s.IsReady())
+	notReady := s.NotReadyInstances()
+	assert.Equal(t, len(notReady), 1)
+	assert.Equal(t, notReady[0].Instance.Name, "gold")
+}
+
+func TestSessionState_InstanceErrors_SkipsOptional(t *testing.T) {
+	s := &sablier.SessionState{
+		Instances: map[string]sablier.InstanceInfoWithError{
+			"gold": {
+				Instance: sablier.InstanceInfo{Name: "gold", Status: sablier.InstanceStatusReady},
+				Error:    errors.New("gold failed"),
+			},
+			"silver": {
+				Instance: sablier.InstanceInfo{Name: "silver", Status: sablier.InstanceStatusReady},
+				Error:    errors.New("silver failed"),
+				Optional: true,
+			},
+		},
+	}
+
+	err := s.InstanceErrors()
+	assert.Assert(t, err != nil)
+	assert.Assert(t, contains(err.Error(), "gold failed"))
+	assert.Assert(t, !contains(err.Error(), "silver failed"))
+}
+
 func TestSessionState_Status(t *testing.T) {
 	ready := &sablier.SessionState{
 		Instances: map[string]sablier.InstanceInfoWithError{

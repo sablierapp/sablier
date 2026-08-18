@@ -4,14 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
+// OptionalPrefix marks a requested instance name as best-effort. An optional
+// instance is started and kept alive with the session exactly like any other
+// member, but its readiness and errors never gate the session: a slow or
+// failing optional instance cannot hold back the waiting page or fail a
+// blocking request. The marker travels inside the name itself so reverse-proxy
+// plugins forward it without changes; no workload name can collide with it
+// because Docker, Swarm, Podman and Kubernetes names cannot contain a colon.
+const OptionalPrefix = "optional:"
+
 type InstanceInfoWithError struct {
 	Instance InstanceInfo `json:"instance"`
 	Error    error        `json:"error"`
+	// Optional marks a best-effort instance, requested with the "optional:"
+	// name prefix. Its readiness and errors are ignored by SessionState.
+	Optional bool `json:"optional,omitempty"`
 }
 
 func (s *Sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
@@ -34,7 +47,8 @@ func (s *Sablier) requestSession(ctx context.Context, names []string, duration t
 	wg.Add(len(names))
 
 	for i := range names {
-		go func(name string) {
+		name, optional := strings.CutPrefix(names[i], OptionalPrefix)
+		go func(name string, optional bool) {
 			defer wg.Done()
 			state, err := s.instanceRequest(ctx, name, duration, rejectUnlabeled)
 			mx.Lock()
@@ -42,8 +56,9 @@ func (s *Sablier) requestSession(ctx context.Context, names []string, duration t
 			sessionState.Instances[name] = InstanceInfoWithError{
 				Instance: state,
 				Error:    err,
+				Optional: optional,
 			}
-		}(names[i])
+		}(name, optional)
 	}
 
 	wg.Wait()

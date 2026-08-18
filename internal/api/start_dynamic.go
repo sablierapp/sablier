@@ -30,7 +30,7 @@ type DynamicRequest struct {
 // @Description  Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.
 // @Tags         strategies
 // @Produce      html
-// @Param        names              query  []string  false  "Instance name(s). Mutually exclusive with group."
+// @Param        names              query  []string  false  "Instance name(s). Mutually exclusive with group. Prefix a name with 'optional:' to mark it best-effort: it is started with the session but its readiness and errors never gate it."
 // @Param        group              query  string    false  "Group name. Mutually exclusive with names."
 // @Param        session_duration   query  string    false  "Session duration as a Go duration (e.g. 5m)."
 // @Param        refresh_frequency  query  string    false  "Waiting-page refresh interval as a Go duration (e.g. 5s)."
