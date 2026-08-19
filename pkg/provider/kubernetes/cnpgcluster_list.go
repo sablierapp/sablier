@@ -58,9 +58,10 @@ func (p *Provider) clusterToInstance(u *unstructured.Unstructured) sablier.Insta
 	parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:    parsed.Original,
-		Groups:  groups,
-		Enabled: enabled,
+		Name:      parsed.Original,
+		Groups:    groups,
+		Enabled:   enabled,
+		Delegated: delegatedScaling(config),
 	}
 }
 

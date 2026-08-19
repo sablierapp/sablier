@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/store"
 )
 
@@ -107,6 +108,19 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
 	}
 	info.Status = InstanceStatusStarting
+
+	// Delegated scaling: an external scaler (e.g. a KEDA ScaledObject) owns the
+	// replica count, so Sablier must not start the workload itself. Record the
+	// same ready-wait/active metrics the non-delegated path records at this point,
+	// emit an activate intent, and return — there is no async provider call to
+	// track, so we skip the pendingStart bookkeeping. Readiness is observed via
+	// InstanceInspect on subsequent requests, exactly as for any other instance.
+	if info.IsDelegated() {
+		s.metrics.RecordReadyWaitBegin(name)
+		s.metrics.RecordActiveInstance(name)
+		s.emitIntent(ctx, name, provider.InstanceEventActivate)
+		return info, nil
+	}
 
 	// Second critical section: register the pending entry. Re-check in case
 	// another goroutine raced past the first unlock and registered first.
