@@ -76,6 +76,12 @@ Use `systemctl --user daemon-reload` for a user instance.
 
 Sablier accepts the same settings documented in the [labels reference](/reference/labels/) without the `sablier.` prefix and in systemd-style casing. For example, `sablier.ready-after` becomes `ReadyAfter`, and `sablier.idle.cpu` becomes `IdleCPU`.
 
+## Runnable example
+
+A complete, runnable example (using the systemd **user** instance, no `sudo`
+required) is available in
+[`examples/systemd`](https://github.com/sablierapp/sablier/tree/main/examples/systemd).
+
 ## Confirm when the unit is ready
 
 Sablier waits for systemd to report the unit as active before marking it `ready`.
