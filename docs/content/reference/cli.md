@@ -121,6 +121,7 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.proxmox-lxc.token-secret`](#opt-provider-proxmox-lxc-token-secret) | Proxmox VE API token secret |
 | [`--provider.proxmox-lxc.url`](#opt-provider-proxmox-lxc-url) | Proxmox VE API URL (e.g. https://proxmox:8006/api2/json) |
 | [`--provider.reject-unlabeled-requests`](#opt-provider-reject-unlabeled-requests) | Reject direct named requests for instances without sablier.enable=true |
+| [`--provider.systemd.unit-patterns`](#opt-provider-systemd-unit-patterns) | Restrict managed units to those matching the given glob patterns (e.g. podman-*.service) |
 | [`--provider.systemd.user-instance`](#opt-provider-systemd-user-instance) | Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode) |
 | [`--provider.verify-enabled-on-expiration`](#opt-provider-verify-enabled-on-expiration) | Verify sablier.enable=true before stopping expired instances |
 
@@ -468,6 +469,27 @@ SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS=false
 
 # Command-line flag
 --provider.reject-unlabeled-requests=false
+```
+
+### `--provider.systemd.unit-patterns` {#opt-provider-systemd-unit-patterns}
+
+Restrict managed units to those matching the given glob patterns (e.g. podman-*.service)
+
+{{< badge "stringSlice" >}} {{< badge content="Default: []" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  systemd:
+    unit-patterns: []
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS=[]
+
+# Command-line flag
+--provider.systemd.unit-patterns=[]
 ```
 
 ### `--provider.systemd.user-instance` {#opt-provider-systemd-user-instance}
