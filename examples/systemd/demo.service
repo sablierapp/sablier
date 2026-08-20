@@ -2,7 +2,7 @@
 Description=Sablier demo service (systemd provider)
 
 [Service]
-ExecStart=/run/current-system/sw/bin/sleep infinity
+ExecStart=/usr/bin/sleep infinity
 
 [X-Sablier]
 Enable=true
