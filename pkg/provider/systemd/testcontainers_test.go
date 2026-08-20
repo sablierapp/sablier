@@ -51,7 +51,7 @@ func (c *systemdContainer) Provider(t *testing.T) *systemd.Provider {
 		t.Fatalf("cannot connect to systemd dbus: %v", err)
 	}
 	t.Cleanup(con.Close)
-	p, err := systemd.NewForTest(t.Context(), con, slogt.New(t), 500*time.Millisecond)
+	p, err := systemd.NewForTest(t.Context(), con, slogt.New(t), 500*time.Millisecond, "sablier-*.service")
 	if err != nil {
 		t.Fatalf("cannot create provider: %v", err)
 	}
