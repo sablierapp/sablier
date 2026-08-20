@@ -69,6 +69,50 @@ func (c *GroupLockCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
+// InstanceGroupCollector emits the instance→group membership mapping as a
+// constant gauge (always 1) at scrape time, sourced from the group registry.
+// Because instance↔group is many-to-many, this mapping lets per-instance
+// metrics be sliced by group via a PromQL join, e.g.:
+//
+//	sum by (group) (metric * on(instance) group_left(group) sablier_instance_group)
+type InstanceGroupCollector struct {
+	groups GroupsProvider
+	desc   *prometheus.Desc
+}
+
+// NewInstanceGroupCollector wires a GroupsProvider into a Collector that can be
+// registered on the same registry as the rest of the metrics.
+func NewInstanceGroupCollector(groups GroupsProvider) *InstanceGroupCollector {
+	return &InstanceGroupCollector{
+		groups: groups,
+		desc: prometheus.NewDesc(
+			"sablier_instance_group",
+			"Mapping of instances to the groups they belong to. Always 1. "+
+				"Join with on(instance) group_left(group) to slice per-instance metrics by group.",
+			[]string{"instance", "group"}, nil,
+		),
+	}
+}
+
+func (c *InstanceGroupCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.desc
+}
+
+func (c *InstanceGroupCollector) Collect(ch chan<- prometheus.Metric) {
+	for group, members := range c.groups.Groups() {
+		// Deduplicate members: a duplicate (instance, group) labelset makes
+		// Prometheus' Gather() fail and takes down the /metrics endpoint.
+		seen := make(map[string]struct{}, len(members))
+		for _, instance := range members {
+			if _, ok := seen[instance]; ok {
+				continue
+			}
+			seen[instance] = struct{}{}
+			ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, 1, instance, group)
+		}
+	}
+}
+
 // SessionEntry is the minimal view of a single active session that the
 // SessionExpiryCollector needs to emit its gauge.
 type SessionEntry struct {
