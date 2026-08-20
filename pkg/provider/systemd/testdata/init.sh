@@ -1,9 +1,12 @@
 #!/bin/sh
 # Container init for the systemd integration tests. Runs as root and brings
-# up a systemd user manager for the host's uid (setpriv needs no passwd
-# entry), so the provider connecting as that same uid can manage units
-# without polkit. The bus socket and unit files live in the bind-mounted
-# TEST_UNITS dir, visible to the host at the same paths.
+# up a systemd user manager for the host's uid, so the provider connecting as
+# that same uid can manage units without polkit. The bus socket and unit files
+# live in the bind-mounted TEST_UNITS dir, visible to the host at the same paths.
+#
+# The test runs as the host's uid (e.g. the CI runner user), which is generally
+# not present in this image's /etc/passwd. dbus-daemon and systemd --user need a
+# passwd/group entry for the uid they run as, so we create one when missing.
 set -e
 
 C=$(cut -d/ -f2- /proc/1/cgroup)
@@ -17,6 +20,16 @@ case "$C" in
 esac
 chown -R "$TEST_UID" "/sys/fs/cgroup/$C"
 mkdir -p /run/systemd/system
+
+# Create a passwd/group entry for the test uid if it doesn't exist so
+# dbus-daemon and systemd --user can resolve it.
+# Prevents the 'dbus: Could not get password database information for UID of current process: User "???" unknown ...' issue
+if ! getent passwd "$TEST_UID" >/dev/null 2>&1; then
+	echo "sabliertest:x:$TEST_UID:$TEST_UID:sablier test user:$TEST_UNITS:/bin/sh" >> /etc/passwd
+fi
+if ! getent group "$TEST_UID" >/dev/null 2>&1; then
+	echo "sabliertest:x:$TEST_UID:" >> /etc/group
+fi
 
 setpriv --reuid "$TEST_UID" --regid "$TEST_UID" --clear-groups env XDG_RUNTIME_DIR="$TEST_UNITS" \
 	/usr/bin/dbus-daemon --session --nofork --address=unix:path="$TEST_UNITS/bus" &
