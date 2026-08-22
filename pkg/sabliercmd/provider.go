@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/coreos/go-systemd/v22/dbus"
 	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/moby/moby/client"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -18,6 +19,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
+	"github.com/sablierapp/sablier/pkg/provider/systemd"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"k8s.io/client-go/dynamic"
 	k8s "k8s.io/client-go/kubernetes"
@@ -106,6 +108,24 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		}))
 		cli := proxmox.NewClient(config.ProxmoxLXC.URL, opts...)
 		return proxmoxlxc.New(ctx, cli, logger)
+	case "systemd":
+		var con *dbus.Conn
+		var err error
+		if config.Systemd.UserInstance {
+			con, err = dbus.NewUserConnectionContext(ctx)
+		} else {
+			con, err = dbus.NewSystemConnectionContext(ctx)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("cannot connect to systemd dbus: %w", err)
+		}
+
+		provider, err := systemd.New(ctx, con, logger, config.Systemd.UnitPatterns)
+		if err != nil {
+			con.Close()
+			return nil, err
+		}
+		return provider, nil
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
 }

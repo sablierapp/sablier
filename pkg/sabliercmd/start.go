@@ -58,7 +58,8 @@ func Start(ctx context.Context, conf config.Config) error {
 		}
 	}()
 	if conf.Tracing.Enabled {
-		logger.Info("OpenTelemetry tracing enabled",
+		logger.Info(
+			"OpenTelemetry tracing enabled",
 			slog.String("exporter", conf.Tracing.ExporterType),
 			slog.String("endpoint", conf.Tracing.Endpoint),
 			slog.String("service_name", conf.Tracing.ServiceName),
@@ -154,12 +155,14 @@ func Start(ctx context.Context, conf config.Config) error {
 			if len(events) == 0 {
 				events = []string{"started", "stopped"}
 			}
-			logger.InfoContext(ctx, "webhook endpoint registered",
+			logger.InfoContext(
+				ctx, "webhook endpoint registered",
 				slog.Int("index", i),
 				slog.String("url", ep.URL),
 				slog.Any("events", events),
 			)
-			logger.DebugContext(ctx, "webhook endpoint configuration",
+			logger.DebugContext(
+				ctx, "webhook endpoint configuration",
 				slog.Int("index", i),
 				slog.String("url", ep.URL),
 				slog.Any("events", events),

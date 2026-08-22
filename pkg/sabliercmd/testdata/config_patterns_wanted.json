@@ -1,0 +1,74 @@
+{
+  "Server": {
+    "Port": 10000,
+    "BasePath": "/",
+    "Metrics": {
+      "Enabled": false
+    }
+  },
+  "Storage": {
+    "File": ""
+  },
+  "Provider": {
+    "Name": "docker",
+    "AutoStopOnStartup": true,
+    "AutoStopExternallyStarted": false,
+    "AutoWarmExternallyStarted": false,
+    "RejectUnlabeledRequests": false,
+    "VerifyEnabledOnExpiration": false,
+    "Kubernetes": {
+      "QPS": 5,
+      "Burst": 10,
+      "Delimiter": "_",
+      "ReadyOnFirstReplica": false
+    },
+    "Podman": {
+      "Uri": "unix:///run/podman/podman.sock"
+    },
+    "Docker": {
+      "Strategy": "stop",
+      "HonorRestartPolicy": false
+    },
+    "ProxmoxLXC": {
+      "URL": "",
+      "TokenID": "",
+      "TokenSecret": "",
+      "TLSInsecure": false
+    },
+    "Systemd": {
+      "UserInstance": false,
+      "UnitPatterns": [
+        "podman-*.service"
+      ]
+    }
+  },
+  "Sessions": {
+    "DefaultDuration": 300000000000,
+    "ExpirationInterval": 20000000000
+  },
+  "Logging": {
+    "Level": "info"
+  },
+  "Strategy": {
+    "Dynamic": {
+      "CustomThemesPath": "",
+      "ShowDetailsByDefault": true,
+      "DefaultTheme": "hacker-terminal",
+      "DefaultRefreshFrequency": 5000000000
+    },
+    "Blocking": {
+      "DefaultTimeout": 60000000000,
+      "DefaultRefreshFrequency": 5000000000
+    }
+  },
+  "Webhooks": {
+    "Endpoints": null
+  },
+  "Tracing": {
+    "Enabled": false,
+    "ExporterType": "otlphttp",
+    "Endpoint": "http://localhost:4318",
+    "ServiceName": "sablier",
+    "SamplingRate": 1
+  }
+}

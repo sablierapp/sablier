@@ -101,6 +101,13 @@ func writeApplying(b *strings.Builder) {
 	b.WriteString("```\n")
 	b.WriteString("{{< /tab >}}\n")
 
+	b.WriteString("{{< tab name=\"Systemd\" >}}\n")
+	b.WriteString("```ini\n")
+	b.WriteString("# systemd has no labels; Sablier reads the [X-Sablier] unit file section:\n")
+	b.WriteString("[Unit]\nDescription=my app\n\n[Service]\nExecStart=/usr/bin/myapp\n\n[X-Sablier]\nEnable=true\nGroup=my-group\n")
+	b.WriteString("```\n")
+	b.WriteString("{{< /tab >}}\n")
+
 	b.WriteString("{{< /tabs >}}\n\n")
 }
 

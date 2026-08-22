@@ -3,8 +3,10 @@ module github.com/sablierapp/sablier
 go 1.26.3
 
 require (
+	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/getkin/kin-openapi v0.146.0
 	github.com/gin-gonic/gin v1.12.0
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.1.3
@@ -33,6 +35,7 @@ require (
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.83.0
+	gopkg.in/ini.v1 v1.67.3
 	gotest.tools/v3 v3.5.2
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3

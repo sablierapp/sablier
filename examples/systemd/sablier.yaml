@@ -1,0 +1,11 @@
+provider:
+  name: systemd
+  systemd:
+    user-instance: true
+sessions:
+  default-duration: 1m
+  expiration-interval: 10s
+server:
+  port: 10000
+logging:
+  level: info

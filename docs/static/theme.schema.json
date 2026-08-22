@@ -68,7 +68,7 @@
         },
         "Provider": {
           "type": "string",
-          "description": "Provider type (docker|swarm|kubernetes|podman)",
+          "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd)",
           "examples": [
             "docker"
           ]

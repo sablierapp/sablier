@@ -50,6 +50,20 @@ sablier                 # enables management (sablier.enable=true)
 sablier-group-my-group  # one tag per group
 ```
 {{< /tab >}}
+{{< tab name="Systemd" >}}
+```ini
+# systemd has no labels; Sablier reads the [X-Sablier] unit file section:
+[Unit]
+Description=my app
+
+[Service]
+ExecStart=/usr/bin/myapp
+
+[X-Sablier]
+Enable=true
+Group=my-group
+```
+{{< /tab >}}
 {{< /tabs >}}
 
 ## Labels {#labels}
@@ -263,7 +277,7 @@ The relative block I/O scheduling weight applied when idle.
 Example: `"100"`
 
 {{< callout type="info" >}}
-Docker only.
+Docker and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -277,7 +291,7 @@ The relative block I/O scheduling weight restored when active.
 Example: `"500"`
 
 {{< callout type="info" >}}
-Docker only.
+Docker and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -291,7 +305,7 @@ The per-device I/O scheduling weight applied when idle.
 Example: `"/dev/sda:100"`
 
 {{< callout type="info" >}}
-Docker only; per-device limits require daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -305,7 +319,7 @@ The per-device I/O scheduling weight restored when active.
 Example: `"/dev/sda:500"`
 
 {{< callout type="info" >}}
-Docker only; per-device limits require daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -319,7 +333,7 @@ The per-device read throughput limit applied when idle (Docker byte units, e.g. 
 Example: `"/dev/sda:10m"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -333,7 +347,7 @@ The per-device read throughput limit restored when active.
 Example: `"/dev/sda:100m"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -347,7 +361,7 @@ The per-device write throughput limit applied when idle.
 Example: `"/dev/sda:10m"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -361,7 +375,7 @@ The per-device write throughput limit restored when active.
 Example: `"/dev/sda:100m"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -375,7 +389,7 @@ The per-device read IOPS limit applied when idle.
 Example: `"/dev/sda:100"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -389,7 +403,7 @@ The per-device read IOPS limit restored when active.
 Example: `"/dev/sda:1000"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -403,7 +417,7 @@ The per-device write IOPS limit applied when idle.
 Example: `"/dev/sda:100"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)
@@ -417,7 +431,7 @@ The per-device write IOPS limit restored when active.
 Example: `"/dev/sda:1000"`
 
 {{< callout type="info" >}}
-Docker only; requires daemon API >= 1.55.
+Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-blkio/)

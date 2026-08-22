@@ -19,7 +19,7 @@ type Instance struct {
 	Error           error                           `json:",omitempty" jsonschema:"description=Error encountered while resolving the instance state if any"`
 	CurrentReplicas int32                           `jsonschema:"description=Current number of running replicas,example=0"`
 	DesiredReplicas int32                           `jsonschema:"description=Target number of replicas to reach before the session is considered ready,example=1"`
-	Provider        string                          `jsonschema:"description=Provider type (docker|swarm|kubernetes|podman),example=docker"`
+	Provider        string                          `jsonschema:"description=Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd),example=docker"`
 	Docker          *sablier.DockerContainerInfo    `json:",omitempty" jsonschema:"description=Docker-specific container metadata (only set when Provider is docker). Fields are accessible in templates as .Docker.ID .Docker.Image .Docker.Labels"`
 	Swarm           *sablier.SwarmServiceInfo       `json:",omitempty" jsonschema:"description=Docker Swarm-specific service metadata (only set when Provider is swarm). Fields are accessible in templates as .Swarm.ID .Swarm.Image .Swarm.Labels"`
 	Kubernetes      *sablier.KubernetesWorkloadInfo `json:",omitempty" jsonschema:"description=Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Image .Kubernetes.Labels"`

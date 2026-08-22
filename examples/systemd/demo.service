@@ -1,0 +1,12 @@
+[Unit]
+Description=Sablier demo service (systemd provider)
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+[X-Sablier]
+Enable=true
+Group=demo
+
+[Install]
+WantedBy=default.target

@@ -129,7 +129,7 @@ func TestProvider_IsValid(t *testing.T) {
 			provider: Provider{
 				Name: "invalid",
 			},
-			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc]"),
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd]"),
 		},
 	}
 

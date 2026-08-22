@@ -1,6 +1,6 @@
 ---
 title: Connect a provider
-description: "Connect Sablier to your platform: Docker, Docker Swarm, Kubernetes, Podman or Proxmox LXC."
+description: "Connect Sablier to your platform: Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC or Systemd."
 weight: 40
 ---
 
@@ -12,6 +12,7 @@ Each provider below is a step-by-step tutorial that wires Sablier to one platfor
   {{< card link="/tutorials/providers/kubernetes/" image="/assets/img/kubernetes.png" imageStyle="object-fit:contain;height:120px;padding:24px;background:#ffffff;" title="Kubernetes" subtitle="Scale Deployments and StatefulSets to zero." >}}
   {{< card link="/tutorials/providers/podman/" image="/assets/img/podman.png" imageStyle="object-fit:contain;height:120px;padding:24px;background:#ffffff;" title="Podman" subtitle="Stop and start containers on demand." >}}
   {{< card link="/tutorials/providers/proxmox_lxc/" image="/assets/img/proxmox.png" imageStyle="object-fit:contain;height:120px;padding:24px;background:#ffffff;" title="Proxmox LXC" subtitle="Stop and start LXC containers via the Proxmox VE API." >}}
+  {{< card link="/tutorials/providers/systemd/" image="/assets/img/systemd.svg" imageStyle="object-fit:contain;height:120px;padding:24px;background:#ffffff;" title="Systemd" subtitle="Start and stop system units on demand." >}}
 {{< /cards >}}
 
 *Your Provider is not on the list? [Open an issue to request the missing provider here!](https://github.com/sablierapp/sablier/issues/new?assignees=&labels=enhancement%2C+provider&projects=&template=instance-provider-request.md&title=Add+%60%5BPROVIDER%5D%60+provider)*
