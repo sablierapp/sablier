@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.17.0](https://github.com/sablierapp/sablier/compare/v1.16.2...v1.17.0) (2026-08-19)
+
+
+### Features
+
+* **session:** best-effort instances via the optional: name prefix ([#1068](https://github.com/sablierapp/sablier/issues/1068)) ([90d89b2](https://github.com/sablierapp/sablier/commit/90d89b2ee9988c818cae69925954a500694a7c14))
+* **strategy:** add poke strategy ([#1015](https://github.com/sablierapp/sablier/issues/1015)) ([b60578a](https://github.com/sablierapp/sablier/commit/b60578a17e152ff20a85de50df5e7bfd86235727))
+
+
+### Documentation
+
+* share giscus comment threads across doc versions ([#1072](https://github.com/sablierapp/sablier/issues/1072)) ([632d9a6](https://github.com/sablierapp/sablier/commit/632d9a6680a1dc1dcc6b5bee9be2e0cb22e5527f))
+
 ## [1.16.2](https://github.com/sablierapp/sablier/compare/v1.16.1...v1.16.2) (2026-08-12)
 
 
