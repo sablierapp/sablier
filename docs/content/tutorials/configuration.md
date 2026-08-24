@@ -62,6 +62,28 @@ Becomes:
 SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/my/path
 ```
 
+### `NO_COLOR`
+
+Sablier writes its logs to standard error with ANSI color. Setting
+[`NO_COLOR`](https://no-color.org/) to any non-empty value turns the color off, which keeps the
+escape sequences out of log files and log collectors:
+
+```yaml
+services:
+  sablier:
+    image: sablierapp/sablier:{{< version >}}
+    environment:
+      - NO_COLOR=1
+```
+
+```
+10:29AM INF docker/docker.go:48 connection established with docker provider=docker strategy=stop
+```
+
+`NO_COLOR` is a cross-tool convention rather than a Sablier option, so it carries no `SABLIER_`
+prefix and has no configuration-file or command-line equivalent. Leaving it unset, or setting it
+to the empty string, keeps the color.
+
 ## Arguments
 
 To get the list of all available arguments:
