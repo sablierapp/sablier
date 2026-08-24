@@ -176,12 +176,6 @@ With the layout shown in [How to load your custom theme](#how-to-load-your-custo
 }
 ```
 
-{{< callout type="info" >}}
-The Sablier image is built `FROM scratch` and contains only the Sablier binary, so there is no
-shell and no `curl` inside the container. Call the endpoint from another container on the same
-network, or from the host through the published port.
-{{< /callout >}}
-
 See the [API reference](/reference/api/) for the full `themes` endpoint documentation.
 
 ## Design your theme in the browser
