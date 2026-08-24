@@ -681,7 +681,7 @@ SABLIER_STORAGE_FILE=<string>
 |--------|-------------|
 | [`--strategy.blocking.default-refresh-frequency`](#opt-strategy-blocking-default-refresh-frequency) | Default refresh frequency at which the instances status are checked for blocking strategy |
 | [`--strategy.blocking.default-timeout`](#opt-strategy-blocking-default-timeout) | Default timeout used for blocking strategy |
-| [`--strategy.dynamic.custom-themes-path`](#opt-strategy-dynamic-custom-themes-path) | Custom themes folder, will load all .html files recursively |
+| [`--strategy.dynamic.custom-themes-path`](#opt-strategy-dynamic-custom-themes-path) | Custom themes folder, will load all .html files recursively (a missing folder is not an error, Sablier then serves only the built-in themes) |
 | [`--strategy.dynamic.default-refresh-frequency`](#opt-strategy-dynamic-default-refresh-frequency) | Default refresh frequency in the HTML page for dynamic strategy |
 | [`--strategy.dynamic.default-theme`](#opt-strategy-dynamic-default-theme) | Default theme used for dynamic strategy |
 | [`--strategy.dynamic.show-details-by-default`](#opt-strategy-dynamic-show-details-by-default) | Show the loading instances details by default |
@@ -730,23 +730,23 @@ SABLIER_STRATEGY_BLOCKING_DEFAULT_TIMEOUT=1m0s
 
 ### `--strategy.dynamic.custom-themes-path` {#opt-strategy-dynamic-custom-themes-path}
 
-Custom themes folder, will load all .html files recursively
+Custom themes folder, will load all .html files recursively (a missing folder is not an error, Sablier then serves only the built-in themes)
 
-{{< badge "string" >}} {{< badge content="Since v1.0.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.0.0" >}}
+{{< badge "string" >}} {{< badge content="Default: /etc/sablier/themes" >}} {{< badge content="Since v1.0.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.0.0" >}}
 
 ```yaml
 # sablier.yaml
 strategy:
   dynamic:
-    custom-themes-path: <string>
+    custom-themes-path: /etc/sablier/themes
 ```
 
 ```bash
 # Environment variable
-SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=<string>
+SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH=/etc/sablier/themes
 
 # Command-line flag
---strategy.dynamic.custom-themes-path=<string>
+--strategy.dynamic.custom-themes-path=/etc/sablier/themes
 ```
 
 ### `--strategy.dynamic.default-refresh-frequency` {#opt-strategy-dynamic-default-refresh-frequency}

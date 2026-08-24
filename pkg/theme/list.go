@@ -1,13 +1,20 @@
 package theme
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Exists reports whether a theme with the given name is loaded.
 func (t *Themes) Exists(name string) bool {
 	return t.themes.Lookup(name+".html") != nil
 }
 
-// List all the loaded themes
+// List all the loaded themes, sorted by name.
+//
+// The order is explicit because the underlying templates are held in a map:
+// without sorting, the themes endpoint and the "theme not found" problem detail
+// returned a differently ordered list on every call.
 func (t *Themes) List() []string {
 	themes := make([]string, 0)
 
@@ -17,5 +24,6 @@ func (t *Themes) List() []string {
 		}
 	}
 
+	slices.Sort(themes)
 	return themes
 }

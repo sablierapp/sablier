@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/coreos/go-systemd/v22 v22.7.0
-	github.com/getkin/kin-openapi v0.146.0
+	github.com/getkin/kin-openapi v0.147.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/google/go-cmp v0.7.0
@@ -21,7 +21,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/swaggo/swag v1.16.6
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/dind v0.44.0

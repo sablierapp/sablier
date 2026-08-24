@@ -74,7 +74,7 @@ You can install Sablier using one of the following methods:
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.16.2)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/sablierapp/sablier/1.17.0)
 <!-- x-release-please-end -->
 
 - **Docker Hub**: [sablierapp/sablier](https://hub.docker.com/r/sablierapp/sablier)
@@ -85,7 +85,7 @@ You can install Sablier using one of the following methods:
 ```yaml
 services:
   sablier:
-    image: sablierapp/sablier:1.16.2 # x-release-please-version
+    image: sablierapp/sablier:1.17.0 # x-release-please-version
     command:
       - start
       - --provider.name=docker
@@ -99,13 +99,13 @@ services:
 
 <!-- x-release-please-start-version -->
 ```bash
-docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.16.2
+docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierapp/sablier:1.17.0
 ```
 
 > [!TIP]
 > Verify the image signature to ensure authenticity:
 > ```bash
-> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.16.2
+> gh attestation verify --owner sablierapp oci://sablierapp/sablier:1.17.0
 > ```
 
 <!-- x-release-please-end -->
@@ -312,8 +312,9 @@ logging:
   level: info
 strategy:
   dynamic:
-    # Custom themes folder, will load all .html files recursively (default empty)
-    custom-themes-path:
+    # Custom themes folder, will load all .html files recursively.
+    # A missing folder is not an error, only the built-in themes are served then.
+    custom-themes-path: /etc/sablier/themes
     # Show instances details by default in waiting UI
     show-details-by-default: true
     # Default theme used for dynamic strategy (default "hacker-terminal")
@@ -373,7 +374,7 @@ sablier --help
 
 # or
 
-docker run sablierapp/sablier:1.16.2 --help
+docker run sablierapp/sablier:1.17.0 --help
 ```
 <!-- x-release-please-end -->
 

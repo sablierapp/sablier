@@ -36,9 +36,12 @@ You can also extend the themes by providing your own, which will be rendered as 
 
 ## Custom themes locations
 
-You can use the `--strategy.dynamic.custom-themes-path` argument to define the location where Sablier should search for themes at startup.
+`--strategy.dynamic.custom-themes-path` defaults to `/etc/sablier/themes`, so the volume mount
+shown at the top of this page is all you need: no extra argument is required. Set the argument
+only when you want Sablier to look somewhere else.
 
-By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder. The volume mount shown at the top of this page makes your themes available at that path.
+If the folder does not exist, Sablier serves the embedded themes and says so at `debug` level,
+so leaving the default in place costs nothing when you have no custom themes.
 
 Sablier will recursively search for themes with the `.html` extension.
 
@@ -153,22 +156,30 @@ curl 'http://localhost:10000/api/strategies/dynamic?session_duration=1m&names=ng
 
 ## See the available themes from the API
 
+The themes endpoint is served at `/api/themes` (the legacy path `/api/dynamic/themes` still
+works). It returns every loaded theme, embedded and custom alike, in a single sorted list.
+
 ```bash
-curl 'http://localhost:10000/api/strategies/dynamic/themes'
+curl 'http://localhost:10000/api/themes'
 ```
+
+With the layout shown in [How to load your custom theme](#how-to-load-your-custom-theme):
+
 ```json
 {
-  "custom": [
-    "custom"
-  ],
-  "embedded": [
+  "themes": [
+    "custom1",
+    "custom2",
     "ghost",
     "hacker-terminal",
     "matrix",
-    "shuffle"
+    "shuffle",
+    "special/secret"
   ]
 }
 ```
+
+See the [API reference](/reference/api/) for the full `themes` endpoint documentation.
 
 ## Design your theme in the browser
 

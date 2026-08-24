@@ -49,7 +49,7 @@
   },
   "Strategy": {
     "Dynamic": {
-      "CustomThemesPath": "",
+      "CustomThemesPath": "/etc/sablier/themes",
       "ShowDetailsByDefault": true,
       "DefaultTheme": "hacker-terminal",
       "DefaultRefreshFrequency": 5000000000

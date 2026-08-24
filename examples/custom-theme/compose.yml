@@ -8,14 +8,14 @@ services:
       - --logging.level=debug
       - --sessions.default-duration=1m
       - --sessions.expiration-interval=10s
-      # Point Sablier at the themes directory mounted below.
-      - --strategy.dynamic.custom-themes-path=/themes
+      # No --strategy.dynamic.custom-themes-path needed: the themes below are
+      # mounted at the default location, /etc/sablier/themes.
       - --strategy.dynamic.default-theme=my-theme
       - --strategy.dynamic.show-details-by-default=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount the local themes folder so Sablier can bundle the assets at startup.
-      - ./themes:/themes
+      - ./themes:/etc/sablier/themes
     ports:
       - "10000:10000"
 
