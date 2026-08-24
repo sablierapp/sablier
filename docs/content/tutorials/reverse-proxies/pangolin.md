@@ -93,11 +93,20 @@ The full option reference lives in the [plugin README](https://github.com/sablie
 
 ## 4. Attach the middleware to a resource
 
-Pangolin has no per-resource middleware field today, so there are two ways to get the middleware onto a router — pick based on how many apps you are waking.
+Pangolin has no per-resource middleware field, so getting the middleware onto a
+router takes one of three approaches. They differ on two axes: whether you can
+target a single resource, and whether Pangolin authenticates the request
+*before* Sablier wakes the container.
 
-### Option A — apply it to every resource
+| | Per-resource | Auth before wake | Extra service |
+| --- | --- | --- | --- |
+| [`additional_middlewares`](#a--additional_middlewares) | ✗ global | ✓ | ✗ |
+| [Middleware Manager](#b--middleware-manager) | ✓ | ✗ | ✓ |
+| [Shadow the router](#c--shadow-the-router-by-hand) | ✓ | ✓ | ✗ |
 
-Pangolin appends `traefik.additional_middlewares` to every router it generates:
+### A — `additional_middlewares`
+
+Pangolin appends this list to every router it generates, right after `badger`:
 
 ```yaml
 # config/config.yml
@@ -106,15 +115,63 @@ traefik:
       - sablier-photoprism@file
 ```
 
-The `@file` suffix is required: the middleware is defined in the file provider while the routers live in the `http` provider.
+The `@file` suffix is required: the middleware is defined in the file provider
+while the routers live in the `http` provider.
 
 {{< callout type="warning" >}}
-`additional_middlewares` is **global**. Every HTTP resource in your Pangolin install goes through this middleware, and therefore through this one Sablier group. Use it only when you have a single Sablier-managed resource. Pangolin's own dashboard routers are declared in `dynamic_config.yml` and are *not* affected.
+`additional_middlewares` is **global**. Every HTTP resource in your Pangolin
+install goes through this middleware, and therefore through this one Sablier
+group. Use it only when you have a single Sablier-managed resource. Pangolin's
+own dashboard routers are declared in `dynamic_config.yml` and are *not*
+affected.
 {{< /callout >}}
 
-### Option B — one resource at a time
+### B — Middleware Manager
 
-Declare your own router in the file provider that shadows the generated one with a higher priority, and reuse Pangolin's generated service instead of duplicating the target:
+[Middleware Manager](https://github.com/hhftechnology/middleware-manager) is a
+community service, listed in [Pangolin's own
+docs](https://docs.pangolin.net/self-host/community-guides/middlewaremanager),
+that reads resources from Pangolin's internal API and re-serves Traefik's
+dynamic configuration with middlewares attached per resource. You point
+Traefik's HTTP provider at it instead of at Pangolin:
+
+```yaml
+# config/traefik/traefik_config.yml
+providers:
+  http:
+    endpoint: "http://middleware-manager:3456/api/v1/traefik-config"
+    pollInterval: "5s"
+```
+
+Keep the Sablier middleware declared in the file provider and attach it as an
+*external* middleware, from the UI or the API:
+
+```bash
+curl -X POST http://middleware-manager:3456/api/resources/<id>/external-middlewares \
+  -H 'Content-Type: application/json' \
+  -d '{"middleware_name":"sablier-photoprism@file","priority":100,"provider":"file"}'
+```
+
+{{< callout type="warning" >}}
+Middleware Manager always places its own additions **before** the router's
+existing middlewares, so Sablier runs *before* `badger`. The `priority` field
+only orders Middleware Manager's own assignments among themselves — it cannot
+move one after `badger`.
+
+The consequence is that anyone who can reach the hostname can wake the
+container without authenticating. If that matters, use option A or C.
+{{< /callout >}}
+
+Note also that Traefik's whole dynamic configuration now comes from Middleware
+Manager, so if it stops, Traefik loses every Pangolin-generated router — not
+just the Sablier attachment.
+
+### C — Shadow the router by hand
+
+Per-resource *and* authentication-first, at the cost of hand-maintained config.
+Declare your own router in the file provider that shadows the generated one with
+a higher priority, and reuse Pangolin's generated service instead of duplicating
+the target:
 
 ```yaml
 # config/traefik/dynamic_config.yml
@@ -133,15 +190,18 @@ http:
         certResolver: letsencrypt
 ```
 
-Rather than guessing the generated names, copy the real router from Traefik's API and edit it:
+Rather than guessing the generated names, copy the real router from Traefik's
+API and edit it:
 
 ```bash
 curl -s http://localhost:8080/api/http/routers | jq '.[] | select(.provider=="http")'
 ```
 
-Then add the Sablier middleware, raise the priority, and keep the `service`, `rule` and `tls` blocks as Traefik reports them.
+Then add the Sablier middleware, raise the priority, and keep the `service`,
+`rule` and `tls` blocks as Traefik reports them.
 
-This shadows a router Pangolin owns, so re-check it after changing the resource's domain, path rules or TLS settings in the Pangolin UI.
+This shadows a router Pangolin owns, so re-check it after changing the
+resource's domain, path rules or TLS settings in the Pangolin UI.
 
 ## 5. Label your containers
 
@@ -159,6 +219,6 @@ services:
 
 ## Caveats
 
-- **Ordering matters, and the default is the right one.** `badger` runs before Sablier, so the waiting page is only ever served to users Pangolin has already authenticated.
+- **Check the middleware ordering.** With `additional_middlewares` or a hand-written router, `badger` runs before Sablier and the waiting page is only ever served to authenticated users. Middleware Manager reverses this — see the warning in [step 4](#b--middleware-manager).
 - **Health checks.** Pangolin drops targets it considers `unhealthy` from the load balancer. Leave health checks off for Sablier-managed targets, or a stopped container will be removed from the config that Sablier needs in order to wake it.
-- **Per-resource middleware support** is tracked upstream — following [sablierapp/sablier#1040](https://github.com/sablierapp/sablier/issues/1040) is the best way to know when Option B becomes unnecessary.
+- **Per-resource middleware support** is not a Pangolin feature today, which is why options B and C exist at all. If Pangolin gains a middleware field on the resource itself, both become unnecessary.
