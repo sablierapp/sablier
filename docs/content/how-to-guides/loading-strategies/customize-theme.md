@@ -36,9 +36,12 @@ You can also extend the themes by providing your own, which will be rendered as 
 
 ## Custom themes locations
 
-You can use the `--strategy.dynamic.custom-themes-path` argument to define the location where Sablier should search for themes at startup.
+`--strategy.dynamic.custom-themes-path` defaults to `/etc/sablier/themes`, so the volume mount
+shown at the top of this page is all you need: no extra argument is required. Set the argument
+only when you want Sablier to look somewhere else.
 
-By default, the docker image looks for themes located inside the `/etc/sablier/themes` folder. The volume mount shown at the top of this page makes your themes available at that path.
+If the folder does not exist, Sablier serves the embedded themes and says so at `debug` level,
+so leaving the default in place costs nothing when you have no custom themes.
 
 Sablier will recursively search for themes with the `.html` extension.
 

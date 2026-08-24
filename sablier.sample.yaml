@@ -18,7 +18,7 @@ logging:
   level: info
 strategy:
   dynamic:
-    custom-themes-path:
+    custom-themes-path: /etc/sablier/themes
     show-details-by-default: true
     default-theme: hacker-terminal
     default-refresh-frequency: 5s

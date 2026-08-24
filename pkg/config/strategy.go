@@ -2,14 +2,21 @@ package config
 
 import "time"
 
+// DefaultCustomThemesPath is where Sablier looks for custom waiting-page themes when
+// --strategy.dynamic.custom-themes-path is not set. It is the path the documentation
+// tells users to mount their themes at; a missing directory is not an error.
+const DefaultCustomThemesPath = "/etc/sablier/themes"
+
 // DynamicStrategy holds configuration for the dynamic (waiting-page) strategy.
 type DynamicStrategy struct {
 	// CustomThemesPath is a directory from which Sablier loads custom waiting-page themes.
 	// All .html files found recursively under this path are registered as named themes.
-	// Leave empty to use only the built-in themes.
+	// The default is the path the documentation tells you to mount your themes at; when it
+	// does not exist Sablier simply serves the built-in themes. Set it to "" to skip the
+	// lookup entirely.
 	// Env: SABLIER_STRATEGY_DYNAMIC_CUSTOM_THEMES_PATH
 	// CLI: --strategy.dynamic.custom-themes-path
-	// Default: "" (built-in themes only)
+	// Default: "/etc/sablier/themes"
 	// Since: v1.0.0
 	CustomThemesPath string
 
@@ -70,6 +77,7 @@ func NewStrategyConfig() Strategy {
 
 func newDynamicStrategy() DynamicStrategy {
 	return DynamicStrategy{
+		CustomThemesPath:        DefaultCustomThemesPath,
 		DefaultTheme:            "hacker-terminal",
 		ShowDetailsByDefault:    true,
 		DefaultRefreshFrequency: 5 * time.Second,

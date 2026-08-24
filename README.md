@@ -312,8 +312,9 @@ logging:
   level: info
 strategy:
   dynamic:
-    # Custom themes folder, will load all .html files recursively (default empty)
-    custom-themes-path:
+    # Custom themes folder, will load all .html files recursively.
+    # A missing folder is not an error, only the built-in themes are served then.
+    custom-themes-path: /etc/sablier/themes
     # Show instances details by default in waiting UI
     show-details-by-default: true
     # Default theme used for dynamic strategy (default "hacker-terminal")

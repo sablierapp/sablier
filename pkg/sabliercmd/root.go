@@ -106,7 +106,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("logging.level"))
 
 	// strategy
-	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.CustomThemesPath, "strategy.dynamic.custom-themes-path", "", "Custom themes folder, will load all .html files recursively")
+	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.CustomThemesPath, "strategy.dynamic.custom-themes-path", config.DefaultCustomThemesPath, "Custom themes folder, will load all .html files recursively (a missing folder is not an error, Sablier then serves only the built-in themes)")
 	_ = viper.BindPFlag("strategy.dynamic.custom-themes-path", startCmd.Flags().Lookup("strategy.dynamic.custom-themes-path"))
 	startCmd.Flags().StringVar(&conf.Strategy.Dynamic.DefaultTheme, "strategy.dynamic.default-theme", "hacker-terminal", "Default theme used for dynamic strategy")
 	_ = viper.BindPFlag("strategy.dynamic.default-theme", startCmd.Flags().Lookup("strategy.dynamic.default-theme"))
