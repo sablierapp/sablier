@@ -153,22 +153,30 @@ curl 'http://localhost:10000/api/strategies/dynamic?session_duration=1m&names=ng
 
 ## See the available themes from the API
 
+The themes endpoint is served at `/api/themes` (the legacy path `/api/dynamic/themes` still
+works). It returns every loaded theme, embedded and custom alike, in a single sorted list.
+
 ```bash
-curl 'http://localhost:10000/api/strategies/dynamic/themes'
+curl 'http://localhost:10000/api/themes'
 ```
+
+With the layout shown in [How to load your custom theme](#how-to-load-your-custom-theme):
+
 ```json
 {
-  "custom": [
-    "custom"
-  ],
-  "embedded": [
+  "themes": [
+    "custom1",
+    "custom2",
     "ghost",
     "hacker-terminal",
     "matrix",
-    "shuffle"
+    "shuffle",
+    "special/secret"
   ]
 }
 ```
+
+See the [API reference](/reference/api/) for the full `themes` endpoint documentation.
 
 ## Design your theme in the browser
 
