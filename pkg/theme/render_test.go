@@ -133,12 +133,20 @@ func TestThemes_Render(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Load custom theme",
+			name: "Load custom theme by its path relative to the themes directory",
+			args: args{
+				name: "inner/custom-theme",
+				opts: options,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Load custom theme by its base name only",
 			args: args{
 				name: "custom-theme",
 				opts: options,
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -190,7 +198,7 @@ func ExampleThemes_Render() {
 		ErrorInstanceInfo,
 	}
 
-	err = themes.Render("custom-theme", theme.Options{
+	err = themes.Render("inner/custom-theme", theme.Options{
 		DisplayName:      "Test",
 		InstanceStates:   instances,
 		ShowDetails:      true,
