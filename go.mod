@@ -34,9 +34,9 @@ require (
 	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.83.1
 	gotest.tools/v3 v3.5.2
-	k8s.io/api v0.36.3
-	k8s.io/apimachinery v0.36.3
-	k8s.io/client-go v0.36.3
+	k8s.io/api v0.36.4
+	k8s.io/apimachinery v0.36.4
+	k8s.io/client-go v0.36.4
 )
 
 require (
