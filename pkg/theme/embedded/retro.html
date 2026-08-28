@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />
+    <title>Sablier</title>
+    <style>
+        /* The 90s desktop "Please wait" dialog -- the original waiting UI, and
+           the only place an hourglass cursor was ever load-bearing. */
+        html, body { height: 100%; margin: 0; padding: 0; font-size: 0; overflow: hidden; }
+
+        body {
+            box-sizing: border-box;
+            background-color: #008080;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 24px 52px;
+            font-family: Tahoma, Verdana, "Segoe UI", "MS Sans Serif", sans-serif;
+            color: #000;
+            -webkit-font-smoothing: none;
+        }
+
+        .raised {
+            box-shadow:
+                inset -1px -1px 0 0 #0a0a0a, inset  1px  1px 0 0 #ffffff,
+                inset -2px -2px 0 0 #808080, inset  2px  2px 0 0 #dfdfdf;
+        }
+        .sunken {
+            box-shadow:
+                inset  1px  1px 0 0 #808080, inset -1px -1px 0 0 #ffffff,
+                inset  2px  2px 0 0 #0a0a0a, inset -2px -2px 0 0 #dfdfdf;
+        }
+
+        /* ---------- window ---------- */
+        .window {
+            width: 100%;
+            max-width: 430px;
+            background: #c0c0c0;
+            padding: 3px;
+            box-sizing: border-box;
+        }
+
+        .titlebar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 20px;
+            padding: 0 2px 0 4px;
+            background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .01em;
+        }
+        .titlebar .t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .titlebar .btn {
+            width: 16px; height: 15px;
+            background: #c0c0c0;
+            color: #0a0a0a;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 13px;
+            text-align: center;
+            flex: none;
+        }
+        .titlebar .btn.x { margin-left: 2px; }
+
+        .body { padding: 16px 14px 12px; }
+
+        .top { display: flex; gap: 14px; align-items: flex-start; }
+        .glass { width: 44px; height: 55px; flex: none; shape-rendering: crispEdges; }
+        /* 8s per turn: 4s of sand, then the cursor snaps over. The chambers swap roles at
+           the flip so the sand always falls downwards -- replaying the same motion after a
+           180 degree rotation would run it back up the glass. Each chamber's sand is one
+           rect the size of the chamber; it empties towards whichever edge faces the floor. */
+        .glass .flip { transform-origin: 8px 10px; animation: flip 8s steps(1, end) infinite; }
+        @keyframes flip { 0%, 49.99% { transform: rotate(0deg); } 50%, 100% { transform: rotate(180deg); } }
+
+        .glass .st { animation: sandA 8s steps(7, end) infinite; }
+        .glass .sb { animation: sandB 8s steps(7, end) infinite; }
+
+        /* The jump at 50% is invisible: both sides of it are an empty chamber. */
+        @keyframes sandA {
+            0%     { transform: translateY(0); }     /* full, on top */
+            44%    { transform: translateY(6px); }   /* drained      */
+            50%    { transform: translateY(6px); }
+            50.01% { transform: translateY(-6px); }  /* flipped: below, still empty */
+            94%    { transform: translateY(0); }     /* filled       */
+            100%   { transform: translateY(0); }
+        }
+        @keyframes sandB {
+            0%     { transform: translateY(6px); }   /* empty, below */
+            44%    { transform: translateY(0); }     /* filled       */
+            50%    { transform: translateY(0); }
+            94%    { transform: translateY(-6px); }  /* flipped: on top, drains */
+            100%   { transform: translateY(-6px); }
+        }
+
+        h1 { font-size: 13px; font-weight: 700; margin: 0 0 6px; line-height: 1.35; }
+        .sub { font-size: 11.5px; line-height: 1.55; margin: 0; color: #0a0a0a; }
+
+        /* ---------- progress ---------- */
+        .progress { margin: 14px 0 0; height: 20px; background: #c0c0c0; padding: 3px; box-sizing: border-box; overflow: hidden; position: relative; }
+        .progress .strip {
+            position: absolute;
+            top: 3px; bottom: 3px; left: 3px;
+            width: 38%;
+            background-image: repeating-linear-gradient(90deg, #000080 0 10px, transparent 10px 13px);
+            animation: march 2.2s linear infinite;
+        }
+        @keyframes march { from { transform: translateX(-105%); } to { transform: translateX(280%); } }
+
+        /* ---------- list box ---------- */
+        .listbox { margin: 14px 0 0; background: #fff; padding: 3px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; font-family: ui-monospace, "Lucida Console", Consolas, monospace; font-size: 11px; table-layout: fixed; }
+        thead th {
+            background: #c0c0c0;
+            font-family: Tahoma, Verdana, sans-serif;
+            font-size: 10.5px;
+            font-weight: 400;
+            text-align: left;
+            padding: 2px 5px;
+            box-shadow: inset -1px -1px 0 0 #808080, inset 1px 1px 0 0 #fff;
+        }
+        th.c2 { width: 82px; }
+        th.c3 { width: 44px; text-align: right; }
+        tbody td { padding: 2px 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tbody td.rep { text-align: right; }
+        tbody tr:nth-child(odd) td { background: #f2f2f2; }
+        td.st-ok   { color: #006000; }
+        td.st-err  { color: #a00000; }
+        td.st-wait { color: #000080; }
+        td.why { color: #a00000; white-space: normal; word-break: break-word; font-size: 10.5px; }
+
+        /* ---------- footer ---------- */
+        .actions { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+        .hint { flex: 1 1 auto; font-size: 10.5px; color: #4a4a4a; }
+        .button {
+            flex: none;
+            min-width: 76px;
+            padding: 4px 12px;
+            background: #c0c0c0;
+            font-size: 11.5px;
+            text-align: center;
+            color: #808080;
+            text-shadow: 1px 1px 0 #fff;
+        }
+
+        /* ---------- taskbar ---------- */
+        .taskbar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            height: 30px;
+            box-sizing: border-box;
+            background: #c0c0c0;
+            border-top: 1px solid #fff;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 3px;
+            font-size: 11.5px;
+        }
+        .taskbar .start { display: flex; align-items: center; gap: 4px; padding: 3px 7px 3px 4px; background: #c0c0c0; font-weight: 700; }
+        .taskbar .start svg { width: 14px; height: 16px; }
+        .taskbar .task { display: flex; align-items: center; gap: 5px; padding: 3px 8px; background: #c0c0c0; max-width: 190px; overflow: hidden; }
+        .taskbar .task svg { width: 10px; height: 12px; flex: none; }
+        .taskbar .task span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .taskbar .spacer { flex: 1 1 auto; }
+        .taskbar .tray { padding: 3px 9px; background: #c0c0c0; font-variant-numeric: tabular-nums; }
+
+        @media (max-width: 420px) {
+            .top { gap: 10px; }
+            .glass { width: 34px; height: 43px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .glass .flip, .glass .st, .glass .sb { animation: none; }
+            .glass .st { transform: translateY(3px); }
+            .glass .sb { transform: translateY(3px); }
+            .progress .strip { animation: none; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="window raised">
+    <div class="titlebar">
+        <span class="t">Sablier</span>
+        <span class="btn raised">_</span>
+        <span class="btn raised">&#9633;</span>
+        <span class="btn raised x">&times;</span>
+    </div>
+
+    <div class="body">
+        <div class="top">
+            <svg class="glass" viewBox="0 0 16 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                    <clipPath id="rt"><path d="M4 4 H12 L9 10 H7 Z"/></clipPath>
+                    <clipPath id="rb"><path d="M7 10 H9 L12 16 H4 Z"/></clipPath>
+                </defs>
+                <g class="flip">
+                    <rect x="2" y="1" width="12" height="2" fill="#0a0a0a"/>
+                    <rect x="2" y="17" width="12" height="2" fill="#0a0a0a"/>
+                    <path d="M4 3 H12 L9 10 L12 17 H4 L7 10 Z" fill="#ffffff"/>
+                    <g clip-path="url(#rt)"><rect class="st" x="3" y="4"  width="10" height="6" fill="#ef6c00"/></g>
+                    <g clip-path="url(#rb)"><rect class="sb" x="3" y="10" width="10" height="6" fill="#ef6c00"/></g>
+                    <path d="M4 3 H12 L9 10 L12 17 H4 L7 10 Z" fill="none" stroke="#0a0a0a" stroke-width="1"/>
+                </g>
+            </svg>
+
+            <div>
+                <h1>Starting {{ with .DisplayName }}{{ . }}{{ else }}your instances{{ end }}&hellip;</h1>
+                <p class="sub">Please wait while Sablier wakes the workload. This window refreshes automatically, so you do not need to do anything.</p>
+            </div>
+        </div>
+
+        <div class="progress sunken"><div class="strip"></div></div>
+
+        {{ if .InstanceStates }}
+        <div class="listbox sunken">
+            <table>
+                <thead><tr><th>Instance</th><th class="c2">Status</th><th class="c3">Rep.</th></tr></thead>
+                <tbody>
+                {{- range $instance := .InstanceStates }}
+                    {{- if $instance.Error }}
+                    <tr><td>{{ $instance.Name }}</td><td class="st-err">Error</td><td class="rep">n/a</td></tr>
+                    <tr><td class="why" colspan="3">{{ $instance.Error }}</td></tr>
+                    {{- else if eq $instance.Status "ready" }}
+                    <tr><td>{{ $instance.Name }}</td><td class="st-ok">Ready</td><td class="rep">{{ $instance.CurrentReplicas }}/{{ $instance.DesiredReplicas }}</td></tr>
+                    {{- else }}
+                    <tr><td>{{ $instance.Name }}</td><td class="st-wait">{{ $instance.Status }}</td><td class="rep">{{ $instance.CurrentReplicas }}/{{ $instance.DesiredReplicas }}</td></tr>
+                    {{- end }}
+                {{- end }}
+                </tbody>
+            </table>
+        </div>
+        {{ end }}
+
+        <div class="actions">
+            <span class="hint">Idle instances stop after {{ .SessionDuration }}.</span>
+            <span class="button raised">Cancel</span>
+        </div>
+    </div>
+</div>
+
+<div class="taskbar">
+    <span class="start raised">
+        <svg viewBox="0 0 16 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="shape-rendering:crispEdges">
+            <rect x="2" y="1" width="12" height="2" fill="#0a0a0a"/><rect x="2" y="17" width="12" height="2" fill="#0a0a0a"/>
+            <path d="M4 3 H12 L9 10 L12 17 H4 L7 10 Z" fill="#ffc107" stroke="#0a0a0a" stroke-width="1"/>
+        </svg>
+        Start
+    </span>
+    <span class="task sunken">
+        <svg viewBox="0 0 16 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="shape-rendering:crispEdges">
+            <path d="M4 3 H12 L9 10 L12 17 H4 L7 10 Z" fill="#ef6c00" stroke="#0a0a0a" stroke-width="1"/>
+        </svg>
+        <span>Sablier: Starting&hellip;</span>
+    </span>
+    <span class="spacer"></span>
+    <span class="tray sunken" id="clock">--:--</span>
+</div>
+
+<script>
+    (function () {
+        var el = document.getElementById('clock');
+        if (!el) return;
+        function tick() {
+            var d = new Date();
+            var h = d.getHours(), m = d.getMinutes();
+            var ap = h < 12 ? 'AM' : 'PM';
+            h = h % 12; if (h === 0) h = 12;
+            el.textContent = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ap;
+        }
+        tick();
+        setInterval(tick, 15000);
+    })();
+</script>
+</body>
+</html>

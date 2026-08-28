@@ -39,7 +39,7 @@ func TestSetupTheme(t *testing.T) {
 		themes, err := setupTheme(context.Background(), confWithThemesPath(missing), newTestLogger(buf))
 		require.NoError(t, err)
 
-		assert.ElementsMatch(t, []string{"ghost", "hacker-terminal", "matrix", "shuffle"}, themes.List())
+		assert.ElementsMatch(t, []string{"ghost", "hacker-terminal", "matrix", "retro", "shuffle"}, themes.List())
 		assert.NotContains(t, buf.String(), "level=WARN")
 	})
 
@@ -74,7 +74,7 @@ func TestSetupTheme(t *testing.T) {
 		themes, err := setupTheme(context.Background(), confWithThemesPath(""), newTestLogger(buf))
 		require.NoError(t, err)
 
-		assert.ElementsMatch(t, []string{"ghost", "hacker-terminal", "matrix", "shuffle"}, themes.List())
+		assert.ElementsMatch(t, []string{"ghost", "hacker-terminal", "matrix", "retro", "shuffle"}, themes.List())
 		assert.Contains(t, buf.String(), "--strategy.dynamic.custom-themes-path is empty")
 	})
 }

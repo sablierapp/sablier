@@ -6,6 +6,8 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"github.com/sablierapp/sablier/pkg/version"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"log/slog"
 	"os"
 	"testing"
@@ -125,6 +127,14 @@ func TestThemes_Render(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Load retro theme",
+			args: args{
+				name: "retro",
+				opts: options,
+			},
+			wantErr: false,
+		},
+		{
 			name: "Load non existent theme",
 			args: args{
 				name: "non-existent",
@@ -156,6 +166,43 @@ func TestThemes_Render(t *testing.T) {
 				t.Errorf("Themes.Render() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+		})
+	}
+}
+
+// TestThemes_RenderEmbeddedWithDetails exercises every embedded theme with
+// ShowDetails on. TestThemes_Render leaves it off, which means Render replaces
+// the instances with an empty slice and no theme's `range .InstanceStates`
+// block ever runs, so a broken row, error branch or status comparison in a
+// built-in theme goes unnoticed there.
+func TestThemes_RenderEmbeddedWithDetails(t *testing.T) {
+	version.Version = "1.0.0"
+	themes, err := theme.New(slogt.New(t))
+	require.NoError(t, err)
+
+	names := themes.List()
+	require.NotEmpty(t, names)
+
+	opts := theme.Options{
+		DisplayName:      "Test",
+		ShowDetails:      true,
+		InstanceStates:   []theme.Instance{StartingInstanceInfo, StartedInstanceInfo, ErrorInstanceInfo},
+		SessionDuration:  10 * time.Minute,
+		RefreshFrequency: 5 * time.Second,
+	}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			writer := &bytes.Buffer{}
+			require.NoError(t, themes.Render(name, opts, writer))
+
+			body := writer.String()
+			// Every instance has to make it onto the page, otherwise a theme
+			// renders without error while quietly dropping half the details.
+			for _, instance := range opts.InstanceStates {
+				assert.Contains(t, body, instance.Name)
+			}
+			assert.Contains(t, body, "instance does not exist", "the error message is not surfaced")
 		})
 	}
 }

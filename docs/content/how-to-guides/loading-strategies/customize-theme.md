@@ -31,6 +31,7 @@ You can also extend the themes by providing your own, which will be rendered as 
 |     `shuffle`     |         ![shuffle](/assets/img/shuffle.png)         |
 | `hacker-terminal` | ![hacker-terminal](/assets/img/hacker-terminal.png) |
 |     `matrix`      |          ![matrix](/assets/img/matrix.png)          |
+|      `retro`      |           ![retro](/assets/img/retro.png)           |
 
 
 
@@ -173,6 +174,7 @@ With the layout shown in [How to load your custom theme](#how-to-load-your-custo
     "ghost",
     "hacker-terminal",
     "matrix",
+    "retro",
     "shuffle",
     "special/secret"
   ]
