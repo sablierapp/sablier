@@ -1,0 +1,32 @@
+name: Integration (systemd)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-systemd:
+    name: Integration (systemd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: |
+            go.sum
+            tools.mod
+
+      - name: Run systemd integration tests
+        env:
+          SABLIER_SYSTEMD_INTEGRATION: "1"
+        run: go test -tags=nomsgpack -run TestSystemdProvider_Integration ./pkg/provider/systemd/

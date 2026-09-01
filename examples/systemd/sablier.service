@@ -1,0 +1,10 @@
+[Unit]
+Description=Sablier
+After=network.target
+
+[Service]
+ExecStart=%h/.local/bin/sablier start --configFile %h/.config/sablier/sablier.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

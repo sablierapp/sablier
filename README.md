@@ -281,7 +281,7 @@ sablier --configFile=path/to/myconfigfile.yml
 
 ```yaml
 provider:
-  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc)
+  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc, systemd)
   name: docker
   # Reject requests for containers/services that don't have the Sablier enable label
   reject-unlabeled-requests: false
@@ -471,6 +471,21 @@ Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmo
 - Discovers containers by `sablier` tag
 
 📚 **[Full Documentation](https://sablierapp.dev/#/providers/proxmox_lxc)**
+
+---
+
+### Systemd
+
+<img src="./docs/static/assets/img/systemd.svg" alt="Systemd" width="100" align="right" />
+
+Sablier integrates with systemd to manage units on demand, including per-user services when needed.
+
+**Features:**
+- Connects to the systemd D-Bus
+- Starts/stops explicitly opted-in systemd units
+- Supports system or user instances
+
+📚 **[Full Documentation](https://sablierapp.dev/tutorials/providers/systemd/)**
 
 ## Scale Mode
 

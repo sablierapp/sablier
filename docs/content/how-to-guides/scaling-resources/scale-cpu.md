@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: differs
   proxmox: impossible
+  systemd: differs
 example: scale-mode
 ---
 
@@ -108,5 +109,8 @@ services:
       - "sablier.idle.cpu=0.1"
       - "sablier.active.cpu=2.0"
 ```
+{{< /provider-tab >}}
+{{< provider-tab name="systemd" >}}
+Use decimal cores in the `[X-Sablier]` section: `IdleCPU=0.1` and `ActiveCPU=2.0`. Set `IdleReplicas=1` to keep the unit running while idle.
 {{< /provider-tab >}}
 {{< /provider-tabs >}}

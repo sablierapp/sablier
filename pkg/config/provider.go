@@ -8,7 +8,7 @@ import (
 // Provider holds the provider configurations.
 type Provider struct {
 	// Name selects the container runtime to manage workloads.
-	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc.
+	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd.
 	// Env: SABLIER_PROVIDER_NAME
 	// CLI: --provider.name
 	// Default: "docker"
@@ -62,6 +62,7 @@ type Provider struct {
 	Podman     Podman
 	Docker     Docker
 	ProxmoxLXC ProxmoxLXC
+	Systemd    Systemd
 }
 
 type Kubernetes struct {
@@ -148,6 +149,31 @@ type Docker struct {
 	HonorRestartPolicy bool
 }
 
+// Systemd holds the systemd provider configuration.
+type Systemd struct {
+	// UserInstance controls whether to talk to the systemd user instance
+	// (via the user D-Bus) instead of the system instance. This is useful
+	// when managing per-user services, e.g. Podman quadlets running in
+	// user mode.
+	// Env: SABLIER_PROVIDER_SYSTEMD_USER_INSTANCE
+	// CLI: --provider.systemd.user-instance
+	// Default: false
+	// Since: NEXT_RELEASE
+	UserInstance bool
+
+	// UnitPatterns optionally restricts the units Sablier manages to those
+	// matching any of the given glob patterns (e.g. "podman-*.service").
+	// When non-empty it is applied as a server-side pre-filter on listing
+	// and as a filter on the event stream, which reduces the amount of unit
+	// files Sablier has to inspect. Units still need the X-Sablier section
+	// with Enable=true to be considered managed.
+	// Env: SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS
+	// CLI: --provider.systemd.unit-patterns
+	// Default: []
+	// Since: NEXT_RELEASE
+	UnitPatterns []string
+}
+
 // ProxmoxLXC holds the Proxmox VE LXC provider configuration.
 type ProxmoxLXC struct {
 	// URL is the Proxmox VE REST API base URL (e.g. "https://proxmox:8006/api2/json").
@@ -181,7 +207,7 @@ type ProxmoxLXC struct {
 	TLSInsecure bool
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc"}
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd"}
 var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
@@ -200,6 +226,7 @@ func NewProviderConfig() Provider {
 			Strategy: "stop",
 		},
 		ProxmoxLXC: ProxmoxLXC{},
+		Systemd:    Systemd{},
 	}
 }
 

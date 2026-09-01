@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: differs
   proxmox: impossible
+  systemd: differs
 example: scale-mode
 ---
 
@@ -96,5 +97,8 @@ metadata:
 {{< /provider-tab >}}
 {{< provider-tab name="podman" >}}
 Identical to Docker: same units and labels.
+{{< /provider-tab >}}
+{{< provider-tab name="systemd" >}}
+Use Docker-style units in the `[X-Sablier]` section, for example `IdleMemory=64m` and `ActiveMemory=512m`.
 {{< /provider-tab >}}
 {{< /provider-tabs >}}

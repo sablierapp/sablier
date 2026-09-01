@@ -34,6 +34,10 @@
       "TokenID": "",
       "TokenSecret": "",
       "TLSInsecure": false
+    },
+    "Systemd": {
+      "UserInstance": false,
+      "UnitPatterns": null
     }
   },
   "Sessions": {
