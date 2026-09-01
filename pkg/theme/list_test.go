@@ -28,7 +28,7 @@ func TestList(t *testing.T) {
 
 	// Nested themes are named after their path relative to the themes directory,
 	// and the list is sorted so that the API returns a stable order.
-	assert.Equal(t, []string{"ghost", "hacker-terminal", "inner/theme2", "matrix", "shuffle", "theme1"}, list)
+	assert.Equal(t, []string{"ghost", "hacker-terminal", "inner/theme2", "matrix", "retro", "shuffle", "theme1"}, list)
 }
 
 func TestExists(t *testing.T) {
@@ -60,7 +60,7 @@ func TestListDoesNotCollideOnBaseName(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, []string{"ghost", "hacker-terminal", "matrix", "secret", "shuffle", "special/secret"}, themes.List())
+	assert.Equal(t, []string{"ghost", "hacker-terminal", "matrix", "retro", "secret", "shuffle", "special/secret"}, themes.List())
 	assert.True(t, themes.Exists("secret"))
 	assert.True(t, themes.Exists("special/secret"))
 

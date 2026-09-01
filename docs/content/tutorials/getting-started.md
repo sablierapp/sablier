@@ -214,7 +214,7 @@ This configuration applies to requests for `http://localhost:8080/whoami`:
 - After one minute without traffic, the containers stop.
 - The dynamic strategy shows a waiting page while the service starts, using the display name `My Whoami Service`, the built-in `ghost` theme, and the instance details.
 
-Sablier ships several built-in themes, including `ghost`, `shuffle`, `hacker-terminal`, and `matrix`. You can also provide your own. See [Customize your theme](/how-to-guides/loading-strategies/customize-theme/).
+Sablier ships several built-in themes, including `ghost`, `shuffle`, `hacker-terminal`, `matrix`, and `retro`. You can also provide your own. See [Customize your theme](/how-to-guides/loading-strategies/customize-theme/).
 
 ### Reach the endpoint and watch it load
 
