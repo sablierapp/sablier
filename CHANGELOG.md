@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.18.0](https://github.com/sablierapp/sablier/compare/v1.17.0...v1.18.0) (2026-09-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **theme:** a custom theme in a sub-directory is now requested as "<subdir>/<name>" rather than "<name>", as documented.
+
+### build
+
+* **deps:** bump github.com/getkin/kin-openapi from 0.146.0 to 0.147.0 ([#1084](https://github.com/sablierapp/sablier/issues/1084)) ([0d4e617](https://github.com/sablierapp/sablier/commit/0d4e6178e48cea226f003fe8929d0cebb82bc733))
+
+
+### Features
+
+* add systemd provider ([#611](https://github.com/sablierapp/sablier/issues/611)) ([08c1ad4](https://github.com/sablierapp/sablier/commit/08c1ad4876edf29540aa1929109b06530895eddd))
+* **logging:** honor the NO_COLOR environment variable ([#1090](https://github.com/sablierapp/sablier/issues/1090)) ([f5c1dcc](https://github.com/sablierapp/sablier/commit/f5c1dcc20ace8a72e618de2763a75e975a705cff)), closes [#1085](https://github.com/sablierapp/sablier/issues/1085)
+* **theme:** add the retro waiting page theme ([#1096](https://github.com/sablierapp/sablier/issues/1096)) ([510f0e1](https://github.com/sablierapp/sablier/commit/510f0e1967e9a87abc0a496c7cf3a402b2f9c305))
+* **theme:** default the custom themes path to /etc/sablier/themes ([#1087](https://github.com/sablierapp/sablier/issues/1087)) ([5b44757](https://github.com/sablierapp/sablier/commit/5b44757762f77eb279a5c8c9b0d57b0a327d056f)), closes [#1081](https://github.com/sablierapp/sablier/issues/1081)
+
+
+### Bug Fixes
+
+* **theme:** name custom themes after their path, ignore non-theme entries ([#1088](https://github.com/sablierapp/sablier/issues/1088)) ([001101e](https://github.com/sablierapp/sablier/commit/001101e86ecaeb20dd3eb097c428b36237e44d17)), closes [#1081](https://github.com/sablierapp/sablier/issues/1081)
+
+
+### Documentation
+
+* **themes:** correct the themes endpoint path and response shape ([#1086](https://github.com/sablierapp/sablier/issues/1086)) ([867f542](https://github.com/sablierapp/sablier/commit/867f54273f98895f1d07cca583f094f3dc142743))
+
 ## [1.17.0](https://github.com/sablierapp/sablier/compare/v1.16.2...v1.17.0) (2026-08-19)
 
 
