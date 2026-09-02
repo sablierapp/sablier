@@ -11,7 +11,7 @@ import (
 func TestNoopRecorderImplementsAllMethods(t *testing.T) {
 	var r metrics.Recorder = metrics.Noop{}
 
-	r.RecordSessionRequest("dynamic", "names")
+	r.RecordSessionRequest("dynamic", "names", "")
 	r.RecordInstanceStartEnd("nginx", 250*time.Millisecond)
 	r.RecordInstanceStartFailure("nginx")
 	r.RecordReadyWaitBegin("nginx")

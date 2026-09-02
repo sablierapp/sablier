@@ -70,6 +70,52 @@ func TestGroupLockCollector_NoGroupsEmitsNothing(t *testing.T) {
 	}
 }
 
+func TestInstanceGroupCollector_EmitsMembership(t *testing.T) {
+	gp := fakeGroupsProvider{groups: map[string][]string{
+		"team-a": {"frontend", "shared-api"},
+		"team-b": {"shared-api"},
+	}}
+	c := metrics.NewInstanceGroupCollector(gp)
+
+	want := `
+# HELP sablier_instance_group Mapping of instances to the groups they belong to. Always 1. Join with on(instance) group_left(group) to slice per-instance metrics by group.
+# TYPE sablier_instance_group gauge
+sablier_instance_group{group="team-a",instance="frontend"} 1
+sablier_instance_group{group="team-a",instance="shared-api"} 1
+sablier_instance_group{group="team-b",instance="shared-api"} 1
+`
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want), "sablier_instance_group"); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
+	}
+}
+
+func TestInstanceGroupCollector_DeduplicatesMembers(t *testing.T) {
+	// A duplicate (instance, group) labelset makes Gather() fail; the collector
+	// must emit it once.
+	gp := fakeGroupsProvider{groups: map[string][]string{
+		"team-a": {"frontend", "frontend", "shared-api"},
+	}}
+	c := metrics.NewInstanceGroupCollector(gp)
+
+	want := `
+# HELP sablier_instance_group Mapping of instances to the groups they belong to. Always 1. Join with on(instance) group_left(group) to slice per-instance metrics by group.
+# TYPE sablier_instance_group gauge
+sablier_instance_group{group="team-a",instance="frontend"} 1
+sablier_instance_group{group="team-a",instance="shared-api"} 1
+`
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want), "sablier_instance_group"); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
+	}
+}
+
+func TestInstanceGroupCollector_NoGroupsEmitsNothing(t *testing.T) {
+	gp := fakeGroupsProvider{groups: map[string][]string{}}
+	c := metrics.NewInstanceGroupCollector(gp)
+	if got := testutil.CollectAndCount(c, "sablier_instance_group"); got != 0 {
+		t.Errorf("expected 0 series, got %d", got)
+	}
+}
+
 type fakeSessionSource struct {
 	entries []metrics.SessionEntry
 }

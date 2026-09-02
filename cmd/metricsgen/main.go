@@ -44,10 +44,12 @@ func main() {
 	rec := metrics.NewPromRecorder()
 	reg := rec.Registry().(*prometheus.Registry)
 	reg.MustRegister(metrics.NewGroupLockCollector(fakeGroups{}, fakeActive{}))
+	reg.MustRegister(metrics.NewInstanceGroupCollector(fakeGroups{}))
 	reg.MustRegister(metrics.NewSessionExpiryCollector(fakeSessions{}))
 
 	// Exercise each recorder vector so its label names appear on gather.
-	rec.RecordSessionRequest("dynamic", "group")
+	rec.RecordSessionRequest("dynamic", "group", "group")
+	rec.RecordGroupStartDuration("group", time.Second)
 	rec.RecordInstanceStartFailure("instance")
 	rec.RecordInstanceStop("instance", "expired")
 	rec.RecordInstanceStartEnd("instance", time.Second)
@@ -98,6 +100,15 @@ func main() {
 		fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", name, typ, labels, escape(mf.GetHelp()))
 	}
 	b.WriteString("| Go runtime + process collectors | (default) | (default) | Standard `go_*` and `process_*` metrics from the Prometheus Go client. |\n\n")
+
+	b.WriteString("## Querying per-group\n\n")
+	b.WriteString("Instances can belong to multiple groups, so per-instance timing and lifetime metrics carry no `group` label. Slice them by group by joining on `sablier_instance_group`.\n\n")
+	b.WriteString("Session active time per group (last hour):\n\n")
+	b.WriteString("```promql\nsum by (group) (\n  increase(sablier_instance_active_seconds_total[1h])\n  * on(instance) group_left(group) sablier_instance_group\n)\n```\n\n")
+	b.WriteString("Ready-time p95 per group:\n\n")
+	b.WriteString("```promql\nhistogram_quantile(0.95, sum by (group, le) (\n  rate(sablier_instance_ready_duration_seconds_bucket[1h])\n  * on(instance) group_left(group) sablier_instance_group\n))\n```\n\n")
+	b.WriteString("Request rate and blocking start-time p95 are already labeled by group directly:\n\n")
+	b.WriteString("```promql\nsum by (group) (rate(sablier_session_requests_total{group!=\"\"}[5m]))\nhistogram_quantile(0.95, sum by (group, le) (rate(sablier_group_start_duration_seconds_bucket[1h])))\n```\n\n")
 
 	b.WriteString("## Security note\n\n")
 	b.WriteString("The endpoint exposes process internals, group and instance names, and counters. It is intended for trusted observability stacks. Restrict at the reverse proxy when Sablier is fronted on an untrusted network.\n")
