@@ -84,6 +84,17 @@ const (
 	// since: NEXT_RELEASE
 	LabelAntiAffinity = "sablier.anti-affinity"
 
+	// LabelDelegateScaling opts the instance into delegated scaling: Sablier never
+	// writes the replica count and instead emits "activate"/"deactivate" intent
+	// webhooks for an external scaler (e.g. a KEDA ScaledObject) to act on.
+	//
+	// type: boolean
+	// example: "true"
+	// feature: /how-to-guides/scaling-resources/delegated-scaling/
+	// providers: Kubernetes only.
+	// since: NEXT_RELEASE
+	LabelDelegateScaling = "sablier.delegate-scaling"
+
 	// LabelIdleReplicas is the replica count when idle. `0` stops the workload;
 	// `1` or more keeps it running with optional resource throttling.
 	//

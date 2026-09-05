@@ -3,6 +3,18 @@
 // bridge: regardless of whether the underlying runtime is Docker, Kubernetes,
 // Docker Swarm, Podman, or Proxmox LXC, every consumer receives the same JSON
 // payload structure.
+//
+// Two kinds of events are delivered on separate watches:
+//
+//   - Lifecycle events ("started"/"stopped") are observations of an actual
+//     scale transition. They are delivered best-effort and fan out per endpoint
+//     (Watch/dispatch); an endpoint with no events filter receives all of them.
+//   - Intent events ("activate"/"deactivate") are emitted only for
+//     delegated-scaling instances, whose replica count is owned by an external
+//     scaler. They are delivered strictly in order with bounded retries
+//     (WatchOrdered/dispatchOrdered) and require an explicit subscription: an
+//     endpoint receives them only if its events filter lists them, so existing
+//     unfiltered endpoints see no new traffic.
 package webhook
 
 import (
@@ -27,7 +39,8 @@ import (
 // Payload is the normalized JSON body posted to every webhook endpoint.
 // The same structure is used regardless of the underlying provider.
 type Payload struct {
-	// Event is the normalized event type: "started" or "stopped".
+	// Event is the normalized event type. Lifecycle events are "started" or
+	// "stopped"; delegated-scaling intent events are "activate" or "deactivate".
 	Event string `json:"event"`
 	// Instance holds provider-agnostic instance identifiers.
 	Instance InstancePayload `json:"instance"`
@@ -68,9 +81,9 @@ func NewDispatcher(endpoints []config.WebhookEndpoint, logger *slog.Logger) *Dis
 	}
 }
 
-// Watch consumes events from stream and delivers webhooks for "started" and
-// "stopped" transitions. It returns when ctx is cancelled, the event channel
-// is closed, or a terminal error is received from the stream.
+// Watch consumes events from stream and delivers webhooks for the lifecycle
+// "started" and "stopped" transitions only. It returns when ctx is cancelled,
+// the event channel is closed, or a terminal error is received from the stream.
 //
 // Watch waits for all in-flight HTTP deliveries to complete before returning,
 // so the caller can rely on no goroutines escaping after Watch exits.
@@ -108,6 +121,94 @@ func (d *Dispatcher) Watch(ctx context.Context, stream sablier.InstanceEventStre
 	}
 }
 
+// orderedDeliveryAttempts bounds how many times WatchOrdered retries a single
+// delivery before giving up and moving on to the next event.
+const orderedDeliveryAttempts = 5
+
+// orderedRetryBaseDelay is the base backoff between ordered-delivery retries; it
+// grows linearly with the attempt number.
+const orderedRetryBaseDelay = 200 * time.Millisecond
+
+// WatchOrdered consumes events from stream and delivers them strictly in order,
+// one event at a time, retrying each delivery with bounded backoff. It is the
+// counterpart to Watch for intent events (activate/deactivate) where delivery is
+// load-bearing: a reordered deactivate→activate or a silently dropped delivery
+// would leave the external scaler in the wrong state.
+//
+// Unlike Watch it does not fan out per endpoint concurrently — all of an event's
+// endpoints are delivered (with retries) before the next event is read, so the
+// receiver observes events in the exact order Sablier emitted them.
+//
+// Call WatchOrdered in a dedicated goroutine.
+func (d *Dispatcher) WatchOrdered(ctx context.Context, stream sablier.InstanceEventStream) {
+	eventsC := stream.Events
+	errC := stream.Err
+
+	for {
+		select {
+		case <-ctx.Done():
+			d.l.InfoContext(ctx, "ordered webhook dispatcher stopped", slog.Any("reason", ctx.Err()))
+			return
+		case event, ok := <-eventsC:
+			if !ok {
+				d.l.WarnContext(ctx, "ordered webhook event stream closed")
+				return
+			}
+			d.dispatchOrdered(ctx, event)
+		case err, ok := <-errC:
+			if !ok {
+				return
+			}
+			d.l.ErrorContext(ctx, "ordered webhook event stream error", slog.Any("error", err))
+			return
+		}
+	}
+}
+
+// dispatchOrdered delivers a single event to every endpoint that should fire,
+// sequentially and with bounded retries, before returning.
+func (d *Dispatcher) dispatchOrdered(ctx context.Context, event sablier.InstanceEvent) {
+	payload := Payload{
+		Event:     string(event.Type),
+		Instance:  InstancePayload{Name: event.Info.Name},
+		Timestamp: time.Now().UTC(),
+	}
+	for _, ep := range d.endpoints {
+		// Intent events require an EXPLICIT subscription. Unlike shouldFire there
+		// is no empty-means-all fallback: an endpoint with no events filter never
+		// receives activate/deactivate, so existing unfiltered endpoints (e.g. an
+		// uptime monitor watching started/stopped) see zero new traffic.
+		if !slices.Contains(ep.Events, string(event.Type)) {
+			continue
+		}
+		d.sendWithRetry(ctx, ep, payload)
+	}
+}
+
+// sendWithRetry calls send up to orderedDeliveryAttempts times, backing off
+// between attempts, until send reports success or the context is cancelled.
+func (d *Dispatcher) sendWithRetry(ctx context.Context, ep config.WebhookEndpoint, payload Payload) {
+	for attempt := 1; attempt <= orderedDeliveryAttempts; attempt++ {
+		if err := d.send(ctx, ep, payload); err == nil {
+			return
+		}
+		if attempt == orderedDeliveryAttempts {
+			d.l.ErrorContext(ctx, "webhook: giving up after retries",
+				slog.String("url", ep.URL),
+				slog.String("event", payload.Event),
+				slog.String("instance", payload.Instance.Name),
+				slog.Int("attempts", attempt),
+			)
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Duration(attempt) * orderedRetryBaseDelay):
+		}
+	}
+}
+
 // dispatch builds the payload and spawns a goroutine per endpoint that should fire.
 // Each goroutine is tracked in wg so Watch can wait for them to drain.
 func (d *Dispatcher) dispatch(ctx context.Context, wg *sync.WaitGroup, event sablier.InstanceEvent) {
@@ -121,7 +222,9 @@ func (d *Dispatcher) dispatch(ctx context.Context, wg *sync.WaitGroup, event sab
 			continue
 		}
 		wg.Go(func() {
-			d.send(ctx, ep, payload)
+			// Best-effort delivery: send logs its own failures, and this path
+			// intentionally does not retry, so the returned error is ignored.
+			_ = d.send(ctx, ep, payload)
 		})
 	}
 }
@@ -134,19 +237,20 @@ func (d *Dispatcher) shouldFire(ep config.WebhookEndpoint, eventType string) boo
 	return slices.Contains(ep.Events, eventType)
 }
 
-// send performs the HTTP POST. Errors are logged but never returned; webhook
-// delivery is best-effort and must not block the event loop.
-func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payload Payload) {
+// send performs the HTTP POST. It returns nil on success and an error on
+// failure. Callers on the best-effort path (Watch/dispatch) ignore the return;
+// the ordered path (WatchOrdered/sendWithRetry) uses it to drive retries.
+func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payload Payload) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		d.l.ErrorContext(ctx, "webhook: failed to marshal payload", slog.String("url", ep.URL), slog.Any("error", err))
-		return
+		return err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ep.URL, bytes.NewReader(body))
 	if err != nil {
 		d.l.ErrorContext(ctx, "webhook: failed to build request", slog.String("url", ep.URL), slog.Any("error", err))
-		return
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", d.userAgent)
@@ -157,7 +261,7 @@ func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payloa
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.l.ErrorContext(ctx, "webhook: delivery failed", slog.String("url", ep.URL), slog.Any("error", err))
-		return
+		return err
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
@@ -168,7 +272,7 @@ func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payloa
 			slog.String("event", payload.Event),
 			slog.String("instance", payload.Instance.Name),
 		)
-		return
+		return fmt.Errorf("webhook %s returned status %d", ep.URL, resp.StatusCode)
 	}
 	d.l.InfoContext(ctx, "webhook: delivered",
 		slog.String("url", ep.URL),
@@ -176,6 +280,7 @@ func (d *Dispatcher) send(ctx context.Context, ep config.WebhookEndpoint, payloa
 		slog.String("event", payload.Event),
 		slog.String("instance", payload.Instance.Name),
 	)
+	return nil
 }
 
 // validateEndpoints checks each endpoint for a non-empty URL.

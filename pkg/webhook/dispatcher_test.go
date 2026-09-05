@@ -85,6 +85,113 @@ func startWatch(t *testing.T, d *webhook.Dispatcher, ctx context.Context, cancel
 	})
 }
 
+// startWatchOrdered launches d.WatchOrdered in a goroutine, with cleanup.
+func startWatchOrdered(t *testing.T, d *webhook.Dispatcher, ctx context.Context, cancel context.CancelFunc, stream sablier.InstanceEventStream) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		d.WatchOrdered(ctx, stream)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	})
+}
+
+func TestDispatcher_WatchOrdered_DeliversIntentEventsInOrder(t *testing.T) {
+	c := &capture{}
+	srv := httptest.NewServer(http.HandlerFunc(c.handler))
+	defer srv.Close()
+
+	// Intent events require an explicit subscription.
+	d := webhook.NewDispatcher([]config.WebhookEndpoint{{URL: srv.URL, Events: []string{"activate", "deactivate"}}}, slogt.New(t))
+
+	eventsC, _, stream := makeStream()
+	ctx, cancel := context.WithCancel(t.Context())
+	startWatchOrdered(t, d, ctx, cancel, stream)
+
+	// A deactivate followed by an activate must arrive in that exact order.
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventDeactivate, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventActivate, Info: sablier.InstanceInfo{Name: "app"}}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && c.count() < 2 {
+		time.Sleep(5 * time.Millisecond)
+	}
+	assert.Equal(t, 2, c.count())
+	assert.Equal(t, "deactivate", c.received[0].Event)
+	assert.Equal(t, "activate", c.received[1].Event)
+}
+
+func TestDispatcher_WatchOrdered_RetriesThenSucceeds(t *testing.T) {
+	var mu sync.Mutex
+	attempts := 0
+	done := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		attempts++
+		n := attempts
+		mu.Unlock()
+		if n < 3 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		select {
+		case done <- struct{}{}:
+		default:
+		}
+	}))
+	defer srv.Close()
+
+	// Intent events require an explicit subscription.
+	d := webhook.NewDispatcher([]config.WebhookEndpoint{{URL: srv.URL, Events: []string{"activate"}}}, slogt.New(t))
+
+	eventsC, _, stream := makeStream()
+	ctx, cancel := context.WithCancel(t.Context())
+	startWatchOrdered(t, d, ctx, cancel, stream)
+
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventActivate, Info: sablier.InstanceInfo{Name: "app"}}
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected eventual successful delivery after retries")
+	}
+	mu.Lock()
+	got := attempts
+	mu.Unlock()
+	assert.Assert(t, got >= 3, "expected at least 3 attempts, got %d", got)
+}
+
+// TestDispatcher_WatchOrdered_UnfilteredEndpointReceivesNoIntentEvents proves the
+// headline invariant: an endpoint with an empty events filter (which fires for
+// every lifecycle event) receives zero intent events. Intent delivery requires an
+// explicit subscription, so existing unfiltered endpoints see no new traffic.
+func TestDispatcher_WatchOrdered_UnfilteredEndpointReceivesNoIntentEvents(t *testing.T) {
+	c := &capture{}
+	srv := httptest.NewServer(http.HandlerFunc(c.handler))
+	defer srv.Close()
+
+	// No Events filter => empty-means-all for lifecycle events, but never intent.
+	d := webhook.NewDispatcher([]config.WebhookEndpoint{{URL: srv.URL}}, slogt.New(t))
+
+	eventsC, _, stream := makeStream()
+	ctx, cancel := context.WithCancel(t.Context())
+	startWatchOrdered(t, d, ctx, cancel, stream)
+
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventActivate, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventDeactivate, Info: sablier.InstanceInfo{Name: "app"}}
+
+	// Give the dispatcher time to (not) deliver.
+	time.Sleep(300 * time.Millisecond)
+	assert.Equal(t, 0, c.count(), "unfiltered endpoint must not receive intent events")
+}
+
 func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 	c := &capture{}
 	srv := httptest.NewServer(http.HandlerFunc(c.handler))

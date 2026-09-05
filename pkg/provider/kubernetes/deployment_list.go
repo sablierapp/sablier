@@ -42,9 +42,10 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:    parsed.Original,
-		Groups:  groups,
-		Enabled: enabled,
+		Name:      parsed.Original,
+		Groups:    groups,
+		Enabled:   enabled,
+		Delegated: delegatedScaling(config),
 	}
 }
 
