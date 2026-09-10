@@ -8,17 +8,17 @@ import (
 )
 
 func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	deployments, err := p.DeploymentList(ctx)
+	deployments, err := p.DeploymentList(ctx, options)
 	if err != nil {
 		return nil, err
 	}
 
-	statefulSets, err := p.StatefulSetList(ctx)
+	statefulSets, err := p.StatefulSetList(ctx, options)
 	if err != nil {
 		return nil, err
 	}
 
-	clusters, err := p.ClusterList(ctx)
+	clusters, err := p.ClusterList(ctx, options)
 	if err != nil {
 		return nil, err
 	}

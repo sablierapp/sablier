@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) DeploymentList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			sablier.LabelEnable: "true",
@@ -24,11 +25,20 @@ func (p *Provider) DeploymentList(ctx context.Context) ([]sablier.InstanceConfig
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(deployments.Items))
 	for _, d := range deployments.Items {
+		if !opts.All && !deploymentIsRunning(&d) {
+			continue
+		}
 		instance := p.deploymentToInstance(&d)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
+}
+
+// A nil replicas value defaults to 1 replica.
+// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec
+func deploymentIsRunning(d *v1.Deployment) bool {
+	return d.Spec.Replicas == nil || *d.Spec.Replicas != 0
 }
 
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {

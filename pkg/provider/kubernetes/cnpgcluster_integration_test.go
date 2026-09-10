@@ -9,6 +9,7 @@ import (
 
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
@@ -170,7 +171,7 @@ func TestKubernetesProvider_CNPGCluster(t *testing.T) {
 	})
 
 	t.Run("list discovers the cluster", func(t *testing.T) {
-		instances, err := p.ClusterList(ctx)
+		instances, err := p.ClusterList(ctx, provider.InstanceListOptions{All: true})
 		assert.NilError(t, err)
 		found := false
 		for _, i := range instances {

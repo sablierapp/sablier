@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"go.opentelemetry.io/otel"
 	"gotest.tools/v3/assert"
@@ -162,7 +163,7 @@ func TestProvider_ClusterListAndGroups(t *testing.T) {
 
 	p := newFakeCNPGProvider(t, enabled, enabledDefaultGroup, disabled)
 
-	instances, err := p.ClusterList(context.Background())
+	instances, err := p.ClusterList(context.Background(), provider.InstanceListOptions{All: true})
 	assert.NilError(t, err)
 	// Only the two sablier.enable=true clusters are listed.
 	assert.Equal(t, len(instances), 2)
