@@ -315,13 +315,11 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 func parseWeightDevices(s string) []BlkioWeightDevice {
 	var out []BlkioWeightDevice
 	for entry := range strings.SplitSeq(s, ",") {
-		entry = strings.TrimSpace(entry)
-		i := strings.LastIndex(entry, ":")
-		if i <= 0 {
+		path, wstr, ok := strings.CutLast(strings.TrimSpace(entry), ":")
+		if !ok || path == "" {
 			continue
 		}
-		path, wstr := entry[:i], strings.TrimSpace(entry[i+1:])
-		n, err := strconv.ParseUint(wstr, 10, 16)
+		n, err := strconv.ParseUint(strings.TrimSpace(wstr), 10, 16)
 		if err != nil || n < 10 || n > 1000 {
 			continue
 		}
@@ -336,13 +334,9 @@ func parseWeightDevices(s string) []BlkioWeightDevice {
 func parseThrottleDevices(s string) []BlkioThrottleDevice {
 	var out []BlkioThrottleDevice
 	for entry := range strings.SplitSeq(s, ",") {
-		entry = strings.TrimSpace(entry)
-		i := strings.LastIndex(entry, ":")
-		if i <= 0 {
-			continue
-		}
-		path, rate := entry[:i], strings.TrimSpace(entry[i+1:])
-		if path == "" || rate == "" {
+		path, rate, ok := strings.CutLast(strings.TrimSpace(entry), ":")
+		rate = strings.TrimSpace(rate)
+		if !ok || path == "" || rate == "" {
 			continue
 		}
 		out = append(out, BlkioThrottleDevice{Path: path, Rate: rate})

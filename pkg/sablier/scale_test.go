@@ -185,8 +185,8 @@ func TestScaleConfigFromLabels_BlkioDeviceMultiple(t *testing.T) {
 
 func TestScaleConfigFromLabels_BlkioWeightDeviceInvalidWeight(t *testing.T) {
 	labels := map[string]string{
-		// weight=9 is below minimum (10), weight=bad is not a number — both skipped
-		"sablier.idle.blkio-weight-device": "/dev/sda:9,/dev/sdb:bad,/dev/sdc:100",
+		// Weight 9 is below the minimum, "bad" is not a number, and ":100" has no path.
+		"sablier.idle.blkio-weight-device": "/dev/sda:9,/dev/sdb:bad,:100,/dev/sdc:100",
 	}
 	got := sablier.ScaleConfigFromLabels(labels)
 	// Only the valid entry survives
@@ -196,12 +196,24 @@ func TestScaleConfigFromLabels_BlkioWeightDeviceInvalidWeight(t *testing.T) {
 
 func TestScaleConfigFromLabels_BlkioThrottleDeviceMalformed(t *testing.T) {
 	labels := map[string]string{
-		// No colon → skipped; empty rate → skipped; valid entry survives
-		"sablier.idle.blkio-device-read-bps": "nocodon,/dev/sda:,/dev/sdb:5m",
+		// Entries with no colon, an empty rate, or an empty path are skipped.
+		"sablier.idle.blkio-device-read-bps": "nocodon,/dev/sda:,:5m,/dev/sdb:5m",
 	}
 	got := sablier.ScaleConfigFromLabels(labels)
 	assert.Assert(t, cmp.DeepEqual(got.Idle.BlkioDeviceReadBps,
 		[]sablier.BlkioThrottleDevice{{Path: "/dev/sdb", Rate: "5m"}}))
+}
+
+func TestScaleConfigFromLabels_BlkioDevicePathWithColons(t *testing.T) {
+	labels := map[string]string{
+		"sablier.idle.blkio-weight-device":   "/dev/disk/by-path/pci-0000:00:1f.2-ata-1:300",
+		"sablier.idle.blkio-device-read-bps": "/dev/disk/by-path/pci-0000:00:1f.2-ata-1:5m",
+	}
+	got := sablier.ScaleConfigFromLabels(labels)
+	assert.Assert(t, cmp.DeepEqual(got.Idle.BlkioWeightDevice,
+		[]sablier.BlkioWeightDevice{{Path: "/dev/disk/by-path/pci-0000:00:1f.2-ata-1", Weight: 300}}))
+	assert.Assert(t, cmp.DeepEqual(got.Idle.BlkioDeviceReadBps,
+		[]sablier.BlkioThrottleDevice{{Path: "/dev/disk/by-path/pci-0000:00:1f.2-ata-1", Rate: "5m"}}))
 }
 
 func TestPopulateEnabledAndGroup_BlkioDeviceLabels(t *testing.T) {
