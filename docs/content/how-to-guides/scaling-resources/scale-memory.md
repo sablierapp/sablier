@@ -88,11 +88,11 @@ kind: Deployment
 metadata:
   name: myapp
   labels:
-    sablier.enable: "true"
-    sablier.group: myapp
-    sablier.idle.replicas: "1"
-    sablier.idle.memory: "64Mi"
-    sablier.active.memory: "512Mi"
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: myapp
+    sablierapp.dev/idle.replicas: "1"
+    sablierapp.dev/idle.memory: "64Mi"
+    sablierapp.dev/active.memory: "512Mi"
 ```
 {{< /provider-tab >}}
 {{< provider-tab name="podman" >}}

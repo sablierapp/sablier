@@ -11,17 +11,21 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-// listClusters returns the CloudNativePG Clusters labelled sablier.enable=true across
-// all namespaces. When the dynamic client is unset or the CloudNativePG CRD is not
-// installed, it returns no clusters rather than an error, so the provider keeps working
-// on clusters that don't run CloudNativePG.
+// listClusters returns the CloudNativePG Clusters labelled sablierapp.dev/enable=true
+// or sablier.enable=true across all namespaces. When the dynamic client is unset or the
+// CloudNativePG CRD is not installed, it returns no clusters rather than an error, so the
+// provider keeps working on clusters that don't run CloudNativePG.
 func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructured, error) {
 	if p.dynamic == nil {
 		return nil, nil
 	}
 
-	list, err := p.dynamic.Resource(cnpgClusterGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: "sablier.enable=true",
+	items, err := listEnabled(func(opts metav1.ListOptions) ([]unstructured.Unstructured, error) {
+		list, err := p.dynamic.Resource(cnpgClusterGVR).Namespace(metav1.NamespaceAll).List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		return list.Items, nil
 	})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -31,7 +35,7 @@ func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructure
 		return nil, err
 	}
 
-	return list.Items, nil
+	return items, nil
 }
 
 func (p *Provider) ClusterList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {

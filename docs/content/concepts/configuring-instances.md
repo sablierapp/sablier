@@ -37,11 +37,11 @@ Each platform exposes labels differently, and Sablier reads them from the native
 |----------|-----------------------------------|
 | Docker, Podman | container `labels` |
 | Docker Swarm | service `deploy.labels` |
-| Kubernetes | workload `labels` for `sablier.enable`, `annotations` for every other key |
+| Kubernetes | workload `labels` for `sablierapp.dev/enable`, `annotations` for every other key |
 | Proxmox LXC | container `tags` |
 
 {{< callout type="info" >}}
-On **Kubernetes**, `sablier.enable` must be a *label* because workload discovery uses a label selector; multi-value settings such as `sablier.group` must be *annotations*. On **Proxmox LXC** there are no key/value labels, so Sablier reads *tags* like `sablier` and `sablier-group-<name>`.
+On **Kubernetes**, keys use the public `sablierapp.dev/` prefix in place of `sablier.`, for example `sablierapp.dev/enable`. The legacy `sablier.*` keys continue to work, but they are deprecated. `sablierapp.dev/enable` must be a *label* because workload discovery uses a label selector; multi-value settings such as `sablierapp.dev/group` must be *annotations*. On **Proxmox LXC** there are no key/value labels, so Sablier reads *tags* like `sablier` and `sablier-group-<name>`.
 {{< /callout >}}
 
 See [Applying labels](/reference/labels/#applying-labels) for copy-paste examples in each provider's syntax.

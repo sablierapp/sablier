@@ -11,20 +11,13 @@ import (
 )
 
 func (p *Provider) DeploymentList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			sablier.LabelEnable: "true",
-		},
-	}
-	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
-	})
+	deployments, err := p.listDeployments(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	instances := make([]sablier.InstanceConfiguration, 0, len(deployments.Items))
-	for _, d := range deployments.Items {
+	instances := make([]sablier.InstanceConfiguration, 0, len(deployments))
+	for _, d := range deployments {
 		if !opts.All && !deploymentIsRunning(&d) {
 			continue
 		}
@@ -59,21 +52,13 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 }
 
 func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, error) {
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			sablier.LabelEnable: "true",
-		},
-	}
-	deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
-	})
-
+	deployments, err := p.listDeployments(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	groups := make(map[string][]string)
-	for _, deployment := range deployments.Items {
+	for _, deployment := range deployments {
 		parsed := DeploymentName(&deployment, ParseOptions{Delimiter: p.delimiter})
 		config := sablierConfig(deployment.Labels, deployment.Annotations)
 		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
@@ -82,4 +67,14 @@ func (p *Provider) DeploymentGroups(ctx context.Context) (map[string][]string, e
 	}
 
 	return groups, nil
+}
+
+func (p *Provider) listDeployments(ctx context.Context) ([]v1.Deployment, error) {
+	return listEnabled(func(opts metav1.ListOptions) ([]v1.Deployment, error) {
+		deployments, err := p.Client.AppsV1().Deployments(corev1.NamespaceAll).List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		return deployments.Items, nil
+	})
 }

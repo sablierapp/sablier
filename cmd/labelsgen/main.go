@@ -89,8 +89,9 @@ func writeApplying(b *strings.Builder) {
 
 	b.WriteString("{{< tab name=\"Kubernetes\" >}}\n")
 	b.WriteString("```yaml\n")
-	b.WriteString("metadata:\n  labels:\n    sablier.enable: \"true\"      # discovery uses a label selector\n  annotations:\n    sablier.group: \"my-group\"   # all other settings are annotations\n")
-	b.WriteString("```\n")
+	b.WriteString("metadata:\n  labels:\n    sablierapp.dev/enable: \"true\"      # discovery uses a label selector\n  annotations:\n    sablierapp.dev/group: \"my-group\"   # all other settings are annotations\n")
+	b.WriteString("```\n\n")
+	b.WriteString("On Kubernetes, replace the `sablier.` prefix with `sablierapp.dev/`. For example, `sablier.idle.replicas` becomes `sablierapp.dev/idle.replicas`. The legacy `sablier.*` keys continue to work, but they are deprecated.\n")
 	b.WriteString("{{< /tab >}}\n")
 
 	b.WriteString("{{< tab name=\"Proxmox LXC\" >}}\n")

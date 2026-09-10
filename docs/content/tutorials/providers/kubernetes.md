@@ -102,8 +102,8 @@ metadata:
   name: whoami
   labels:
     app: whoami
-    sablier.enable: "true"
-    sablier.group: mygroup
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: mygroup
 spec:
   selector:
     matchLabels:
@@ -128,18 +128,20 @@ Kubernetes uses the Pod healthcheck to check if the Pod is up and running. So th
 
 ## Configure with labels or annotations
 
-On Kubernetes, `sablier.*` keys can be set either as a **label** or as an **annotation**, with one exception: `sablier.enable` must always be a label (see the note below). This applies to Deployments, StatefulSets, CloudNativePG Clusters and OT-CONTAINER-KIT Redis instances.
+On Kubernetes, Sablier keys use the public `sablierapp.dev/` prefix. To get the Kubernetes key of a key in the [Label reference](/reference/labels/), replace `sablier.` with `sablierapp.dev/`. For example, `sablier.idle.replicas` becomes `sablierapp.dev/idle.replicas`.
+
+You can set each key as a **label** or as an **annotation**, with one exception: `sablierapp.dev/enable` must always be a label (see the note below). This applies to Deployments, StatefulSets, CloudNativePG Clusters and OT-CONTAINER-KIT Redis instances.
 
 Annotations are useful because Kubernetes **label values are restricted** (max 63 characters, only `[A-Za-z0-9._-]`, no commas or colons). Some Sablier values cannot be expressed as labels and must use annotations, for example:
 
-- `sablier.group` with multiple comma-separated groups (e.g. `team-a,team-b`)
-- `sablier.running-hours` (e.g. `09:00-18:00`), where the colon is invalid in a label value
-- `sablier.running-days` (e.g. `Mon,Tue,Wed,Thu,Fri`)
+- `sablierapp.dev/group` with multiple comma-separated groups (e.g. `team-a,team-b`)
+- `sablierapp.dev/running-hours` (e.g. `09:00-18:00`), where the colon is invalid in a label value
+- `sablierapp.dev/running-days` (e.g. `Mon,Tue,Wed,Thu,Fri`)
 
 When the same key is present as both a label and an annotation, the **annotation takes precedence**.
 
 {{< callout type="warning" >}}
-`sablier.enable` must be set as a **label**. Workload discovery relies on a server-side label selector, which cannot match annotations. All other keys work as labels or annotations.
+`sablierapp.dev/enable` must be set as a **label**. Workload discovery relies on a server-side label selector, which cannot match annotations. All other keys work as labels or annotations.
 {{< /callout >}}
 
 ```yaml
@@ -149,14 +151,20 @@ metadata:
   name: whoami
   labels:
     app: whoami
-    sablier.enable: "true"       # must be a label
+    sablierapp.dev/enable: "true"       # must be a label
   annotations:
-    sablier.group: "team-a,team-b"          # comma is invalid as a label value
-    sablier.running-hours: "09:00-18:00"    # colon is invalid as a label value
-    sablier.running-days: "Mon,Tue,Wed,Thu,Fri"
+    sablierapp.dev/group: "team-a,team-b"          # comma is invalid as a label value
+    sablierapp.dev/running-hours: "09:00-18:00"    # colon is invalid as a label value
+    sablierapp.dev/running-days: "Mon,Tue,Wed,Thu,Fri"
 spec:
   # ...existing spec...
 ```
+
+### Legacy `sablier.*` keys
+
+Sablier continues to read the `sablier.*` keys, for example `sablier.enable` and `sablier.group`. On Kubernetes, these keys are deprecated. A key without a prefix is [private to the user](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set), thus it can conflict with the label conventions of your organization. Use the `sablierapp.dev/` keys for new workloads.
+
+During a migration, a workload can have the two forms of a key. In this case, the `sablierapp.dev/` key takes precedence over the `sablier.` key from the same source. An annotation continues to take precedence over a label.
 
 ## Register CloudNativePG Clusters
 
@@ -173,15 +181,15 @@ kind: Cluster
 metadata:
   name: opencell-db
   labels:
-    sablier.enable: "true"
-    sablier.group: opencell
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: opencell
 spec:
   instances: 3
   storage:
     size: 1Gi
 ```
 
-This makes it possible to put an application, its Keycloak and its database in a single `sablier.group`, so that a single request wakes up the whole stack and inactivity hibernates all of it.
+This makes it possible to put an application, its Keycloak and its database in a single `sablierapp.dev/group`, so that a single request wakes up the whole stack and inactivity hibernates all of it.
 
 ### Cluster readiness
 
@@ -212,8 +220,8 @@ kind: Redis
 metadata:
   name: myapp-redis
   labels:
-    sablier.enable: "true"
-    sablier.group: myapp
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: myapp
 spec:
   kubernetesConfig:
     image: quay.io/opstree/redis:v7.0.12

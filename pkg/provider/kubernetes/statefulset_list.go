@@ -11,20 +11,13 @@ import (
 )
 
 func (p *Provider) StatefulSetList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			sablier.LabelEnable: "true",
-		},
-	}
-	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
-	})
+	statefulSets, err := p.listStatefulSets(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	instances := make([]sablier.InstanceConfiguration, 0, len(statefulSets.Items))
-	for _, ss := range statefulSets.Items {
+	instances := make([]sablier.InstanceConfiguration, 0, len(statefulSets))
+	for _, ss := range statefulSets {
 		if !opts.All && !statefulSetIsRunning(&ss) {
 			continue
 		}
@@ -59,20 +52,13 @@ func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceCon
 }
 
 func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {
-	labelSelector := metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			sablier.LabelEnable: "true",
-		},
-	}
-	statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
-	})
+	statefulSets, err := p.listStatefulSets(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	groups := make(map[string][]string)
-	for _, ss := range statefulSets.Items {
+	for _, ss := range statefulSets {
 		parsed := StatefulSetName(&ss, ParseOptions{Delimiter: p.delimiter})
 		config := sablierConfig(ss.Labels, ss.Annotations)
 		for _, groupName := range sablier.ParseGroups(config[sablier.LabelGroup]) {
@@ -81,4 +67,14 @@ func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, 
 	}
 
 	return groups, nil
+}
+
+func (p *Provider) listStatefulSets(ctx context.Context) ([]v1.StatefulSet, error) {
+	return listEnabled(func(opts metav1.ListOptions) ([]v1.StatefulSet, error) {
+		statefulSets, err := p.Client.AppsV1().StatefulSets(corev1.NamespaceAll).List(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		return statefulSets.Items, nil
+	})
 }
