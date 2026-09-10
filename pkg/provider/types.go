@@ -1,6 +1,8 @@
 package provider
 
 type InstanceListOptions struct {
+	// All includes the stopped instances. If All is false, the provider must
+	// return only the running instances.
 	All bool
 }
 

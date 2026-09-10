@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) StatefulSetList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			sablier.LabelEnable: "true",
@@ -24,11 +25,20 @@ func (p *Provider) StatefulSetList(ctx context.Context) ([]sablier.InstanceConfi
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(statefulSets.Items))
 	for _, ss := range statefulSets.Items {
+		if !opts.All && !statefulSetIsRunning(&ss) {
+			continue
+		}
 		instance := p.statefulSetToInstance(&ss)
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
+}
+
+// A nil replicas value defaults to 1 replica.
+// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/stateful-set-v1/#StatefulSetSpec
+func statefulSetIsRunning(ss *v1.StatefulSet) bool {
+	return ss.Spec.Replicas == nil || *ss.Spec.Replicas != 0
 }
 
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {

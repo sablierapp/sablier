@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -33,7 +34,7 @@ func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructure
 	return list.Items, nil
 }
 
-func (p *Provider) ClusterList(ctx context.Context) ([]sablier.InstanceConfiguration, error) {
+func (p *Provider) ClusterList(ctx context.Context, opts provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
 	items, err := p.listClusters(ctx)
 	if err != nil {
 		return nil, err
@@ -41,10 +42,18 @@ func (p *Provider) ClusterList(ctx context.Context) ([]sablier.InstanceConfigura
 
 	instances := make([]sablier.InstanceConfiguration, 0, len(items))
 	for i := range items {
+		if !opts.All && !clusterIsRunning(&items[i]) {
+			continue
+		}
 		instances = append(instances, p.clusterToInstance(&items[i]))
 	}
 
 	return instances, nil
+}
+
+// The provider stops a Cluster when it sets the hibernation annotation to on.
+func clusterIsRunning(u *unstructured.Unstructured) bool {
+	return u.GetAnnotations()[cnpgHibernationAnnotation] != cnpgHibernationOn
 }
 
 func (p *Provider) clusterToInstance(u *unstructured.Unstructured) sablier.InstanceConfiguration {
