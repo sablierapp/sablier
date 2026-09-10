@@ -147,7 +147,7 @@ func setupProxmox(t *testing.T) *proxmoxTestEnv {
 			}
 		}
 
-		delTask, err := ct.Delete(cleanupCtx)
+		delTask, err := ct.Delete(cleanupCtx, nil)
 		if err != nil {
 			t.Logf("cleanup: cannot delete container %d: %v", newID, err)
 			return
