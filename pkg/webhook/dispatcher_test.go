@@ -85,10 +85,18 @@ func startWatch(t *testing.T, d *webhook.Dispatcher, ctx context.Context, cancel
 	})
 }
 
+// startServer starts a test server on a loopback listener. The Dispatcher client uses
+// http.DefaultTransport, which cannot reach the in-memory network (https://pkg.go.dev/net/http/httptest#Server).
+func startServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewTestServer(t, handler)
+	srv.Start()
+	return srv
+}
+
 func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 	c := &capture{}
-	srv := httptest.NewServer(http.HandlerFunc(c.handler))
-	defer srv.Close()
+	srv := startServer(t, c.handler)
 
 	d := webhook.NewDispatcher(
 		[]config.WebhookEndpoint{{URL: srv.URL}},
@@ -112,8 +120,7 @@ func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 
 func TestDispatcher_FiresOnStoppedEvent(t *testing.T) {
 	c := &capture{}
-	srv := httptest.NewServer(http.HandlerFunc(c.handler))
-	defer srv.Close()
+	srv := startServer(t, c.handler)
 
 	d := webhook.NewDispatcher(
 		[]config.WebhookEndpoint{{URL: srv.URL}},
@@ -136,8 +143,7 @@ func TestDispatcher_FiresOnStoppedEvent(t *testing.T) {
 
 func TestDispatcher_IgnoresNonLifecycleEvents(t *testing.T) {
 	c := &capture{}
-	srv := httptest.NewServer(http.HandlerFunc(c.handler))
-	defer srv.Close()
+	srv := startServer(t, c.handler)
 
 	d := webhook.NewDispatcher(
 		[]config.WebhookEndpoint{{URL: srv.URL}},
@@ -162,12 +168,10 @@ func TestDispatcher_IgnoresNonLifecycleEvents(t *testing.T) {
 
 func TestDispatcher_FiltersEventsByEndpointConfig(t *testing.T) {
 	cStart := &capture{}
-	srvStart := httptest.NewServer(http.HandlerFunc(cStart.handler))
-	defer srvStart.Close()
+	srvStart := startServer(t, cStart.handler)
 
 	cStop := &capture{}
-	srvStop := httptest.NewServer(http.HandlerFunc(cStop.handler))
-	defer srvStop.Close()
+	srvStop := startServer(t, cStop.handler)
 
 	d := webhook.NewDispatcher([]config.WebhookEndpoint{
 		{URL: srvStart.URL, Events: []string{"started"}},
@@ -196,11 +200,10 @@ func TestDispatcher_FiltersEventsByEndpointConfig(t *testing.T) {
 
 func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 	gotAuth := make(chan string, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := startServer(t, func(w http.ResponseWriter, r *http.Request) {
 		gotAuth <- r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
+	})
 
 	d := webhook.NewDispatcher([]config.WebhookEndpoint{
 		{URL: srv.URL, Headers: map[string]string{"Authorization": "Bearer secret"}},
@@ -223,14 +226,13 @@ func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 func TestDispatcher_HandlesHTTPError(t *testing.T) {
 	// Endpoint that always returns 500 — dispatcher must not crash.
 	delivered := make(chan struct{}, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := startServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		select {
 		case delivered <- struct{}{}:
 		default:
 		}
-	}))
-	defer srv.Close()
+	})
 
 	d := webhook.NewDispatcher([]config.WebhookEndpoint{{URL: srv.URL}}, slogt.New(t))
 
@@ -306,12 +308,10 @@ func TestDispatcher_MultipleEndpoints(t *testing.T) {
 	const numEndpoints = 3
 	captures := make([]*capture, numEndpoints)
 	endpoints := make([]config.WebhookEndpoint, numEndpoints)
-	servers := make([]*httptest.Server, numEndpoints)
 	for i := range numEndpoints {
 		captures[i] = &capture{}
-		servers[i] = httptest.NewServer(http.HandlerFunc(captures[i].handler))
-		defer servers[i].Close()
-		endpoints[i] = config.WebhookEndpoint{URL: servers[i].URL}
+		srv := startServer(t, captures[i].handler)
+		endpoints[i] = config.WebhookEndpoint{URL: srv.URL}
 	}
 
 	d := webhook.NewDispatcher(endpoints, slogt.New(t))

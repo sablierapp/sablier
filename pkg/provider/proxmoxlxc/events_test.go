@@ -17,7 +17,6 @@ func TestProxmoxLXCProvider_InstanceEvents_ContextCancel(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -54,7 +53,6 @@ func TestProxmoxLXCProvider_InstanceEvents_Started_ContextCancel(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -91,7 +89,6 @@ func TestProxmoxLXCProvider_InstanceEvents_AllTypes_ContextCancel(t *testing.T) 
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)

@@ -202,5 +202,9 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 		})
 	}
 
-	return httptest.NewServer(mux)
+	// Use a loopback listener. NewTestClient uses http.DefaultClient, which cannot reach
+	// the in-memory network (https://pkg.go.dev/net/http/httptest#Server).
+	srv := httptest.NewTestServer(t, mux)
+	srv.Start()
+	return srv
 }

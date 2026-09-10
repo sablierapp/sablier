@@ -15,7 +15,6 @@ func TestProxmoxLXCProvider_InstanceStart(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -35,7 +34,6 @@ func TestProxmoxLXCProvider_InstanceStart_ByVMID(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -48,7 +46,6 @@ func TestProxmoxLXCProvider_InstanceStart_NotFound(t *testing.T) {
 	t.Parallel()
 
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -63,7 +60,6 @@ func TestProxmoxLXCProvider_InstanceStart_WithoutSablierTag(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 200, Name: "unmanaged", Status: "stopped", Tags: "", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -79,7 +75,6 @@ func TestProxmoxLXCProvider_InstanceStart_AlreadyRunning(t *testing.T) {
 	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -100,7 +95,6 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailure(t *testing.T) {
 		{VMID: 100, Name: "broken", Status: "stopped", Tags: "sablier", Node: "pve1",
 			StartTaskState: proxmoxlxc.TaskFailed, StartTaskExitStatus: "startup for container '100' failed"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -126,7 +120,6 @@ func TestProxmoxLXCProvider_InstanceStart_TaskFailureTTLExpiry(t *testing.T) {
 			StartTaskExitStatus: "startup for container '100' failed",
 			StartTaskEndTime:    time.Now().Add(-time.Minute)},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -149,7 +142,6 @@ func TestProxmoxLXCProvider_InstanceStart_TaskInProgress(t *testing.T) {
 		{VMID: 100, Name: "slow", Status: "stopped", Tags: "sablier", Node: "pve1",
 			StartTaskState: proxmoxlxc.TaskRunning},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
