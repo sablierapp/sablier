@@ -1,6 +1,6 @@
 module github.com/sablierapp/sablier/tools
 
-go 1.26.3
+go 1.27.1
 
 tool (
 	github.com/Zxilly/go-size-analyzer/cmd/gsa
