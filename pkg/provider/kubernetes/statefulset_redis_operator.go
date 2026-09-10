@@ -41,8 +41,8 @@ func redisOperatorOwner(ss *appsv1.StatefulSet) (name string, ok bool) {
 // string (e.g. "apps" from "apps/v1"). Returns the full string unchanged for
 // core resources that have no group prefix.
 func apiVersionGroup(apiVersion string) string {
-	if i := strings.Index(apiVersion, "/"); i >= 0 {
-		return apiVersion[:i]
+	if before, _, ok := strings.Cut(apiVersion, "/"); ok {
+		return before
 	}
 	return apiVersion
 }

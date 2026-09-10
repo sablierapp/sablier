@@ -247,8 +247,8 @@ func writeOption(b *strings.Builder, o option) {
 // categoryOf maps a flag name to its documentation category via the first key segment.
 func categoryOf(name string) string {
 	seg := name
-	if i := strings.Index(name, "."); i >= 0 {
-		seg = name[:i]
+	if before, _, ok := strings.Cut(name, "."); ok {
+		seg = before
 	}
 	switch seg {
 	case "logging":

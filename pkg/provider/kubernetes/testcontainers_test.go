@@ -48,10 +48,8 @@ type MimicOptions struct {
 // instead of flipping to Ready as soon as the container is running.
 func mimicHealthcheck() *corev1.Probe {
 	return &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			Exec: &corev1.ExecAction{
-				Command: []string{"/mimic", "healthcheck"},
-			},
+		Exec: &corev1.ExecAction{
+			Command: []string{"/mimic", "healthcheck"},
 		},
 		PeriodSeconds: 1,
 	}
@@ -68,11 +66,9 @@ func (d *kindContainer) CreateMimicDeployment(ctx context.Context, opts MimicOpt
 	}
 	replicas := int32(1)
 	return d.client.AppsV1().Deployments("default").Create(ctx, &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Labels:      opts.Labels,
-			Annotations: opts.Annotations,
-		},
+		Name:        name,
+		Labels:      opts.Labels,
+		Annotations: opts.Annotations,
 		Spec: v1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -112,11 +108,9 @@ func (d *kindContainer) CreateMimicStatefulSet(ctx context.Context, opts MimicOp
 	}
 	replicas := int32(1)
 	return d.client.AppsV1().StatefulSets("default").Create(ctx, &v1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Labels:      opts.Labels,
-			Annotations: opts.Annotations,
-		},
+		Name:        name,
+		Labels:      opts.Labels,
+		Annotations: opts.Annotations,
 		Spec: v1.StatefulSetSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{

@@ -602,7 +602,7 @@ func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {
 
 // eventually polls cond for up to a second, returning true as soon as it holds.
 func eventually(cond func() bool) bool {
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if cond() {
 			return true
 		}

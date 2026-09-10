@@ -314,7 +314,7 @@ func ScaleConfigFromLabels(labels map[string]string) ScaleConfig {
 // Entries with out-of-range weights (10-1000) or malformed format are skipped.
 func parseWeightDevices(s string) []BlkioWeightDevice {
 	var out []BlkioWeightDevice
-	for _, entry := range strings.Split(s, ",") {
+	for entry := range strings.SplitSeq(s, ",") {
 		entry = strings.TrimSpace(entry)
 		i := strings.LastIndex(entry, ":")
 		if i <= 0 {
@@ -335,7 +335,7 @@ func parseWeightDevices(s string) []BlkioWeightDevice {
 // provider's responsibility. Entries with a missing path or empty rate are skipped.
 func parseThrottleDevices(s string) []BlkioThrottleDevice {
 	var out []BlkioThrottleDevice
-	for _, entry := range strings.Split(s, ",") {
+	for entry := range strings.SplitSeq(s, ",") {
 		entry = strings.TrimSpace(entry)
 		i := strings.LastIndex(entry, ":")
 		if i <= 0 {

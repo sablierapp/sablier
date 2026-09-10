@@ -1,6 +1,7 @@
 package sablier_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -87,16 +88,9 @@ func TestParseRunningDays(t *testing.T) {
 			}
 			// Days not in want must not be present.
 			for d := time.Sunday; d <= time.Saturday; d++ {
-				expected := false
-				for _, w := range tt.want {
-					if w == d {
-						expected = true
-						break
-					}
-				}
+				expected := slices.Contains(tt.want, d)
 				assert.Equal(t, days.Contains(d), expected)
 			}
 		})
 	}
 }
-

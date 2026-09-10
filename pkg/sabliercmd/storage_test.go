@@ -126,8 +126,7 @@ func TestSaveToFile(t *testing.T) {
 }
 
 func TestSetupStorage_LoadOnStartup(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	path := filepath.Join(t.TempDir(), "state.json")
 	require.NoError(t, os.WriteFile(path, storeJSON("startup-service", time.Now().Add(time.Hour)), 0o600))
@@ -144,8 +143,7 @@ func TestSetupStorage_LoadOnStartup(t *testing.T) {
 }
 
 func TestSetupStorage_SaveOnShutdown(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	path := filepath.Join(t.TempDir(), "state.json")
 

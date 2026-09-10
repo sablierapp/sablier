@@ -126,7 +126,7 @@ var weekdayNames = map[string]time.Weekday{
 // is case-insensitive and whitespace around entries is ignored.
 func ParseRunningDays(v string) (RunningDays, error) {
 	days := make(RunningDays)
-	for _, p := range strings.Split(v, ",") {
+	for p := range strings.SplitSeq(v, ",") {
 		token := strings.ToLower(strings.TrimSpace(p))
 		if token == "" {
 			continue
@@ -147,4 +147,3 @@ func ParseRunningDays(v string) (RunningDays, error) {
 func (d RunningDays) Contains(day time.Weekday) bool {
 	return d[day]
 }
-

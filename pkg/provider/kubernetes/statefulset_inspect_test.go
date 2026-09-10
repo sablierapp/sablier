@@ -90,9 +90,7 @@ func TestKubernetesProvider_InspectStatefulSet(t *testing.T) {
 					}
 
 					_, err = dind.client.AppsV1().StatefulSets(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: d.Name,
-						},
+						Name: d.Name,
 						Spec: autoscalingv1.ScaleSpec{
 							Replicas: 0,
 						},

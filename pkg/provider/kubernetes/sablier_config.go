@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"maps"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,9 +46,7 @@ var enableSelectors = []string{
 // selectable. Setting it only as an annotation keeps it out of discovery.
 func sablierConfig(labels, annotations map[string]string) map[string]string {
 	merged := make(map[string]string, len(labels)+len(annotations))
-	for k, v := range labels {
-		merged[k] = v
-	}
+	maps.Copy(merged, labels)
 	copyPublicKeys(merged, labels)
 	for k, v := range annotations {
 		if strings.HasPrefix(k, sablierConfigPrefix) {

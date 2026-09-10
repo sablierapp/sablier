@@ -131,7 +131,7 @@ func newMockSystemd(t *testing.T, configs []mockUnitConfig) *mockSystemd {
 	}
 
 	var conn *godbus.Conn
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		conn, err = godbus.Connect(addr)
 		if err == nil {
 			break
@@ -358,10 +358,8 @@ func (m *mockSystemd) ListUnitsFiltered(states []string) ([]unitStatus, error) {
 func stateOverlaps(states []string, u unitStatus) bool {
 	candidates := []string{u.LoadState, u.ActiveState, u.SubState}
 	for _, s := range states {
-		for _, c := range candidates {
-			if s == c {
-				return true
-			}
+		if slices.Contains(candidates, s) {
+			return true
 		}
 	}
 	return false
