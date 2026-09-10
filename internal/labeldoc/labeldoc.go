@@ -91,7 +91,7 @@ func decodeDoc(l *Label, doc string) {
 	var desc []string
 	curKey := ""
 
-	for _, raw := range strings.Split(doc, "\n") {
+	for raw := range strings.SplitSeq(doc, "\n") {
 		line := strings.TrimSpace(raw)
 		if line == "" {
 			curKey = ""
@@ -139,8 +139,8 @@ func splitField(line string) (key, value string, ok bool) {
 func finalizeDescription(constName, s string) string {
 	s = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), constName))
 	for _, p := range []string{"is ", "are "} {
-		if strings.HasPrefix(s, p) {
-			s = strings.TrimPrefix(s, p)
+		if after, ok := strings.CutPrefix(s, p); ok {
+			s = after
 			break
 		}
 	}

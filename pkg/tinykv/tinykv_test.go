@@ -267,11 +267,11 @@ func Test04(t *testing.T) {
 func Test05(t *testing.T) {
 	assert := assert.New(t)
 	N := 10000
-	var cnt int64
+	var cnt atomic.Int64
 	kv := New(
 		time.Millisecond*10,
 		func(k string, v any) {
-			atomic.AddInt64(&cnt, 1)
+			cnt.Add(1)
 		})
 
 	src := rand.NewSource(time.Now().Unix())

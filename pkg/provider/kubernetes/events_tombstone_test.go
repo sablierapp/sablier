@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -31,7 +30,7 @@ func TestDeploymentDeleteHandlesTombstone(t *testing.T) {
 	handler := p.deploymentEventHandler(t.Context(), events, true, true, true, true)
 
 	deleted := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "myapp", Namespace: "demo"},
+		Name: "myapp", Namespace: "demo",
 	}
 	handler.OnDelete(cache.DeletedFinalStateUnknown{Key: "demo/myapp", Obj: deleted})
 
@@ -50,7 +49,7 @@ func TestStatefulSetDeleteHandlesTombstone(t *testing.T) {
 	handler := p.statefulSetEventHandler(t.Context(), events, true, true, true, true)
 
 	deleted := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "mydb", Namespace: "demo"},
+		Name: "mydb", Namespace: "demo",
 	}
 	handler.OnDelete(cache.DeletedFinalStateUnknown{Key: "demo/mydb", Obj: deleted})
 
@@ -71,7 +70,7 @@ func TestUpdateHandlesNilReplicas(t *testing.T) {
 	events := make(chan sablier.InstanceEvent, 4)
 	handler := p.deploymentEventHandler(t.Context(), events, false, false, false, false)
 
-	oldD := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "myapp", Namespace: "demo", ResourceVersion: "1"}}
-	newD := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "myapp", Namespace: "demo", ResourceVersion: "2"}}
+	oldD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "1"}
+	newD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "2"}
 	handler.OnUpdate(oldD, newD) // Spec.Replicas nil on both: must not panic
 }

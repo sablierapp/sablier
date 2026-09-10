@@ -63,7 +63,7 @@ func SinceByFlag(dir string) (map[string]string, error) {
 
 // docMeta extracts the "CLI:" and "Since:" values from a field doc comment.
 func docMeta(doc string) (cli, since string) {
-	for _, raw := range strings.Split(doc, "\n") {
+	for raw := range strings.SplitSeq(doc, "\n") {
 		line := strings.TrimSpace(raw)
 		switch {
 		case strings.HasPrefix(line, "CLI:"):

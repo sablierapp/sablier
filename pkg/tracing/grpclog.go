@@ -16,53 +16,53 @@ type grpcSlogBridge struct {
 	l *slog.Logger
 }
 
-func (b *grpcSlogBridge) Info(args ...interface{}) {
+func (b *grpcSlogBridge) Info(args ...any) {
 	b.l.Debug("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Infoln(args ...interface{}) {
+func (b *grpcSlogBridge) Infoln(args ...any) {
 	b.l.Debug("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Infof(format string, args ...interface{}) {
+func (b *grpcSlogBridge) Infof(format string, args ...any) {
 	b.l.Debug("[grpc] " + fmt.Sprintf(format, args...))
 }
 
-func (b *grpcSlogBridge) Warning(args ...interface{}) {
+func (b *grpcSlogBridge) Warning(args ...any) {
 	b.l.Warn("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Warningln(args ...interface{}) {
+func (b *grpcSlogBridge) Warningln(args ...any) {
 	b.l.Warn("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Warningf(format string, args ...interface{}) {
+func (b *grpcSlogBridge) Warningf(format string, args ...any) {
 	b.l.Warn("[grpc] " + fmt.Sprintf(format, args...))
 }
 
-func (b *grpcSlogBridge) Error(args ...interface{}) {
+func (b *grpcSlogBridge) Error(args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Errorln(args ...interface{}) {
+func (b *grpcSlogBridge) Errorln(args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Errorf(format string, args ...interface{}) {
+func (b *grpcSlogBridge) Errorf(format string, args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprintf(format, args...))
 }
 
 // Fatal is intentionally demoted to Error so the gRPC library cannot call
 // os.Exit and bypass Sablier's graceful shutdown.
-func (b *grpcSlogBridge) Fatal(args ...interface{}) {
+func (b *grpcSlogBridge) Fatal(args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Fatalln(args ...interface{}) {
+func (b *grpcSlogBridge) Fatalln(args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprint(args...))
 }
 
-func (b *grpcSlogBridge) Fatalf(format string, args ...interface{}) {
+func (b *grpcSlogBridge) Fatalf(format string, args ...any) {
 	b.l.Error("[grpc] " + fmt.Sprintf(format, args...))
 }
 

@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	v1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
@@ -65,10 +64,8 @@ func TestParseName(t *testing.T) {
 
 func TestDeploymentName(t *testing.T) {
 	deployment := v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-namespace",
-			Name:      "test-deployment",
-		},
+		Namespace: "test-namespace",
+		Name:      "test-deployment",
 	}
 	opts := ParseOptions{Delimiter: ":"}
 	expected := ParsedName{
@@ -87,10 +84,8 @@ func TestDeploymentName(t *testing.T) {
 
 func TestStatefulSetName(t *testing.T) {
 	statefulSet := v1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-namespace",
-			Name:      "test-statefulset",
-		},
+		Namespace: "test-namespace",
+		Name:      "test-statefulset",
 	}
 	opts := ParseOptions{Delimiter: ":"}
 	expected := ParsedName{

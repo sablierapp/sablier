@@ -114,18 +114,16 @@ func createRedisAndStatefulSet(ctx context.Context, t *testing.T, kind *kindCont
 	isController := true
 	one := int32(1)
 	sts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion: "redis.redis.opstreelabs.in/v1beta2",
-				Kind:       "Redis",
-				Name:       cr.GetName(),
-				UID:        cr.GetUID(),
-				Controller: &isController,
-			}},
-		},
+		Name:      name,
+		Namespace: "default",
+		Labels:    labels,
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: "redis.redis.opstreelabs.in/v1beta2",
+			Kind:       "Redis",
+			Name:       cr.GetName(),
+			UID:        cr.GetUID(),
+			Controller: &isController,
+		}},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &one,
 			Selector: &metav1.LabelSelector{

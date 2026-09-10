@@ -7,7 +7,6 @@ import (
 
 	"gotest.tools/v3/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -104,10 +103,10 @@ func TestProvider_InstanceList_EnableKeys(t *testing.T) {
 	t.Parallel()
 
 	deployment := func(name string, labels map[string]string) *appsv1.Deployment {
-		return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name, Labels: labels}}
+		return &appsv1.Deployment{Namespace: "default", Name: name, Labels: labels}
 	}
 	statefulSet := func(name string, labels map[string]string) *appsv1.StatefulSet {
-		return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name, Labels: labels}}
+		return &appsv1.StatefulSet{Namespace: "default", Name: name, Labels: labels}
 	}
 
 	p := newFakeCNPGProvider(t,

@@ -1,4 +1,4 @@
-golang 1.26.3
-golangci-lint 2.12.2
+golang 1.27.1
+golangci-lint 2.13.2
 goreleaser 2.15.4
 hugo 0.163.3

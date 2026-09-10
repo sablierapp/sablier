@@ -133,7 +133,7 @@ func TestSessionExpiryCollector_NonDestructive(t *testing.T) {
 	if first <= 0 {
 		t.Fatalf("expected a positive expiry timestamp, got %v", first)
 	}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		<-time.After(10 * time.Millisecond)
 		if got := testutil.ToFloat64(c); got != first {
 			t.Fatalf("expiry moved across scrapes (%v -> %v): the collector renews sessions", first, got)

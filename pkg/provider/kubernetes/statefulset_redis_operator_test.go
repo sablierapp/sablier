@@ -26,17 +26,15 @@ func newRedisOwnerSTS(namespace, name string, replicas int32, apiVersion string)
 	}
 	isController := true
 	return &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    map[string]string{"sablier.enable": "true"},
-			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion: apiVersion,
-				Kind:       "Redis",
-				Name:       name, // Redis CR has same name as the StatefulSet by convention
-				Controller: &isController,
-			}},
-		},
+		Name:      name,
+		Namespace: namespace,
+		Labels:    map[string]string{"sablier.enable": "true"},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: apiVersion,
+			Kind:       "Redis",
+			Name:       name, // Redis CR has same name as the StatefulSet by convention
+			Controller: &isController,
+		}},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 		},
@@ -68,8 +66,8 @@ func newRedisOperatorTestProvider(t *testing.T, sts *appsv1.StatefulSet) (*Provi
 		}
 		name := action.(k8stesting.GetAction).GetName()
 		return true, &autoscalingv1.Scale{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: action.GetNamespace()},
-			Spec:       autoscalingv1.ScaleSpec{Replicas: stsReplicas[name]},
+			Name: name, Namespace: action.GetNamespace(),
+			Spec: autoscalingv1.ScaleSpec{Replicas: stsReplicas[name]},
 		}, nil
 	})
 	client.PrependReactor("update", "statefulsets", func(action k8stesting.Action) (bool, runtime.Object, error) {
@@ -235,7 +233,7 @@ func TestSetRedisOperatorSkipReconcile_NonRedisStatefulSet(t *testing.T) {
 	t.Parallel()
 	// Plain StatefulSet with no owner references — patch must not be called.
 	sts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "plain-sts", Namespace: "default"},
+		Name: "plain-sts", Namespace: "default",
 	}
 	scheme := runtime.NewScheme()
 	dyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme,

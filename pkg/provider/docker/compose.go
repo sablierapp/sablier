@@ -34,7 +34,7 @@ func parseComposeDependsOn(label string) []composeDependency {
 	}
 
 	var deps []composeDependency
-	for _, entry := range strings.Split(label, ",") {
+	for entry := range strings.SplitSeq(label, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
 			continue

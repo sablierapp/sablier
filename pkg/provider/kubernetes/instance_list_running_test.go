@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"gotest.tools/v3/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
@@ -24,23 +23,19 @@ import (
 
 func newListTestDeployment(name string, replicas *int32) *appsv1.Deployment {
 	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-			Labels:    map[string]string{sablier.LabelEnable: "true"},
-		},
-		Spec: appsv1.DeploymentSpec{Replicas: replicas},
+		Name:      name,
+		Namespace: "default",
+		Labels:    map[string]string{sablier.LabelEnable: "true"},
+		Spec:      appsv1.DeploymentSpec{Replicas: replicas},
 	}
 }
 
 func newListTestStatefulSet(name string, replicas *int32) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-			Labels:    map[string]string{sablier.LabelEnable: "true"},
-		},
-		Spec: appsv1.StatefulSetSpec{Replicas: replicas},
+		Name:      name,
+		Namespace: "default",
+		Labels:    map[string]string{sablier.LabelEnable: "true"},
+		Spec:      appsv1.StatefulSetSpec{Replicas: replicas},
 	}
 }
 

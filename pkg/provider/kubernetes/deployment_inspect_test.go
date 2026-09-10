@@ -91,9 +91,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 					}
 
 					_, err = dind.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: d.Name,
-						},
+						Name: d.Name,
 						Spec: autoscalingv1.ScaleSpec{
 							Replicas: 0,
 						},
@@ -315,8 +313,8 @@ func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) 
 	assert.NilError(t, WaitForDeploymentReady(ctx, c.client, "default", d.Name))
 
 	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
-		Spec:       autoscalingv1.ScaleSpec{Replicas: 2},
+		Name: d.Name,
+		Spec: autoscalingv1.ScaleSpec{Replicas: 2},
 	}, metav1.UpdateOptions{})
 	assert.NilError(t, err)
 	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 2))
@@ -342,8 +340,8 @@ func TestKubernetesProvider_DeploymentInspect_ReadyOnFirstReplica(t *testing.T) 
 
 	// Scaled to zero, the workload must still be reported as stopped.
 	_, err = c.client.AppsV1().Deployments(d.Namespace).UpdateScale(ctx, d.Name, &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{Name: d.Name},
-		Spec:       autoscalingv1.ScaleSpec{Replicas: 0},
+		Name: d.Name,
+		Spec: autoscalingv1.ScaleSpec{Replicas: 0},
 	}, metav1.UpdateOptions{})
 	assert.NilError(t, err)
 	assert.NilError(t, WaitForDeploymentScale(ctx, c.client, "default", d.Name, 0))
