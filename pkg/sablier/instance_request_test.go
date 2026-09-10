@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -15,23 +16,6 @@ import (
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
-
-// checkWithTimeout polls fn at the given interval until it returns true or the timeout expires.
-func checkWithTimeout(interval, timeout time.Duration, fn func() bool) bool {
-	deadline := time.After(timeout)
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		if fn() {
-			return true
-		}
-		select {
-		case <-deadline:
-			return false
-		case <-ticker.C:
-		}
-	}
-}
 
 func TestInstanceRequest_EmptyName(t *testing.T) {
 	manager, _, _ := setupSablier(t)
@@ -334,175 +318,177 @@ func TestInstanceRequest_SecondCallJoinsInFlightPendingStart(t *testing.T) {
 }
 
 func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	// First call: store miss -> requestStart
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+		// First call: store miss -> requestStart
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	// Goroutine fails immediately
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("connection refused"))
+		// Goroutine fails immediately
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("connection refused"))
 
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
-	// Subsequent calls: store returns the stored not-ready state (realistic behavior).
-	// While goroutine is still running, polling returns not-ready with Put.
-	// Once goroutine finishes, consumePendingError surfaces the error (no Put in that case).
-	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil).AnyTimes()
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).AnyTimes()
+		// Wait until the async start fails.
+		synctest.Wait()
 
-	assert.Assert(t, checkWithTimeout(100*time.Millisecond, 5*time.Second, func() bool {
+		// Second call: the store returns the stored not-ready state and
+		// consumePendingError surfaces the error, so Put is not called.
+		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
+
 		_, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
-		return err != nil
-	}), "expected async error to be surfaced on the not-ready path")
-	assert.ErrorContains(t, err, "instance start failed: connection refused")
+		assert.ErrorContains(t, err, "instance start failed: connection refused")
+	})
 }
 
 func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
-	secondDone := make(chan struct{})
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
+		secondDone := make(chan struct{})
 
-	// All Get/Put/Inspect calls use AnyTimes since polling may hit them multiple times
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).AnyTimes()
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).AnyTimes()
+		// The 1st and 3rd calls start the instance. The 2nd call only reads the store.
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(3)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).Times(2)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).Times(2)
 
-	gomock.InOrder(
-		// First attempt — fails immediately
-		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("connection refused")),
-		// Retry — succeeds
-		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-			close(secondDone)
-			return nil
-		}),
-	)
+		gomock.InOrder(
+			// First attempt — fails immediately
+			provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("connection refused")),
+			// Retry — succeeds
+			provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+				close(secondDone)
+				return nil
+			}),
+		)
 
-	// 1st call: dispatches goroutine (fails)
-	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
+		// 1st call: dispatches goroutine (fails)
+		_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
 
-	// 2nd call: poll until the error is consumable
-	assert.Assert(t, checkWithTimeout(100*time.Millisecond, 5*time.Second, func() bool {
+		// 2nd call: the error is consumable once the goroutine is done
+		synctest.Wait()
 		_, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
-		return err != nil
-	}), "expected error to be surfaced")
-	assert.ErrorContains(t, err, "instance start failed: connection refused")
+		assert.ErrorContains(t, err, "instance start failed: connection refused")
 
-	// 3rd call: entry cleared, store miss again -> requestStart retries
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		// 3rd call: entry cleared, store miss again -> requestStart retries
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
-	select {
-	case <-secondDone:
-	case <-time.After(5 * time.Second):
-		t.Fatal("Retry goroutine was never started")
-	}
+		select {
+		case <-secondDone:
+		case <-time.After(5 * time.Second):
+			t.Fatal("Retry goroutine was never started")
+		}
+	})
 }
 
 func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
-	ready := sablier.InstanceInfo{Name: "nginx", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
+		ready := sablier.InstanceInfo{Name: "nginx", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
 
-	// 1st call: store miss -> requestStart (goroutine succeeds)
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+		// 1st call: store miss -> requestStart (goroutine succeeds)
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	startDone := make(chan struct{})
-	gomock.InOrder(
-		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil), // pre-start inspect
-		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(ready, nil),       // post-start inspect in not-ready path
-	)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startDone)
-		return nil
+		startDone := make(chan struct{})
+		gomock.InOrder(
+			provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil), // pre-start inspect
+			provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(ready, nil),       // post-start inspect in not-ready path
+		)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startDone)
+			return nil
+		})
+
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+		// Wait for goroutine to finish and self-clean
+		select {
+		case <-startDone:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart goroutine never completed")
+		}
+		// Wait until the goroutine removes the pending entry.
+		synctest.Wait()
+
+		// 2nd call: store returns not-ready, no pending entry exists, goes straight to inspect
+		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
+		sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
+
+		info, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusReady))
 	})
-
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-
-	// Wait for goroutine to finish and self-clean
-	select {
-	case <-startDone:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart goroutine never completed")
-	}
-	// Small settle time for the goroutine to acquire the lock and clean up
-	time.Sleep(50 * time.Millisecond)
-
-	// 2nd call: store returns not-ready, no pending entry exists, goes straight to inspect
-	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
-	sessions.EXPECT().Put(ctx, readyAtMatcher{}, time.Minute).Return(nil)
-
-	info, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusReady))
 }
 
 func TestInstanceRequest_StartTimeoutSurfacesError(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	manager.InstanceStartTimeout = 100 * time.Millisecond
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		manager.InstanceStartTimeout = 100 * time.Millisecond
+		ctx := t.Context()
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	// InstanceStart blocks until context is cancelled
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(startCtx any, _ string) error {
-		<-startCtx.(interface{ Done() <-chan struct{} }).Done()
-		return startCtx.(interface{ Err() error }).Err()
-	})
+		// InstanceStart blocks until context is cancelled
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(startCtx any, _ string) error {
+			<-startCtx.(interface{ Done() <-chan struct{} }).Done()
+			return startCtx.(interface{ Err() error }).Err()
+		})
 
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
-	// Subsequent calls: store returns not-ready; polling may get not-ready while
-	// the goroutine is still in progress, or the timeout error once it completes.
-	sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil).AnyTimes()
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).AnyTimes()
+		// Wait until the start timeout cancels InstanceStart.
+		synctest.Sleep(manager.InstanceStartTimeout)
 
-	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
+		// The store returns not-ready and the next call surfaces the timeout error.
+		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil)
+
 		_, err = manager.InstanceRequest(ctx, "nginx", time.Minute)
-		return err != nil
-	}), "expected timeout error to be surfaced")
-	assert.ErrorContains(t, err, "instance start failed")
+		assert.ErrorContains(t, err, "instance start failed")
+	})
 }
 
 func TestInstanceRequest_ExistingNotReady_InspectsProvider(t *testing.T) {
@@ -562,74 +548,76 @@ func TestInstanceRequest_StoreGetError(t *testing.T) {
 }
 
 func TestInstanceRequest_NewInstance_RecordsStartMetrics_Success(t *testing.T) {
-	manager, sessions, provider, rec := setupSablierWithMetrics(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider, rec := setupSablierWithMetrics(t)
+		ctx := t.Context()
 
-	startDone := make(chan struct{})
+		startDone := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startDone)
-		return nil
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startDone)
+			return nil
+		})
+
+		_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+
+		select {
+		case <-startDone:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart goroutine never completed")
+		}
+		// Wait until the goroutine records the end metric.
+		synctest.Wait()
+		assert.Assert(t, slices.Contains(rec.snapshot(), "start_end:nginx"), "expected start_end metric")
+
+		calls := rec.snapshot()
+		assertContains(t, calls, "ready_begin:nginx")
+		assertContains(t, calls, "active+:nginx")
 	})
-
-	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-
-	select {
-	case <-startDone:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart goroutine never completed")
-	}
-	// Settle for the goroutine to record the end metric.
-	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
-		return slices.Contains(rec.snapshot(), "start_end:nginx")
-	}), "expected start_end metric")
-
-	calls := rec.snapshot()
-	assertContains(t, calls, "ready_begin:nginx")
-	assertContains(t, calls, "active+:nginx")
 }
 
 func TestInstanceRequest_NewInstance_RecordsStartFailure(t *testing.T) {
-	manager, sessions, provider, rec := setupSablierWithMetrics(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider, rec := setupSablierWithMetrics(t)
+		ctx := t.Context()
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
-
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("boom"))
-
-	_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err) // first call returns not-ready, error surfaces on next
-
-	assert.Assert(t, checkWithTimeout(50*time.Millisecond, 5*time.Second, func() bool {
-		return slices.Contains(rec.snapshot(), "start_fail:nginx")
-	}), "expected start_fail metric")
-
-	calls := rec.snapshot()
-	for _, c := range calls {
-		if c == "start_end:nginx" {
-			t.Errorf("did not expect start_end on failure, got: %v", calls)
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
 		}
-	}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
+
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("boom"))
+
+		_, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err) // first call returns not-ready, error surfaces on next
+
+		synctest.Wait()
+		assert.Assert(t, slices.Contains(rec.snapshot(), "start_fail:nginx"), "expected start_fail metric")
+
+		calls := rec.snapshot()
+		for _, c := range calls {
+			if c == "start_end:nginx" {
+				t.Errorf("did not expect start_end on failure, got: %v", calls)
+			}
+		}
+	})
 }
 
 func TestInstanceRequest_ReadyTransition_RecordsReadyEnd(t *testing.T) {

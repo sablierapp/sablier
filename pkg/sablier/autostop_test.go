@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -136,54 +137,58 @@ func TestWatchAndStopExternallyStarted_StopsExternalInstance(t *testing.T) {
 // that a "started" event for an instance already in the sessions store is
 // not stopped (Sablier started it).
 func TestWatchAndStopExternallyStarted_SkipsSablierStartedInstance_InStore(t *testing.T) {
-	s, sessions, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// Instance IS in the sessions store → started by Sablier
-	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
-		Name:   "nginx",
-		Status: sablier.InstanceStatusReady,
-	}, nil)
+		// Instance IS in the sessions store → started by Sablier
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
+			Name:   "nginx",
+			Status: sablier.InstanceStatusReady,
+		}, nil)
 
-	// InstanceStop must NOT be called; gomock will fail the test if it is.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
+		// InstanceStop must NOT be called; gomock will fail the test if it is.
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
-	startAutostopWatcher(t, s, ctx, cancel)
+		startAutostopWatcher(t, s, ctx, cancel)
 
-	// Give the goroutine time to process the event then verify no stop happened.
-	time.Sleep(100 * time.Millisecond)
+		// Wait until the goroutine processes the event. gomock then checks that no stop occurred.
+		synctest.Wait()
+	})
 }
 
 // TestWatchAndStopExternallyStarted_SkipsNonSablierInstance verifies that a
 // "started" event for an instance without sablier.enable=true is ignored.
 func TestWatchAndStopExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
-	s, _, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// No sessions.Get or InstanceStop expected.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
+		// No sessions.Get or InstanceStop expected.
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
 
-	startAutostopWatcher(t, s, ctx, cancel)
+		startAutostopWatcher(t, s, ctx, cancel)
 
-	time.Sleep(100 * time.Millisecond)
+		synctest.Wait()
+	})
 }
 
 // TestWatchAndStopExternallyStarted_ReconciliationTicker verifies that even without
