@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -409,6 +410,83 @@ func TestOrdering(t *testing.T) {
 	}
 
 	assert.Equal(1, 1)
+}
+
+// putAt adds an entry with a given expiry time. It keeps the timers from
+// earlier calls in the heap, the same as Put.
+func putAt[T any](kv *store[T], k string, v T, expiresAt time.Time) {
+	to := &timeout{
+		expiresAt:    expiresAt,
+		expiresAfter: time.Until(expiresAt),
+		key:          k,
+	}
+	kv.kv[k] = &entry[T]{timeout: to, value: v}
+	timeheapPush(&kv.heap, to)
+}
+
+// One expiry cycle can pop an expired key and a stale timer of a renewed key.
+// See https://github.com/sablierapp/sablier/issues/1110
+func TestExpireFuncNotifiesExpiredKeyWithRenewedNeighbour(t *testing.T) {
+	for i := range 200 {
+		expired := make(chan string, 4)
+		kv := &store[int]{
+			onExpire:           func(k string, _ int) { expired <- k },
+			stop:               make(chan struct{}),
+			kv:                 make(map[string]*entry[int]),
+			expirationInterval: time.Hour,
+			heap:               th{},
+		}
+
+		// Key "a" is expired. Key "b" has a stale timer and a new timer.
+		past := time.Now().Add(-time.Minute)
+		putAt(kv, "a", 1, past)
+		timeheapPush(&kv.heap, &timeout{expiresAt: past, expiresAfter: time.Minute, key: "b"})
+		putAt(kv, "b", 2, time.Now().Add(time.Hour))
+
+		kv.expireFunc()
+
+		select {
+		case k := <-expired:
+			require.Equalf(t, "a", k, "iteration %d, only the idle key must expire", i)
+		case <-time.After(time.Second):
+			t.Fatalf("iteration %d, onExpire did not fire for the expired key", i)
+		}
+
+		_, ok := kv.kv["a"]
+		assert.Falsef(t, ok, "iteration %d, the store must not contain the expired key", i)
+		_, ok = kv.kv["b"]
+		assert.Truef(t, ok, "iteration %d, the store must contain the renewed key", i)
+	}
+}
+
+// The same defect through the public API.
+// See https://github.com/sablierapp/sablier/issues/1110
+func TestRenewedKeyKeepsNeighbourNotification(t *testing.T) {
+	for i := range 5 {
+		var mu sync.Mutex
+		fired := map[string]int{}
+		kv := New[int](20*time.Millisecond, func(k string, _ int) {
+			mu.Lock()
+			fired[k]++
+			mu.Unlock()
+		})
+
+		require.NoError(t, kv.Put("a", 1, 100*time.Millisecond))
+		require.NoError(t, kv.Put("b", 1, 100*time.Millisecond))
+		<-time.After(60 * time.Millisecond)
+		require.NoError(t, kv.Put("b", 2, time.Hour))
+		<-time.After(300 * time.Millisecond)
+
+		_, ok := kv.Get("a")
+		assert.Falsef(t, ok, "iteration %d, the store must not contain the idle key", i)
+
+		mu.Lock()
+		assert.Positivef(t, fired["a"], "iteration %d, onExpire must fire for the idle key", i)
+		assert.Zerof(t, fired["b"], "iteration %d, the renewed key must not expire", i)
+		mu.Unlock()
+
+		kv.Stop()
+	}
 }
 
 func BenchmarkGetNoValue(b *testing.B) {

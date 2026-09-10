@@ -344,15 +344,15 @@ func (kv *store[T]) expireFunc() time.Duration {
 			expired[last.key] = entry.value
 		}
 	}
-REVAL:
+	// Validate all candidates before you delete them. A deleted key looks like a
+	// renewed key. See https://github.com/sablierapp/sablier/issues/1110
 	for k := range expired {
-		newVal, ok := kv.kv[k]
-		if !ok ||
-			newVal.timeout == nil ||
-			!newVal.expired() {
+		current, ok := kv.kv[k]
+		if !ok || current.timeout == nil || !current.expired() {
 			delete(expired, k)
-			goto REVAL
 		}
+	}
+	for k := range expired {
 		delete(kv.kv, k)
 	}
 	go notifyExpirations(expired, kv.onExpire)
