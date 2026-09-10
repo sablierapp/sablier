@@ -121,7 +121,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("strategy.dynamic.default-refresh-frequency", startCmd.Flags().Lookup("strategy.dynamic.default-refresh-frequency"))
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultTimeout, "strategy.blocking.default-timeout", 1*time.Minute, "Default timeout used for blocking strategy")
 	_ = viper.BindPFlag("strategy.blocking.default-timeout", startCmd.Flags().Lookup("strategy.blocking.default-timeout"))
-	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Default refresh frequency at which the instances status are checked for blocking strategy")
+	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Maximum interval between two instance status checks for blocking strategy")
 	_ = viper.BindPFlag("strategy.blocking.default-refresh-frequency", startCmd.Flags().Lookup("strategy.blocking.default-refresh-frequency"))
 
 	rootCmd.AddCommand(startCmd)

@@ -679,7 +679,7 @@ SABLIER_STORAGE_FILE=<string>
 
 | Option | Description |
 |--------|-------------|
-| [`--strategy.blocking.default-refresh-frequency`](#opt-strategy-blocking-default-refresh-frequency) | Default refresh frequency at which the instances status are checked for blocking strategy |
+| [`--strategy.blocking.default-refresh-frequency`](#opt-strategy-blocking-default-refresh-frequency) | Maximum interval between two instance status checks for blocking strategy |
 | [`--strategy.blocking.default-timeout`](#opt-strategy-blocking-default-timeout) | Default timeout used for blocking strategy |
 | [`--strategy.dynamic.custom-themes-path`](#opt-strategy-dynamic-custom-themes-path) | Custom themes folder, will load all .html files recursively (a missing folder is not an error, Sablier then serves only the built-in themes) |
 | [`--strategy.dynamic.default-refresh-frequency`](#opt-strategy-dynamic-default-refresh-frequency) | Default refresh frequency in the HTML page for dynamic strategy |
@@ -688,7 +688,7 @@ SABLIER_STORAGE_FILE=<string>
 
 ### `--strategy.blocking.default-refresh-frequency` {#opt-strategy-blocking-default-refresh-frequency}
 
-Default refresh frequency at which the instances status are checked for blocking strategy
+Maximum interval between two instance status checks for blocking strategy
 
 {{< badge "duration" >}} {{< badge content="Default: 5s" >}} {{< badge content="Since v1.9.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.9.0" >}}
 

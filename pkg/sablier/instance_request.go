@@ -49,6 +49,31 @@ func (s *Sablier) consumePendingError(name string) (bool, error) {
 	}
 }
 
+// startsDone returns a channel that is closed when every start in progress for
+// names completes. It returns nil when no start is in progress.
+func (s *Sablier) startsDone(names []string) <-chan struct{} {
+	s.pendingMu.Lock()
+	var pending []chan struct{}
+	for _, name := range names {
+		if ps, ok := s.pendingStarts[name]; ok {
+			pending = append(pending, ps.done)
+		}
+	}
+	s.pendingMu.Unlock()
+
+	if len(pending) == 0 {
+		return nil
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for _, ch := range pending {
+			<-ch
+		}
+	}()
+	return done
+}
+
 func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled bool) (InstanceInfo, error) {
 	// First critical section: check whether a start is already in progress.
 	// We release the lock before doing the remote inspect to avoid holding a
