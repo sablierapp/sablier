@@ -19,7 +19,6 @@ func TestProxmoxLXCProvider_InstanceList(t *testing.T) {
 		{VMID: 101, Name: "db", Status: "stopped", Tags: "sablier", Node: "pve1"},
 		{VMID: 102, Name: "unmanaged", Status: "running", Tags: "production", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -42,7 +41,6 @@ func TestProxmoxLXCProvider_InstanceList_RunningOnly(t *testing.T) {
 		{VMID: 101, Name: "db", Status: "stopped", Tags: "sablier", Node: "pve1"},
 		{VMID: 102, Name: "unmanaged", Status: "running", Tags: "production", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -62,7 +60,6 @@ func TestProxmoxLXCProvider_InstanceList_MultiNode(t *testing.T) {
 		{VMID: 100, Name: "app1", Status: "running", Tags: "sablier;sablier-group-apps", Node: "pve1"},
 		{VMID: 200, Name: "app2", Status: "stopped", Tags: "sablier;sablier-group-apps", Node: "pve2"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -84,7 +81,6 @@ func TestProxmoxLXCProvider_InstanceList_DuplicateHostname(t *testing.T) {
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 		{VMID: 200, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve2"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
@@ -101,7 +97,6 @@ func TestProxmoxLXCProvider_InstanceGroups(t *testing.T) {
 		{VMID: 101, Name: "web2", Status: "running", Tags: "sablier;sablier-group-frontend", Node: "pve1"},
 		{VMID: 102, Name: "db", Status: "stopped", Tags: "sablier", Node: "pve1"},
 	})
-	defer server.Close()
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)

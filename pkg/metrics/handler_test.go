@@ -2,7 +2,6 @@ package metrics_test
 
 import (
 	"io"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -14,10 +13,11 @@ func TestNewHandler_ServesPrometheusExposition(t *testing.T) {
 	r := metrics.NewPromRecorder()
 	r.RecordSessionRequest("dynamic", "names")
 
-	srv := httptest.NewServer(metrics.NewHandler(r))
-	defer srv.Close()
+	srv := httptest.NewTestServer(t, metrics.NewHandler(r))
+	// Client starts the in-memory server and sets srv.URL, so call it before srv.URL is read.
+	client := srv.Client()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := client.Get(srv.URL)
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
