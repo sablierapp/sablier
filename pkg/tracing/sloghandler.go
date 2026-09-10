@@ -16,7 +16,7 @@ import (
 //
 // Usage: wrap the inner handler before passing it to slog.New:
 //
-//	logger := slog.New(tracing.NewOTelHandler(tint.NewHandler(os.Stderr, opts)))
+//	logger := slog.New(tracing.NewOTelHandler(tint.NewTextHandler(os.Stderr, opts)))
 type OTelHandler struct {
 	inner slog.Handler
 }

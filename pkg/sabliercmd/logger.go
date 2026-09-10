@@ -19,7 +19,7 @@ func setupLogger(config config.Logging) *slog.Logger {
 // newLogger builds the application logger writing to w. It is separate from
 // setupLogger so that tests can assert on what actually reaches the output.
 func newLogger(w io.Writer, config config.Logging) *slog.Logger {
-	inner := tint.NewHandler(w, &tint.Options{
+	inner := tint.NewTextHandler(w, &tint.Options{
 		Level:      parseLogLevel(config.Level),
 		TimeFormat: time.Kitchen,
 		AddSource:  true,
