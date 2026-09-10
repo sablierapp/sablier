@@ -84,11 +84,11 @@ kind: Deployment
 metadata:
   name: myapp
   labels:
-    sablier.enable: "true"
-    sablier.group: myapp
-    sablier.idle.replicas: "1"
-    sablier.idle.cpu: "100m"
-    sablier.active.cpu: "2000m"
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: myapp
+    sablierapp.dev/idle.replicas: "1"
+    sablierapp.dev/idle.cpu: "100m"
+    sablierapp.dev/active.cpu: "2000m"
 ```
 
 {{< callout type="info" >}}

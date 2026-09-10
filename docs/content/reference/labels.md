@@ -38,10 +38,12 @@ services:
 ```yaml
 metadata:
   labels:
-    sablier.enable: "true"      # discovery uses a label selector
+    sablierapp.dev/enable: "true"      # discovery uses a label selector
   annotations:
-    sablier.group: "my-group"   # all other settings are annotations
+    sablierapp.dev/group: "my-group"   # all other settings are annotations
 ```
+
+On Kubernetes, replace the `sablier.` prefix with `sablierapp.dev/`. For example, `sablier.idle.replicas` becomes `sablierapp.dev/idle.replicas`. The legacy `sablier.*` keys continue to work, but they are deprecated.
 {{< /tab >}}
 {{< tab name="Proxmox LXC" >}}
 ```bash
