@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.19.0](https://github.com/sablierapp/sablier/compare/v1.18.0...v1.19.0) (2026-09-11)
+
+
+### Features
+
+* **kubernetes:** support public sablierapp.dev label keys ([#1114](https://github.com/sablierapp/sablier/issues/1114)) ([2771b53](https://github.com/sablierapp/sablier/commit/2771b53f2414e099bc69fc4abadde58fd55acc77)), closes [#449](https://github.com/sablierapp/sablier/issues/449)
+
+
+### Bug Fixes
+
+* **kubernetes:** list only the running workloads when All is false ([#1112](https://github.com/sablierapp/sablier/issues/1112)) ([9a1b640](https://github.com/sablierapp/sablier/commit/9a1b640e04f3fe6055b8c4c7cb604535d55d84a3)), closes [#1095](https://github.com/sablierapp/sablier/issues/1095)
+* **strategy:** do not wait a full refresh interval in blocking strategy ([#1117](https://github.com/sablierapp/sablier/issues/1117)) ([59fb00d](https://github.com/sablierapp/sablier/commit/59fb00d1c7ec2583900cea31ce8d6a3d14c11b7c)), closes [#282](https://github.com/sablierapp/sablier/issues/282)
+* **tinykv:** send onExpire when a stale timer is in the same cycle ([#1111](https://github.com/sablierapp/sablier/issues/1111)) ([2d147f8](https://github.com/sablierapp/sablier/commit/2d147f848a9e689380f4eac3e56e27f5a02d2cb3)), closes [#1110](https://github.com/sablierapp/sablier/issues/1110)
+
+
+### Code Refactoring
+
+* **sablier:** use strings.CutLast to parse blkio device lists ([#1118](https://github.com/sablierapp/sablier/issues/1118)) ([cdc1e0a](https://github.com/sablierapp/sablier/commit/cdc1e0a8466902a6ca6514c51fc8702e271b1b67))
+
+
+### Tests
+
+* use httptest.NewTestServer in the webhook, metrics and proxmoxlxc tests ([#1119](https://github.com/sablierapp/sablier/issues/1119)) ([346c009](https://github.com/sablierapp/sablier/commit/346c009637e2f69c52a8673d017e993903a4fc9b))
+* use testing/synctest for time-based tests ([#1121](https://github.com/sablierapp/sablier/issues/1121)) ([e4c307a](https://github.com/sablierapp/sablier/commit/e4c307ac577b20c2638fe856a5e22f585bc661d3))
+
 ## [1.18.0](https://github.com/sablierapp/sablier/compare/v1.17.0...v1.18.0) (2026-09-02)
 
 
