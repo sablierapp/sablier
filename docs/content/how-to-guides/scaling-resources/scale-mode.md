@@ -97,7 +97,7 @@ Nomad supports the replica profiles only: `sablier.idle.replicas` and `sablier.a
 group "web" {
   count = 1
 
-  meta {
+  meta = {
     "sablier.enable"          = "true"
     "sablier.idle.replicas"   = "1"
     "sablier.active.replicas" = "3"

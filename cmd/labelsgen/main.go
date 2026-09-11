@@ -104,7 +104,7 @@ func writeApplying(b *strings.Builder) {
 
 	b.WriteString("{{< tab name=\"Nomad\" >}}\n")
 	b.WriteString("```hcl\n")
-	b.WriteString("job \"whoami\" {\n  group \"web\" {\n    meta {\n      \"sablier.enable\" = \"true\"\n      \"sablier.group\"  = \"my-group\"\n    }\n  }\n}\n")
+	b.WriteString("job \"whoami\" {\n  group \"web\" {\n    # A map, because HCL does not accept quoted names in a meta block.\n    meta = {\n      \"sablier.enable\" = \"true\"\n      \"sablier.group\"  = \"my-group\"\n    }\n  }\n}\n")
 	b.WriteString("```\n")
 	b.WriteString("{{< /tab >}}\n")
 

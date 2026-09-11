@@ -79,7 +79,7 @@ job "whoami" {
   group "web" {
     count = 0
 
-    meta {
+    meta = {
       "sablier.enable" = "true"
       "sablier.group"  = "mygroup"
     }
@@ -115,7 +115,9 @@ job "whoami" {
 }
 ```
 
-The `meta` block of the job applies to every task group, and a task group `meta` block overrides it. A job with a single task group can therefore carry the `sablier.*` keys at the job level.
+Write `meta` as a map, `meta = { ... }`. The label names contain dots, and HCL does not accept quoted argument names in a `meta { ... }` block.
+
+The `meta` of the job applies to every task group, and the `meta` of a task group overrides it. A job with a single task group can therefore carry the `sablier.*` keys at the job level.
 
 Every label of the [labels reference](/reference/labels/) is read from `meta` with the same name, for example `"sablier.ready-after" = "30s"`.
 
@@ -139,6 +141,10 @@ http:
 ```
 
 A request with only the job ID is rejected with an error that lists the task groups of the job. Dispatched and periodic child jobs contain a `/` in their ID; the task group name is everything after the last `/`.
+
+## Runnable example
+
+A complete, runnable example is available in [`examples/nomad`](https://github.com/sablierapp/sablier/tree/main/examples/nomad). It runs a Nomad agent in development mode and Sablier with Docker Compose, so it does not need a Nomad installation.
 
 ## Confirm when the task group is ready
 

@@ -56,7 +56,8 @@ sablier-group-my-group  # one tag per group
 ```hcl
 job "whoami" {
   group "web" {
-    meta {
+    # A map, because HCL does not accept quoted names in a meta block.
+    meta = {
       "sablier.enable" = "true"
       "sablier.group"  = "my-group"
     }
