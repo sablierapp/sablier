@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/neilotoole/slogt"
@@ -261,24 +262,26 @@ func TestStartWithDependencies_PropagatesStartError(t *testing.T) {
 }
 
 func TestEnsureDependencyStarted_SingleFlight(t *testing.T) {
-	fp := newFakeDepProvider()
-	fp.startDelay = 50 * time.Millisecond
-	s := newDepSablier(t, fp)
+	synctest.Test(t, func(t *testing.T) {
+		fp := newFakeDepProvider()
+		fp.startDelay = 50 * time.Millisecond
+		s := newDepSablier(t, fp)
 
-	const n = 8
-	var wg sync.WaitGroup
-	wg.Add(n)
-	for range n {
-		go func() {
-			defer wg.Done()
-			_ = s.ensureDependencyStarted(context.Background(), "db")
-		}()
-	}
-	wg.Wait()
+		const n = 8
+		var wg sync.WaitGroup
+		wg.Add(n)
+		for range n {
+			go func() {
+				defer wg.Done()
+				_ = s.ensureDependencyStarted(context.Background(), "db")
+			}()
+		}
+		wg.Wait()
 
-	if c := fp.count("db"); c != 1 {
-		t.Fatalf("expected a single InstanceStart across concurrent callers, got %d", c)
-	}
+		if c := fp.count("db"); c != 1 {
+			t.Fatalf("expected a single InstanceStart across concurrent callers, got %d", c)
+		}
+	})
 }
 
 func TestEnsureDependencyStarted_DefersToManagedStart(t *testing.T) {

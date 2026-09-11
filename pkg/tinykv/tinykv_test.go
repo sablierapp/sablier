@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -42,24 +43,26 @@ func TestTimeoutHeap(t *testing.T) {
 var _ KV[int] = &store[int]{}
 
 func TestGetPut(t *testing.T) {
-	assert := assert.New(t)
-	rg := New[int](0, nil)
-	defer rg.Stop()
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		rg := New[int](0, nil)
+		defer rg.Stop()
 
-	require.NoError(t, rg.Put("1", 1, time.Minute*50))
-	v, ok := rg.Get("1")
-	assert.True(ok)
-	assert.Equal(1, v)
+		require.NoError(t, rg.Put("1", 1, time.Minute*50))
+		v, ok := rg.Get("1")
+		assert.True(ok)
+		assert.Equal(1, v)
 
-	require.NoError(t, rg.Put("2", 2, time.Millisecond*50))
-	v, ok = rg.Get("2")
-	assert.True(ok)
-	assert.Equal(2, v)
-	<-time.After(time.Millisecond * 100)
+		require.NoError(t, rg.Put("2", 2, time.Millisecond*50))
+		v, ok = rg.Get("2")
+		assert.True(ok)
+		assert.Equal(2, v)
+		synctest.Sleep(time.Millisecond * 100)
 
-	v, ok = rg.Get("2")
-	assert.False(ok)
-	assert.NotEqual(2, v)
+		v, ok = rg.Get("2")
+		assert.False(ok)
+		assert.NotEqual(2, v)
+	})
 }
 
 func TestKeys(t *testing.T) {
@@ -107,43 +110,45 @@ func TestEntries(t *testing.T) {
 }
 
 func TestRange(t *testing.T) {
-	assert := assert.New(t)
-	rg := New[int](0, nil)
-	defer rg.Stop()
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		rg := New[int](0, nil)
+		defer rg.Stop()
 
-	require.NoError(t, rg.Put("live1", 1, time.Minute*50))
-	require.NoError(t, rg.Put("live2", 2, time.Minute*50))
-	require.NoError(t, rg.Put("expired", 3, time.Millisecond))
+		require.NoError(t, rg.Put("live1", 1, time.Minute*50))
+		require.NoError(t, rg.Put("live2", 2, time.Minute*50))
+		require.NoError(t, rg.Put("expired", 3, time.Millisecond))
 
-	<-time.After(time.Millisecond * 20)
+		synctest.Sleep(time.Millisecond * 20)
 
-	got := make(map[string]int)
-	expiries := make(map[string]time.Time)
-	rg.Range(func(key string, value int, expiresAt time.Time) {
-		got[key] = value
-		expiries[key] = expiresAt
+		got := make(map[string]int)
+		expiries := make(map[string]time.Time)
+		rg.Range(func(key string, value int, expiresAt time.Time) {
+			got[key] = value
+			expiries[key] = expiresAt
+		})
+
+		// Expired entries must never be yielded.
+		assert.Len(got, 2)
+		assert.Equal(1, got["live1"])
+		assert.Equal(2, got["live2"])
+		_, ok := got["expired"]
+		assert.False(ok, "expired entries must not be yielded by Range")
+
+		// The reported expiry is in the future for live entries.
+		assert.True(expiries["live1"].After(time.Now()))
+
+		// Range must not renew timeouts: the reported expiry is stable across calls.
+		first := expiries["live1"]
+		synctest.Sleep(time.Millisecond * 20)
+		var second time.Time
+		rg.Range(func(key string, _ int, expiresAt time.Time) {
+			if key == "live1" {
+				second = expiresAt
+			}
+		})
+		assert.Equal(first, second, "Range must not renew an entry's timeout")
 	})
-
-	// Expired entries must never be yielded.
-	assert.Len(got, 2)
-	assert.Equal(1, got["live1"])
-	assert.Equal(2, got["live2"])
-	_, ok := got["expired"]
-	assert.False(ok, "expired entries must not be yielded by Range")
-
-	// The reported expiry is in the future for live entries.
-	assert.True(expiries["live1"].After(time.Now()))
-
-	// Range must not renew timeouts: the reported expiry is stable across calls.
-	first := expiries["live1"]
-	<-time.After(time.Millisecond * 20)
-	var second time.Time
-	rg.Range(func(key string, _ int, expiresAt time.Time) {
-		if key == "live1" {
-			second = expiresAt
-		}
-	})
-	assert.Equal(first, second, "Range must not renew an entry's timeout")
 }
 
 func TestMarshalJSON(t *testing.T) {
@@ -193,223 +198,247 @@ func TestUnmarshalJSONExpired(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	assert := assert.New(t)
-	rcvd := make(chan string, 100)
-	notify := func(k string, v any) {
-		rcvd <- k
-	}
-	rg := New(time.Millisecond*10, notify)
-	n := 1000
-	for i := n; i < 2*n; i++ {
-		assert.NoError(rg.Put(strconv.Itoa(i), i, time.Millisecond*10))
-	}
-	got := make([]string, n)
-OUT01:
-	for {
-		select {
-		case v := <-rcvd:
-			i, err := strconv.Atoi(v)
-			assert.NoError(err)
-			i = i - n
-			if i < 0 || i >= n {
-				t.Fail()
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		rcvd := make(chan string, 100)
+		notify := func(k string, v any) {
+			rcvd <- k
+		}
+		rg := New(time.Millisecond*10, notify)
+		defer rg.Stop()
+		n := 1000
+		for i := n; i < 2*n; i++ {
+			assert.NoError(rg.Put(strconv.Itoa(i), i, time.Millisecond*10))
+		}
+		got := make([]string, n)
+	OUT01:
+		for {
+			select {
+			case v := <-rcvd:
+				i, err := strconv.Atoi(v)
+				assert.NoError(err)
+				i = i - n
+				if i < 0 || i >= n {
+					t.Fail()
+				}
+				got[i] = v
+			case <-time.After(time.Millisecond * 100):
+				break OUT01
 			}
-			got[i] = v
-		case <-time.After(time.Millisecond * 100):
-			break OUT01
 		}
-	}
-	assert.Equal(len(got), n)
-	for i := range n {
-		if got[i] != "" {
-			continue
+		assert.Equal(len(got), n)
+		for i := range n {
+			if got[i] != "" {
+				continue
+			}
+			assert.Fail("should have value", i, got[i])
 		}
-		assert.Fail("should have value", i, got[i])
-	}
+	})
 }
 
 func Test03(t *testing.T) {
-	assert := assert.New(t)
-	var putAt time.Time
-	elapsed := make(chan time.Duration, 1)
-	kv := New(
-		time.Millisecond*50,
-		func(k string, v any) {
-			elapsed <- time.Since(putAt)
-		})
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		var putAt time.Time
+		elapsed := make(chan time.Duration, 1)
+		kv := New(
+			time.Millisecond*50,
+			func(k string, v any) {
+				elapsed <- time.Since(putAt)
+			})
+		defer kv.Stop()
 
-	putAt = time.Now()
-	require.NoError(t, kv.Put("1", 1, time.Millisecond*10))
+		putAt = time.Now()
+		require.NoError(t, kv.Put("1", 1, time.Millisecond*10))
 
-	<-time.After(time.Millisecond * 100)
-	assert.WithinDuration(putAt, putAt.Add(<-elapsed), time.Millisecond*60)
+		synctest.Sleep(time.Millisecond * 100)
+		assert.WithinDuration(putAt, putAt.Add(<-elapsed), time.Millisecond*60)
+	})
 }
 
 func Test04(t *testing.T) {
-	assert := assert.New(t)
-	kv := New(
-		time.Millisecond*10,
-		func(k string, v any) {
-			t.Fatal(k, v)
-		})
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		kv := New(
+			time.Millisecond*10,
+			func(k string, v any) {
+				t.Fatal(k, v)
+			})
+		defer kv.Stop()
 
-	err := kv.Put("1", 1, time.Millisecond*10000)
-	assert.NoError(err)
-	<-time.After(time.Millisecond * 50)
-	kv.Delete("1")
-	kv.Delete("1")
+		err := kv.Put("1", 1, time.Millisecond*10000)
+		assert.NoError(err)
+		synctest.Sleep(time.Millisecond * 50)
+		kv.Delete("1")
+		kv.Delete("1")
 
-	<-time.After(time.Millisecond * 100)
-	_, ok := kv.Get("1")
-	assert.False(ok)
+		synctest.Sleep(time.Millisecond * 100)
+		_, ok := kv.Get("1")
+		assert.False(ok)
+	})
 }
 
 func Test05(t *testing.T) {
-	assert := assert.New(t)
-	N := 10000
-	var cnt atomic.Int64
-	kv := New(
-		time.Millisecond*10,
-		func(k string, v any) {
-			cnt.Add(1)
-		})
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
+		N := 10000
+		var cnt atomic.Int64
+		kv := New(
+			time.Millisecond*10,
+			func(k string, v any) {
+				cnt.Add(1)
+			})
+		defer kv.Stop()
 
-	src := rand.NewSource(time.Now().Unix())
-	rnd := rand.New(src)
-	for i := range N {
-		k := fmt.Sprintf("%d", i)
-		require.NoError(t, kv.Put(k, fmt.Sprintf("VAL::%v", k),
-			time.Millisecond*time.Duration(rnd.Intn(10)+1)))
-	}
+		src := rand.NewSource(time.Now().Unix())
+		rnd := rand.New(src)
+		for i := range N {
+			k := fmt.Sprintf("%d", i)
+			require.NoError(t, kv.Put(k, fmt.Sprintf("VAL::%v", k),
+				time.Millisecond*time.Duration(rnd.Intn(10)+1)))
+		}
 
-	<-time.After(time.Millisecond * 100)
-	for i := range N {
-		k := fmt.Sprintf("%d", i)
-		_, ok := kv.Get(k)
-		assert.False(ok)
-	}
+		synctest.Sleep(time.Millisecond * 100)
+		for i := range N {
+			k := fmt.Sprintf("%d", i)
+			_, ok := kv.Get(k)
+			assert.False(ok)
+		}
+	})
 }
 
 func Test11(t *testing.T) {
-	assert := assert.New(t)
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
 
-	key := "QQG"
+		key := "QQG"
 
-	var expiredKey = make(chan string, 100)
-	onExpired := func(k string, v any) { expiredKey <- k }
+		var expiredKey = make(chan string, 100)
+		onExpired := func(k string, v any) { expiredKey <- k }
 
-	kv := New(time.Millisecond*100, onExpired)
-	err := kv.Put(
-		key, "G",
-		time.Millisecond*15)
-	assert.NoError(err)
+		kv := New(time.Millisecond*100, onExpired)
+		defer kv.Stop()
+		err := kv.Put(
+			key, "G",
+			time.Millisecond*15)
+		assert.NoError(err)
 
-	<-time.After(time.Millisecond * 10)
+		synctest.Sleep(time.Millisecond * 10)
 
-	v, ok := kv.Get(key)
-	assert.True(ok)
-	assert.Equal("G", v)
+		v, ok := kv.Get(key)
+		assert.True(ok)
+		assert.Equal("G", v)
 
-	<-time.After(time.Millisecond * 10)
+		synctest.Sleep(time.Millisecond * 10)
 
-	_, ok = kv.Get(key)
-	assert.False(ok)
-	<-time.After(time.Millisecond)
-	assert.Equal(key, <-expiredKey)
+		_, ok = kv.Get(key)
+		assert.False(ok)
+		synctest.Wait()
+		assert.Equal(key, <-expiredKey)
 
-	<-time.After(time.Millisecond * 110)
+		synctest.Sleep(time.Millisecond * 110)
 
-	_, ok = kv.Get(key)
-	assert.False(ok)
+		_, ok = kv.Get(key)
+		assert.False(ok)
+	})
 }
 
 func Test12(t *testing.T) {
-	assert := assert.New(t)
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
 
-	key := "QQG"
+		key := "QQG"
 
-	onExpired := func(k string, v any) {}
+		onExpired := func(k string, v any) {}
 
-	kv := New(time.Millisecond*100, onExpired)
-	err := kv.Put(
-		key, "G",
-		time.Millisecond)
-	assert.NoError(err)
+		kv := New(time.Millisecond*100, onExpired)
+		defer kv.Stop()
+		err := kv.Put(
+			key, "G",
+			time.Millisecond)
+		assert.NoError(err)
 
-	<-time.After(time.Millisecond * 10)
+		synctest.Sleep(time.Millisecond * 10)
 
-	v, ok := kv.Get(key)
-	assert.False(ok)
-	assert.Equal(nil, v)
+		v, ok := kv.Get(key)
+		assert.False(ok)
+		assert.Equal(nil, v)
+	})
 }
 
 func Test13(t *testing.T) {
-	assert := assert.New(t)
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
 
-	got := make(chan any, 10)
-	onExpired := func(k string, v any) {
-		got <- v
-	}
+		got := make(chan any, 10)
+		onExpired := func(k string, v any) {
+			got <- v
+		}
 
-	kv := New(time.Millisecond*10, onExpired)
-	err := kv.Put(
-		"1", 123,
-		time.Millisecond)
-	assert.NoError(err)
+		kv := New(time.Millisecond*10, onExpired)
+		defer kv.Stop()
+		err := kv.Put(
+			"1", 123,
+			time.Millisecond)
+		assert.NoError(err)
 
-	<-time.After(time.Millisecond * 50)
+		synctest.Sleep(time.Millisecond * 50)
 
-	v, ok := kv.Get("1")
-	assert.False(ok)
-	assert.Equal(nil, v)
+		v, ok := kv.Get("1")
+		assert.False(ok)
+		assert.Equal(nil, v)
 
-	v = <-got
-	assert.Equal(123, v)
+		v = <-got
+		assert.Equal(123, v)
+	})
 }
 
 func TestOrdering(t *testing.T) {
-	assert := assert.New(t)
+	synctest.Test(t, func(t *testing.T) {
+		assert := assert.New(t)
 
-	type data struct {
-		key   string
-		value any
-	}
-	got := make(chan data, 100)
-	onExpired := func(k string, v any) {
-		got <- data{k, v}
-	}
-
-	kv := New(time.Millisecond*5, onExpired)
-
-	for i := 1; i <= 10; i++ {
-		k := strconv.Itoa(i)
-		v := i
-		assert.NoError(kv.Put(k, v, time.Millisecond*time.Duration(i)*50))
-	}
-
-	var order = make([]int, 10)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for {
-			select {
-			case v := <-got:
-				i, _ := strconv.Atoi(v.key)
-				i--
-				val := v.value.(int)
-				val--
-				order[i] = val
-			case <-time.After(time.Millisecond * 100):
-				return
-			}
+		type data struct {
+			key   string
+			value any
 		}
-	}()
-	<-done
-	for k, v := range order {
-		assert.Equal(k, v)
-	}
+		got := make(chan data, 100)
+		onExpired := func(k string, v any) {
+			got <- data{k, v}
+		}
 
-	assert.Equal(1, 1)
+		kv := New(time.Millisecond*5, onExpired)
+		defer kv.Stop()
+
+		for i := 1; i <= 10; i++ {
+			k := strconv.Itoa(i)
+			v := i
+			assert.NoError(kv.Put(k, v, time.Millisecond*time.Duration(i)*50))
+		}
+
+		var order = make([]int, 10)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case v := <-got:
+					i, _ := strconv.Atoi(v.key)
+					i--
+					val := v.value.(int)
+					val--
+					order[i] = val
+				case <-time.After(time.Millisecond * 100):
+					return
+				}
+			}
+		}()
+		<-done
+		for k, v := range order {
+			assert.Equal(k, v)
+		}
+
+		assert.Equal(1, 1)
+	})
 }
 
 // putAt adds an entry with a given expiry time. It keeps the timers from
@@ -462,31 +491,33 @@ func TestExpireFuncNotifiesExpiredKeyWithRenewedNeighbour(t *testing.T) {
 // The same defect through the public API.
 // See https://github.com/sablierapp/sablier/issues/1110
 func TestRenewedKeyKeepsNeighbourNotification(t *testing.T) {
-	for i := range 5 {
-		var mu sync.Mutex
-		fired := map[string]int{}
-		kv := New[int](20*time.Millisecond, func(k string, _ int) {
+	synctest.Test(t, func(t *testing.T) {
+		for i := range 5 {
+			var mu sync.Mutex
+			fired := map[string]int{}
+			kv := New[int](20*time.Millisecond, func(k string, _ int) {
+				mu.Lock()
+				fired[k]++
+				mu.Unlock()
+			})
+
+			require.NoError(t, kv.Put("a", 1, 100*time.Millisecond))
+			require.NoError(t, kv.Put("b", 1, 100*time.Millisecond))
+			synctest.Sleep(60 * time.Millisecond)
+			require.NoError(t, kv.Put("b", 2, time.Hour))
+			synctest.Sleep(300 * time.Millisecond)
+
+			_, ok := kv.Get("a")
+			assert.Falsef(t, ok, "iteration %d, the store must not contain the idle key", i)
+
 			mu.Lock()
-			fired[k]++
+			assert.Positivef(t, fired["a"], "iteration %d, onExpire must fire for the idle key", i)
+			assert.Zerof(t, fired["b"], "iteration %d, the renewed key must not expire", i)
 			mu.Unlock()
-		})
 
-		require.NoError(t, kv.Put("a", 1, 100*time.Millisecond))
-		require.NoError(t, kv.Put("b", 1, 100*time.Millisecond))
-		<-time.After(60 * time.Millisecond)
-		require.NoError(t, kv.Put("b", 2, time.Hour))
-		<-time.After(300 * time.Millisecond)
-
-		_, ok := kv.Get("a")
-		assert.Falsef(t, ok, "iteration %d, the store must not contain the idle key", i)
-
-		mu.Lock()
-		assert.Positivef(t, fired["a"], "iteration %d, onExpire must fire for the idle key", i)
-		assert.Zerof(t, fired["b"], "iteration %d, the renewed key must not expire", i)
-		mu.Unlock()
-
-		kv.Stop()
-	}
+			kv.Stop()
+		}
+	})
 }
 
 func BenchmarkGetNoValue(b *testing.B) {

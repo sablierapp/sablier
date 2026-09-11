@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -155,31 +156,33 @@ func TestWatchAndWarmExternallyStarted_WarmsExternalInstance(t *testing.T) {
 // not touched (Sablier started it, or it already holds a session): the session
 // must not be re-created, so it is never renewed in a loop.
 func TestWatchAndWarmExternallyStarted_SkipsSablierStartedInstance_InStore(t *testing.T) {
-	s, sessions, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// Instance IS in the sessions store → started by Sablier / already has a session
-	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
-		Name:   "nginx",
-		Status: sablier.InstanceStatusReady,
-	}, nil)
+		// Instance IS in the sessions store → started by Sablier / already has a session
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
+			Name:   "nginx",
+			Status: sablier.InstanceStatusReady,
+		}, nil)
 
-	// Put must NOT be called; gomock will fail the test if it is.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
+		// Put must NOT be called; gomock will fail the test if it is.
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "true"}}
 
-	startAutowarmWatcher(t, s, ctx, cancel)
+		startAutowarmWatcher(t, s, ctx, cancel)
 
-	// Give the goroutine time to process the event then verify no seed happened.
-	time.Sleep(100 * time.Millisecond)
+		// Wait until the goroutine processes the event. gomock then checks that no seed occurred.
+		synctest.Wait()
+	})
 }
 
 // TestWatchAndWarmExternallyStarted_DoesNotReseedWhenSessionAppearsBetweenChecks
@@ -187,31 +190,33 @@ func TestWatchAndWarmExternallyStarted_SkipsSablierStartedInstance_InStore(t *te
 // between the isStartedByUs check and the seed (e.g. a concurrent RequestSession),
 // no session is put on top of it.
 func TestWatchAndWarmExternallyStarted_DoesNotReseedWhenSessionAppearsBetweenChecks(t *testing.T) {
-	s, sessions, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// First lookup (isStartedByUs): no session yet. Second lookup (seedSession):
-	// a session appeared in between. InstanceInspect and Put must NOT be called.
-	first := sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
-		Name:   "nginx",
-		Status: sablier.InstanceStatusReady,
-	}, nil).After(first)
+		// First lookup (isStartedByUs): no session yet. Second lookup (seedSession):
+		// a session appeared in between. InstanceInspect and Put must NOT be called.
+		first := sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
+			Name:   "nginx",
+			Status: sablier.InstanceStatusReady,
+		}, nil).After(first)
 
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady, Enabled: "true"}}
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady, Enabled: "true"}}
 
-	startAutowarmWatcher(t, s, ctx, cancel)
+		startAutowarmWatcher(t, s, ctx, cancel)
 
-	time.Sleep(100 * time.Millisecond)
+		synctest.Wait()
+	})
 }
 
 // TestWatchAndWarmExternallyStarted_SkipsPendingSablierStart verifies the
@@ -219,47 +224,49 @@ func TestWatchAndWarmExternallyStarted_DoesNotReseedWhenSessionAppearsBetweenChe
 // in-progress start for an instance whose session entry is not written yet,
 // the "started" event emitted by the provider must not trigger a seed.
 func TestWatchAndWarmExternallyStarted_SkipsPendingSablierStart(t *testing.T) {
-	s, sessions, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// Simulate the window between a Sablier-initiated start and its session
-	// write: the store keeps answering "not found" for the whole test.
-	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
+		// Simulate the window between a Sablier-initiated start and its session
+		// write: the store keeps answering "not found" for the whole test.
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
 
-	// InstanceRequest performs exactly one pre-start inspect; the warm watcher
-	// must not add a second inspect (seedSession would).
-	p.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
-		Name:    "nginx",
-		Status:  sablier.InstanceStatusStopped,
-		Enabled: "true",
-	}, nil).Times(1)
+		// InstanceRequest performs exactly one pre-start inspect; the warm watcher
+		// must not add a second inspect (seedSession would).
+		p.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
+			Name:    "nginx",
+			Status:  sablier.InstanceStatusStopped,
+			Enabled: "true",
+		}, nil).Times(1)
 
-	// A failed async start leaves the pendingStarts entry in place (it is only
-	// consumed by the next request), which is exactly the state we need.
-	p.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("start failed"))
+		// A failed async start leaves the pendingStarts entry in place (it is only
+		// consumed by the next request), which is exactly the state we need.
+		p.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("start failed"))
 
-	// The only allowed Put is the one from InstanceRequest itself.
-	sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		// The only allowed Put is the one from InstanceRequest itself.
+		sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
-	// Sablier initiates the start: nginx is now registered in pendingStarts.
-	_, err := s.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
+		// Sablier initiates the start: nginx is now registered in pendingStarts.
+		_, err := s.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
 
-	// The provider emits the started event for the Sablier-initiated start.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady, Enabled: "true"}}
+		// The provider emits the started event for the Sablier-initiated start.
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady, Enabled: "true"}}
 
-	startAutowarmWatcher(t, s, ctx, cancel)
+		startAutowarmWatcher(t, s, ctx, cancel)
 
-	time.Sleep(100 * time.Millisecond)
+		synctest.Wait()
+	})
 }
 
 // TestWarmAllUnregisteredInstances_SkipsOnInspectError verifies that an
@@ -303,24 +310,26 @@ func TestWarmAllUnregisteredInstances_SkipsOnSessionLookupError(t *testing.T) {
 // TestWatchAndWarmExternallyStarted_SkipsNonSablierInstance verifies that a
 // "started" event for an instance without sablier.enable=true is ignored.
 func TestWatchAndWarmExternallyStarted_SkipsNonSablierInstance(t *testing.T) {
-	s, _, p := setupSablier(t)
-	s.ExternallyStartedScanInterval = 24 * time.Hour
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ExternallyStartedScanInterval = 24 * time.Hour
 
-	ctx, cancel := context.WithCancel(t.Context())
+		ctx, cancel := context.WithCancel(t.Context())
 
-	eventsC := make(chan sablier.InstanceEvent, 1)
-	errC := make(chan error, 1)
+		eventsC := make(chan sablier.InstanceEvent, 1)
+		errC := make(chan error, 1)
 
-	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
-		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
-	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
 
-	// No sessions.Get or Put expected.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
+		// No sessions.Get or Put expected.
+		eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusStarting, Enabled: "false"}}
 
-	startAutowarmWatcher(t, s, ctx, cancel)
+		startAutowarmWatcher(t, s, ctx, cancel)
 
-	time.Sleep(100 * time.Millisecond)
+		synctest.Wait()
+	})
 }
 
 // TestWatchAndWarmExternallyStarted_ReconciliationTicker verifies that even without

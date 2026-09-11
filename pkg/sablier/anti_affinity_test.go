@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/neilotoole/slogt"
@@ -185,27 +186,28 @@ func TestReconcileAntiAffinity_SuppressesActiveDependent(t *testing.T) {
 }
 
 func TestReconcileAntiAffinity_RestoresWhenGroupInactive(t *testing.T) {
-	s, st, p := setupAntiAffinity(t)
-	ctx := context.Background()
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
 
-	s.SetGroups(map[string][]string{"streaming": {"plex"}})
-	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
 
-	// Activate then suppress.
-	st.session("plex")
-	st.session("nextcloud")
-	s.reconcileAntiAffinity(ctx)
-	assert.Assert(t, s.isSuppressed("nextcloud"))
+		// Activate then suppress.
+		st.session("plex")
+		st.session("nextcloud")
+		s.reconcileAntiAffinity(ctx)
+		assert.Assert(t, s.isSuppressed("nextcloud"))
 
-	// Antagonist session ends -> group inactive -> dependent must be restored.
-	_ = st.Delete(ctx, "plex")
-	s.reconcileAntiAffinity(ctx)
+		// Antagonist session ends -> group inactive -> dependent must be restored.
+		_ = st.Delete(ctx, "plex")
+		s.reconcileAntiAffinity(ctx)
 
-	// The restore goes through the request path, which starts asynchronously.
-	assert.Assert(t, eventually(func() bool {
-		return slices.Contains(p.snapshotStarted(), "nextcloud")
-	}), "dependent should be restored")
-	assert.Assert(t, !s.isSuppressed("nextcloud"), "dependent should no longer be suppressed")
+		// The restore goes through the request path, which starts asynchronously.
+		synctest.Wait()
+		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "dependent should be restored")
+		assert.Assert(t, !s.isSuppressed("nextcloud"), "dependent should no longer be suppressed")
+	})
 }
 
 func TestReconcileAntiAffinity_DoesNotSuppressAlreadyIdleDependent(t *testing.T) {
@@ -224,31 +226,33 @@ func TestReconcileAntiAffinity_DoesNotSuppressAlreadyIdleDependent(t *testing.T)
 }
 
 func TestReconcileAntiAffinity_RestoreOnlyWhenAllAntagonistsInactive(t *testing.T) {
-	s, st, p := setupAntiAffinity(t)
-	ctx := context.Background()
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
 
-	s.SetGroups(map[string][]string{"streaming": {"plex"}, "backup": {"restic"}})
-	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming", "backup"})
+		s.SetGroups(map[string][]string{"streaming": {"plex"}, "backup": {"restic"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming", "backup"})
 
-	st.session("nextcloud")
-	st.session("restic") // only backup is active
-	s.reconcileAntiAffinity(ctx)
-	assert.Assert(t, s.isSuppressed("nextcloud"), "dependent should be suppressed while any antagonist is active")
+		st.session("nextcloud")
+		st.session("restic") // only backup is active
+		s.reconcileAntiAffinity(ctx)
+		assert.Assert(t, s.isSuppressed("nextcloud"), "dependent should be suppressed while any antagonist is active")
 
-	// streaming becomes active too; backup ends. Still one antagonist active.
-	_ = st.Delete(ctx, "restic")
-	st.session("plex")
-	s.reconcileAntiAffinity(ctx)
-	assert.Assert(t, s.isSuppressed("nextcloud"), "dependent should stay suppressed while streaming is active")
-	assert.Assert(t, !slices.Contains(p.snapshotStarted(), "nextcloud"), "must not restore while an antagonist is active")
+		// streaming becomes active too; backup ends. Still one antagonist active.
+		_ = st.Delete(ctx, "restic")
+		st.session("plex")
+		s.reconcileAntiAffinity(ctx)
+		assert.Assert(t, s.isSuppressed("nextcloud"), "dependent should stay suppressed while streaming is active")
+		assert.Assert(t, !slices.Contains(p.snapshotStarted(), "nextcloud"), "must not restore while an antagonist is active")
 
-	// All antagonists inactive -> restore (asynchronously, via the request path).
-	_ = st.Delete(ctx, "plex")
-	s.reconcileAntiAffinity(ctx)
-	assert.Assert(t, eventually(func() bool {
-		return slices.Contains(p.snapshotStarted(), "nextcloud")
-	}), "dependent should be restored once all antagonists are inactive")
-	assert.Assert(t, !s.isSuppressed("nextcloud"))
+		// All antagonists inactive -> restore (asynchronously, via the request path).
+		_ = st.Delete(ctx, "plex")
+		s.reconcileAntiAffinity(ctx)
+		synctest.Wait()
+		assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"),
+			"dependent should be restored once all antagonists are inactive")
+		assert.Assert(t, !s.isSuppressed("nextcloud"))
+	})
 }
 
 func TestReconcileAntiAffinity_NoOpWhenNoAntiAffinity(t *testing.T) {
@@ -439,21 +443,22 @@ func TestSuppressForAntiAffinity_Errors(t *testing.T) {
 
 func TestRestoreFromAntiAffinity(t *testing.T) {
 	t.Run("requests the instance, tracking a session and clearing suppression", func(t *testing.T) {
-		s, st, p := setupAntiAffinity(t)
-		s.affinityMu.Lock()
-		s.suppressed["nextcloud"] = struct{}{}
-		s.restoreFromAntiAffinity(context.Background(), "nextcloud")
-		s.affinityMu.Unlock()
+		synctest.Test(t, func(t *testing.T) {
+			s, st, p := setupAntiAffinity(t)
+			s.affinityMu.Lock()
+			s.suppressed["nextcloud"] = struct{}{}
+			s.restoreFromAntiAffinity(context.Background(), "nextcloud")
+			s.affinityMu.Unlock()
 
-		// Requesting establishes a tracked session synchronously (so the instance
-		// is not treated as externally started and expires normally) and starts
-		// the instance via the normal, asynchronous request path.
-		_, err := st.Get(context.Background(), "nextcloud")
-		assert.NilError(t, err, "restored instance should have a tracked session")
-		assert.Assert(t, !s.isSuppressed("nextcloud"))
-		assert.Assert(t, eventually(func() bool {
-			return slices.Contains(p.snapshotStarted(), "nextcloud")
-		}), "restored instance should be started")
+			// Requesting establishes a tracked session synchronously (so the instance
+			// is not treated as externally started and expires normally) and starts
+			// the instance via the normal, asynchronous request path.
+			_, err := st.Get(context.Background(), "nextcloud")
+			assert.NilError(t, err, "restored instance should have a tracked session")
+			assert.Assert(t, !s.isSuppressed("nextcloud"))
+			synctest.Wait()
+			assert.Assert(t, slices.Contains(p.snapshotStarted(), "nextcloud"), "restored instance should be started")
+		})
 	})
 
 	t.Run("keeps it suppressed when the request fails", func(t *testing.T) {
@@ -513,28 +518,32 @@ func TestIsGroupActive(t *testing.T) {
 
 func TestTriggerAntiAffinityReconcile(t *testing.T) {
 	t.Run("no-op without any anti-affinity", func(t *testing.T) {
-		s, st, p := setupAntiAffinity(t)
-		s.SetGroups(map[string][]string{"streaming": {"plex"}})
-		st.session("plex")
+		synctest.Test(t, func(t *testing.T) {
+			s, st, p := setupAntiAffinity(t)
+			s.SetGroups(map[string][]string{"streaming": {"plex"}})
+			st.session("plex")
 
-		s.triggerAntiAffinityReconcile(context.Background())
-		// No goroutine should have been spawned; give any stray one a moment.
-		time.Sleep(20 * time.Millisecond)
-		assert.Equal(t, len(p.snapshotStopped()), 0)
+			s.triggerAntiAffinityReconcile(context.Background())
+			// No goroutine should have been spawned. Wait until a stray one, if any, is done.
+			synctest.Wait()
+			assert.Equal(t, len(p.snapshotStopped()), 0)
+		})
 	})
 
 	t.Run("enforces in the background when configured", func(t *testing.T) {
-		s, st, p := setupAntiAffinity(t)
-		s.SetGroups(map[string][]string{"streaming": {"plex"}})
-		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
-		st.session("plex")
-		st.session("nextcloud")
+		synctest.Test(t, func(t *testing.T) {
+			s, st, p := setupAntiAffinity(t)
+			s.SetGroups(map[string][]string{"streaming": {"plex"}})
+			s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+			st.session("plex")
+			st.session("nextcloud")
 
-		s.triggerAntiAffinityReconcile(context.Background())
+			s.triggerAntiAffinityReconcile(context.Background())
 
-		assert.Assert(t, eventually(func() bool {
-			return slices.Contains(p.snapshotStopped(), "nextcloud")
-		}), "the background reconcile should have suppressed nextcloud")
+			synctest.Wait()
+			assert.Assert(t, slices.Contains(p.snapshotStopped(), "nextcloud"),
+				"the background reconcile should have suppressed nextcloud")
+		})
 	})
 }
 
@@ -583,30 +592,21 @@ func TestInstanceRequest_HeldByAntiAffinity(t *testing.T) {
 }
 
 func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {
-	s, st, _ := setupAntiAffinity(t)
-	s.BlockingRefreshFrequency = 10 * time.Millisecond
-	s.SetGroups(map[string][]string{"streaming": {"plex"}})
-	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
-	st.session("plex") // antagonist active -> nextcloud is held
+	synctest.Test(t, func(t *testing.T) {
+		s, st, _ := setupAntiAffinity(t)
+		s.BlockingRefreshFrequency = 10 * time.Millisecond
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		st.session("plex") // antagonist active -> nextcloud is held
 
-	_, err := s.requestReadySession(context.Background(), []string{"nextcloud"}, time.Minute, 60*time.Millisecond, false)
+		_, err := s.requestReadySession(context.Background(), []string{"nextcloud"}, time.Minute, 60*time.Millisecond, false)
 
-	var te ErrTimeout
-	assert.Assert(t, errors.As(err, &te), "expected ErrTimeout, got %v", err)
-	assert.Equal(t, len(te.Instances), 1)
-	assert.Equal(t, te.Instances[0].Instance.Name, "nextcloud")
-	assert.Assert(t, strings.Contains(te.Instances[0].Instance.Message, "streaming"),
-		"held instance message should name the antagonist group, got %q", te.Instances[0].Instance.Message)
-	assert.Assert(t, strings.Contains(te.Error(), "streaming"), "timeout error should carry the reason")
-}
-
-// eventually polls cond for up to a second, returning true as soon as it holds.
-func eventually(cond func() bool) bool {
-	for range 100 {
-		if cond() {
-			return true
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	return cond()
+		var te ErrTimeout
+		assert.Assert(t, errors.As(err, &te), "expected ErrTimeout, got %v", err)
+		assert.Equal(t, len(te.Instances), 1)
+		assert.Equal(t, te.Instances[0].Instance.Name, "nextcloud")
+		assert.Assert(t, strings.Contains(te.Instances[0].Instance.Message, "streaming"),
+			"held instance message should name the antagonist group, got %q", te.Instances[0].Instance.Message)
+		assert.Assert(t, strings.Contains(te.Error(), "streaming"), "timeout error should carry the reason")
+	})
 }
