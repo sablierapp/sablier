@@ -46,12 +46,13 @@ The `cluster` accepts a short name or a full ARN and defaults to `default`. The 
 
 ## Give Sablier access to the ECS API
 
-Sablier does not have credential settings. It uses the AWS SDK default credential chain, in this order:
+Sablier does not have credential settings. It uses the AWS SDK default credential chain, which reads credentials from these sources:
 
-1. The `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` environment variables
-2. The shared configuration and credentials files (`~/.aws/config`, `~/.aws/credentials`) and the `AWS_PROFILE` variable
-3. The task role when Sablier itself runs as an ECS task
-4. The instance role when Sablier runs on an EC2 instance, or the pod identity when it runs on EKS
+- The `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` environment variables
+- The shared configuration and credentials files (`~/.aws/config`, `~/.aws/credentials`) and the `AWS_PROFILE` variable
+- A web identity token, for example IAM roles for service accounts on EKS
+- The container credentials endpoint, which serves the task role of an ECS task and EKS Pod Identity
+- The instance metadata service, which serves the instance role of an EC2 instance
 
 Running Sablier as an ECS service in the same cluster with a task role is the recommended setup. The role needs this policy:
 
