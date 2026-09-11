@@ -28,3 +28,11 @@ type PodmanContainerInfo struct {
 	Image  string            `json:"image" jsonschema:"description=Container image (template access: .Podman.Image),example=nginx:latest"`
 	Labels map[string]string `json:"labels,omitempty" jsonschema:"description=Container labels (template access: .Podman.Labels)"`
 }
+
+// NomadTaskGroupInfo holds Nomad-specific task group metadata.
+type NomadTaskGroupInfo struct {
+	Namespace string            `json:"namespace" jsonschema:"description=Nomad namespace (template access: .Nomad.Namespace),example=default"`
+	JobID     string            `json:"jobId" jsonschema:"description=Nomad job ID (template access: .Nomad.JobID),example=whoami"`
+	TaskGroup string            `json:"taskGroup" jsonschema:"description=Task group name (template access: .Nomad.TaskGroup),example=web"`
+	Meta      map[string]string `json:"meta,omitempty" jsonschema:"description=Job and task group meta merged (template access: .Nomad.Meta)"`
+}

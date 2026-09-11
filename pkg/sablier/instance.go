@@ -36,6 +36,7 @@ const (
 	ProviderKubernetes ProviderType = "kubernetes"
 	ProviderPodman     ProviderType = "podman"
 	ProviderSystemd    ProviderType = "systemd"
+	ProviderNomad      ProviderType = "nomad"
 )
 
 type InstanceInfo struct {
@@ -51,6 +52,7 @@ type InstanceInfo struct {
 	Swarm           *SwarmServiceInfo       `json:"swarm,omitempty"`
 	Kubernetes      *KubernetesWorkloadInfo `json:"kubernetes,omitempty"`
 	Podman          *PodmanContainerInfo    `json:"podman,omitempty"`
+	Nomad           *NomadTaskGroupInfo     `json:"nomad,omitempty"`
 
 	// ReadyAfter is the minimum duration to wait after the instance first
 	// reports ready before Sablier considers it truly ready. Set via the

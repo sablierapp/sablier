@@ -40,6 +40,12 @@
       "UnitPatterns": [
         "podman-*.service"
       ]
+    },
+    "Nomad": {
+      "Address": "",
+      "Token": "",
+      "Namespace": "",
+      "Region": ""
     }
   },
   "Sessions": {

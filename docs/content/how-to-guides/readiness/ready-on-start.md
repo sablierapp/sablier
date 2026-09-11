@@ -10,6 +10,7 @@ compatibility:
   kubernetes: supported
   podman: supported
   proxmox: unsupported
+  nomad: supported
 example: ready-on-start
 ---
 
