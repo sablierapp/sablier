@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: supported
   proxmox: unsupported
+  ecs: differs
 example: running-hours
 ---
 

@@ -27,6 +27,7 @@ Thank you for your interest in contributing to Sablier! This guide will help you
     - [Running Long Tests (Testcontainers)](#running-long-tests-testcontainers)
       - [Running Testcontainer Tests](#running-testcontainer-tests)
       - [Skipping Long Tests](#skipping-long-tests)
+      - [Tests That Need a LocalStack Token](#tests-that-need-a-localstack-token)
   - [Submitting Your Contribution](#submitting-your-contribution)
     - [Before Submitting](#before-submitting)
     - [Create a Pull Request](#create-a-pull-request)
@@ -272,6 +273,16 @@ func TestMyLongRunningTest(t *testing.T) {
     // Test code...
 }
 ```
+
+#### Tests That Need a LocalStack Token
+
+The AWS ECS integration test (`TestECSProvider_Integration` in `pkg/provider/awsecs`) runs against LocalStack. ECS is not in the free LocalStack plan, so the test needs a LocalStack auth token with ECS access. Without the token, the test skips.
+
+```bash
+LOCALSTACK_AUTH_TOKEN=<token> go test -tags=nomsgpack -run TestECSProvider_Integration ./pkg/provider/awsecs/
+```
+
+In CI, the `Integration (ECS)` workflow reads the token from the `LOCALSTACK_AUTH_TOKEN` repository secret. GitHub does not pass secrets to pull requests from forks, so this test runs only for branches of this repository.
 
 ## Submitting Your Contribution
 
