@@ -11,6 +11,7 @@ compatibility:
   podman: unsupported
   proxmox: impossible
   systemd: supported
+  ecs: impossible
 example: scale-mode
 ---
 
