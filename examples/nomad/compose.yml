@@ -1,0 +1,41 @@
+services:
+  nomad:
+    image: hashicorp/nomad:1.11.3
+    command:
+      - agent
+      - -dev
+      - -bind=0.0.0.0
+      - -network-interface=eth0
+      - -config=/etc/nomad.d/raw_exec.hcl
+    environment:
+      NOMAD_SKIP_DOCKER_IMAGE_WARN: "1"
+    # The Nomad client creates cgroups for its allocations.
+    privileged: true
+    cgroup: host
+    volumes:
+      - ./raw_exec.hcl:/etc/nomad.d/raw_exec.hcl:ro
+      - ./whoami.nomad.hcl:/jobs/whoami.nomad.hcl:ro
+    ports:
+      - "4646:4646" # Nomad API and UI
+      - "8080:8080" # Task group whoami/web
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4646/v1/status/leader"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=nomad
+      - --provider.nomad.address=http://nomad:4646
+      - --logging.level=debug
+      - --sessions.default-duration=1m
+      - --sessions.expiration-interval=10s
+      - --strategy.blocking.default-timeout=2m
+    ports:
+      - "10000:10000"
+    depends_on:
+      nomad:
+        condition: service_healthy

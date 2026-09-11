@@ -185,5 +185,6 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		Swarm:           instanceState.Swarm,
 		Kubernetes:      instanceState.Kubernetes,
 		Podman:          instanceState.Podman,
+		Nomad:           instanceState.Nomad,
 	}
 }
