@@ -51,5 +51,5 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 	} else {
 		p.l.DebugContext(ctx, "scaling task group to zero", slog.String("name", name))
 	}
-	return p.scale(ctx, jobID, group, target, "scaled down by Sablier")
+	return p.scale(ctx, job, tg, target, "scaled down by Sablier")
 }

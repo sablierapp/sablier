@@ -51,7 +51,7 @@ TLS is configured with the same environment variables as the `nomad` CLI: `NOMAD
 
 ## Create an ACL token
 
-When ACLs are enabled, Sablier needs a token that can list and read the jobs of the namespace, scale their task groups, and submit jobs (only used to run a job again after `nomad job stop`). Create a policy file `sablier.hcl`:
+When ACLs are enabled, Sablier needs a token that can list and read the jobs of the namespace, scale their task groups, and submit jobs. Sablier submits a job only to run it again after `nomad job stop`, or to change its count while an active deployment blocks the scaling API. Create a policy file `sablier.hcl`:
 
 ```hcl
 namespace "default" {

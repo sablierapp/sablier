@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/hashicorp/nomad/api"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -40,10 +41,7 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 		p.l.DebugContext(ctx, "registering stopped job again", slog.String("name", name), slog.Int("replicas", int(target)))
 		job.Stop = new(false)
 		tg.Count = new(int(target))
-		if _, _, err := p.Client.Jobs().Register(job, p.writeOptions(ctx)); err != nil {
-			return fmt.Errorf("cannot register stopped job %q again: %w", jobID, err)
-		}
-		return nil
+		return p.register(ctx, job)
 	}
 
 	if int32(deref(tg.Count)) == target {
@@ -54,14 +52,33 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 
 	span.SetAttributes(attribute.String("operation", "scale"))
 	p.l.DebugContext(ctx, "scaling task group up", slog.String("name", name), slog.Int("replicas", int(target)))
-	return p.scale(ctx, jobID, group, target, "scaled up by Sablier")
+	return p.scale(ctx, job, tg, target, "scaled up by Sablier")
 }
 
 // scale sets the count of a task group through the Nomad scaling API.
-func (p *Provider) scale(ctx context.Context, jobID, group string, count int32, message string) error {
+func (p *Provider) scale(ctx context.Context, job *api.Job, tg *api.TaskGroup, count int32, message string) error {
+	jobID, group := deref(job.ID), deref(tg.Name)
 	c := int(count)
-	if _, _, err := p.Client.Jobs().Scale(jobID, group, &c, message, false, nil, p.writeOptions(ctx)); err != nil {
+	_, _, err := p.Client.Jobs().Scale(jobID, group, &c, message, false, nil, p.writeOptions(ctx))
+	if err == nil {
+		return nil
+	}
+	if !isBlockedByDeployment(err) {
 		return fmt.Errorf("cannot scale task group %q of job %q to %d: %w", group, jobID, count, err)
+	}
+
+	// Nomad rejects a scale request while a deployment is active, but not a job registration.
+	// See Job.Scale in https://github.com/hashicorp/nomad/blob/v1.11.3/nomad/job_endpoint.go
+	p.l.InfoContext(ctx, "an active deployment blocks scaling, registering the job with the new count",
+		slog.String("job", jobID), slog.String("group", group), slog.Int("count", c))
+	tg.Count = &c
+	return p.register(ctx, job)
+}
+
+// register submits the job again. Nomad rejects it when the job changed since it was read.
+func (p *Provider) register(ctx context.Context, job *api.Job) error {
+	if _, _, err := p.Client.Jobs().EnforceRegister(job, deref(job.JobModifyIndex), p.writeOptions(ctx)); err != nil {
+		return fmt.Errorf("cannot register job %q: %w", deref(job.ID), err)
 	}
 	return nil
 }

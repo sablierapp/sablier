@@ -74,10 +74,10 @@ func startNomad(ctx context.Context) (*nomadContainer, error) {
 			ContainerFilePath: "/etc/nomad.d/raw_exec.hcl",
 			FileMode:          0o644,
 		}},
-		// The Nomad client manages cgroups for its allocations, which needs a
-		// privileged container with a view on the host cgroup hierarchy.
-		Privileged: true,
+		// The Nomad client creates its nomad.slice cgroup, so the container must be
+		// privileged and see the host cgroup tree, like the testcontainers dind module.
 		HostConfigModifier: func(hc *container.HostConfig) {
+			hc.Privileged = true
 			hc.CgroupnsMode = container.CgroupnsModeHost
 		},
 		WaitingFor: wait.ForHTTP("/v1/status/leader").WithPort("4646/tcp").WithStartupTimeout(2 * time.Minute),
@@ -141,7 +141,7 @@ func (c *nomadContainer) provider(t *testing.T) *nomad.Provider {
 
 // registerJob registers a service job with one task group "web" that runs a
 // sleeping raw_exec task, purges it when the test ends and returns its instance name.
-func (c *nomadContainer) registerJob(t *testing.T, id string, count int, meta map[string]string) string {
+func (c *nomadContainer) registerJob(t *testing.T, id string, count int, meta map[string]string, minHealthy time.Duration) string {
 	t.Helper()
 	job := &api.Job{
 		ID:          new(id),
@@ -154,9 +154,9 @@ func (c *nomadContainer) registerJob(t *testing.T, id string, count int, meta ma
 			Meta:  meta,
 			Update: &api.UpdateStrategy{
 				HealthCheck:      new("task_states"),
-				MinHealthyTime:   new(time.Second),
-				HealthyDeadline:  new(time.Minute),
-				ProgressDeadline: new(2 * time.Minute),
+				MinHealthyTime:   new(minHealthy),
+				HealthyDeadline:  new(minHealthy + time.Minute),
+				ProgressDeadline: new(minHealthy + 2*time.Minute),
 			},
 			Tasks: []*api.Task{{
 				Name:   "sleep",

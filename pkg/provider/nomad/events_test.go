@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/nomad"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
@@ -33,14 +34,26 @@ func assertNoEvent(t *testing.T, events <-chan sablier.InstanceEvent) {
 	}
 }
 
+// subscribe opens an event stream and closes it before the test ends, so the
+// provider never logs to a finished test (the race detector reports that).
+func subscribe(t *testing.T, p *nomad.Provider, opts provider.InstanceEventsOptions) (sablier.InstanceEventStream, context.CancelFunc) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := p.InstanceEvents(ctx, opts)
+	t.Cleanup(func() {
+		cancel()
+		for range stream.Events {
+		}
+	})
+	return stream, cancel
+}
+
 func TestInstanceEvents(t *testing.T) {
 	m := newMockNomad(t)
 	m.addJob(serviceJob("whoami", 0, enabledMeta))
 	p := m.provider(t)
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{})
+	stream, cancel := subscribe(t, p, provider.InstanceEventsOptions{})
 	waitStreamOpens(t, m, 1)
 
 	t.Run("existing jobs do not emit events", func(t *testing.T) {
@@ -137,7 +150,7 @@ func TestInstanceEvents_FiltersTypes(t *testing.T) {
 	m.addJob(serviceJob("whoami", 0, enabledMeta))
 	p := m.provider(t)
 
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream, _ := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 	waitStreamOpens(t, m, 1)
@@ -154,7 +167,7 @@ func TestInstanceEvents_ReconnectsAndResynchronizes(t *testing.T) {
 	m.addJob(serviceJob("whoami", 0, enabledMeta))
 	p := m.provider(t)
 
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{})
+	stream, _ := subscribe(t, p, provider.InstanceEventsOptions{})
 	waitStreamOpens(t, m, 1)
 
 	// The job is scaled while the stream is down: no event is delivered for
@@ -179,7 +192,7 @@ func TestInstanceEvents_RetriesTheInitialConnection(t *testing.T) {
 	m.setStreamFail(true)
 	p := m.provider(t)
 
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{})
+	stream, _ := subscribe(t, p, provider.InstanceEventsOptions{})
 	time.Sleep(50 * time.Millisecond)
 	m.setStreamFail(false)
 	waitStreamOpens(t, m, 1)

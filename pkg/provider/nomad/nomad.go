@@ -167,6 +167,11 @@ func isNotFound(err error) bool {
 	return errors.As(err, &ure) && ure.StatusCode() == http.StatusNotFound
 }
 
+func isBlockedByDeployment(err error) bool {
+	var ure api.UnexpectedResponseError
+	return errors.As(err, &ure) && ure.StatusCode() == http.StatusBadRequest && strings.Contains(ure.Body(), "active deployment")
+}
+
 func deref[T any](p *T) T {
 	if p == nil {
 		var zero T

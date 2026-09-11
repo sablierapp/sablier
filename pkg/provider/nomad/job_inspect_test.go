@@ -17,14 +17,23 @@ func testJob(count int, meta map[string]string) (*api.Job, *api.TaskGroup) {
 		Meta:  meta,
 	}
 	job := &api.Job{
-		ID:         new("whoami"),
-		Name:       new("whoami"),
-		Namespace:  new("default"),
-		Type:       new(api.JobTypeService),
-		Stop:       new(false),
-		TaskGroups: []*api.TaskGroup{tg},
+		ID:          new("whoami"),
+		Name:        new("whoami"),
+		Namespace:   new("default"),
+		Type:        new(api.JobTypeService),
+		Stop:        new(false),
+		CreateIndex: new(uint64(1)),
+		TaskGroups:  []*api.TaskGroup{tg},
 	}
 	return job, tg
+}
+
+func testDeployment(status string, jobCreateIndex uint64, groups ...string) *api.Deployment {
+	d := &api.Deployment{Status: status, JobCreateIndex: jobCreateIndex, TaskGroups: map[string]*api.DeploymentState{}}
+	for _, g := range groups {
+		d.TaskGroups[g] = &api.DeploymentState{DesiredTotal: 1}
+	}
+	return d
 }
 
 func alloc(group, clientStatus, desiredStatus string) *api.AllocationListStub {
@@ -62,14 +71,47 @@ func TestInfoFromGroup(t *testing.T) {
 	p := &Provider{namespace: "default", l: slog.Default()}
 
 	tests := []struct {
-		name   string
-		count  int
-		meta   map[string]string
-		stop   bool
-		batch  bool
-		allocs []*api.AllocationListStub
-		want   sablier.InstanceInfo
+		name       string
+		count      int
+		meta       map[string]string
+		stop       bool
+		batch      bool
+		allocs     []*api.AllocationListStub
+		deployment *api.Deployment
+		want       sablier.InstanceInfo
 	}{
+		{
+			name:       "running allocation waiting for its health in an active deployment is starting",
+			count:      1,
+			meta:       enabled,
+			allocs:     []*api.AllocationListStub{alloc("web", api.AllocClientStatusRunning, api.AllocDesiredStatusRun)},
+			deployment: testDeployment(api.DeploymentStatusRunning, 1, "web"),
+			want:       sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStarting, Message: "allocation is running but not healthy yet"},
+		},
+		{
+			name:       "running allocation after a finished deployment is ready",
+			count:      1,
+			meta:       enabled,
+			allocs:     []*api.AllocationListStub{alloc("web", api.AllocClientStatusRunning, api.AllocDesiredStatusRun)},
+			deployment: testDeployment(api.DeploymentStatusSuccessful, 1, "web"),
+			want:       sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady},
+		},
+		{
+			name:       "active deployment of a previous job with the same ID is ignored",
+			count:      1,
+			meta:       enabled,
+			allocs:     []*api.AllocationListStub{alloc("web", api.AllocClientStatusRunning, api.AllocDesiredStatusRun)},
+			deployment: testDeployment(api.DeploymentStatusRunning, 99, "web"),
+			want:       sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady},
+		},
+		{
+			name:       "active deployment of another task group is ignored",
+			count:      1,
+			meta:       enabled,
+			allocs:     []*api.AllocationListStub{alloc("web", api.AllocClientStatusRunning, api.AllocDesiredStatusRun)},
+			deployment: testDeployment(api.DeploymentStatusRunning, 1, "db"),
+			want:       sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady},
+		},
 		{
 			name:  "count zero is stopped",
 			count: 0,
@@ -190,7 +232,7 @@ func TestInfoFromGroup(t *testing.T) {
 				job.Type = new(api.JobTypeBatch)
 			}
 
-			got := p.infoFromGroup(job, tg, tt.allocs)
+			got := p.infoFromGroup(job, tg, tt.allocs, tt.deployment)
 
 			assert.Equal(t, got.Name, tt.want.Name)
 			assert.Equal(t, got.Status, tt.want.Status)
@@ -215,7 +257,7 @@ func TestInfoFromGroup_LabelsFromJobAndGroup(t *testing.T) {
 	job, tg := testJob(0, map[string]string{"sablier.group": "team-a,team-b"})
 	job.Meta = map[string]string{"sablier.enable": "true", "sablier.group": "job-level", "sablier.ready-after": "30s"}
 
-	got := p.infoFromGroup(job, tg, nil)
+	got := p.infoFromGroup(job, tg, nil, nil)
 
 	assert.Equal(t, got.Enabled, "true")
 	assert.DeepEqual(t, got.Groups, []string{"team-a", "team-b"})

@@ -130,6 +130,34 @@ func TestInstanceInspect(t *testing.T) {
 		assert.Equal(t, info.Nomad.JobID, "whoami")
 	})
 
+	t.Run("does not query the deployment when the allocation health is known", func(t *testing.T) {
+		_, err := p.InstanceInspect(t.Context(), "whoami/web")
+
+		assert.NilError(t, err)
+		assert.Equal(t, m.getDeploymentCalls("whoami"), 0)
+	})
+
+	t.Run("waits for the allocation health while a deployment is active", func(t *testing.T) {
+		m := newMockNomad(t)
+		m.addJob(serviceJob("deploying", 1, enabledMeta))
+		m.setAllocs("deploying", &api.AllocationListStub{
+			ID:            "alloc-deploying",
+			JobID:         "deploying",
+			TaskGroup:     "web",
+			ClientStatus:  api.AllocClientStatusRunning,
+			DesiredStatus: api.AllocDesiredStatusRun,
+		})
+		m.setActiveDeployment("deploying", true)
+		p := m.provider(t)
+
+		info, err := p.InstanceInspect(t.Context(), "deploying/web")
+
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatusStarting)
+		assert.Equal(t, info.Message, "allocation is running but not healthy yet")
+		assert.Equal(t, m.getDeploymentCalls("deploying"), 1)
+	})
+
 	t.Run("rejects an unknown job", func(t *testing.T) {
 		_, err := p.InstanceInspect(t.Context(), "missing/web")
 

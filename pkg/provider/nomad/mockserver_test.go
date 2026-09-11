@@ -2,6 +2,7 @@ package nomad_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -32,33 +33,38 @@ type mockNomad struct {
 	t   *testing.T
 	srv *httptest.Server
 
-	mu          sync.Mutex
-	index       uint64
-	jobs        map[string]*api.Job
-	allocs      map[string][]*api.AllocationListStub
-	scaleCalls  []scaleCall
-	registered  []*api.Job
-	infoCalls   map[string]int // job ID -> GET /v1/job/:id count
-	namespaces  map[string]int // namespace query parameter -> count
-	tokens      map[string]int // X-Nomad-Token header -> count
-	listFail    bool
-	streamFail  bool
-	streams     map[int]chan []byte
-	nextStream  int
-	streamOpens atomic.Int32
+	mu              sync.Mutex
+	index           uint64
+	jobs            map[string]*api.Job
+	allocs          map[string][]*api.AllocationListStub
+	scaleCalls      []scaleCall
+	registered      []api.JobRegisterRequest
+	deployments     map[string]*api.Deployment // job ID -> latest deployment
+	deploymentCalls map[string]int             // job ID -> GET /v1/job/:id/deployment count
+	infoCalls       map[string]int             // job ID -> GET /v1/job/:id count
+	namespaces      map[string]int             // namespace query parameter -> count
+	tokens          map[string]int             // X-Nomad-Token header -> count
+	listFail        bool
+	scaleFail       bool
+	streamFail      bool
+	streams         map[int]chan []byte
+	nextStream      int
+	streamOpens     atomic.Int32
 }
 
 func newMockNomad(t *testing.T) *mockNomad {
 	t.Helper()
 	m := &mockNomad{
-		t:          t,
-		index:      10,
-		jobs:       make(map[string]*api.Job),
-		allocs:     make(map[string][]*api.AllocationListStub),
-		infoCalls:  make(map[string]int),
-		namespaces: make(map[string]int),
-		tokens:     make(map[string]int),
-		streams:    make(map[int]chan []byte),
+		t:               t,
+		index:           10,
+		jobs:            make(map[string]*api.Job),
+		allocs:          make(map[string][]*api.AllocationListStub),
+		deployments:     make(map[string]*api.Deployment),
+		deploymentCalls: make(map[string]int),
+		infoCalls:       make(map[string]int),
+		namespaces:      make(map[string]int),
+		tokens:          make(map[string]int),
+		streams:         make(map[int]chan []byte),
 	}
 	m.srv = httptest.NewServer(http.HandlerFunc(m.handle))
 	t.Cleanup(func() {
@@ -102,6 +108,9 @@ func (m *mockNomad) storeLocked(job *api.Job) {
 	m.index++
 	job.ModifyIndex = new(m.index)
 	job.JobModifyIndex = new(m.index)
+	if job.CreateIndex == nil {
+		job.CreateIndex = new(m.index)
+	}
 	if job.Namespace == nil {
 		job.Namespace = new("default")
 	}
@@ -126,16 +135,52 @@ func (m *mockNomad) setStreamFail(fail bool) {
 	m.streamFail = fail
 }
 
+func (m *mockNomad) setScaleFail(fail bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.scaleFail = fail
+}
+
+// setActiveDeployment gives the job a running deployment of its "web" task group.
+// Like Nomad, the scale endpoint then rejects the job.
+func (m *mockNomad) setActiveDeployment(jobID string, active bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !active {
+		delete(m.deployments, jobID)
+		return
+	}
+	m.deployments[jobID] = &api.Deployment{
+		ID:             "deployment-" + jobID,
+		JobID:          jobID,
+		JobCreateIndex: *m.jobs[jobID].CreateIndex,
+		Status:         api.DeploymentStatusRunning,
+		TaskGroups:     map[string]*api.DeploymentState{"web": {DesiredTotal: 1}},
+	}
+}
+
+func (m *mockNomad) getDeploymentCalls(jobID string) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.deploymentCalls[jobID]
+}
+
+func (m *mockNomad) jobModifyIndex(jobID string) uint64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return *m.jobs[jobID].JobModifyIndex
+}
+
 func (m *mockNomad) getScaleCalls() []scaleCall {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return append([]scaleCall(nil), m.scaleCalls...)
 }
 
-func (m *mockNomad) getRegistered() []*api.Job {
+func (m *mockNomad) getRegistered() []api.JobRegisterRequest {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return append([]*api.Job(nil), m.registered...)
+	return append([]api.JobRegisterRequest(nil), m.registered...)
 }
 
 func (m *mockNomad) getInfoCalls(jobID string) int {
@@ -268,14 +313,22 @@ func (m *mockNomad) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if current, ok := m.jobs[*req.Job.ID]; ok && req.EnforceIndex && req.JobModifyIndex != *current.JobModifyIndex {
+		http.Error(w, fmt.Sprintf("Enforcing job modify index %d: job exists with conflicting job modify index: %d", req.JobModifyIndex, *current.JobModifyIndex), http.StatusBadRequest)
+		return
+	}
+	m.registered = append(m.registered, req)
 	m.storeLocked(req.Job)
-	m.registered = append(m.registered, req.Job)
+	// A new job version cancels the active deployment.
+	if d := m.deployments[*req.Job.ID]; d != nil {
+		d.Status = api.DeploymentStatusCancelled
+	}
 	writeJSON(w, api.JobRegisterResponse{EvalID: "eval-register", JobModifyIndex: m.index})
 }
 
 func (m *mockNomad) handleJob(w http.ResponseWriter, r *http.Request, rest string) {
 	action := ""
-	for _, suffix := range []string{"/allocations", "/scale"} {
+	for _, suffix := range []string{"/allocations", "/scale", "/deployment"} {
 		if strings.HasSuffix(rest, suffix) {
 			action = strings.TrimPrefix(suffix, "/")
 			rest = strings.TrimSuffix(rest, suffix)
@@ -299,6 +352,9 @@ func (m *mockNomad) handleJob(w http.ResponseWriter, r *http.Request, rest strin
 	case "":
 		m.infoCalls[jobID]++
 		writeJSON(w, job)
+	case "deployment":
+		m.deploymentCalls[jobID]++
+		writeJSON(w, m.deployments[jobID])
 	case "allocations":
 		allocs := m.allocs[jobID]
 		if allocs == nil {
@@ -309,6 +365,14 @@ func (m *mockNomad) handleJob(w http.ResponseWriter, r *http.Request, rest strin
 		var req api.ScalingRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Count == nil {
 			http.Error(w, "invalid scaling request", http.StatusBadRequest)
+			return
+		}
+		if m.scaleFail {
+			http.Error(w, "nomad unavailable", http.StatusInternalServerError)
+			return
+		}
+		if d := m.deployments[jobID]; d != nil && d.Status == api.DeploymentStatusRunning {
+			http.Error(w, "job scaling blocked due to active deployment", http.StatusBadRequest)
 			return
 		}
 		group := req.Target["Group"]

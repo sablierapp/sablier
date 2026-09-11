@@ -39,6 +39,9 @@ func (p *Provider) streamEvents(ctx context.Context, wanted map[provider.Instanc
 		// what changed while the stream was disconnected.
 		jobs, lastIndex, err := p.listJobs(ctx)
 		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
 			p.l.WarnContext(ctx, "cannot list jobs for the event stream, retrying", slog.Any("error", err), slog.Duration("backoff", backoff))
 			if !sleepContext(ctx, backoff) {
 				return
@@ -62,6 +65,9 @@ func (p *Provider) streamEvents(ctx context.Context, wanted map[provider.Instanc
 
 		stream, err := p.Client.EventStream().Stream(ctx, map[api.Topic][]string{api.TopicJob: {"*"}}, index, p.queryOptions(ctx))
 		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
 			p.l.WarnContext(ctx, "cannot open the Nomad event stream, retrying", slog.Any("error", err), slog.Duration("backoff", backoff))
 			if !sleepContext(ctx, backoff) {
 				return
@@ -74,7 +80,9 @@ func (p *Provider) streamEvents(ctx context.Context, wanted map[provider.Instanc
 
 		for batch := range stream {
 			if batch.Err != nil {
-				p.l.WarnContext(ctx, "nomad event stream interrupted", slog.Any("error", batch.Err))
+				if ctx.Err() == nil {
+					p.l.WarnContext(ctx, "nomad event stream interrupted", slog.Any("error", batch.Err))
+				}
 				break
 			}
 			if batch.Index > 0 {

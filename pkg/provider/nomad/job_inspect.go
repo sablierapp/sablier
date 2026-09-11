@@ -17,14 +17,22 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot inspect instance %q: %w", name, err)
 	}
 
-	// Only the allocations of the current job version matter. A job registered
-	// again after a purge would otherwise report its old allocations.
+	// Only the allocations of the current job matter. A job registered again
+	// after a purge would otherwise report the allocations of the purged job.
 	allocs, _, err := p.Client.Jobs().Allocations(deref(job.ID), false, p.queryOptions(ctx))
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot list allocations of job %q: %w", deref(job.ID), err)
 	}
 
-	info := p.infoFromGroup(job, tg, allocs)
+	var deployment *api.Deployment
+	if awaitsHealth(job, tg, allocs) {
+		deployment, _, err = p.Client.Jobs().LatestDeployment(deref(job.ID), p.queryOptions(ctx))
+		if err != nil {
+			return sablier.InstanceInfo{}, fmt.Errorf("cannot get the latest deployment of job %q: %w", deref(job.ID), err)
+		}
+	}
+
+	info := p.infoFromGroup(job, tg, allocs, deployment)
 	p.l.DebugContext(ctx, "task group inspected",
 		slog.String("name", info.Name),
 		slog.String("status", string(info.Status)),
@@ -36,7 +44,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 
 // infoFromGroup derives the instance state of one task group from the job
 // spec and the allocations of the job.
-func (p *Provider) infoFromGroup(job *api.Job, tg *api.TaskGroup, allocs []*api.AllocationListStub) sablier.InstanceInfo {
+func (p *Provider) infoFromGroup(job *api.Job, tg *api.TaskGroup, allocs []*api.AllocationListStub, deployment *api.Deployment) sablier.InstanceInfo {
 	jobID := deref(job.ID)
 	group := deref(tg.Name)
 	name := instanceName(jobID, group)
@@ -67,7 +75,7 @@ func (p *Provider) infoFromGroup(job *api.Job, tg *api.TaskGroup, allocs []*api.
 			Status:          sablier.InstanceStatusStopped,
 		}
 	default:
-		info = groupStatus(name, count, deref(job.Type), group, allocs)
+		info = groupStatus(name, count, deref(job.Type), group, allocs, tracksHealth(job, group, deployment))
 	}
 
 	namespace := deref(job.Namespace)
@@ -87,7 +95,7 @@ func (p *Provider) infoFromGroup(job *api.Job, tg *api.TaskGroup, allocs []*api.
 
 // groupStatus derives the state of a task group with a positive count from
 // its allocations.
-func groupStatus(name string, count int32, jobType, group string, allocs []*api.AllocationListStub) sablier.InstanceInfo {
+func groupStatus(name string, count int32, jobType, group string, allocs []*api.AllocationListStub, healthTracked bool) sablier.InstanceInfo {
 	var ready, live, completed, failed int32
 	var unhealthy, failure string
 
@@ -97,13 +105,16 @@ func groupStatus(name string, count int32, jobType, group string, allocs []*api.
 		}
 		switch a.ClientStatus {
 		case api.AllocClientStatusRunning:
-			// Without a deployment there is no health tracking, so running is the
-			// best readiness signal, as with a Docker container without healthcheck.
-			if a.DeploymentStatus == nil || deref(a.DeploymentStatus.Healthy) {
+			switch {
+			case a.DeploymentStatus != nil && deref(a.DeploymentStatus.Healthy):
 				ready++
-			} else {
+			case a.DeploymentStatus != nil || healthTracked:
 				live++
 				unhealthy = "allocation is running but not healthy yet"
+			default:
+				// Without a deployment there is no health tracking, so running is the
+				// best readiness signal, as with a Docker container without healthcheck.
+				ready++
 			}
 		case api.AllocClientStatusPending:
 			live++
@@ -130,6 +141,33 @@ func groupStatus(name string, count int32, jobType, group string, allocs []*api.
 		// The scheduler has not placed any allocation yet.
 		return sablier.InstanceInfo{Name: name, CurrentReplicas: ready, DesiredReplicas: count, Status: sablier.InstanceStatusStarting}
 	}
+}
+
+// awaitsHealth reports whether a running allocation of the group has no health data.
+// Nomad sets it only when the deployment of the allocation decides the health.
+func awaitsHealth(job *api.Job, tg *api.TaskGroup, allocs []*api.AllocationListStub) bool {
+	if deref(job.Stop) || deref(tg.Count) == 0 {
+		return false
+	}
+	group := deref(tg.Name)
+	return slices.ContainsFunc(allocs, func(a *api.AllocationListStub) bool {
+		return a.TaskGroup == group && a.DesiredStatus == api.AllocDesiredStatusRun &&
+			a.ClientStatus == api.AllocClientStatusRunning && a.DeploymentStatus == nil
+	})
+}
+
+// tracksHealth reports whether an active deployment of this job decides the health
+// of the task group. The job check is the same as in Job.Scale of Nomad.
+func tracksHealth(job *api.Job, group string, d *api.Deployment) bool {
+	if d == nil || d.JobCreateIndex != deref(job.CreateIndex) {
+		return false
+	}
+	switch d.Status {
+	case api.DeploymentStatusSuccessful, api.DeploymentStatusFailed, api.DeploymentStatusCancelled:
+		return false
+	}
+	_, ok := d.TaskGroups[group]
+	return ok
 }
 
 // failureMessage describes why an allocation failed from its task events.

@@ -52,6 +52,7 @@ func TestInstanceStart(t *testing.T) {
 		job := serviceJob("whoami", 0, enabledMeta)
 		job.Stop = new(true)
 		m.addJob(job)
+		index := m.jobModifyIndex("whoami")
 		p := m.provider(t)
 
 		err := p.InstanceStart(t.Context(), "whoami/web")
@@ -60,8 +61,29 @@ func TestInstanceStart(t *testing.T) {
 		assert.Equal(t, len(m.getScaleCalls()), 0)
 		registered := m.getRegistered()
 		assert.Equal(t, len(registered), 1)
-		assert.Equal(t, *registered[0].Stop, false)
-		assert.Equal(t, *registered[0].TaskGroups[0].Count, 1)
+		assert.Equal(t, *registered[0].Job.Stop, false)
+		assert.Equal(t, *registered[0].Job.TaskGroups[0].Count, 1)
+		assert.Equal(t, registered[0].EnforceIndex, true)
+		assert.Equal(t, registered[0].JobModifyIndex, index)
+	})
+
+	t.Run("registers the job with the active count when a deployment blocks scaling", func(t *testing.T) {
+		m := newMockNomad(t)
+		m.addJob(serviceJob("whoami", 0, map[string]string{"sablier.enable": "true", "sablier.active.replicas": "2"}))
+		m.setActiveDeployment("whoami", true)
+		index := m.jobModifyIndex("whoami")
+		p := m.provider(t)
+
+		err := p.InstanceStart(t.Context(), "whoami/web")
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(m.getScaleCalls()), 0)
+		registered := m.getRegistered()
+		assert.Equal(t, len(registered), 1)
+		assert.Equal(t, *registered[0].Job.Stop, false)
+		assert.Equal(t, *registered[0].Job.TaskGroups[0].Count, 2)
+		assert.Equal(t, registered[0].EnforceIndex, true)
+		assert.Equal(t, registered[0].JobModifyIndex, index)
 	})
 
 	t.Run("rejects an unknown job", func(t *testing.T) {

@@ -47,6 +47,36 @@ func TestInstanceStop(t *testing.T) {
 		assert.Equal(t, calls[0].Count, int64(1))
 	})
 
+	t.Run("registers the job with the idle count when a deployment blocks scaling", func(t *testing.T) {
+		m := newMockNomad(t)
+		m.addJob(serviceJob("whoami", 1, enabledMeta))
+		m.setActiveDeployment("whoami", true)
+		index := m.jobModifyIndex("whoami")
+		p := m.provider(t)
+
+		err := p.InstanceStop(t.Context(), "whoami/web")
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(m.getScaleCalls()), 0)
+		registered := m.getRegistered()
+		assert.Equal(t, len(registered), 1)
+		assert.Equal(t, *registered[0].Job.TaskGroups[0].Count, 0)
+		assert.Equal(t, registered[0].EnforceIndex, true)
+		assert.Equal(t, registered[0].JobModifyIndex, index)
+	})
+
+	t.Run("returns other scaling errors without registering the job", func(t *testing.T) {
+		m := newMockNomad(t)
+		m.addJob(serviceJob("whoami", 1, enabledMeta))
+		m.setScaleFail(true)
+		p := m.provider(t)
+
+		err := p.InstanceStop(t.Context(), "whoami/web")
+
+		assert.ErrorContains(t, err, `cannot scale task group "web" of job "whoami" to 0`)
+		assert.Equal(t, len(m.getRegistered()), 0)
+	})
+
 	t.Run("does nothing when the job is stopped", func(t *testing.T) {
 		m := newMockNomad(t)
 		job := serviceJob("whoami", 1, enabledMeta)
