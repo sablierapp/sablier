@@ -23,6 +23,20 @@ func newEventsProvider(t *testing.T, f *fakeECS) *awsecs.Provider {
 	return p
 }
 
+// subscribe opens an event stream for the test. The cleanup cancels it and
+// drains the events, so no event goroutine logs after the test ends.
+func subscribe(t *testing.T, p *awsecs.Provider, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := p.InstanceEvents(ctx, opts)
+	t.Cleanup(func() {
+		cancel()
+		for range stream.Events {
+		}
+	})
+	return stream
+}
+
 func expectEvent(t *testing.T, stream sablier.InstanceEventStream) sablier.InstanceEvent {
 	t.Helper()
 	select {
@@ -92,7 +106,7 @@ func TestInstanceEvents_Started(t *testing.T) {
 
 	f := newFake(newService("web", 0, 0, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
@@ -112,7 +126,7 @@ func TestInstanceEvents_Stopped(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 
@@ -130,7 +144,7 @@ func TestInstanceEvents_Created(t *testing.T) {
 
 	f := newFake()
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
 
@@ -148,7 +162,7 @@ func TestInstanceEvents_Updated(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(map[string]string{sablier.LabelGroup: "team-a"})))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventUpdated},
 	})
 
@@ -165,7 +179,7 @@ func TestInstanceEvents_Removed(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventRemoved},
 	})
 
@@ -183,7 +197,7 @@ func TestInstanceEvents_RemovedEmitsStopped(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{
+	stream := subscribe(t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 
@@ -201,7 +215,7 @@ func TestInstanceEvents_UnrelatedChangeEmitsNothing(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{})
+	stream := subscribe(t, p, provider.InstanceEventsOptions{})
 
 	expectNoEvent(t, stream)
 	// A running count change is not a lifecycle transition.
@@ -214,7 +228,7 @@ func TestInstanceEvents_TerminalErrorAfterRepeatedFailures(t *testing.T) {
 
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{})
+	stream := subscribe(t, p, provider.InstanceEventsOptions{})
 
 	expectNoEvent(t, stream)
 	f.setListErr(errors.New("throttled"))
@@ -237,7 +251,7 @@ func TestInstanceEvents_InitialScanFailureIsNotABaseline(t *testing.T) {
 	f := newFake(newService("web", 1, 1, enabledTags(nil)))
 	f.setListErr(errors.New("throttled"))
 	p := newEventsProvider(t, f)
-	stream := p.InstanceEvents(t.Context(), provider.InstanceEventsOptions{})
+	stream := subscribe(t, p, provider.InstanceEventsOptions{})
 
 	// The first successful scan becomes the baseline without events.
 	time.Sleep(2 * pollInterval)
