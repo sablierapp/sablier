@@ -371,6 +371,8 @@ github.com/testcontainers/testcontainers-go/modules/dind v0.44.0 h1:bEEdrzRpMOGq
 github.com/testcontainers/testcontainers-go/modules/dind v0.44.0/go.mod h1:mzH1Z/14MngCzcroZZfbwiQPizAMEWEdw02KGb+4uvo=
 github.com/testcontainers/testcontainers-go/modules/k3s v0.44.0 h1:NWvw3DJkUzGIYdDxHWfaPqvT3zPWPj+oIE5h2x4KT+4=
 github.com/testcontainers/testcontainers-go/modules/k3s v0.44.0/go.mod h1:mC5hA8VlVLeuYXzRScoJAqMel81ndUtALJagr7+QFX0=
+github.com/testcontainers/testcontainers-go/modules/localstack v0.44.0 h1:URHEf3ZO4U3YQS3zvnkqxyFmgFcQWhC274IhqSPhPpA=
+github.com/testcontainers/testcontainers-go/modules/localstack v0.44.0/go.mod h1:NMZKPQ1+o+idj3PK4vLgAi5Lkc5wjEnlkQeXEkIyimI=
 github.com/testcontainers/testcontainers-go/modules/valkey v0.44.0 h1:knKD2DGjhwV4tWgIalmSFyhkFCCpzH+U0lsxrsgJEoo=
 github.com/testcontainers/testcontainers-go/modules/valkey v0.44.0/go.mod h1:Rx2WWz5UBBJSkv2mC81iYnIxCe29SF0DkD7PhWnovXQ=
 github.com/tklauser/go-sysconf v0.4.0 h1:7H0uAN+7RkwWRaxhYXDLqa5V3LPrJeV8wmD9dRUgPQU=
