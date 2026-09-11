@@ -40,8 +40,8 @@ type Sablier struct {
 	// group members that both depend on the same database) never start it twice.
 	depStarts map[string]*depStart
 
-	// BlockingRefreshFrequency is the frequency at which the instances are checked
-	// against the provider. Defaults to 5 seconds.
+	// BlockingRefreshFrequency is the maximum interval between two readiness
+	// checks of a blocking request. Defaults to 5 seconds.
 	BlockingRefreshFrequency time.Duration
 
 	// InstanceStartTimeout is the maximum time allowed for an async InstanceStart

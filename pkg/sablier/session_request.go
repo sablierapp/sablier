@@ -91,6 +91,10 @@ func (s *Sablier) RequestReadySession(ctx context.Context, names []string, durat
 	return s.requestReadySession(ctx, names, duration, timeout, s.rejectUnlabeledRequests)
 }
 
+// blockingFirstRecheck is the wait before the first new readiness check of a
+// blocking request. Each next wait is two times longer, up to BlockingRefreshFrequency.
+const blockingFirstRecheck = 100 * time.Millisecond
+
 func (s *Sablier) requestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration, rejectUnlabeled bool) (*SessionState, error) {
 	s.l.DebugContext(ctx, "requesting ready session", slog.Any("names", names), slog.Duration("duration", duration), slog.Duration("timeout", timeout))
 	session, err := s.requestSession(ctx, names, duration, rejectUnlabeled)
@@ -106,7 +110,13 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 		return nil, err
 	}
 
-	ticker := time.NewTicker(s.BlockingRefreshFrequency)
+	// A zero or negative frequency makes the timer fire at once, in a busy loop.
+	maxDelay := s.BlockingRefreshFrequency
+	if maxDelay <= 0 {
+		maxDelay = blockingFirstRecheck
+	}
+	delay := min(blockingFirstRecheck, maxDelay)
+	timer := time.NewTimer(delay)
 	// Buffered capacity 1: the goroutine can complete its send even when the
 	// outer select has already chosen a different case (timeout, cancellation).
 	// Without the buffer the goroutine would block forever on the channel send.
@@ -120,28 +130,33 @@ func (s *Sablier) requestReadySession(ctx context.Context, names []string, durat
 	var last atomic.Pointer[SessionState]
 	last.Store(session)
 
+	started := s.startsDone(names)
 	go func() {
+		defer timer.Stop()
 		for {
 			select {
-			case <-ticker.C:
-				session, err := s.requestSession(ctx, names, duration, rejectUnlabeled)
-				if err != nil {
-					errch <- err
-					return
-				}
-				if session.IsReady() {
-					readiness <- session
-					return
-				}
-				if err := session.InstanceErrors(); err != nil {
-					errch <- err
-					return
-				}
-				last.Store(session)
+			case <-timer.C:
+				delay = min(delay*2, maxDelay)
+			case <-started:
+				started = nil // disable this select case
 			case <-quit:
-				ticker.Stop()
 				return
 			}
+			session, err := s.requestSession(ctx, names, duration, rejectUnlabeled)
+			if err != nil {
+				errch <- err
+				return
+			}
+			if session.IsReady() {
+				readiness <- session
+				return
+			}
+			if err := session.InstanceErrors(); err != nil {
+				errch <- err
+				return
+			}
+			last.Store(session)
+			timer.Reset(delay)
 		}
 	}()
 
