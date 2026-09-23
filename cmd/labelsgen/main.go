@@ -109,6 +109,15 @@ func writeApplying(b *strings.Builder) {
 	b.WriteString("```\n")
 	b.WriteString("{{< /tab >}}\n")
 
+	b.WriteString("{{< tab name=\"AWS ECS\" >}}\n")
+	b.WriteString("```bash\n")
+	b.WriteString("# ECS reads the resource tags of the service. A tag value cannot contain a comma,\n")
+	b.WriteString("# so list values such as sablier.group are space separated.\n")
+	b.WriteString("aws ecs tag-resource --resource-arn <service-arn> \\\n")
+	b.WriteString("  --tags key=sablier.enable,value=true key=sablier.group,value=\"my-group other-group\"\n")
+	b.WriteString("```\n")
+	b.WriteString("{{< /tab >}}\n")
+
 	b.WriteString("{{< /tabs >}}\n\n")
 }
 

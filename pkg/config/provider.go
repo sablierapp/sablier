@@ -8,7 +8,7 @@ import (
 // Provider holds the provider configurations.
 type Provider struct {
 	// Name selects the container runtime to manage workloads.
-	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd.
+	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd, ecs.
 	// Env: SABLIER_PROVIDER_NAME
 	// CLI: --provider.name
 	// Default: "docker"
@@ -63,6 +63,7 @@ type Provider struct {
 	Docker     Docker
 	ProxmoxLXC ProxmoxLXC
 	Systemd    Systemd
+	ECS        ECS
 }
 
 type Kubernetes struct {
@@ -207,7 +208,35 @@ type ProxmoxLXC struct {
 	TLSInsecure bool
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd"}
+// ECS holds the AWS ECS provider configuration. Credentials come from the
+// AWS SDK default chain (environment, shared config, task or instance role).
+type ECS struct {
+	// Cluster is the short name or full ARN of the ECS cluster that holds the
+	// services Sablier manages.
+	// Env: SABLIER_PROVIDER_ECS_CLUSTER
+	// CLI: --provider.ecs.cluster
+	// Default: "default"
+	// Since: NEXT_RELEASE
+	Cluster string
+
+	// Region is the AWS region of the cluster. Leave empty to use the AWS SDK
+	// resolution (AWS_REGION, the shared config profile, or the instance metadata).
+	// Env: SABLIER_PROVIDER_ECS_REGION
+	// CLI: --provider.ecs.region
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Region string
+
+	// Endpoint overrides the ECS API endpoint URL, for example to target a
+	// local emulator. Leave empty to use the regional AWS endpoint.
+	// Env: SABLIER_PROVIDER_ECS_ENDPOINT
+	// CLI: --provider.ecs.endpoint
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Endpoint string
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd", "ecs"}
 var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
@@ -227,6 +256,9 @@ func NewProviderConfig() Provider {
 		},
 		ProxmoxLXC: ProxmoxLXC{},
 		Systemd:    Systemd{},
+		ECS: ECS{
+			Cluster: "default",
+		},
 	}
 }
 
@@ -245,6 +277,11 @@ func (provider Provider) IsValid() error {
 			// Validate Proxmox LXC-specific settings
 			if p == "proxmox_lxc" {
 				if err := provider.ProxmoxLXC.IsValid(); err != nil {
+					return err
+				}
+			}
+			if p == "ecs" {
+				if err := provider.ECS.IsValid(); err != nil {
 					return err
 				}
 			}
@@ -270,6 +307,13 @@ func (p ProxmoxLXC) IsValid() error {
 	}
 	if p.TokenSecret == "" {
 		return fmt.Errorf("proxmox_lxc provider requires a token secret")
+	}
+	return nil
+}
+
+func (e ECS) IsValid() error {
+	if e.Cluster == "" {
+		return fmt.Errorf("ecs provider requires a cluster")
 	}
 	return nil
 }

@@ -1,0 +1,39 @@
+name: Integration (ECS)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-ecs:
+    name: Integration (ECS)
+    runs-on: ubuntu-latest
+    env:
+      # Secrets are not passed to pull requests from forks, so the test runs
+      # only for branches of this repository.
+      LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+    steps:
+      - name: Report skipped ECS integration tests
+        if: env.LOCALSTACK_AUTH_TOKEN == ''
+        run: echo "::notice title=ECS integration tests skipped::The LOCALSTACK_AUTH_TOKEN secret is not available to this run."
+
+      - name: Checkout code
+        if: env.LOCALSTACK_AUTH_TOKEN != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        if: env.LOCALSTACK_AUTH_TOKEN != ''
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: |
+            go.sum
+            tools.mod
+
+      - name: Run ECS integration tests
+        if: env.LOCALSTACK_AUTH_TOKEN != ''
+        run: go test -tags=nomsgpack -count=1 -v -run TestECSProvider_Integration ./pkg/provider/awsecs/
