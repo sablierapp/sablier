@@ -128,6 +128,7 @@
 .hextra-sidebar-item > a[href$="/tutorials/providers/kubernetes/"] > span::before,
 .hextra-sidebar-item > a[href$="/tutorials/providers/podman/"] > span::before,
 .hextra-sidebar-item > a[href$="/tutorials/providers/proxmox_lxc/"] > span::before,
+.hextra-sidebar-item > a[href$="/tutorials/providers/nomad/"] > span::before,
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before,
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before,
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before,
@@ -149,6 +150,7 @@
 .hextra-sidebar-item > a[href$="/tutorials/providers/kubernetes/"] > span::before { background-image: url("/assets/img/kubernetes.png"); }
 .hextra-sidebar-item > a[href$="/tutorials/providers/podman/"] > span::before { background-image: url("/assets/img/podman.png"); }
 .hextra-sidebar-item > a[href$="/tutorials/providers/proxmox_lxc/"] > span::before { background-image: url("/assets/img/proxmox.png"); }
+.hextra-sidebar-item > a[href$="/tutorials/providers/nomad/"] > span::before { background-image: url("/assets/img/nomad.svg"); }
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before { background-image: url("/assets/img/traefik.png"); }
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before { background-image: url("/assets/img/caddy.png"); }
 .hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before { background-image: url("/assets/img/nginx.svg"); }

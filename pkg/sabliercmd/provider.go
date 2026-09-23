@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+	nomadapi "github.com/hashicorp/nomad/api"
 	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/moby/moby/client"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -17,6 +18,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
+	"github.com/sablierapp/sablier/pkg/provider/nomad"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/provider/proxmoxlxc"
 	"github.com/sablierapp/sablier/pkg/provider/systemd"
@@ -126,6 +128,50 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 			return nil, err
 		}
 		return provider, nil
+	case "nomad":
+		cli, namespace, err := newNomadClient(config.Nomad)
+		if err != nil {
+			return nil, err
+		}
+		return nomad.New(ctx, cli, namespace, logger)
 	}
 	return nil, fmt.Errorf("unimplemented provider %s", config.Name)
+}
+
+// newNomadClient builds the Nomad API client and returns its namespace. The
+// Sablier settings override the NOMAD_* environment variables read by DefaultConfig.
+func newNomadClient(config config.Nomad) (*nomadapi.Client, string, error) {
+	cfg := nomadapi.DefaultConfig()
+	if config.Address != "" {
+		cfg.Address = config.Address
+	}
+	if config.Token != "" {
+		cfg.SecretID = config.Token
+	}
+	if config.Namespace != "" {
+		cfg.Namespace = config.Namespace
+	}
+	if config.Region != "" {
+		cfg.Region = config.Region
+	}
+	if cfg.Namespace == "" {
+		cfg.Namespace = nomadapi.DefaultNamespace
+	}
+
+	// The custom HTTP client keeps the Nomad TLS settings and wraps the
+	// transport with OpenTelemetry so every API call becomes a child span.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	httpClient := &http.Client{Transport: transport}
+	if err := nomadapi.ConfigureTLS(httpClient, cfg.TLSConfig); err != nil {
+		return nil, "", fmt.Errorf("cannot configure nomad TLS: %w", err)
+	}
+	httpClient.Transport = otelhttp.NewTransport(httpClient.Transport)
+	cfg.HttpClient = httpClient
+
+	cli, err := nomadapi.NewClient(cfg)
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot create nomad client: %w", err)
+	}
+	return cli, cfg.Namespace, nil
 }

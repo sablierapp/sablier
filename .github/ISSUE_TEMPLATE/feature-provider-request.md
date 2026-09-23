@@ -11,7 +11,7 @@ assignees: ''
 The Sablier feature you would like supported (link to its documentation page).
 
 **Which provider?**
-The provider that should support it (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC).
+The provider that should support it (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, Systemd, Nomad).
 
 **Use case**
 Why do you need this feature on this provider?
