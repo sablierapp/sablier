@@ -50,7 +50,7 @@ func (v *ValKey) Get(ctx context.Context, s string) (sablier.InstanceInfo, error
 		return sablier.InstanceInfo{}, err
 	}
 
-	return r.Instance, nil
+	return r.ToInstanceInfo(), nil
 }
 
 func (v *ValKey) Put(ctx context.Context, state sablier.InstanceInfo, duration time.Duration) error {
@@ -117,11 +117,11 @@ func (v *ValKey) Range(ctx context.Context, f func(sablier.InstanceInfo, time.Ti
 			if err = json.Unmarshal(b, &r); err != nil {
 				continue
 			}
-			if r.Instance.Name != key {
+			if r.Name != key {
 				continue
 			}
 
-			f(r.Instance, expiresAt)
+			f(r.ToInstanceInfo(), expiresAt)
 		}
 
 		cursor = entry.Cursor
