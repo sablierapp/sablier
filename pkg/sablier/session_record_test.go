@@ -3,41 +3,100 @@ package sablier
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
 
 func TestSessionRecordRoundTrip(t *testing.T) {
-	rec := NewSessionRecord(InstanceInfo{Name: "web", Status: InstanceStatusReady, CurrentReplicas: 1, DesiredReplicas: 1})
+	now := time.Now().UTC().Truncate(time.Second)
+	info := InstanceInfo{
+		Name:            "web",
+		CurrentReplicas: 1,
+		DesiredReplicas: 2,
+		Status:          InstanceStatusReady,
+		Groups:          []string{"default"},
+		Provider:        ProviderDocker,
+		Docker:          &DockerContainerInfo{ID: "abc", Image: "img"},
+		ReadyAfter:      30 * time.Second,
+		ReadyAt:         &now,
+		ReadyOnStart:    true,
+		RunningHours:    "09:00-18:00",
+		RunningDays:     "Mon,Tue",
+	}
+
+	rec := NewSessionRecord(info)
 	assert.Equal(t, SessionRecordVersion, rec.Version)
 
 	b, err := json.Marshal(rec)
 	assert.NilError(t, err)
-	assert.Assert(t, containsSub(string(b), `"v":1`), "persisted record must carry its schema version: %s", b)
 
 	var got SessionRecord
 	assert.NilError(t, json.Unmarshal(b, &got))
 	assert.DeepEqual(t, rec, got)
+	assert.DeepEqual(t, info, got.ToInstanceInfo())
 }
 
-// TestSessionRecordLegacyUpgrade pins the migration path: records persisted
-// before versioning were a bare InstanceInfo document; they must decode into
-// a current-version record with every field intact, so live sessions survive
-// the upgrade (both in valkey and in the state.json snapshot).
-func TestSessionRecordLegacyUpgrade(t *testing.T) {
-	legacy := `{"name":"web","currentReplicas":1,"desiredReplicas":2,"status":"ready","enabled":"true","groups":["default"],"runningHours":"09:00-18:00"}`
+// TestSessionRecordDropsConfiguration pins the schema decision: label
+// configuration is not session state and must not be persisted or served on
+// the warm path, while the readiness semantics (ReadyAfter/ReadyAt/
+// ReadyOnStart) that IsReady depends on are preserved.
+func TestSessionRecordDropsConfiguration(t *testing.T) {
+	now := time.Now()
+	info := InstanceInfo{
+		Name:         "web",
+		Status:       InstanceStatusReady,
+		Enabled:      "true",
+		AntiAffinity: []string{"streaming"},
+		ScaleConfig:  &ScaleConfig{Idle: ResourceProfile{Replicas: 1}},
+		Config:       &InstanceConfig{Enabled: true, Groups: []string{"default"}},
+		ReadyAfter:   time.Second,
+		ReadyAt:      &now,
+		ReadyOnStart: true,
+	}
 
-	var got SessionRecord
-	assert.NilError(t, json.Unmarshal([]byte(legacy), &got))
+	out := NewSessionRecord(info).ToInstanceInfo()
 
-	assert.Equal(t, SessionRecordVersion, got.Version)
-	assert.Equal(t, "web", got.Instance.Name)
-	assert.Equal(t, int32(1), got.Instance.CurrentReplicas)
-	assert.Equal(t, int32(2), got.Instance.DesiredReplicas)
-	assert.Equal(t, InstanceStatusReady, got.Instance.Status)
-	assert.Equal(t, "true", got.Instance.Enabled)
-	assert.DeepEqual(t, []string{"default"}, got.Instance.Groups)
-	assert.Equal(t, "09:00-18:00", got.Instance.RunningHours)
+	// Configuration: gone.
+	assert.Equal(t, "", out.Enabled)
+	assert.Assert(t, out.AntiAffinity == nil)
+	assert.Assert(t, out.ScaleConfig == nil)
+	assert.Assert(t, out.Config == nil)
+
+	// Readiness semantics: intact, so the warm path answers IsReady correctly.
+	assert.Equal(t, time.Second, out.ReadyAfter)
+	assert.Assert(t, out.ReadyAt != nil)
+	assert.Assert(t, out.ReadyOnStart)
+	assert.Assert(t, out.IsReady())
+}
+
+// TestSessionRecordUpgrades pins the migration paths for both previous
+// generations of persisted payloads.
+func TestSessionRecordUpgrades(t *testing.T) {
+	t.Run("v0: bare InstanceInfo document", func(t *testing.T) {
+		legacy := `{"name":"web","currentReplicas":1,"desiredReplicas":2,"status":"ready","enabled":"true","groups":["default"],"runningHours":"09:00-18:00"}`
+
+		var got SessionRecord
+		assert.NilError(t, json.Unmarshal([]byte(legacy), &got))
+
+		assert.Equal(t, SessionRecordVersion, got.Version)
+		assert.Equal(t, "web", got.Name)
+		assert.Equal(t, int32(2), got.DesiredReplicas)
+		assert.Equal(t, InstanceStatusReady, got.Status)
+		assert.DeepEqual(t, []string{"default"}, got.Groups)
+		assert.Equal(t, "09:00-18:00", got.RunningHours)
+	})
+
+	t.Run("v1: envelope around the domain struct", func(t *testing.T) {
+		v1 := `{"v":1,"instance":{"name":"web","currentReplicas":1,"desiredReplicas":1,"status":"ready","enabled":"true"}}`
+
+		var got SessionRecord
+		assert.NilError(t, json.Unmarshal([]byte(v1), &got))
+
+		assert.Equal(t, SessionRecordVersion, got.Version)
+		assert.Equal(t, "web", got.Name)
+		assert.Equal(t, InstanceStatusReady, got.Status)
+	})
 }
 
 func TestSessionRecordForeignPayloads(t *testing.T) {
@@ -46,20 +105,11 @@ func TestSessionRecordForeignPayloads(t *testing.T) {
 		assert.Assert(t, json.Unmarshal([]byte(`not json`), &got) != nil)
 	})
 	t.Run("foreign object decodes to a zero record", func(t *testing.T) {
-		// Stores sharing their keyspace skip entries whose Instance.Name does
-		// not match the key; a foreign JSON object must therefore decode to a
-		// record with an empty name rather than erroring the enumeration.
+		// Stores sharing their keyspace skip entries whose Name does not match
+		// the key; a foreign JSON object must decode to a record with an empty
+		// name rather than erroring the enumeration.
 		var got SessionRecord
 		assert.NilError(t, json.Unmarshal([]byte(`{"foo":"bar"}`), &got))
-		assert.Equal(t, "", got.Instance.Name)
+		assert.Equal(t, "", got.Name)
 	})
-}
-
-func containsSub(s, sub string) bool {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
