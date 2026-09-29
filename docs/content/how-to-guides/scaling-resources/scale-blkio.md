@@ -11,6 +11,7 @@ compatibility:
   podman: unsupported
   proxmox: impossible
   systemd: supported
+  nomad: impossible
 example: scale-mode
 ---
 

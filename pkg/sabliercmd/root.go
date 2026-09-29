@@ -78,6 +78,14 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.systemd.user-instance", startCmd.Flags().Lookup("provider.systemd.user-instance"))
 	startCmd.Flags().StringSliceVar(&conf.Provider.Systemd.UnitPatterns, "provider.systemd.unit-patterns", nil, "Restrict managed units to those matching the given glob patterns (e.g. podman-*.service)")
 	_ = viper.BindPFlag("provider.systemd.unit-patterns", startCmd.Flags().Lookup("provider.systemd.unit-patterns"))
+	startCmd.Flags().StringVar(&conf.Provider.Nomad.Address, "provider.nomad.address", "", "Nomad API address (e.g. http://nomad.service.consul:4646). Falls back to NOMAD_ADDR, then http://127.0.0.1:4646")
+	_ = viper.BindPFlag("provider.nomad.address", startCmd.Flags().Lookup("provider.nomad.address"))
+	startCmd.Flags().StringVar(&conf.Provider.Nomad.Token, "provider.nomad.token", "", "Nomad ACL token secret ID. Falls back to NOMAD_TOKEN")
+	_ = viper.BindPFlag("provider.nomad.token", startCmd.Flags().Lookup("provider.nomad.token"))
+	startCmd.Flags().StringVar(&conf.Provider.Nomad.Namespace, "provider.nomad.namespace", "", "Nomad namespace that holds the managed jobs. Falls back to NOMAD_NAMESPACE, then default")
+	_ = viper.BindPFlag("provider.nomad.namespace", startCmd.Flags().Lookup("provider.nomad.namespace"))
+	startCmd.Flags().StringVar(&conf.Provider.Nomad.Region, "provider.nomad.region", "", "Nomad region to send requests to. Falls back to NOMAD_REGION, then the region of the agent")
+	_ = viper.BindPFlag("provider.nomad.region", startCmd.Flags().Lookup("provider.nomad.region"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")

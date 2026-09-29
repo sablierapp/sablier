@@ -8,6 +8,7 @@ compatibility:
   kubernetes: supported
   podman: supported
   proxmox: supported
+  nomad: supported
 ---
 
 {{< compatibility >}}

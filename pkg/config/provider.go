@@ -8,7 +8,7 @@ import (
 // Provider holds the provider configurations.
 type Provider struct {
 	// Name selects the container runtime to manage workloads.
-	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd.
+	// Accepted values: docker, swarm, kubernetes, podman, proxmox_lxc, systemd, nomad.
 	// Env: SABLIER_PROVIDER_NAME
 	// CLI: --provider.name
 	// Default: "docker"
@@ -63,6 +63,7 @@ type Provider struct {
 	Docker     Docker
 	ProxmoxLXC ProxmoxLXC
 	Systemd    Systemd
+	Nomad      Nomad
 }
 
 type Kubernetes struct {
@@ -207,7 +208,45 @@ type ProxmoxLXC struct {
 	TLSInsecure bool
 }
 
-var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd"}
+// Nomad holds the Nomad provider configuration. A setting left empty falls back
+// to the standard NOMAD_* environment variables of the Nomad client.
+type Nomad struct {
+	// Address is the HTTP(S) address of the Nomad API (e.g. "http://nomad.service.consul:4646").
+	// Leave empty to fall back to the NOMAD_ADDR environment variable, then to
+	// "http://127.0.0.1:4646".
+	// Env: SABLIER_PROVIDER_NOMAD_ADDRESS
+	// CLI: --provider.nomad.address
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Address string
+
+	// Token is the secret ID of the ACL token used to authenticate against Nomad.
+	// Leave empty to fall back to the NOMAD_TOKEN environment variable, or when
+	// ACLs are disabled.
+	// Env: SABLIER_PROVIDER_NOMAD_TOKEN
+	// CLI: --provider.nomad.token
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Token string
+
+	// Namespace is the Nomad namespace that holds the managed jobs. Leave empty
+	// to fall back to the NOMAD_NAMESPACE environment variable, then to "default".
+	// Env: SABLIER_PROVIDER_NOMAD_NAMESPACE
+	// CLI: --provider.nomad.namespace
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Namespace string
+
+	// Region is the Nomad region to send requests to. Leave empty to fall back
+	// to the NOMAD_REGION environment variable, then to the region of the agent.
+	// Env: SABLIER_PROVIDER_NOMAD_REGION
+	// CLI: --provider.nomad.region
+	// Default: ""
+	// Since: NEXT_RELEASE
+	Region string
+}
+
+var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd", "nomad"}
 var dockerStrategies = []string{"stop", "pause"}
 
 func NewProviderConfig() Provider {
@@ -227,6 +266,7 @@ func NewProviderConfig() Provider {
 		},
 		ProxmoxLXC: ProxmoxLXC{},
 		Systemd:    Systemd{},
+		Nomad:      Nomad{},
 	}
 }
 

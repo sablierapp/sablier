@@ -31,6 +31,7 @@ captured as a span and exported to an OTLP-compatible backend such as
 | Podman provider | same as Docker |
 | Kubernetes provider | `rest.Config.WrapTransport`, K8s API calls become child spans |
 | Proxmox LXC provider | `otelhttp.NewTransport` wrapping the Proxmox HTTP client |
+| Nomad provider | `otelhttp.NewTransport` wrapping the Nomad HTTP client |
 | Webhook dispatcher | `otelhttp.NewTransport` on the outgoing HTTP client |
 
 Trace context is propagated using the **W3C TraceContext** and **Baggage**
@@ -133,6 +134,14 @@ Same mechanism as Docker. The Podman socket URI is configured via
 The Proxmox Go client's HTTP client is replaced with an `otelhttp`-wrapped
 version. If `provider.proxmox-lxc.tls-insecure` is set the original
 TLS-insecure transport is wrapped (not bypassed).
+
+### Nomad
+
+The Nomad API client is created with an `otelhttp`-wrapped HTTP client. The
+TLS settings from the standard `NOMAD_CACERT`, `NOMAD_CLIENT_CERT`,
+`NOMAD_CLIENT_KEY` and `NOMAD_SKIP_VERIFY` environment variables are applied
+to the wrapped transport. The long-lived event stream request produces one
+span for the whole connection.
 
 ## Sampling
 

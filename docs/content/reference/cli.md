@@ -114,7 +114,11 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
-| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd] |
+| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad] |
+| [`--provider.nomad.address`](#opt-provider-nomad-address) | Nomad API address (e.g. http://nomad.service.consul:4646). |
+| [`--provider.nomad.namespace`](#opt-provider-nomad-namespace) | Nomad namespace that holds the managed jobs. |
+| [`--provider.nomad.region`](#opt-provider-nomad-region) | Nomad region to send requests to. |
+| [`--provider.nomad.token`](#opt-provider-nomad-token) | Nomad ACL token secret ID. |
 | [`--provider.podman.uri`](#opt-provider-podman-uri) | Uri is the URI to connect to the Podman service. |
 | [`--provider.proxmox-lxc.tls-insecure`](#opt-provider-proxmox-lxc-tls-insecure) | Skip TLS certificate verification for Proxmox VE API |
 | [`--provider.proxmox-lxc.token-id`](#opt-provider-proxmox-lxc-token-id) | Proxmox VE API token ID (e.g. root@pam!sablier) |
@@ -318,7 +322,7 @@ SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA=false
 
 ### `--provider.name` {#opt-provider-name}
 
-Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd]
+Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad]
 
 {{< badge "string" >}} {{< badge content="Default: docker" >}} {{< badge content="Since v1.0.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.0.0" >}}
 
@@ -331,6 +335,7 @@ Accepted values:
 - `podman`
 - `proxmox_lxc`
 - `systemd`
+- `nomad`
 
 ```yaml
 # sablier.yaml
@@ -344,6 +349,90 @@ SABLIER_PROVIDER_NAME=docker
 
 # Command-line flag
 --provider.name=docker
+```
+
+### `--provider.nomad.address` {#opt-provider-nomad-address}
+
+Nomad API address (e.g. http://nomad.service.consul:4646). Falls back to NOMAD_ADDR, then http://127.0.0.1:4646
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  nomad:
+    address: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_NOMAD_ADDRESS=<string>
+
+# Command-line flag
+--provider.nomad.address=<string>
+```
+
+### `--provider.nomad.namespace` {#opt-provider-nomad-namespace}
+
+Nomad namespace that holds the managed jobs. Falls back to NOMAD_NAMESPACE, then default
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  nomad:
+    namespace: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_NOMAD_NAMESPACE=<string>
+
+# Command-line flag
+--provider.nomad.namespace=<string>
+```
+
+### `--provider.nomad.region` {#opt-provider-nomad-region}
+
+Nomad region to send requests to. Falls back to NOMAD_REGION, then the region of the agent
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  nomad:
+    region: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_NOMAD_REGION=<string>
+
+# Command-line flag
+--provider.nomad.region=<string>
+```
+
+### `--provider.nomad.token` {#opt-provider-nomad-token}
+
+Nomad ACL token secret ID. Falls back to NOMAD_TOKEN
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  nomad:
+    token: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_NOMAD_TOKEN=<string>
+
+# Command-line flag
+--provider.nomad.token=<string>
 ```
 
 ### `--provider.podman.uri` {#opt-provider-podman-uri}
