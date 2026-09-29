@@ -10,6 +10,7 @@ compatibility:
   kubernetes: supported
   podman: supported
   proxmox: unsupported
+  ecs: supported
 example: ready-after
 ---
 

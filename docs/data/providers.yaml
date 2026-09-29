@@ -20,3 +20,6 @@
 - key: systemd
   name: Systemd
   icon: systemd.svg
+- key: ecs
+  name: AWS ECS
+  icon: ecs.svg

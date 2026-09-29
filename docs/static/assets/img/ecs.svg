@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AWS ECS">
+  <rect x="4" y="4" width="56" height="56" rx="10" fill="#ED7100"/>
+  <g fill="#ffffff">
+    <rect x="15" y="35" width="15" height="13" rx="2"/>
+    <rect x="34" y="35" width="15" height="13" rx="2"/>
+    <rect x="24.5" y="17" width="15" height="13" rx="2"/>
+  </g>
+</svg>

@@ -17,7 +17,7 @@ webhooks:
         - stopped
 ```
 
-Because Sablier sits in front of every supported provider (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC), webhooks act as a **unified, provider-agnostic event stream**: your receiver always gets the same payload structure regardless of the underlying runtime.
+Because Sablier sits in front of every supported provider (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, systemd, AWS ECS), webhooks act as a **unified, provider-agnostic event stream**: your receiver always gets the same payload structure regardless of the underlying runtime.
 
 Common uses:
 
