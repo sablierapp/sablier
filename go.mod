@@ -10,7 +10,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/google/go-cmp v0.7.0
 	github.com/invopop/jsonschema v0.14.0
-	github.com/lmittmann/tint v1.2.0
+	github.com/lmittmann/tint v1.2.1
 	github.com/luthermonson/go-proxmox v0.8.1
 	github.com/moby/moby/api v1.56.0
 	github.com/moby/moby/client v0.6.0
