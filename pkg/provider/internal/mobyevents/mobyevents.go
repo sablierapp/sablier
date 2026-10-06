@@ -35,9 +35,12 @@ import (
 // DialFunc opens one connection to the provider's events API.
 type DialFunc func(ctx context.Context) client.EventsResult
 
-// BuildFunc converts a raw events API message into an instance event.
-// It returns false when the message is not relevant to the subscription.
-type BuildFunc func(ctx context.Context, msg events.Message) (sablier.InstanceEvent, bool)
+// BuildFunc converts a raw events API message into the instance events it
+// carries, in the order the consumer must see them. It returns false when the
+// message is not relevant to the subscription. One message can carry more than
+// one event: a Docker rename is the removal of the old name followed by the
+// adoption of the new one, and the order is part of it.
+type BuildFunc func(ctx context.Context, msg events.Message) ([]sablier.InstanceEvent, bool)
 
 // Stream opens the events API via dial and keeps consuming it until ctx is
 // cancelled, redialing with linear backoff whenever the connection drops.
@@ -95,14 +98,16 @@ func consume(
 				return true
 			}
 			l.DebugContext(ctx, "event received", "event", msg)
-			if event, ok := build(ctx, msg); ok {
-				// The send must be context-guarded: once the consumer stops
-				// reading, a bare send blocks forever, leaking this goroutine
-				// and its events connection.
-				select {
-				case instance <- event:
-				case <-ctx.Done():
-					return false
+			if built, ok := build(ctx, msg); ok {
+				for _, event := range built {
+					// The send must be context-guarded: once the consumer stops
+					// reading, a bare send blocks forever, leaking this goroutine
+					// and its events connection.
+					select {
+					case instance <- event:
+					case <-ctx.Done():
+						return false
+					}
 				}
 			}
 		case err, ok := <-result.Err:
