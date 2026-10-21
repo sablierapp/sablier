@@ -22,7 +22,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		filters.Add("type", "service")
 		return p.Client.Events(ctx, client.EventsListOptions{Filters: filters})
 	}
-	build := func(ctx context.Context, msg events.Message) (sablier.InstanceEvent, bool) {
+	buildOne := func(ctx context.Context, msg events.Message) (sablier.InstanceEvent, bool) {
 		name := msg.Actor.Attributes["name"]
 		if name == "" {
 			return sablier.InstanceEvent{}, false
@@ -70,6 +70,15 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 			}
 			return sablier.InstanceEvent{}, false
 		}
+	}
+	// A swarm service message carries one event; the shared stream takes a slice so a
+	// provider whose one message means several events (Docker's rename) can say so.
+	build := func(ctx context.Context, msg events.Message) ([]sablier.InstanceEvent, bool) {
+		event, ok := buildOne(ctx, msg)
+		if !ok {
+			return nil, false
+		}
+		return []sablier.InstanceEvent{event}, true
 	}
 	return mobyevents.Stream(ctx, p.l, dial, build)
 }
