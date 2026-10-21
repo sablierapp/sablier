@@ -11,6 +11,7 @@ compatibility:
   podman: differs
   proxmox: impossible
   systemd: differs
+  nomad: differs
 example: scale-mode
 ---
 
@@ -88,6 +89,21 @@ Identical to Docker: decimal CPU cores and Docker-style memory units, same label
 {{< /provider-tab >}}
 {{< provider-tab name="systemd" >}}
 Use decimal CPU cores and Docker-style memory units in `[X-Sablier]` keys such as `IdleCPU` and `ActiveMemory`. Systemd supports CPU, memory, and block-I/O profiles for one running unit; replica values above `1` are capped at `1`.
+{{< /provider-tab >}}
+{{< provider-tab name="nomad" >}}
+Nomad supports the replica profiles only: `sablier.idle.replicas` and `sablier.active.replicas` in the job or task group `meta` block set the task group `count` on session expiry and on wake-up. CPU and memory limits belong to the task `resources` block of the job specification, so the `sablier.idle.cpu`, `sablier.idle.memory` and their `active` counterparts are ignored.
+
+```hcl
+group "web" {
+  count = 1
+
+  meta = {
+    "sablier.enable"          = "true"
+    "sablier.idle.replicas"   = "1"
+    "sablier.active.replicas" = "3"
+  }
+}
+```
 {{< /provider-tab >}}
 {{< /provider-tabs >}}
 

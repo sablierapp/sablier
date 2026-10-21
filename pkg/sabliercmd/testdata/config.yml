@@ -10,6 +10,11 @@ provider:
     uri: unix:///run/podman/podman.sock.yml
   systemd:
     user-instance: false
+  nomad:
+    address: http://nomad.configfile:4646
+    token: configfile-token
+    namespace: configfile
+    region: configfile
   docker:
     strategy: pause
 server:

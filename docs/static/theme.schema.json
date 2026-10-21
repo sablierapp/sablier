@@ -68,7 +68,7 @@
         },
         "Provider": {
           "type": "string",
-          "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd)",
+          "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd|nomad)",
           "examples": [
             "docker"
           ]
@@ -88,6 +88,10 @@
         "Podman": {
           "$ref": "#/$defs/PodmanContainerInfo",
           "description": "Podman-specific container metadata (only set when Provider is podman). Fields are accessible in templates as .Podman.ID .Podman.Image .Podman.Labels"
+        },
+        "Nomad": {
+          "$ref": "#/$defs/NomadTaskGroupInfo",
+          "description": "Nomad-specific task group metadata (only set when Provider is nomad). Fields are accessible in templates as .Nomad.Namespace .Nomad.JobID .Nomad.TaskGroup .Nomad.Meta"
         }
       },
       "additionalProperties": false,
@@ -137,6 +141,45 @@
         "namespace",
         "kind",
         "image"
+      ]
+    },
+    "NomadTaskGroupInfo": {
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "Nomad namespace (template access: .Nomad.Namespace)",
+          "examples": [
+            "default"
+          ]
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Nomad job ID (template access: .Nomad.JobID)",
+          "examples": [
+            "whoami"
+          ]
+        },
+        "taskGroup": {
+          "type": "string",
+          "description": "Task group name (template access: .Nomad.TaskGroup)",
+          "examples": [
+            "web"
+          ]
+        },
+        "meta": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Job and task group meta merged (template access: .Nomad.Meta)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "namespace",
+        "jobId",
+        "taskGroup"
       ]
     },
     "PodmanContainerInfo": {

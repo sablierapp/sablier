@@ -1,7 +1,7 @@
 // Package webhook delivers normalized HTTP notifications when Sablier-managed
 // instances change state. It acts as an abstract, provider-agnostic event
 // bridge: regardless of whether the underlying runtime is Docker, Kubernetes,
-// Docker Swarm, Podman, or Proxmox LXC, every consumer receives the same JSON
+// Docker Swarm, Podman, Proxmox LXC, systemd, or Nomad, every consumer receives the same JSON
 // payload structure.
 package webhook
 

@@ -38,6 +38,12 @@
     "Systemd": {
       "UserInstance": false,
       "UnitPatterns": null
+    },
+    "Nomad": {
+      "Address": "",
+      "Token": "",
+      "Namespace": "",
+      "Region": ""
     }
   },
   "Sessions": {
