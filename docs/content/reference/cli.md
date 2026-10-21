@@ -110,11 +110,14 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.auto-warm-externally-started`](#opt-provider-auto-warm-externally-started) | Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them |
 | [`--provider.docker.honor-restart-policy`](#opt-provider-docker-honor-restart-policy) | Honor the container restart policy on successful exit: report "no"/"on-failure" containers as completed and exited "always"/"unless-stopped" containers as stopped. |
 | [`--provider.docker.strategy`](#opt-provider-docker-strategy) | Strategy to use to stop docker containers (stop or pause) |
+| [`--provider.ecs.cluster`](#opt-provider-ecs-cluster) | ECS cluster name or ARN that holds the services to manage |
+| [`--provider.ecs.endpoint`](#opt-provider-ecs-endpoint) | ECS API endpoint URL override, for example for a local emulator |
+| [`--provider.ecs.region`](#opt-provider-ecs-region) | AWS region of the ECS cluster (defaults to the AWS SDK resolution) |
 | [`--provider.kubernetes.burst`](#opt-provider-kubernetes-burst) | Maximum burst for K8S API access client-side throttling |
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
-| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd] |
+| [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd ecs] |
 | [`--provider.podman.uri`](#opt-provider-podman-uri) | Uri is the URI to connect to the Podman service. |
 | [`--provider.proxmox-lxc.tls-insecure`](#opt-provider-proxmox-lxc-tls-insecure) | Skip TLS certificate verification for Proxmox VE API |
 | [`--provider.proxmox-lxc.token-id`](#opt-provider-proxmox-lxc-token-id) | Proxmox VE API token ID (e.g. root@pam!sablier) |
@@ -232,6 +235,69 @@ SABLIER_PROVIDER_DOCKER_STRATEGY=stop
 --provider.docker.strategy=stop
 ```
 
+### `--provider.ecs.cluster` {#opt-provider-ecs-cluster}
+
+ECS cluster name or ARN that holds the services to manage
+
+{{< badge "string" >}} {{< badge content="Default: default" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  ecs:
+    cluster: default
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_ECS_CLUSTER=default
+
+# Command-line flag
+--provider.ecs.cluster=default
+```
+
+### `--provider.ecs.endpoint` {#opt-provider-ecs-endpoint}
+
+ECS API endpoint URL override, for example for a local emulator
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  ecs:
+    endpoint: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_ECS_ENDPOINT=<string>
+
+# Command-line flag
+--provider.ecs.endpoint=<string>
+```
+
+### `--provider.ecs.region` {#opt-provider-ecs-region}
+
+AWS region of the ECS cluster (defaults to the AWS SDK resolution)
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  ecs:
+    region: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_ECS_REGION=<string>
+
+# Command-line flag
+--provider.ecs.region=<string>
+```
+
 ### `--provider.kubernetes.burst` {#opt-provider-kubernetes-burst}
 
 Maximum burst for K8S API access client-side throttling
@@ -318,7 +384,7 @@ SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA=false
 
 ### `--provider.name` {#opt-provider-name}
 
-Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd]
+Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd ecs]
 
 {{< badge "string" >}} {{< badge content="Default: docker" >}} {{< badge content="Since v1.0.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.0.0" >}}
 
@@ -331,6 +397,7 @@ Accepted values:
 - `podman`
 - `proxmox_lxc`
 - `systemd`
+- `ecs`
 
 ```yaml
 # sablier.yaml

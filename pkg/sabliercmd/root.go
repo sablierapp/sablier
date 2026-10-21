@@ -78,6 +78,12 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.systemd.user-instance", startCmd.Flags().Lookup("provider.systemd.user-instance"))
 	startCmd.Flags().StringSliceVar(&conf.Provider.Systemd.UnitPatterns, "provider.systemd.unit-patterns", nil, "Restrict managed units to those matching the given glob patterns (e.g. podman-*.service)")
 	_ = viper.BindPFlag("provider.systemd.unit-patterns", startCmd.Flags().Lookup("provider.systemd.unit-patterns"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Cluster, "provider.ecs.cluster", "default", "ECS cluster name or ARN that holds the services to manage")
+	_ = viper.BindPFlag("provider.ecs.cluster", startCmd.Flags().Lookup("provider.ecs.cluster"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Region, "provider.ecs.region", "", "AWS region of the ECS cluster (defaults to the AWS SDK resolution)")
+	_ = viper.BindPFlag("provider.ecs.region", startCmd.Flags().Lookup("provider.ecs.region"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Endpoint, "provider.ecs.endpoint", "", "ECS API endpoint URL override, for example for a local emulator")
+	_ = viper.BindPFlag("provider.ecs.endpoint", startCmd.Flags().Lookup("provider.ecs.endpoint"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")

@@ -40,6 +40,11 @@
       "UnitPatterns": [
         "podman-*.service"
       ]
+    },
+    "ECS": {
+      "Cluster": "default",
+      "Region": "",
+      "Endpoint": ""
     }
   },
   "Sessions": {

@@ -125,11 +125,27 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: fmt.Errorf("proxmox_lxc provider requires a token secret"),
 		},
 		{
+			name: "valid ecs provider",
+			provider: Provider{
+				Name: "ecs",
+				ECS:  ECS{Cluster: "default"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "ecs provider missing cluster",
+			provider: Provider{
+				Name: "ecs",
+				ECS:  ECS{},
+			},
+			wantErr: fmt.Errorf("ecs provider requires a cluster"),
+		},
+		{
 			name: "invalid provider name",
 			provider: Provider{
 				Name: "invalid",
 			},
-			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd]"),
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd ecs]"),
 		},
 	}
 
@@ -205,4 +221,7 @@ func TestNewProviderConfig_Defaults(t *testing.T) {
 	assert.Equal(t, c.Kubernetes.Burst, 10)
 	assert.Equal(t, c.Kubernetes.Delimiter, "_")
 	assert.Equal(t, c.Podman.Uri, "unix:///run/podman/podman.sock")
+	assert.Equal(t, c.ECS.Cluster, "default")
+	assert.Equal(t, c.ECS.Region, "")
+	assert.Equal(t, c.ECS.Endpoint, "")
 }

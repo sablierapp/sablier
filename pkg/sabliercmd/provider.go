@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/coreos/go-systemd/v22/dbus"
 	proxmox "github.com/luthermonson/go-proxmox"
 	"github.com/moby/moby/client"
@@ -14,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/provider/awsecs"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"github.com/sablierapp/sablier/pkg/provider/dockerswarm"
 	"github.com/sablierapp/sablier/pkg/provider/kubernetes"
@@ -108,6 +112,26 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		}))
 		cli := proxmox.NewClient(config.ProxmoxLXC.URL, opts...)
 		return proxmoxlxc.New(ctx, cli, logger)
+	case "ecs":
+		// The AWS SDK resolves the credentials and the region from its default
+		// chain. The HTTP transport is wrapped with OpenTelemetry so every ECS
+		// API call is captured as a child span.
+		opts := []func(*awsconfig.LoadOptions) error{
+			awsconfig.WithHTTPClient(&http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}),
+		}
+		if config.ECS.Region != "" {
+			opts = append(opts, awsconfig.WithRegion(config.ECS.Region))
+		}
+		awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
+		if err != nil {
+			return nil, fmt.Errorf("cannot load the AWS configuration: %w", err)
+		}
+		cli := ecs.NewFromConfig(awsCfg, func(o *ecs.Options) {
+			if config.ECS.Endpoint != "" {
+				o.BaseEndpoint = aws.String(config.ECS.Endpoint)
+			}
+		})
+		return awsecs.New(ctx, cli, config.ECS.Cluster, logger)
 	case "systemd":
 		var con *dbus.Conn
 		var err error

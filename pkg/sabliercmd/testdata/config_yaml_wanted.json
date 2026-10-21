@@ -38,6 +38,11 @@
     "Systemd": {
       "UserInstance": false,
       "UnitPatterns": null
+    },
+    "ECS": {
+      "Cluster": "default",
+      "Region": "",
+      "Endpoint": ""
     }
   },
   "Sessions": {
