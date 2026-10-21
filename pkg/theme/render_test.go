@@ -283,3 +283,33 @@ func ExampleThemes_Render() {
 	//	</body>
 	//</html>
 }
+
+// TestThemes_RenderServesAtLeastOneSecondOfRefreshInterval covers the value the waiting
+// page writes into `<meta http-equiv="refresh">`: it counts in whole seconds, and a `0`
+// there means "refresh immediately", which a browser reads as "keep reloading". An
+// interval under a second — the zero and the negatives a caller can configure included —
+// must therefore not be truncated into one.
+func TestThemes_RenderServesAtLeastOneSecondOfRefreshInterval(t *testing.T) {
+	version.Version = "1.0.0"
+	themes, err := theme.New(slogt.New(t))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name  string
+		asked time.Duration
+		want  string
+	}{
+		{name: "zero", asked: 0, want: "1"},
+		{name: "negative", asked: -30 * time.Second, want: "1"},
+		{name: "sub-second", asked: 500 * time.Millisecond, want: "1"},
+		{name: "whole seconds are served as asked", asked: 5 * time.Second, want: "5"},
+		{name: "under a minute", asked: 90 * time.Second, want: "90"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			require.NoError(t, themes.Render("ghost", theme.Options{RefreshFrequency: tt.asked}, &out))
+			assert.Contains(t, out.String(),
+				fmt.Sprintf(`<meta http-equiv="refresh" content="%s" />`, tt.want))
+		})
+	}
+}
