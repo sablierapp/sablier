@@ -1,0 +1,30 @@
+# Sablier as a Swarm service:
+#   docker stack deploy -c sablier.yml sablier
+services:
+  sablier:
+    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    command:
+      - start
+      - --provider.name=docker_swarm
+    # region timezone
+    environment:
+      # sablier.running-hours windows use Sablier's local time.
+      TZ: Europe/Paris
+    # endregion
+    volumes:
+      # The Docker socket of the manager node Sablier runs on.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - sablier
+    deploy:
+      placement:
+        constraints:
+          # Only manager nodes serve the service API.
+          - node.role == manager
+
+networks:
+  # Attach your reverse proxy to this network to reach http://sablier:10000.
+  sablier:
+    name: sablier
+    driver: overlay
+    attachable: true

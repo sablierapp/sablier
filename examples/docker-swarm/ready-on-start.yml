@@ -1,0 +1,16 @@
+# Reported ready as soon as Sablier sends the scale-up.
+#   docker stack deploy -c ready-on-start.yml demo
+# region sablier
+services:
+  fast-starter:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=fast-starter
+        - sablier.ready-on-start=true
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

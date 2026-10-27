@@ -62,6 +62,10 @@
                 {
                     "type": "generic",
                     "path": "examples/docker/remote.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/docker-swarm/sablier.yml"
                 }
             ]
         }
