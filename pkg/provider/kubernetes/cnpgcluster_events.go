@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,7 +143,7 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 		},
 	}
 
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(p.dynamic, 2*time.Second, metav1.NamespaceAll, nil)
+	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(p.dynamic, informerResync, metav1.NamespaceAll, nil)
 	informer := factory.ForResource(cnpgClusterGVR).Informer()
 
 	_, _ = informer.AddEventHandler(handler)

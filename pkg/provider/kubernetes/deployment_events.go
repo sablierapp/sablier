@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +14,7 @@ import (
 
 func (p *Provider) watchDeployments(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
 	handler := p.deploymentEventHandler(ctx, instance, wantStopped, wantStarted, wantCreated, wantRemoved)
-	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, 2*time.Second, informers.WithNamespace(corev1.NamespaceAll))
+	factory := informers.NewSharedInformerFactoryWithOptions(p.Client, informerResync, informers.WithNamespace(corev1.NamespaceAll))
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	_, _ = informer.AddEventHandler(handler)
