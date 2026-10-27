@@ -185,3 +185,34 @@ func TestDockerSwarmProvider_InstanceList_OnlyRunning(t *testing.T) {
 	assert.Equal(t, len(got), 1)
 	assert.Equal(t, got[0].Name, runningService.Spec.Name)
 }
+
+// Sablier only manages replicated services: InstanceList skips global ones, and
+// starting one fails. InstanceGroups must skip them too. See #1183.
+func TestDockerSwarmProvider_GetGroups_SkipsGlobalServices(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx := t.Context()
+	dind := sharedDinD
+	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
+	assert.NilError(t, err)
+
+	s, err := dind.CreateMimic(ctx, MimicOptions{
+		Global: true,
+		Labels: map[string]string{
+			"sablier.enable": "true",
+			"sablier.group":  "global-only",
+		},
+	})
+	assert.NilError(t, err)
+	t.Cleanup(func() {
+		_, _ = sharedDinD.client.ServiceRemove(context.Background(), s.ID, client.ServiceRemoveOptions{})
+	})
+
+	got, err := p.InstanceGroups(ctx)
+	assert.NilError(t, err)
+
+	_, ok := got["global-only"]
+	assert.Assert(t, !ok, "the global service must not form a group: %v", got)
+}

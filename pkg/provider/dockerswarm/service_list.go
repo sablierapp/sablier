@@ -60,6 +60,8 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {
 	filters := client.Filters{}
 	filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
+	// Only replicated services can be scaled, as in InstanceList.
+	filters.Add("mode", "replicated")
 	p.l.DebugContext(ctx, "listing services", slog.Group("options", slog.Bool("status", true), slog.Any("filters", filters)))
 	services, err := p.Client.ServiceList(ctx, client.ServiceListOptions{
 		Status:  true,
