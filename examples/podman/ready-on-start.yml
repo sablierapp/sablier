@@ -1,0 +1,17 @@
+# A container Sablier reports ready as soon as it starts it, without waiting
+# for its health check. The rest of its group still waits for theirs.
+#
+#   podman compose -f compose.yml -f ready-on-start.yml up -d
+services:
+  nvr:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true", "-healthy-after=30s"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: whoami
+      sablier.ready-on-start: "true"
+    # endregion

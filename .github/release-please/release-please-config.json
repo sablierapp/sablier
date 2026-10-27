@@ -66,6 +66,14 @@
                 {
                     "type": "generic",
                     "path": "examples/docker-swarm/sablier.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/podman/compose.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/podman/sablier.sh"
                 }
             ]
         }

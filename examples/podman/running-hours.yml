@@ -1,0 +1,24 @@
+# A container kept running on weekdays during office hours, and started on
+# demand outside them.
+#
+#   podman compose -f compose.yml -f running-hours.yml up -d
+services:
+  # region timezone
+  sablier:
+    environment:
+      - TZ=Europe/Paris # running hours use Sablier's local time
+  # endregion
+
+  office-app:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: office-app
+      sablier.running-hours: "09:00-18:00"
+      sablier.running-days: Mon,Tue,Wed,Thu,Fri
+    # endregion
