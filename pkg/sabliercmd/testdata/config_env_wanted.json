@@ -38,6 +38,12 @@
     "Systemd": {
       "UserInstance": true,
       "UnitPatterns": null
+    },
+    "Nomad": {
+      "Address": "http://nomad.envvar:4646",
+      "Token": "envvar-token",
+      "Namespace": "envvar",
+      "Region": "envvar"
     }
   },
   "Sessions": {
