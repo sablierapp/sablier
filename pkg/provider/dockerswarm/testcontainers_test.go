@@ -31,6 +31,8 @@ type MimicOptions struct {
 	RestartPolicy *swarm.RestartPolicy
 	Labels        map[string]string
 	Replicas      *uint64
+	// Global creates a global service instead of a replicated one.
+	Global bool
 }
 
 func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ServiceCreateResult, error) {
@@ -42,11 +44,13 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (cli
 	if opts.Replicas != nil {
 		replicas = *opts.Replicas
 	}
+	mode := swarm.ServiceMode{Replicated: &swarm.ReplicatedService{Replicas: &replicas}}
+	if opts.Global {
+		mode = swarm.ServiceMode{Global: &swarm.GlobalService{}}
+	}
 	return d.client.ServiceCreate(ctx, client.ServiceCreateOptions{
 		Spec: swarm.ServiceSpec{
-			Mode: swarm.ServiceMode{
-				Replicated: &swarm.ReplicatedService{Replicas: &replicas},
-			},
+			Mode: mode,
 			TaskTemplate: swarm.TaskSpec{
 				RestartPolicy: opts.RestartPolicy,
 				ContainerSpec: &swarm.ContainerSpec{
