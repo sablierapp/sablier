@@ -1,0 +1,58 @@
+# Reported ready as soon as Sablier raises the desired count.
+# Deploy it like whoami.yaml; see README.md.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: fast-starter, a service managed by Sablier
+
+Parameters:
+  Cluster:
+    Type: String
+    Default: sablier
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: fast-starter
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      ContainerDefinitions:
+        - Name: fast-starter
+          Image: sablierapp/mimic:v0.3.3
+          Command: ["-healthy=true"]
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+          HealthCheck:
+            Command: ["CMD", "/mimic", "healthcheck"]
+            Interval: 5
+            Timeout: 2
+            Retries: 3
+
+  # region sablier
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: fast-starter
+      Tags:
+        - Key: sablier.enable
+          Value: "true"
+        - Key: sablier.group
+          Value: fast-starter
+        - Key: sablier.ready-on-start
+          Value: "true"
+  # endregion
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 0
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref Subnets
+          SecurityGroups: [!Ref SecurityGroup]
+          AssignPublicIp: ENABLED

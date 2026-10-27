@@ -90,6 +90,10 @@
                 {
                     "type": "generic",
                     "path": "examples/nomad/sablier.nomad.hcl"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/ecs/sablier.yaml"
                 }
             ]
         }

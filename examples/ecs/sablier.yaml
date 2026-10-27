@@ -1,0 +1,145 @@
+# Sablier as an ECS service on Fargate, with the task role it needs.
+# aws cloudformation deploy --stack-name sablier --template-file sablier.yaml \
+#   --capabilities CAPABILITY_IAM --parameter-overrides Subnets=<ids> SecurityGroup=<id>
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sablier with the ECS provider
+
+Parameters:
+  Cluster:
+    Type: String
+    Default: sablier
+    Description: The cluster that runs Sablier and the services it manages
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Must allow inbound TCP 10000 from your reverse proxy
+
+Resources:
+  # region iam
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sablier
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Check the cluster on startup.
+              - Effect: Allow
+                Action: ecs:DescribeClusters
+                Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}
+              # ListServices has no resource type: scope it with a condition.
+              - Effect: Allow
+                Action: ecs:ListServices
+                Resource: "*"
+                Condition:
+                  ArnEquals:
+                    ecs:cluster: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}
+              # Read the services and their tags.
+              - Effect: Allow
+                Action: ecs:DescribeServices
+                Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:service/${Cluster}/*
+              # Change the desired count of opted-in services only.
+              - Effect: Allow
+                Action: ecs:UpdateService
+                Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:service/${Cluster}/*
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/sablier.enable: "true"
+  # endregion
+
+  # Lets ECS write the container logs to CloudWatch.
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/sablier
+      RetentionInDays: 7
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: sablier
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: sablier
+          Image: sablierapp/sablier:1.18.0 # x-release-please-version
+          Essential: true
+          # region config
+          Command:
+            - start
+            - --provider.name=ecs
+            - !Sub --provider.ecs.cluster=${Cluster}
+            - !Sub --provider.ecs.region=${AWS::Region}
+          # endregion
+          # region timezone
+          # sablier.running-hours windows use Sablier's local time.
+          Environment:
+            - Name: TZ
+              Value: Europe/Paris
+          # endregion
+          PortMappings:
+            - Name: http
+              ContainerPort: 10000
+              AppProtocol: http
+          HealthCheck:
+            Command: ["CMD", "/bin/sablier", "health"]
+            Interval: 10
+            Timeout: 5
+            Retries: 3
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: sablier
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: sablier
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref Subnets
+          SecurityGroups: [!Ref SecurityGroup]
+          AssignPublicIp: ENABLED # pulls the image without a NAT gateway
+      # region service-connect
+      # Reverse proxies in the namespace reach Sablier at http://sablier:10000.
+      ServiceConnectConfiguration:
+        Enabled: true
+        Services:
+          - PortName: http
+            DiscoveryName: sablier
+            ClientAliases:
+              - DnsName: sablier
+                Port: 10000
+      # endregion

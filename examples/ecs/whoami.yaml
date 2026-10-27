@@ -1,0 +1,65 @@
+# An ECS service Sablier scales to zero when idle and back up on demand.
+# Reverse proxies in the Service Connect namespace reach it at http://whoami.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: whoami, a service managed by Sablier
+
+Parameters:
+  Cluster:
+    Type: String
+    Default: sablier
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Must allow inbound TCP 80 from your reverse proxy
+
+Resources:
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: whoami
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      ContainerDefinitions:
+        - Name: whoami
+          Image: sablierapp/mimic:v0.3.3
+          Command: ["-healthy=true"]
+          Essential: true
+          PortMappings:
+            - Name: http
+              ContainerPort: 80
+              AppProtocol: http
+          HealthCheck:
+            Command: ["CMD", "/mimic", "healthcheck"]
+            Interval: 5
+            Timeout: 2
+            Retries: 3
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: whoami
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 0
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref Subnets
+          SecurityGroups: [!Ref SecurityGroup]
+          AssignPublicIp: ENABLED
+      ServiceConnectConfiguration:
+        Enabled: true
+        Services:
+          - PortName: http
+            DiscoveryName: whoami
+            ClientAliases:
+              - DnsName: whoami
+                Port: 80
+      Tags:
+        - Key: sablier.enable
+          Value: "true"
+        - Key: sablier.group
+          Value: whoami
