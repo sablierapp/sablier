@@ -39,9 +39,10 @@ func serviceToInstance(svc types.Service) sablier.InstanceConfiguration {
 		groups = sablier.ParseGroups(labels[sablier.LabelGroup])
 	}
 	return sablier.InstanceConfiguration{
-		Name:    aws.ToString(svc.ServiceName),
-		Groups:  groups,
-		Enabled: enabled,
+		Name:         aws.ToString(svc.ServiceName),
+		Groups:       groups,
+		Enabled:      enabled,
+		RunningHours: labels[sablier.LabelRunningHours],
 	}
 }
 

@@ -20,7 +20,10 @@ func TestInstanceList_All(t *testing.T) {
 	daemon := newService("agent", 0, 2, enabledTags(nil))
 	daemon.SchedulingStrategy = types.SchedulingStrategyDaemon
 	f := newFake(
-		newService("web", 1, 1, enabledTags(map[string]string{sablier.LabelGroup: "team-a team-b"})),
+		newService("web", 1, 1, enabledTags(map[string]string{
+			sablier.LabelGroup:        "team-a team-b",
+			sablier.LabelRunningHours: "09:00-18:00",
+		})),
 		newService("db", 0, 0, enabledTags(nil)),
 		newService("untagged", 1, 1, nil),
 		newService("disabled", 1, 1, map[string]string{sablier.LabelEnable: "false"}),
@@ -33,7 +36,7 @@ func TestInstanceList_All(t *testing.T) {
 	assert.NilError(t, err)
 	assert.DeepEqual(t, got, []sablier.InstanceConfiguration{
 		{Name: "db", Groups: []string{"default"}, Enabled: "true"},
-		{Name: "web", Groups: []string{"team-a", "team-b"}, Enabled: "true"},
+		{Name: "web", Groups: []string{"team-a", "team-b"}, Enabled: "true", RunningHours: "09:00-18:00"},
 	})
 }
 
