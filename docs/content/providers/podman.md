@@ -212,8 +212,8 @@ Memory values use the suffixes `b`, `k`, `m` and `g`, such as `64m` or `1g`. Sab
 Sablier reports a container:
 
 - **ready** when it is running and its [health check](https://docs.podman.io/en/latest/markdown/podman-run.1.html#health-cmd-command-command-arg1) passes. A running container without a health check is ready at once, and Sablier logs a warning.
-- **starting** when it is created, paused, restarting or being removed, or running with a health check that has not passed yet. An unhealthy container counts as starting: Sablier keeps waiting until the request times out.
-- **stopped** when it exited with code `0`.
+- **starting** when it is created, restarting or being removed, or running with a health check that has not passed yet. An unhealthy container counts as starting: Sablier keeps waiting until the request times out.
+- **stopped** when it exited with code `0`, or is paused.
 - **error** when it exited with another code, or is dead.
 
 Give your containers a health check, so Sablier sends traffic only once they can serve it.

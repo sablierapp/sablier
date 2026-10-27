@@ -317,8 +317,8 @@ If Docker returns warnings for the update, Sablier logs them.
 Sablier reports a container:
 
 - **ready** when it is running and its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck) passes. Without a health check, as soon as it is running.
-- **starting** while it is created, paused, restarting or being removed, or running with a health check that is starting or unhealthy.
-- **stopped** when it exited with code `0`.
+- **starting** while it is created, restarting or being removed, or running with a health check that is starting or unhealthy.
+- **stopped** when it exited with code `0`, or is paused.
 - **completed** when it is a [one-shot container](#one-shot-containers) that finished.
 - **error** when it exited with another code, or is dead.
 

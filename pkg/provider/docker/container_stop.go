@@ -55,6 +55,12 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 	}
 
 	if p.strategy == "pause" {
+		// Pausing twice fails: after a restart, the startup auto-stop pauses
+		// containers that are already paused.
+		if spec.Container.State.Paused {
+			span.SetAttributes(attribute.String("operation", "noop.already_paused"))
+			return nil
+		}
 		span.SetAttributes(attribute.String("operation", "pause"))
 		return p.dockerPause(ctx, name)
 	}
