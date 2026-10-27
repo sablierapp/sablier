@@ -5,6 +5,10 @@ weight: 7
 
 This tutorial connects Sablier to [HashiCorp Nomad](https://developer.hashicorp.com/nomad). You will select the Nomad provider, point Sablier at the Nomad API with an ACL token, register a job task group so Sablier can manage it, and confirm Sablier knows when the task group is ready. The Nomad provider scales task groups to zero and back through the Nomad scaling API.
 
+{{< callout type="warning" >}}
+The Nomad provider is **experimental**. Its configuration and behavior can change in a minor release. Report problems on [GitHub](https://github.com/sablierapp/sablier/issues).
+{{< /callout >}}
+
 ## Select the Nomad provider
 
 Set the `provider.name` property to `nomad` and point it at your Nomad API. See the [CLI reference](/reference/cli/) for every Nomad flag.
@@ -51,7 +55,7 @@ TLS is configured with the same environment variables as the `nomad` CLI: `NOMAD
 
 ## Create an ACL token
 
-When ACLs are enabled, Sablier needs a token that can list and read the jobs of the namespace, scale their task groups, and submit jobs. Sablier submits a job only to run it again after `nomad job stop`, or to change its count while an active deployment blocks the scaling API. Create a policy file `sablier.hcl`:
+When ACLs are enabled, Sablier needs a token that can list and read the jobs of the namespace, scale their task groups, and submit jobs. Sablier submits a job only to change its count while an active deployment blocks the scaling API. Create a policy file `sablier.hcl`:
 
 ```hcl
 namespace "default" {
@@ -152,15 +156,16 @@ Sablier reads the task group `count` and the allocations of the current job vers
 
 | Nomad state | Sablier status |
 |---|---|
-| `count = 0`, or the job is stopped with `nomad job stop` | Stopped |
+| `count = 0` | Stopped |
 | Allocations pending, or running but not healthy yet | Starting |
 | Every desired allocation running and healthy | Ready |
 | Running allocations without deployment tracking (no `update` block, batch jobs) | Ready |
 | Every allocation of a `batch` task group completed | Completed |
 | Only failed allocations left | Error |
+| The job is stopped with `nomad job stop` | Error |
 
 {{< callout type="info" >}}
-A job stopped with `nomad job stop` (without `-purge`) stays registered. Sablier registers it again on the next request, the way `nomad job start` does, which needs the `submit-job` capability.
+Sablier scales task groups and never stops a job, so it leaves a job stopped with `nomad job stop` stopped. Requests for it get an error until you run `nomad job start`.
 {{< /callout >}}
 
 ## Limitations
@@ -213,3 +218,32 @@ job "sablier" {
   }
 }
 ```
+
+## Use with Traefik
+
+When a task group scales to 0, its service is deregistered, and Traefik removes the router that Nomad or Consul tags create. Requests then get a 404 and never reach the Sablier middleware.
+
+- With the Traefik Nomad provider, set `providers.nomad.allowEmptyServices=true` so the router stays.
+- With the Traefik Consul Catalog provider, or with Consul Connect services, add a fallback router with the lowest priority in the file provider:
+
+```yaml
+http:
+  routers:
+    whoami-wake:
+      rule: Host(`whoami.example.com`)
+      priority: 1
+      service: noop@internal
+      middlewares:
+        - sablier-whoami
+      entryPoints:
+        - https
+      tls: {}
+```
+
+While the task group runs, its own router has a higher priority and handles the requests. Add the Sablier middleware to that router too, so requests renew the session. While the task group is at 0, the fallback router catches the requests and Sablier starts the group.
+
+Set `sablier.ready-after` to at least the refresh interval of the Traefik provider (15 seconds for Consul Catalog). Otherwise the waiting page can send the user on before Traefik has the router again, and the request lands on `noop@internal`.
+
+{{< callout type="info" >}}
+An uptime monitor that requests the application through Traefik renews the session on every check, so the task group never scales to 0. Monitor the Sablier `/health` endpoint and the Nomad job instead.
+{{< /callout >}}

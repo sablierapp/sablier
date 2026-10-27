@@ -495,7 +495,7 @@ Sablier integrates with systemd to manage units on demand, including per-user se
 
 <img src="./docs/static/assets/img/nomad.svg" alt="Nomad" width="100" align="right" />
 
-Sablier supports HashiCorp Nomad for scaling job task groups to zero and back on demand.
+Sablier supports HashiCorp Nomad for scaling job task groups to zero and back on demand. Nomad support is **experimental**.
 
 **Features:**
 - Connects to the Nomad HTTP API with an optional ACL token
