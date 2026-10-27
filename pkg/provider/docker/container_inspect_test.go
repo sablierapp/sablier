@@ -207,10 +207,12 @@ func TestDockerClassicProvider_GetState(t *testing.T) {
 					return c.ID, nil
 				},
 			},
+			// A paused container is idle (the pause strategy's stopped state),
+			// not starting. See #1181.
 			want: sablier.InstanceInfo{
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
-				Status:          sablier.InstanceStatusStarting,
+				Status:          sablier.InstanceStatusStopped,
 			},
 			wantErr: nil,
 		},
