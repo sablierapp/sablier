@@ -57,6 +57,23 @@
 </script>
 
 {{- /*
+  Clicking a sidebar section's name toggles the section in place, like its
+  chevron, instead of loading the section's index page (most of them only list
+  their children). Modifier and middle clicks still open the page.
+*/ -}}
+<script>
+document.addEventListener('click', function (e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  var link = e.target.closest('.hextra-sidebar-item > a[href]');
+  if (!link) return;
+  var toggle = link.parentElement.querySelector(':scope > .hextra-sidebar-collapsible-button');
+  if (!toggle) return;
+  e.preventDefault();
+  toggle.click();
+});
+</script>
+
+{{- /*
   Persist the sidebar sections' expanded/collapsed state across page loads.
   Hextra re-derives which sections are open from the current page on every load;
   this remembers the reader's manual toggles in localStorage and restores them on

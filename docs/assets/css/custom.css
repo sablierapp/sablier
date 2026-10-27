@@ -116,6 +116,7 @@
 .hextra-sidebar-item > a[href$="/providers/kubernetes/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/podman/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/proxmox_lxc/"] > span::before,
+.hextra-sidebar-item > a[href$="/providers/systemd/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/nomad/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/ecs/"] > span::before,
 .hextra-sidebar-item > a[href$="/reverse-proxies/traefik/"] > span::before,
@@ -139,6 +140,7 @@
 .hextra-sidebar-item > a[href$="/providers/kubernetes/"] > span::before { background-image: url("/assets/img/kubernetes.png"); }
 .hextra-sidebar-item > a[href$="/providers/podman/"] > span::before { background-image: url("/assets/img/podman.png"); }
 .hextra-sidebar-item > a[href$="/providers/proxmox_lxc/"] > span::before { background-image: url("/assets/img/proxmox.png"); }
+.hextra-sidebar-item > a[href$="/providers/systemd/"] > span::before { background-image: url("/assets/img/systemd-mark.svg"); }
 .hextra-sidebar-item > a[href$="/providers/nomad/"] > span::before { background-image: url("/assets/img/nomad.svg"); }
 .hextra-sidebar-item > a[href$="/providers/ecs/"] > span::before { background-image: url("/assets/img/ecs.svg"); }
 .hextra-sidebar-item > a[href$="/reverse-proxies/traefik/"] > span::before { background-image: url("/assets/img/traefik.png"); }
