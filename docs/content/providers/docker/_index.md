@@ -153,12 +153,13 @@ If the container defines a Healthcheck, then it will check for healthiness befor
 
 If the containers do not define a Healthcheck, then as soon as the container has the status `started`, it is considered `ready`.
 
-## Startup dependencies and one-shot containers
+## Docker Compose
 
-The Docker provider reads Compose [`depends_on`](https://docs.docker.com/compose/how-tos/startup-order/) relationships and starts every dependency of a container first, in order, waiting for each declared condition.
+The Docker provider reads the metadata `docker compose` writes on each container. See [Docker Compose](/providers/docker/compose/) for the Compose features Sablier supports, such as [starting `depends_on` dependencies together](/providers/docker/compose/depends-on/).
 
-- [Start dependencies together](/providers/docker/depends-on/): wake a whole `depends_on` graph on demand, and decide which dependencies to label.
-- [Honor the restart policy](/providers/docker/restart-policy/): report one-shot init or migration containers as `completed` so `service_completed_successfully` resolves.
+## One-shot containers
+
+To report one-shot init or migration containers as `completed` instead of `stopped`, [honor the restart policy](/providers/docker/restart-policy/).
 
 ## Feature support
 
