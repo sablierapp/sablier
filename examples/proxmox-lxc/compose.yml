@@ -1,0 +1,16 @@
+services:
+  sablier:
+    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    command:
+      - start
+      - --configFile=/etc/sablier/sablier.yaml
+    environment:
+      SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_SECRET: ${PROXMOX_TOKEN_SECRET:?set PROXMOX_TOKEN_SECRET to the API token secret}
+      # The image ships no CA certificates: trust the cluster CA.
+      SSL_CERT_FILE: /etc/sablier/pve-root-ca.pem
+    volumes:
+      - ./sablier.yaml:/etc/sablier/sablier.yaml:ro
+      # Copied from /etc/pve/pve-root-ca.pem on any node.
+      - ./pve-root-ca.pem:/etc/sablier/pve-root-ca.pem:ro
+    ports:
+      - "10000:10000"
