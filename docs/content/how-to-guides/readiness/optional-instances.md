@@ -9,6 +9,7 @@ compatibility:
   podman: supported
   proxmox: supported
   nomad: supported
+  ecs: supported
 ---
 
 {{< compatibility >}}

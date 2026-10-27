@@ -11,6 +11,7 @@ compatibility:
   podman: supported
   proxmox: unsupported
   nomad: supported
+  ecs: supported
 example: ready-after
 ---
 

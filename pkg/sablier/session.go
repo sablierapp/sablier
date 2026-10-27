@@ -74,4 +74,3 @@ func (s *SessionState) Status() string {
 
 	return "not-ready"
 }
-

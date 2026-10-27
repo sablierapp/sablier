@@ -46,6 +46,11 @@
       "Token": "",
       "Namespace": "",
       "Region": ""
+    },
+    "ECS": {
+      "Cluster": "default",
+      "Region": "",
+      "Endpoint": ""
     }
   },
   "Sessions": {

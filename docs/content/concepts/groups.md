@@ -28,7 +28,7 @@ services:
 If you enable an instance but do not set `sablier.group`, it joins the group named **`default`**.
 {{< /callout >}}
 
-The label lives wherever your provider keeps labels. See [Configuring instances](/concepts/configuring-instances/) for the per-provider syntax (Kubernetes annotations, Proxmox `sablier-group-<name>` tags, and so on).
+The label lives wherever your provider keeps labels. See [Configuring instances](/concepts/configuring-instances/) for the per-provider syntax (Kubernetes annotations, Proxmox `sablier-group-<name>` tags, space separated ECS tag values, and so on).
 
 ## Targeting a group from the reverse proxy
 

@@ -12,6 +12,7 @@ compatibility:
   proxmox: impossible
   systemd: differs
   nomad: unsupported
+  ecs: impossible
 example: scale-mode
 ---
 

@@ -13,7 +13,7 @@ It integrates with [reverse proxy plugins](#usage-with-reverse-proxies) (Traefik
 Whether you're running on a resource-constrained device like a **Raspberry Pi**, managing a **QA environment** used only once a week, or reducing cloud costs by scaling idle workloads to zero — Sablier is built for you.
 
 **Key features:**
-- On-demand start/stop for Docker, Kubernetes, Podman, Proxmox LXC, systemd, and Nomad workloads
+- On-demand start/stop for Docker, Kubernetes, Podman, Proxmox LXC, systemd, Nomad and AWS ECS workloads
 - Customizable waiting UI with themes while workloads warm up
 - [Webhook notifications](#webhooks) when instances start or stop
 - [Prometheus metrics](#metrics) for monitoring session and workload activity
@@ -42,6 +42,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
   - [Proxmox LXC](#proxmox-lxc)
   - [Systemd](#systemd)
   - [Nomad](#nomad)
+  - [AWS ECS](#aws-ecs)
 - [Scale Mode](#scale-mode)
 - [Webhooks](#webhooks)
 - [Observability](#observability)
@@ -283,7 +284,7 @@ sablier --configFile=path/to/myconfigfile.yml
 
 ```yaml
 provider:
-  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc, systemd, nomad)
+  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc, systemd, nomad, ecs)
   name: docker
   # Reject requests for containers/services that don't have the Sablier enable label
   reject-unlabeled-requests: false
@@ -503,6 +504,19 @@ Sablier supports HashiCorp Nomad for scaling job task groups to zero and back on
 - Discovers task groups by their `sablier.enable` job or group `meta`
 
 📚 **[Full Documentation](https://sablierapp.dev/tutorials/providers/nomad/)**
+
+### AWS ECS
+
+<img src="./docs/static/assets/img/ecs.svg" alt="AWS ECS" width="100" align="right" />
+
+Sablier scales Amazon ECS services on demand through the ECS API.
+
+**Features:**
+- Uses the AWS SDK credential chain (task role, instance role, profile)
+- Scales services to 0 and back through the desired count
+- Discovers services by `sablier.enable=true` resource tag
+
+📚 **[Full Documentation](https://sablierapp.dev/tutorials/providers/ecs/)**
 
 ## Scale Mode
 

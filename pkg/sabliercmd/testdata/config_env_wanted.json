@@ -44,6 +44,11 @@
       "Token": "envvar-token",
       "Namespace": "envvar",
       "Region": "envvar"
+    },
+    "ECS": {
+      "Cluster": "default",
+      "Region": "",
+      "Endpoint": ""
     }
   },
   "Sessions": {

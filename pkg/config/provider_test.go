@@ -132,11 +132,27 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid ecs provider",
+			provider: Provider{
+				Name: "ecs",
+				ECS:  ECS{Cluster: "default"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "ecs provider missing cluster",
+			provider: Provider{
+				Name: "ecs",
+				ECS:  ECS{},
+			},
+			wantErr: fmt.Errorf("ecs provider requires a cluster"),
+		},
+		{
 			name: "invalid provider name",
 			provider: Provider{
 				Name: "invalid",
 			},
-			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad]"),
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad ecs]"),
 		},
 	}
 
@@ -215,4 +231,7 @@ func TestNewProviderConfig_Defaults(t *testing.T) {
 	// Nomad settings are empty by default so the standard NOMAD_* environment
 	// variables of the Nomad client apply.
 	assert.Equal(t, c.Nomad, Nomad{})
+	assert.Equal(t, c.ECS.Cluster, "default")
+	assert.Equal(t, c.ECS.Region, "")
+	assert.Equal(t, c.ECS.Endpoint, "")
 }

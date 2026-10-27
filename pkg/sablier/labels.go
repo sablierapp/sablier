@@ -32,7 +32,8 @@ const (
 	// feature: /how-to-guides/groups/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
 	// Proxmox LXC uses one `sablier-group-<name>` tag per group. Nomad reads
-	// the job or task group `meta` block.
+	// the job or task group `meta` block. An ECS tag value cannot contain a
+	// comma, so ECS separates the groups with a space.
 	// since: v1.4.0
 	LabelGroup = "sablier.group"
 
@@ -72,6 +73,7 @@ const (
 	// example: "Mon,Tue,Wed,Thu,Fri"
 	// feature: /how-to-guides/lifecycle/running-hours/
 	// providers: Kubernetes must set the comma value as an **annotation**.
+	// ECS separates the days with a space.
 	// since: NEXT_RELEASE
 	LabelRunningDays = "sablier.running-days"
 
@@ -82,7 +84,7 @@ const (
 	// example: "streaming"
 	// feature: /how-to-guides/anti-affinity/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
-	// Not supported on Proxmox LXC.
+	// ECS separates the groups with a space. Not supported on Proxmox LXC.
 	// since: NEXT_RELEASE
 	LabelAntiAffinity = "sablier.anti-affinity"
 
@@ -104,7 +106,7 @@ const (
 	// example: "0.1"
 	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `100m`). Not supported
-	// on Proxmox LXC or Nomad.
+	// on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelIdleCPU = "sablier.idle.cpu"
 
@@ -115,7 +117,7 @@ const (
 	// example: "128m"
 	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `128Mi`). Not
-	// supported on Proxmox LXC or Nomad.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelIdleMemory = "sablier.idle.memory"
 
@@ -136,7 +138,7 @@ const (
 	// example: "2.0"
 	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `2000m`). Not
-	// supported on Proxmox LXC or Nomad.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelActiveCPU = "sablier.active.cpu"
 
@@ -147,7 +149,7 @@ const (
 	// example: "512m"
 	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `512Mi`). Not
-	// supported on Proxmox LXC or Nomad.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelActiveMemory = "sablier.active.memory"
 

@@ -15,7 +15,7 @@ tracing:
 ```
 
 When enabled, every incoming HTTP request and every call made to the underlying
-container provider (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC) is
+container provider (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, AWS ECS) is
 captured as a span and exported to an OTLP-compatible backend such as
 [Jaeger](https://www.jaegertracing.io/),
 [Grafana Tempo](https://grafana.com/oss/tempo/), or any
@@ -32,6 +32,7 @@ captured as a span and exported to an OTLP-compatible backend such as
 | Kubernetes provider | `rest.Config.WrapTransport`, K8s API calls become child spans |
 | Proxmox LXC provider | `otelhttp.NewTransport` wrapping the Proxmox HTTP client |
 | Nomad provider | `otelhttp.NewTransport` wrapping the Nomad HTTP client |
+| AWS ECS provider | `otelhttp.NewTransport` wrapping the AWS SDK HTTP client |
 | Webhook dispatcher | `otelhttp.NewTransport` on the outgoing HTTP client |
 
 Trace context is propagated using the **W3C TraceContext** and **Baggage**
@@ -142,6 +143,12 @@ TLS settings from the standard `NOMAD_CACERT`, `NOMAD_CLIENT_CERT`,
 `NOMAD_CLIENT_KEY` and `NOMAD_SKIP_VERIFY` environment variables are applied
 to the wrapped transport. The long-lived event stream request produces one
 span for the whole connection.
+
+### AWS ECS
+
+The AWS SDK is loaded with an `otelhttp`-wrapped HTTP client, so every ECS API
+call (describe services, update service, and so on) becomes a child span. The
+credential and region resolution of the SDK is not affected.
 
 ## Sampling
 

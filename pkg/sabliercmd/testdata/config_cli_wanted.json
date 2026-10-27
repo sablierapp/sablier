@@ -44,6 +44,11 @@
       "Token": "cli-token",
       "Namespace": "cli",
       "Region": "cli"
+    },
+    "ECS": {
+      "Cluster": "default",
+      "Region": "",
+      "Endpoint": ""
     }
   },
   "Sessions": {

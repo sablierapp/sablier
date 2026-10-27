@@ -37,6 +37,7 @@ const (
 	ProviderPodman     ProviderType = "podman"
 	ProviderSystemd    ProviderType = "systemd"
 	ProviderNomad      ProviderType = "nomad"
+	ProviderECS        ProviderType = "ecs"
 )
 
 type InstanceInfo struct {

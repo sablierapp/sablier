@@ -86,6 +86,12 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.nomad.namespace", startCmd.Flags().Lookup("provider.nomad.namespace"))
 	startCmd.Flags().StringVar(&conf.Provider.Nomad.Region, "provider.nomad.region", "", "Nomad region to send requests to. Falls back to NOMAD_REGION, then the region of the agent")
 	_ = viper.BindPFlag("provider.nomad.region", startCmd.Flags().Lookup("provider.nomad.region"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Cluster, "provider.ecs.cluster", "default", "ECS cluster name or ARN that holds the services to manage")
+	_ = viper.BindPFlag("provider.ecs.cluster", startCmd.Flags().Lookup("provider.ecs.cluster"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Region, "provider.ecs.region", "", "AWS region of the ECS cluster (defaults to the AWS SDK resolution)")
+	_ = viper.BindPFlag("provider.ecs.region", startCmd.Flags().Lookup("provider.ecs.region"))
+	startCmd.Flags().StringVar(&conf.Provider.ECS.Endpoint, "provider.ecs.endpoint", "", "ECS API endpoint URL override, for example for a local emulator")
+	_ = viper.BindPFlag("provider.ecs.endpoint", startCmd.Flags().Lookup("provider.ecs.endpoint"))
 
 	// Server flags
 	startCmd.Flags().IntVar(&conf.Server.Port, "server.port", 10000, "The server port to use")
