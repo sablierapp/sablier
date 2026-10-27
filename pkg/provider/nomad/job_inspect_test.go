@@ -125,12 +125,12 @@ func TestInfoFromGroup(t *testing.T) {
 			want:  sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 0, DesiredReplicas: 3, Status: sablier.InstanceStatusStopped},
 		},
 		{
-			name:   "stopped job is stopped even with a running allocation",
+			name:   "stopped job is an error even with a running allocation",
 			count:  1,
 			meta:   enabled,
 			stop:   true,
 			allocs: []*api.AllocationListStub{alloc("web", api.AllocClientStatusRunning, api.AllocDesiredStatusRun)},
-			want:   sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped, Message: "job is stopped"},
+			want:   sablier.InstanceInfo{Name: "whoami/web", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusError, Message: `job was stopped with "nomad job stop", run "nomad job start" to start it again`},
 		},
 		{
 			name:  "no allocation placed yet is starting",

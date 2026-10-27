@@ -35,13 +35,10 @@ func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	span.SetAttributes(attribute.Int("replicas", int(target)))
 
 	if deref(job.Stop) {
-		// A job stopped with "nomad job stop" cannot be scaled. Register it
-		// again, the way "nomad job start" does.
-		span.SetAttributes(attribute.String("operation", "register"))
-		p.l.DebugContext(ctx, "registering stopped job again", slog.String("name", name), slog.Int("replicas", int(target)))
-		job.Stop = new(false)
-		tg.Count = new(int(target))
-		return p.register(ctx, job)
+		// Sablier scales task groups and never stops a job, so an operator
+		// stopped it with "nomad job stop". Leave it stopped.
+		span.SetAttributes(attribute.String("operation", "noop.job_stopped"))
+		return fmt.Errorf("cannot start instance %q: %s", name, stoppedJobMessage)
 	}
 
 	if int32(deref(tg.Count)) == target {

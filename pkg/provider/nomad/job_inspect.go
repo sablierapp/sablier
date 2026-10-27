@@ -11,6 +11,9 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+// stoppedJobMessage explains why Sablier does not start a job stopped with "nomad job stop".
+const stoppedJobMessage = `job was stopped with "nomad job stop", run "nomad job start" to start it again`
+
 func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
 	job, tg, err := p.getGroup(ctx, name)
 	if err != nil {
@@ -60,12 +63,13 @@ func (p *Provider) infoFromGroup(job *api.Job, tg *api.TaskGroup, allocs []*api.
 	var info sablier.InstanceInfo
 	switch {
 	case deref(job.Stop):
+		// Sablier does not start a stopped job, so the operator must act.
 		info = sablier.InstanceInfo{
 			Name:            name,
 			CurrentReplicas: 0,
 			DesiredReplicas: desired,
-			Status:          sablier.InstanceStatusStopped,
-			Message:         "job is stopped",
+			Status:          sablier.InstanceStatusError,
+			Message:         stoppedJobMessage,
 		}
 	case count == 0:
 		info = sablier.InstanceInfo{

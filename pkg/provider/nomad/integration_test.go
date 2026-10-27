@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -198,7 +199,7 @@ func TestNomadProvider_Integration(t *testing.T) {
 		waitAllocsStopped(t, nc, jobID, time.Minute)
 	})
 
-	t.Run("StoppedJobIsRegisteredAgain", func(t *testing.T) {
+	t.Run("StoppedJobStaysStopped", func(t *testing.T) {
 		jobID := uniqueJobID("sablier-it-stopped")
 		name := nc.registerJob(t, jobID, 1, enabledMeta, time.Second)
 		waitStatus(t, p, name, sablier.InstanceStatusReady, 90*time.Second)
@@ -206,14 +207,14 @@ func TestNomadProvider_Integration(t *testing.T) {
 		_, _, err := nc.client.Jobs().Deregister(jobID, false, nil)
 		assert.NilError(t, err)
 		waitAllocsStopped(t, nc, jobID, time.Minute)
-		info := waitStatus(t, p, name, sablier.InstanceStatusStopped, 30*time.Second)
-		assert.Equal(t, info.Message, "job is stopped")
+		info := waitStatus(t, p, name, sablier.InstanceStatusError, 30*time.Second)
+		assert.Assert(t, strings.Contains(info.Message, `run "nomad job start"`), info.Message)
 
-		assert.NilError(t, p.InstanceStart(ctx, name))
-		waitStatus(t, p, name, sablier.InstanceStatusReady, 90*time.Second)
+		assert.ErrorContains(t, p.InstanceStart(ctx, name), `run "nomad job start"`)
+		job, _, err := nc.client.Jobs().Info(jobID, nil)
+		assert.NilError(t, err)
+		assert.Equal(t, *job.Stop, true)
 
 		assert.NilError(t, p.InstanceStop(ctx, name))
-		waitStatus(t, p, name, sablier.InstanceStatusStopped, 60*time.Second)
-		waitAllocsStopped(t, nc, jobID, time.Minute)
 	})
 }
