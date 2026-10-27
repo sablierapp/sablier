@@ -188,3 +188,17 @@ func TestProxmoxLXCProvider_InstanceInspect_EnabledWhileStartPending(t *testing.
 	assert.Equal(t, got.Status, sablier.InstanceStatusStarting)
 	assert.Equal(t, got.IsEnabled(), true)
 }
+
+// An unknown container ID resolves to a best-effort reference; reading it fails.
+func TestProxmoxLXCProvider_InstanceInspect_UnknownNodeVMID(t *testing.T) {
+	t.Parallel()
+
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
+		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
+	})
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	_, err = p.InstanceInspect(t.Context(), "pve1/999")
+	assert.ErrorContains(t, err, "999")
+}
