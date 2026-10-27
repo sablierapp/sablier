@@ -50,6 +50,18 @@
                 {
                     "type": "generic",
                     "path": "examples/kubernetes/sablier.yaml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/docker/compose.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/docker/socket-proxy.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/docker/remote.yml"
                 }
             ]
         }

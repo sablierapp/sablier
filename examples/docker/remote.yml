@@ -1,0 +1,19 @@
+# Sablier managing a remote Docker daemon over TLS: use this file instead of
+# compose.yml. ./certs holds the client certificates: ca.pem, cert.pem, key.pem.
+name: demo
+
+services:
+  sablier:
+    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    restart: unless-stopped
+    command:
+      - start
+      - --provider.name=docker
+    environment:
+      DOCKER_HOST: tcp://docker.example.com:2376
+      DOCKER_CERT_PATH: /certs
+      DOCKER_TLS_VERIFY: 1 # without it, the daemon's certificate is not verified
+    volumes:
+      - ./certs:/certs:ro
+    ports:
+      - "10000:10000"

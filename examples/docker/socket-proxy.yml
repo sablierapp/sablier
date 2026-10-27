@@ -1,0 +1,41 @@
+# Sablier behind a socket proxy: use this file instead of compose.yml.
+#   docker compose -f socket-proxy.yml -f whoami.yml up -d sablier
+name: demo
+
+services:
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:3.4.5
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /run
+    environment:
+      CONTAINERS: 1 # list and inspect containers
+      EVENTS: 1     # follow container events
+      VERSION: 1    # connection check at startup
+      POST: 1       # start, stop, pause, update and wait for containers
+    volumes:
+      # Only the proxy mounts the socket.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket-proxy
+
+  sablier:
+    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    restart: unless-stopped
+    command:
+      - start
+      - --provider.name=docker
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+    depends_on:
+      - socket-proxy
+    networks:
+      - socket-proxy
+      - default
+    ports:
+      - "10000:10000"
+
+networks:
+  socket-proxy:
+    internal: true # unreachable from outside the host

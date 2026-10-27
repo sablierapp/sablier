@@ -1,0 +1,16 @@
+# region sablier
+services:
+  slow-starter:
+    labels:
+      - sablier.enable=true
+      - sablier.group=slow-starter
+      - sablier.ready-after=15s # wait 15s after the health check first passes
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running-after=5s", "-healthy=true", "-healthy-after=5s"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 10

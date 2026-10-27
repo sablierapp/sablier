@@ -1,0 +1,39 @@
+# Run with honor-restart-policy.yml, so that the migration can complete:
+#   docker compose -f compose.yml -f honor-restart-policy.yml -f depends-on.yml up -d sablier
+services:
+  app:
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running-after=1s", "-healthy=true", "-healthy-after=1s"]
+    restart: unless-stopped
+    labels:
+      - sablier.enable=true
+      - sablier.group=app
+    depends_on:
+      db:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+
+  # Labeled: Sablier starts it first and stops it with the group.
+  db:
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running-after=2s", "-healthy=true", "-healthy-after=2s"]
+    restart: unless-stopped
+    labels:
+      - sablier.enable=true
+      - sablier.group=app
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+
+  # One-shot: runs once and exits 0. Never label it.
+  migration:
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running=false", "-exit-code=0"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
