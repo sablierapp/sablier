@@ -58,6 +58,8 @@ func newECSEnv(t *testing.T, client *ecs.Client) *ecsEnv {
 			EntryPoint: []string{"/mimic"},
 			Command:    []string{"-running", "-running-after=1s", "-healthy=false"},
 			Essential:  aws.Bool(true),
+			// ECS requires a memory limit on the container when the task has none.
+			Memory: aws.Int32(128),
 		}},
 	})
 	assert.NilError(t, err, "cannot register task definition")
