@@ -285,3 +285,9 @@ This is the key decision when wiring up a multi-service stack:
 > In short: label a dependency when you want it scaled to zero together with the rest of the group. Leave it unlabeled when it should stay up; Sablier will still start it on-demand to satisfy the ordering.
 
 A complete, runnable example is available in [`examples/depends-on`](https://github.com/sablierapp/sablier/tree/main/examples/depends-on).
+
+## Feature support
+
+Which Sablier features work with the Docker provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "docker" >}}

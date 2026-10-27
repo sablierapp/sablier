@@ -123,3 +123,9 @@ Sablier checks the LXC container status reported by Proxmox. Additionally, for `
 {{< callout type="info" >}}
 When a start task fails (e.g. `startup for container '100' failed`), Sablier marks the instance as **Unrecoverable** instead of retrying indefinitely. The failed-start state is cleared automatically after a short fixed TTL (currently about 30 seconds), allowing a new start attempt on a subsequent request even if the session is still active.
 {{< /callout >}}
+
+## Feature support
+
+Which Sablier features work with the Proxmox LXC provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "proxmox" >}}
