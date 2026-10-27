@@ -470,3 +470,34 @@ func TestDockerScaleMode_Start_StoppedContainerWithIdleReplicas(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, string(spec.Container.State.Status), "running")
 }
+
+// A running scale-mode container without active limits needs nothing on start.
+func TestDockerScaleMode_Start_RunningContainerIsNoop(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.idle.replicas": "1",
+		},
+	})
+	assert.NilError(t, err)
+	_, err = c.client.ContainerStart(ctx, result.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+	before, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+	assert.NilError(t, p.InstanceStart(t.Context(), result.ID))
+
+	after, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, string(after.Container.State.Status), "running")
+	assert.Equal(t, after.Container.State.StartedAt, before.Container.State.StartedAt, "the container must not be restarted")
+}
