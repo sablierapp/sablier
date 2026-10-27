@@ -1,8 +1,14 @@
-# Nomad Provider Example
+# Nomad Examples
 
-This example runs Sablier with the **Nomad provider**. Sablier scales the task group `web` of the Nomad job `whoami` from 0 to 1 when a session starts, and back to 0 when the session expires.
+Runnable jobs for the [Nomad provider](https://sablierapp.dev/providers/nomad/).
+The documentation includes these files directly, so what you read is what you
+run. Sablier scales the task group `web` of the Nomad job `whoami` from 0 to 1
+when a session starts, and back to 0 when the session expires.
 
-Docker Compose runs a Nomad agent in development mode and Sablier. The task of the job is the busybox web server that is part of the Nomad image. You do not need to install Nomad, and the example does not pull other images.
+Docker Compose runs a Nomad agent in development mode and Sablier. The tasks of
+the jobs run the busybox web server that is part of the Nomad image, with the
+`raw_exec` driver. You do not need to install Nomad, and the example does not
+pull other images.
 
 ```
 +--------+  blocking request   +-----------+   scaling API    +---------------------------+
@@ -22,48 +28,34 @@ Docker Compose runs a Nomad agent in development mode and Sablier. The task of t
 
 ## Files
 
-| File | Purpose |
+| File | Shows |
 |---|---|
 | `compose.yml` | Runs the Nomad agent and Sablier |
 | `raw_exec.hcl` | Nomad agent configuration that enables the `raw_exec` driver |
-| `whoami.nomad.hcl` | The job that Sablier manages |
-| `Makefile` | The `up`, `down`, `start`, `status` and `logs` targets |
+| `Makefile` | The `up`, `down`, `run`, `start`, `request`, `status` and `logs` targets |
+| `whoami.nomad.hcl` | The task group the walkthrough starts, the starting point for every other job |
+| `job-meta.nomad.hcl` | Settings in the job `meta`, overridden by a task group `meta` |
+| `group.nomad.hcl` | One task group in two groups |
+| `ready-after.nomad.hcl` | A settling delay after the allocation is healthy |
+| `ready-on-start.nomad.hcl` | Ready as soon as the scale request is sent |
+| `running-hours.nomad.hcl` | Kept running on weekdays during office hours |
+| `anti-affinity.nomad.hcl` | Kept idle while the `streaming` group is active |
+| `scale-mode.nomad.hcl` | Kept at one allocation instead of zero, two during a session |
+| `sablier.nomad.hcl` | Sablier as a Nomad job, for a cluster with the Docker driver and ACLs |
+| `sablier-policy.hcl` | The ACL policy of the Sablier token |
+| `traefik.yml` | Traefik dynamic configuration with a fallback router for a task group at zero |
 
-## The job
+Lines between `# region <name>` and `# endregion` are the excerpts the
+documentation shows; Nomad, Docker Compose and Traefik ignore the markers.
 
-```hcl
-group "web" {
-  count = 0
-
-  meta = {
-    "sablier.enable" = "true"
-    "sablier.group"  = "demo"
-  }
-
-  update {
-    health_check     = "checks"
-    min_healthy_time = "5s"
-  }
-
-  service {
-    provider = "nomad"
-    check {
-      type = "http"
-      path = "/"
-    }
-  }
-}
-```
-
-- `count = 0` keeps the task group stopped until a session starts.
-- Use the map syntax `meta = { ... }`. The label names contain dots, and HCL does not accept quoted argument names in a `meta { ... }` block.
-- The service has an HTTP check, and the `update` block sets `min_healthy_time`. Sablier reports the instance as ready only after the deployment marks the allocation healthy.
+`sablier.nomad.hcl`, `sablier-policy.hcl` and `traefik.yml` are for a real
+cluster: the development agent of this example has no Docker driver and no ACLs.
 
 ## Prerequisites
 
 - Docker with the Compose plugin. The Nomad container runs privileged and uses the cgroup namespace of the host, so use Docker on Linux or Docker Desktop.
 - `make`, `curl` and `jq`.
-- A Sablier image with the Nomad provider. The Compose file uses `sablierapp/sablier:latest`. If that image does not have the Nomad provider yet, build a local image from the root of the repository and set `SABLIER_IMAGE`:
+- A Sablier image with the Nomad provider. The Compose file uses the `sablierapp/sablier` image of the current release. If that image does not have the Nomad provider yet, build a local image from the root of the repository and set `SABLIER_IMAGE`:
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags nomsgpack -o dist/linux/amd64/sablier ./cmd/sablier
@@ -170,7 +162,20 @@ ID        Node ID   Task Group  Version  Desired  Status    Created    Modified
 dbbb739f  44d4e0b1  web         1        stop     complete  1m31s ago  20s ago
 ```
 
-### 6. Tear down
+### 6. Try a setting
+
+Register another job of this folder, then request its group:
+
+```bash
+make run JOB=ready-after.nomad.hcl
+make request GROUP=slow-starter
+```
+
+The group of each job is its `sablier.group` meta key. The jobs other than
+`whoami` use a dynamic port: find it with
+`docker compose exec nomad nomad job status <job>`.
+
+### 7. Tear down
 
 ```bash
 make down
@@ -198,6 +203,6 @@ DBG instance event provider=nomad type=stopped name=whoami/web
 
 ## Notes
 
-- Development mode and the `raw_exec` driver are for local tests only. In production, run a Nomad cluster with ACLs, use a driver that isolates tasks, and give Sablier an ACL token. See the [Nomad provider tutorial](https://sablierapp.dev/tutorials/providers/nomad/).
+- Development mode and the `raw_exec` driver are for local tests only. In production, run a Nomad cluster with ACLs, use a driver that isolates tasks, and give Sablier an ACL token. See the [Nomad provider page](https://sablierapp.dev/providers/nomad/).
 - Add health checks to the services of your task groups. Without a deployment that tracks health, Sablier reports a running allocation as ready at once.
 - A reverse proxy plugin uses the same instance name, `whoami/web`, or the group `demo`.

@@ -82,6 +82,14 @@
                 {
                     "type": "generic",
                     "path": "examples/systemd/Makefile"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/nomad/compose.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/nomad/sablier.nomad.hcl"
                 }
             ]
         }

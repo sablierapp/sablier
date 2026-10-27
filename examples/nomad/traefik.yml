@@ -1,0 +1,26 @@
+# Traefik dynamic configuration (file provider) for the whoami job.
+# The Sablier middleware starts the demo group, and the fallback router keeps
+# a route to it while the task group is at zero and has no service.
+http:
+  middlewares:
+    sablier-whoami:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000 # the address of Sablier, port 10000
+          group: demo
+          sessionDuration: 1m
+          dynamic:
+            displayName: whoami
+
+  # region fallback
+  routers:
+    whoami-wake:
+      rule: Host(`whoami.example.com`)
+      priority: 1 # lower than the router of the running task group
+      service: noop@internal
+      middlewares:
+        - sablier-whoami
+      entryPoints:
+        - https
+      tls: {}
+  # endregion
