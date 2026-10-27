@@ -19,6 +19,7 @@ const (
 	// example: "true"
 	// providers: Kubernetes must set this as a **label** (discovery uses a label
 	// selector), never an annotation. Proxmox LXC uses the `sablier` tag instead.
+	// Nomad reads the job or task group `meta` block.
 	// since: v1.4.0
 	LabelEnable = "sablier.enable"
 
@@ -30,8 +31,9 @@ const (
 	// example: "team-a,team-b"
 	// feature: /how-to-guides/groups/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
-	// Proxmox LXC uses one `sablier-group-<name>` tag per group. An ECS tag
-	// value cannot contain a comma, so ECS separates the groups with a space.
+	// Proxmox LXC uses one `sablier-group-<name>` tag per group. Nomad reads
+	// the job or task group `meta` block. An ECS tag value cannot contain a
+	// comma, so ECS separates the groups with a space.
 	// since: v1.4.0
 	LabelGroup = "sablier.group"
 
@@ -104,7 +106,7 @@ const (
 	// example: "0.1"
 	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `100m`). Not supported
-	// on Proxmox LXC or ECS.
+	// on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelIdleCPU = "sablier.idle.cpu"
 
@@ -115,7 +117,7 @@ const (
 	// example: "128m"
 	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `128Mi`). Not
-	// supported on Proxmox LXC or ECS.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelIdleMemory = "sablier.idle.memory"
 
@@ -136,7 +138,7 @@ const (
 	// example: "2.0"
 	// feature: /how-to-guides/scaling-resources/scale-cpu/
 	// providers: Kubernetes uses a resource quantity (e.g. `2000m`). Not
-	// supported on Proxmox LXC or ECS.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelActiveCPU = "sablier.active.cpu"
 
@@ -147,7 +149,7 @@ const (
 	// example: "512m"
 	// feature: /how-to-guides/scaling-resources/scale-memory/
 	// providers: Kubernetes uses a resource quantity (e.g. `512Mi`). Not
-	// supported on Proxmox LXC or ECS.
+	// supported on Proxmox LXC, Nomad or ECS.
 	// since: v1.13.0
 	LabelActiveMemory = "sablier.active.memory"
 

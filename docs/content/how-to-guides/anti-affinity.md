@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: supported
   proxmox: unsupported
+  nomad: supported
   ecs: differs
 example: anti-affinity
 ---

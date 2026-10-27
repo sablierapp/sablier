@@ -94,4 +94,3 @@ func TestInstanceRequest_DoesNotExtendExpirationOnExcludedDay(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, info.Name, "nginx")
 }
-

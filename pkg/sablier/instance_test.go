@@ -58,7 +58,7 @@ func TestInstanceInfo_IsReady_ReadyAfter_NilReadyAt(t *testing.T) {
 
 func TestInstanceInfo_IsReady_ReadyOnStart(t *testing.T) {
 	info := sablier.InstanceInfo{
-		Status:      sablier.InstanceStatusStarting,
+		Status:       sablier.InstanceStatusStarting,
 		ReadyOnStart: true,
 	}
 	assert.Assert(t, info.IsReady())

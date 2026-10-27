@@ -203,6 +203,9 @@
           "name": {
             "type": "string"
           },
+          "nomad": {
+            "$ref": "#/components/schemas/sablier.NomadTaskGroupInfo"
+          },
           "podman": {
             "$ref": "#/components/schemas/sablier.PodmanContainerInfo"
           },
@@ -275,7 +278,30 @@
             },
             "type": "object"
           },
+          "name": {
+            "type": "string"
+          },
           "namespace": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.NomadTaskGroupInfo": {
+        "properties": {
+          "jobId": {
+            "type": "string"
+          },
+          "meta": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "taskGroup": {
             "type": "string"
           }
         },
@@ -303,6 +329,7 @@
           "docker",
           "ecs",
           "kubernetes",
+          "nomad",
           "podman",
           "swarm",
           "systemd"

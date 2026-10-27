@@ -125,6 +125,13 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: fmt.Errorf("proxmox_lxc provider requires a token secret"),
 		},
 		{
+			name: "valid nomad provider without any setting",
+			provider: Provider{
+				Name: "nomad",
+			},
+			wantErr: nil,
+		},
+		{
 			name: "valid ecs provider",
 			provider: Provider{
 				Name: "ecs",
@@ -145,7 +152,7 @@ func TestProvider_IsValid(t *testing.T) {
 			provider: Provider{
 				Name: "invalid",
 			},
-			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd ecs]"),
+			wantErr: fmt.Errorf("unrecognized provider invalid. providers available: [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad ecs]"),
 		},
 	}
 
@@ -221,6 +228,9 @@ func TestNewProviderConfig_Defaults(t *testing.T) {
 	assert.Equal(t, c.Kubernetes.Burst, 10)
 	assert.Equal(t, c.Kubernetes.Delimiter, "_")
 	assert.Equal(t, c.Podman.Uri, "unix:///run/podman/podman.sock")
+	// Nomad settings are empty by default so the standard NOMAD_* environment
+	// variables of the Nomad client apply.
+	assert.Equal(t, c.Nomad, Nomad{})
 	assert.Equal(t, c.ECS.Cluster, "default")
 	assert.Equal(t, c.ECS.Region, "")
 	assert.Equal(t, c.ECS.Endpoint, "")

@@ -99,6 +99,7 @@ func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- s
 				Kubernetes: &sablier.KubernetesWorkloadInfo{
 					Namespace: d.Namespace,
 					Kind:      "deployment",
+					Name:      parsed.Name,
 					Image:     image,
 					Labels:    d.Labels,
 				},

@@ -20,6 +20,9 @@
 - key: systemd
   name: Systemd
   icon: systemd.svg
+- key: nomad
+  name: Nomad
+  icon: nomad.svg
 - key: ecs
   name: AWS ECS
   icon: ecs.svg

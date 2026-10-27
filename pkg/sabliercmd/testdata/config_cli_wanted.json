@@ -39,6 +39,12 @@
       "UserInstance": true,
       "UnitPatterns": null
     },
+    "Nomad": {
+      "Address": "http://nomad.cli:4646",
+      "Token": "cli-token",
+      "Namespace": "cli",
+      "Region": "cli"
+    },
     "ECS": {
       "Cluster": "default",
       "Region": "",

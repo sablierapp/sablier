@@ -65,6 +65,7 @@ func (p *Provider) ClusterInspect(ctx context.Context, config ParsedName) (sabli
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      KindCNPGCluster,
+		Name:      config.Name,
 		Image:     image,
 		Labels:    labels,
 	}

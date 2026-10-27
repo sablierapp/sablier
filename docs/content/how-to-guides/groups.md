@@ -10,6 +10,7 @@ compatibility:
   kubernetes: differs
   podman: supported
   proxmox: differs
+  nomad: supported
   ecs: differs
 example: multiple-groups
 ---

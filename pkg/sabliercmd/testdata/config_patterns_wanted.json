@@ -41,6 +41,12 @@
         "podman-*.service"
       ]
     },
+    "Nomad": {
+      "Address": "",
+      "Token": "",
+      "Namespace": "",
+      "Region": ""
+    },
     "ECS": {
       "Cluster": "default",
       "Region": "",

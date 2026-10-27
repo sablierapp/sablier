@@ -13,7 +13,7 @@ It integrates with [reverse proxy plugins](#usage-with-reverse-proxies) (Traefik
 Whether you're running on a resource-constrained device like a **Raspberry Pi**, managing a **QA environment** used only once a week, or reducing cloud costs by scaling idle workloads to zero — Sablier is built for you.
 
 **Key features:**
-- On-demand start/stop for Docker, Kubernetes, Podman, Proxmox LXC, systemd and AWS ECS workloads
+- On-demand start/stop for Docker, Kubernetes, Podman, Proxmox LXC, systemd, Nomad and AWS ECS workloads
 - Customizable waiting UI with themes while workloads warm up
 - [Webhook notifications](#webhooks) when instances start or stop
 - [Prometheus metrics](#metrics) for monitoring session and workload activity
@@ -41,6 +41,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
   - [Kubernetes](#kubernetes)
   - [Proxmox LXC](#proxmox-lxc)
   - [Systemd](#systemd)
+  - [Nomad](#nomad)
   - [AWS ECS](#aws-ecs)
 - [Scale Mode](#scale-mode)
 - [Webhooks](#webhooks)
@@ -283,7 +284,7 @@ sablier --configFile=path/to/myconfigfile.yml
 
 ```yaml
 provider:
-  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc, systemd, ecs)
+  # Provider to use to manage containers (docker, swarm, kubernetes, podman, proxmox_lxc, systemd, nomad, ecs)
   name: docker
   # Reject requests for containers/services that don't have the Sablier enable label
   reject-unlabeled-requests: false
@@ -490,6 +491,19 @@ Sablier integrates with systemd to manage units on demand, including per-user se
 📚 **[Full Documentation](https://sablierapp.dev/tutorials/providers/systemd/)**
 
 ---
+
+### Nomad
+
+<img src="./docs/static/assets/img/nomad.svg" alt="Nomad" width="100" align="right" />
+
+Sablier supports HashiCorp Nomad for scaling job task groups to zero and back on demand. Nomad support is **experimental**.
+
+**Features:**
+- Connects to the Nomad HTTP API with an optional ACL token
+- Scales task groups to 0 and back through the scaling API
+- Discovers task groups by their `sablier.enable` job or group `meta`
+
+📚 **[Full Documentation](https://sablierapp.dev/tutorials/providers/nomad/)**
 
 ### AWS ECS
 

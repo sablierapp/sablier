@@ -18,6 +18,7 @@ type SwarmServiceInfo struct {
 type KubernetesWorkloadInfo struct {
 	Namespace string            `json:"namespace" jsonschema:"description=Kubernetes namespace (template access: .Kubernetes.Namespace),example=default"`
 	Kind      string            `json:"kind" jsonschema:"description=Workload kind (template access: .Kubernetes.Kind),example=Deployment"`
+	Name      string            `json:"name" jsonschema:"description=Workload name without namespace or kind (template access: .Kubernetes.Name),example=my-app"`
 	Image     string            `json:"image" jsonschema:"description=Workload image (template access: .Kubernetes.Image),example=nginx:latest"`
 	Labels    map[string]string `json:"labels,omitempty" jsonschema:"description=Workload labels (template access: .Kubernetes.Labels)"`
 }
@@ -27,4 +28,12 @@ type PodmanContainerInfo struct {
 	ID     string            `json:"id" jsonschema:"description=Container ID (template access: .Podman.ID),example=a1b2c3d4e5f6"`
 	Image  string            `json:"image" jsonschema:"description=Container image (template access: .Podman.Image),example=nginx:latest"`
 	Labels map[string]string `json:"labels,omitempty" jsonschema:"description=Container labels (template access: .Podman.Labels)"`
+}
+
+// NomadTaskGroupInfo holds Nomad-specific task group metadata.
+type NomadTaskGroupInfo struct {
+	Namespace string            `json:"namespace" jsonschema:"description=Nomad namespace (template access: .Nomad.Namespace),example=default"`
+	JobID     string            `json:"jobId" jsonschema:"description=Nomad job ID (template access: .Nomad.JobID),example=whoami"`
+	TaskGroup string            `json:"taskGroup" jsonschema:"description=Task group name (template access: .Nomad.TaskGroup),example=web"`
+	Meta      map[string]string `json:"meta,omitempty" jsonschema:"description=Job and task group meta merged (template access: .Nomad.Meta)"`
 }

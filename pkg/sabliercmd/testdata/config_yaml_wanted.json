@@ -39,6 +39,12 @@
       "UserInstance": false,
       "UnitPatterns": null
     },
+    "Nomad": {
+      "Address": "http://nomad.configfile:4646",
+      "Token": "configfile-token",
+      "Namespace": "configfile",
+      "Region": "configfile"
+    },
     "ECS": {
       "Cluster": "default",
       "Region": "",

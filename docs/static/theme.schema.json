@@ -68,7 +68,7 @@
         },
         "Provider": {
           "type": "string",
-          "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd|ecs)",
+          "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd|nomad|ecs)",
           "examples": [
             "docker"
           ]
@@ -83,11 +83,15 @@
         },
         "Kubernetes": {
           "$ref": "#/$defs/KubernetesWorkloadInfo",
-          "description": "Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Image .Kubernetes.Labels"
+          "description": "Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Name .Kubernetes.Image .Kubernetes.Labels"
         },
         "Podman": {
           "$ref": "#/$defs/PodmanContainerInfo",
           "description": "Podman-specific container metadata (only set when Provider is podman). Fields are accessible in templates as .Podman.ID .Podman.Image .Podman.Labels"
+        },
+        "Nomad": {
+          "$ref": "#/$defs/NomadTaskGroupInfo",
+          "description": "Nomad-specific task group metadata (only set when Provider is nomad). Fields are accessible in templates as .Nomad.Namespace .Nomad.JobID .Nomad.TaskGroup .Nomad.Meta"
         }
       },
       "additionalProperties": false,
@@ -116,6 +120,13 @@
             "Deployment"
           ]
         },
+        "name": {
+          "type": "string",
+          "description": "Workload name without namespace or kind (template access: .Kubernetes.Name)",
+          "examples": [
+            "my-app"
+          ]
+        },
         "image": {
           "type": "string",
           "description": "Workload image (template access: .Kubernetes.Image)",
@@ -136,7 +147,47 @@
       "required": [
         "namespace",
         "kind",
+        "name",
         "image"
+      ]
+    },
+    "NomadTaskGroupInfo": {
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "Nomad namespace (template access: .Nomad.Namespace)",
+          "examples": [
+            "default"
+          ]
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Nomad job ID (template access: .Nomad.JobID)",
+          "examples": [
+            "whoami"
+          ]
+        },
+        "taskGroup": {
+          "type": "string",
+          "description": "Task group name (template access: .Nomad.TaskGroup)",
+          "examples": [
+            "web"
+          ]
+        },
+        "meta": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Job and task group meta merged (template access: .Nomad.Meta)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "namespace",
+        "jobId",
+        "taskGroup"
       ]
     },
     "PodmanContainerInfo": {

@@ -244,7 +244,8 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			assert.NilError(t, err)
 
 			// Clean up the deployment created by this subtest.
-			if parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"}); parseErr == nil {
+			parsed, parseErr := kubernetes.ParseName(name, kubernetes.ParseOptions{Delimiter: "_"})
+			if parseErr == nil {
 				t.Cleanup(func() {
 					_ = c.client.AppsV1().Deployments(parsed.Namespace).Delete(context.Background(), parsed.Name, metav1.DeleteOptions{})
 				})
@@ -259,6 +260,7 @@ func TestKubernetesProvider_DeploymentInspect(t *testing.T) {
 			tt.want.Kubernetes = &sablier.KubernetesWorkloadInfo{
 				Namespace: "default",
 				Kind:      "deployment",
+				Name:      parsed.Name,
 				Image:     "sablierapp/mimic:v0.3.3",
 				Labels:    labels,
 			}

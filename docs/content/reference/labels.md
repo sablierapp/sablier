@@ -52,6 +52,19 @@ sablier                 # enables management (sablier.enable=true)
 sablier-group-my-group  # one tag per group
 ```
 {{< /tab >}}
+{{< tab name="Nomad" >}}
+```hcl
+job "whoami" {
+  group "web" {
+    # A map, because HCL does not accept quoted names in a meta block.
+    meta = {
+      "sablier.enable" = "true"
+      "sablier.group"  = "my-group"
+    }
+  }
+}
+```
+{{< /tab >}}
 {{< tab name="Systemd" >}}
 ```ini
 # systemd has no labels; Sablier reads the [X-Sablier] unit file section:
@@ -115,7 +128,7 @@ Opts the instance into Sablier management. Any value other than `true` is ignore
 Example: `"true"`
 
 {{< callout type="info" >}}
-Kubernetes must set this as a **label** (discovery uses a label selector), never an annotation. Proxmox LXC uses the `sablier` tag instead.
+Kubernetes must set this as a **label** (discovery uses a label selector), never an annotation. Proxmox LXC uses the `sablier` tag instead. Nomad reads the job or task group `meta` block.
 {{< /callout >}}
 
 ### `sablier.group` {#label-sablier-group}
@@ -127,7 +140,7 @@ Assigns the instance to one or more named groups. A session for any of its group
 Example: `"team-a,team-b"`
 
 {{< callout type="info" >}}
-Kubernetes must set a multi-value list as an **annotation**. Proxmox LXC uses one `sablier-group-<name>` tag per group. An ECS tag value cannot contain a comma, so ECS separates the groups with a space.
+Kubernetes must set a multi-value list as an **annotation**. Proxmox LXC uses one `sablier-group-<name>` tag per group. Nomad reads the job or task group `meta` block. An ECS tag value cannot contain a comma, so ECS separates the groups with a space.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/groups/)
@@ -217,7 +230,7 @@ The CPU limit applied when the session expires. Requires `sablier.idle.replicas 
 Example: `"0.1"`
 
 {{< callout type="info" >}}
-Kubernetes uses a resource quantity (e.g. `100m`). Not supported on Proxmox LXC or ECS.
+Kubernetes uses a resource quantity (e.g. `100m`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-cpu/)
@@ -231,7 +244,7 @@ The memory limit applied when the session expires. Requires `sablier.idle.replic
 Example: `"128m"`
 
 {{< callout type="info" >}}
-Kubernetes uses a resource quantity (e.g. `128Mi`). Not supported on Proxmox LXC or ECS.
+Kubernetes uses a resource quantity (e.g. `128Mi`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-memory/)
@@ -259,7 +272,7 @@ The CPU limit restored when a new session is requested.
 Example: `"2.0"`
 
 {{< callout type="info" >}}
-Kubernetes uses a resource quantity (e.g. `2000m`). Not supported on Proxmox LXC or ECS.
+Kubernetes uses a resource quantity (e.g. `2000m`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-cpu/)
@@ -273,7 +286,7 @@ The memory limit restored when a new session is requested.
 Example: `"512m"`
 
 {{< callout type="info" >}}
-Kubernetes uses a resource quantity (e.g. `512Mi`). Not supported on Proxmox LXC or ECS.
+Kubernetes uses a resource quantity (e.g. `512Mi`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
 [Learn more](/how-to-guides/scaling-resources/scale-memory/)
