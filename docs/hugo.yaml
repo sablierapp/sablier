@@ -37,7 +37,7 @@ menu:
       url: /providers/
       weight: 2
     - name: Reverse Proxies
-      url: /tutorials/reverse-proxies/
+      url: /reverse-proxies/
       weight: 3
     - name: Guides
       url: /guides/

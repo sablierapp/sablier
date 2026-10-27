@@ -1,6 +1,8 @@
 ---
-title: Nginx
-weight: 3
+title: Apache APISIX
+weight: 6
+aliases:
+  - /tutorials/reverse-proxies/apacheapisix/
 ---
 
 Nginx, Envoy, Istio and Apache APISIX are all served by the same **Sablier Proxy-Wasm plugin**, built with the [Proxy-Wasm SDK](https://github.com/proxy-wasm). It lives in its own repository.

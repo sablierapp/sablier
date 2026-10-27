@@ -44,11 +44,11 @@ First, identify your [provider](/providers/). The provider is how Sablier talks 
 
 ## Identify your reverse proxy
 
-Next, identify your [reverse proxy](/tutorials/reverse-proxies/). The reverse-proxy plugin intercepts incoming requests and calls the Sablier API. You can see the available plugins on the [reverse proxies](/tutorials/reverse-proxies/) page.
+Next, identify your [reverse proxy](/reverse-proxies/). The reverse-proxy plugin intercepts incoming requests and calls the Sablier API. You can see the available plugins on the [reverse proxies](/reverse-proxies/) page.
 
 ## Connect it all together
 
-This tutorial uses the [Docker provider](/providers/docker/) and the [Caddy reverse proxy plugin](/tutorials/reverse-proxies/caddy/). The steps are the same for other combinations; only the provider and plugin configuration change.
+This tutorial uses the [Docker provider](/providers/docker/) and the [Caddy reverse proxy plugin](/reverse-proxies/caddy/). The steps are the same for other combinations; only the provider and plugin configuration change.
 
 {{% steps %}}
 
