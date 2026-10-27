@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+# region sablier
+metadata:
+  name: warm-api
+  labels:
+    app: warm-api
+    sablierapp.dev/enable: "true" # must be a label: discovery uses a label selector
+  annotations:
+    sablierapp.dev/group: warm-api
+    sablierapp.dev/idle.replicas: "1"
+    sablierapp.dev/idle.cpu: "100m"
+    sablierapp.dev/idle.memory: "64Mi"
+    sablierapp.dev/active.cpu: "2"
+    sablierapp.dev/active.memory: "512Mi"
+# endregion
+spec:
+  selector:
+    matchLabels:
+      app: warm-api
+  template:
+    metadata:
+      labels:
+        app: warm-api
+    spec:
+      containers:
+        - name: warm-api
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

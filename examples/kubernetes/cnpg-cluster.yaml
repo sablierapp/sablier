@@ -1,0 +1,12 @@
+# Requires the CloudNativePG operator, and rbac.cnpg=true in the Helm chart.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: whoami-pg
+  labels:
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: whoami
+spec:
+  instances: 3
+  storage:
+    size: 1Gi

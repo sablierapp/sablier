@@ -46,6 +46,10 @@
                 {
                     "type": "generic",
                     "path": "docs/hugo.yaml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/kubernetes/sablier.yaml"
                 }
             ]
         }

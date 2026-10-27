@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: StatefulSet
+# region sablier
+metadata:
+  name: whoami-db
+  labels:
+    app: whoami-db
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: whoami
+# endregion
+spec:
+  serviceName: whoami-db
+  selector:
+    matchLabels:
+      app: whoami-db
+  template:
+    metadata:
+      labels:
+        app: whoami-db
+    spec:
+      containers:
+        - name: whoami-db
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

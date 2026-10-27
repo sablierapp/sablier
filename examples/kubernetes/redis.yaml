@@ -1,0 +1,12 @@
+# Requires the OT-CONTAINER-KIT redis-operator, and rbac.otkRedis=true in the
+# Helm chart. The operator copies these labels to the StatefulSet it manages.
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: Redis
+metadata:
+  name: whoami-redis
+  labels:
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: whoami
+spec:
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.12
