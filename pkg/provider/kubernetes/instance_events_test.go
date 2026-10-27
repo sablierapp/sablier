@@ -288,3 +288,45 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 		}
 	})
 }
+
+// waitStreamClosed cancels the stream's context and waits until both channels
+// are closed, so no informer goroutine outlives the test and logs through its
+// finished *testing.T.
+func waitStreamClosed(t *testing.T, cancel context.CancelFunc, stream sablier.InstanceEventStream) {
+	t.Helper()
+	cancel()
+	deadline := time.After(10 * time.Second)
+	events, errs := stream.Events, stream.Err
+	for events != nil || errs != nil {
+		select {
+		case _, ok := <-events:
+			if !ok {
+				events = nil
+			}
+		case _, ok := <-errs:
+			if !ok {
+				errs = nil
+			}
+		case <-deadline:
+			t.Fatal("the event stream was not closed after its context was cancelled")
+		}
+	}
+}
+
+// The Provider interface requires both channels to close on context
+// cancellation, after the informers stop.
+func TestKubernetesProvider_InstanceEvents_ClosesOnCancel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	conf := config.NewProviderConfig().Kubernetes
+	p, err := kubernetes.New(ctx, sharedKinD.client, sharedKinD.dynamic, slogt.New(t), conf)
+	assert.NilError(t, err)
+
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	stream := p.InstanceEvents(streamCtx, provider.InstanceEventsOptions{})
+	waitStreamClosed(t, streamCancel, stream)
+}
