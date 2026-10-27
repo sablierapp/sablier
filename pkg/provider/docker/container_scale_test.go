@@ -412,3 +412,61 @@ func TestDockerScaleMode_BlkioDeviceReadBps(t *testing.T) {
 	assert.Equal(t, spec.Container.HostConfig.BlkioDeviceReadBps[0].Rate, idleRateBytes,
 		"read BPS rate should match the idle label value")
 }
+
+// With active limits but idle.replicas at 0, a session expiry stops the
+// container: the next start must start it, not only apply the limits. See #1180.
+func TestDockerScaleMode_Start_StoppedContainerWithActiveLimits(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.active.cpu": "1.0",
+		},
+	})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), result.ID)
+	assert.NilError(t, err)
+
+	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, string(spec.Container.State.Status), "running")
+	assert.Equal(t, spec.Container.HostConfig.NanoCPUs, int64(1_000_000_000), "CPU should be set to the active value")
+}
+
+// A scale-mode container stopped outside Sablier must start on the next request.
+func TestDockerScaleMode_Start_StoppedContainerWithIdleReplicas(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{
+		Labels: map[string]string{
+			"sablier.idle.replicas": "1",
+		},
+	})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), result.ID)
+	assert.NilError(t, err)
+
+	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, string(spec.Container.State.Status), "running")
+}
