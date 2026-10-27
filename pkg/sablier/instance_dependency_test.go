@@ -28,11 +28,12 @@ func TestDependencyConditionSatisfied(t *testing.T) {
 		{name: "completed/starting", status: InstanceStatusStarting, condition: "service_completed_successfully", want: false},
 		{name: "completed/stopped", status: InstanceStatusStopped, condition: "service_completed_successfully", want: false},
 
-		// service_running_or_healthy: requires a running (or healthy) service, not a completed one-shot.
-		{name: "running_or_healthy/starting", status: InstanceStatusStarting, condition: "service_running_or_healthy", want: true},
-		{name: "running_or_healthy/ready", status: InstanceStatusReady, condition: "service_running_or_healthy", want: true},
-		{name: "running_or_healthy/completed", status: InstanceStatusCompleted, condition: "service_running_or_healthy", want: false},
-		{name: "running_or_healthy/stopped", status: InstanceStatusStopped, condition: "service_running_or_healthy", want: false},
+		// running_or_healthy: Compose's condition for a legacy depends_on entry without a
+		// condition. Requires a running (or healthy) service, not a completed one-shot.
+		{name: "running_or_healthy/starting", status: InstanceStatusStarting, condition: "running_or_healthy", want: true},
+		{name: "running_or_healthy/ready", status: InstanceStatusReady, condition: "running_or_healthy", want: true},
+		{name: "running_or_healthy/completed", status: InstanceStatusCompleted, condition: "running_or_healthy", want: false},
+		{name: "running_or_healthy/stopped", status: InstanceStatusStopped, condition: "running_or_healthy", want: false},
 
 		// Unknown condition: same as service_started.
 		{name: "unknown/starting", status: InstanceStatusStarting, condition: "unknown_condition", want: true},

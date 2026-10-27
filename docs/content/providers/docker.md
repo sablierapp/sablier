@@ -165,7 +165,7 @@ Decide whether to label each dependency:
 - A dependency that exits with an error, or is dead, fails the start.
 - It ignores the `restart` option of `depends_on`.
 - The whole start, dependencies included, must finish within five minutes.
-- It also accepts the condition `service_running_or_healthy`: running, healthy or not. Compose never writes it. Any other unknown condition behaves like `service_started`.
+- A dependency written without a condition, by older Compose versions, must be running, healthy or not, like Compose does. A one-shot that already exited does not count. Any unknown condition behaves like `service_started`.
 {{< /details >}}
 
 #### One-shot containers {since="v1.15.0"}
