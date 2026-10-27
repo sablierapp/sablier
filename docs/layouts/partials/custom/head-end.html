@@ -57,65 +57,6 @@
 </script>
 
 {{- /*
-  Global provider selector for the {{< provider-tabs >}} shortcode. A single
-  choice (localStorage 'sablier-provider') drives which provider panel is shown
-  on every page, so the reader's provider "sticks" across the whole site.
-*/ -}}
-<script>
-(function () {
-  var KEY = 'sablier-provider';
-  var DEFAULT = 'docker';
-  function current() { try { return localStorage.getItem(KEY) || DEFAULT; } catch (e) { return DEFAULT; } }
-  function store(p) { try { localStorage.setItem(KEY, p); } catch (e) {} }
-
-  function apply(provider) {
-    document.querySelectorAll('[data-provider-tabs]').forEach(function (group) {
-      var panels = group.querySelectorAll('.provider-tab-panel');
-      var btns = group.querySelectorAll('.provider-tab-btn');
-      if (!panels.length) return;
-      var keys = Array.prototype.map.call(panels, function (p) { return p.getAttribute('data-provider'); });
-      // Show the global provider if this group has it, else fall back to its
-      // first panel WITHOUT changing the global choice.
-      var chosen = keys.indexOf(provider) !== -1 ? provider : keys[0];
-      panels.forEach(function (p) { p.hidden = p.getAttribute('data-provider') !== chosen; });
-      btns.forEach(function (b) {
-        var sel = b.getAttribute('data-provider') === chosen;
-        b.setAttribute('data-state', sel ? 'selected' : '');
-        b.setAttribute('aria-selected', sel ? 'true' : 'false');
-      });
-    });
-  }
-
-  function select(provider) { store(provider); apply(provider); }
-
-  // Event delegation on the document so the handler works no matter when the
-  // tabs are rendered (including after client-side navigation) and cannot be
-  // detached.
-  document.addEventListener('click', function (e) {
-    var t = e.target;
-    if (!t || !t.closest) return;
-    var btn = t.closest('[data-provider-tabs] .provider-tab-btn');
-    if (btn) { select(btn.getAttribute('data-provider')); return; }
-    // A "differs" compatibility badge selects that provider and scrolls to the notes.
-    var badge = t.closest('.compat-differs[data-provider]');
-    if (badge) {
-      e.preventDefault();
-      select(badge.getAttribute('data-provider'));
-      var notes = document.querySelector('[data-provider-tabs]');
-      if (notes) notes.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-
-  function init() { apply(current()); }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
-</script>
-
-{{- /*
   Persist the sidebar sections' expanded/collapsed state across page loads.
   Hextra re-derives which sections are open from the current page on every load;
   this remembers the reader's manual toggles in localStorage and restores them on

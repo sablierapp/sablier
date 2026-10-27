@@ -1,0 +1,10 @@
+<!--
+  systemd logo glyph, cropped from https://brand.systemd.io/assets/svg/systemd-light.svg
+  (brackets recolored grey to read on light and dark backgrounds).
+  Copyright systemd, licensed CC BY-SA 4.0.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="86" height="26" viewBox="0 0 86 26" role="img" aria-label="systemd">
+  <path d="M0 0v26h10v-4H4V4h6V0zm76 0v4h6v18h-6v4h10V0z" fill="#8b8b97"/>
+  <path d="M45 13L63 3v20z" fill="#30d475"/>
+  <circle cx="30" cy="13" r="9" fill="#30d475"/>
+</svg>
