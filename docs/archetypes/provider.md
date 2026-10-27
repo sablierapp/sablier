@@ -1,6 +1,7 @@
 ---
 title: "{{ replace .File.ContentBaseName "_" " " | title }}"
 weight: 10
+since: next
 ---
 
 <!--
@@ -10,8 +11,9 @@ section only when it has nothing to say for this provider.
 
 Create a page with: hugo new content providers/<name>.md --kind provider
 
-- Put a since badge under the title and under every setting: since "vX.Y.Z"
-  (or "next" for an unreleased feature).
+- Set `since` in the front matter to the release that added the provider, and
+  mark every setting heading with it: #### Group {since="v1.4.0"}
+  (since="next" for an unreleased feature).
 - Show configuration with the example shortcode, from a runnable file under
   examples/<provider>/, never with a hand-copied snippet. Use a
   "# region <name>" / "# endregion" pair to show only part of a file.
@@ -52,7 +54,7 @@ Create a page with: hugo new content providers/<name>.md --kind provider
 <!--
 One H4 per supported setting, in this order: Enable, Group, Ready after, Ready on
 start, Running hours, Anti-affinity, Scale instead of stop, Block I/O. Each has a
-since badge, an example excerpt, the provider specifics, and a link to the feature
+since attribute, an example excerpt, the provider specifics, and a link to the feature
 page. Leave out unsupported settings and list them under Limitations.
 -->
 

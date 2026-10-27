@@ -178,3 +178,8 @@
 .dark #content li strong,
 .dark #content p b,
 .dark #content li b { color: #f4f4f5; }
+
+/* ---------- "Since" badge next to page titles and headings ---------- */
+.since-badge-link, h1 .hextra-badge.since-badge, h2 .hextra-badge.since-badge, h3 .hextra-badge.since-badge, h4 .hextra-badge.since-badge { display: inline-block; vertical-align: middle; margin-inline-start: .6rem; }
+.since-badge-link .hextra-badge.since-badge { margin-inline-start: 0; }
+.since-badge > div { font-weight: 500; letter-spacing: normal; }

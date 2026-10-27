@@ -1,11 +1,10 @@
 ---
 title: Kubernetes
 weight: 3
+since: v1.0.0
 aliases:
   - /tutorials/providers/kubernetes/
 ---
-
-{{< since "v1.0.0" >}}
 
 ## Introduction
 
@@ -85,9 +84,7 @@ Sablier scales Deployments and StatefulSets through their `scale` subresource. O
 
 {{< example file="kubernetes/statefulset.yaml" region="sablier" >}}
 
-#### CloudNativePG Clusters
-
-{{< since "v1.13.0" >}}
+#### CloudNativePG Clusters {since="v1.13.0"}
 
 Sablier starts and stops [CloudNativePG](https://cloudnative-pg.io/) `Cluster` resources with the operator's [declarative hibernation](https://cloudnative-pg.io/documentation/current/declarative_hibernation/):
 
@@ -102,9 +99,7 @@ Put the application, its database and any other dependency in the same group, so
 Resuming a hibernated cluster takes longer than a scale-up: the PVCs are reattached and PostgreSQL recovers. Make sure your reverse proxy timeouts allow for it.
 {{< /callout >}}
 
-#### OT-CONTAINER-KIT Redis instances
-
-{{< since "v1.14.0" >}}
+#### OT-CONTAINER-KIT Redis instances {since="v1.14.0"}
 
 The [OT-CONTAINER-KIT redis-operator](https://github.com/OT-CONTAINER-KIT/redis-operator) reconciles its StatefulSets back to their replica count, which would undo a scale to zero. Sablier pauses the operator around each scale:
 
@@ -129,29 +124,31 @@ A reverse proxy can target one workload by name instead of a group. Sablier name
 
 `<replicas>` is the replica count Sablier scales to on start, since v1.15.0. Prefer groups: a name ties your proxy configuration to the workload's kind and namespace.
 
-### Labels
+### Labels {since="next"}
 
-{{< since "next" >}}
+On Kubernetes, Sablier keys start with `sablierapp.dev/` instead of `sablier.`:
 
-Sablier settings use the `sablierapp.dev/` prefix on Kubernetes: replace `sablier.` in the [label reference](/reference/labels/) with `sablierapp.dev/`. For example, `sablier.idle.replicas` becomes `sablierapp.dev/idle.replicas`. This applies to Deployments, StatefulSets, CloudNativePG Clusters and Redis instances.
+{{< example file="kubernetes/group.yaml" region="sablier" >}}
 
-Set `sablierapp.dev/enable` as a **label**: Sablier discovers workloads with a label selector, which cannot match annotations. Set every other key as a label or an annotation. Kubernetes label values are limited to 63 characters of `[A-Za-z0-9._-]`, so values with commas or colons, like a list of groups or a time window, must be annotations. When a key is both a label and an annotation, the annotation wins.
+- **`enable` must be a label.** Sablier finds workloads with a label selector, and selectors can't read annotations.
+- **Values with commas or colons must be annotations.** Kubernetes doesn't allow them in labels, so a list of groups or a time window goes in an annotation.
+- **Any other key can be either.** If a key is set as both, the annotation wins.
 
-Sablier still reads the legacy `sablier.*` keys, which earlier releases require. They are deprecated on Kubernetes because a key without a prefix is [private to the user](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set) and can clash with your own conventions. When a workload has both forms, the `sablierapp.dev/` key wins over the `sablier.` key from the same source.
+The [label reference](/reference/labels/) lists every key.
+
+{{< details title="Legacy `sablier.*` keys" closed="true" >}}
+Earlier releases only read `sablier.*` keys. Sablier still reads them, but they are deprecated on Kubernetes: keys without a prefix [belong to the user](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set) and can clash with your own. If a workload has both forms, the `sablierapp.dev/` key wins.
+{{< /details >}}
 
 ### Workload settings
 
 Each excerpt below is the `metadata` of a complete manifest in [`examples/kubernetes`](https://github.com/sablierapp/sablier/tree/main/examples/kubernetes).
 
-#### Enable
-
-{{< since "v1.4.0" >}}
+#### Enable {since="v1.4.0"}
 
 `sablierapp.dev/enable: "true"` opts the workload in. It is required, must be a label, and any other value is ignored. See the [usage example](#usage-example).
 
-#### Group
-
-{{< since "v1.4.0" >}}
+#### Group {since="v1.4.0"}
 
 `sablierapp.dev/group` assigns the workload to one or more groups. A session for any of them starts it. A workload without a group is in the `default` group. A list of groups contains commas, so set it as an annotation:
 
@@ -159,9 +156,7 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 [Learn more about groups](/how-to-guides/groups/).
 
-#### Ready after
-
-{{< since "v1.13.0" >}}
+#### Ready after {since="v1.13.0"}
 
 `sablierapp.dev/ready-after` keeps reporting the workload as not ready for a settling delay after its pods first become ready. Use it when a pod passes its readiness probe before it can serve traffic.
 
@@ -169,9 +164,7 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 [Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
 
-#### Ready on start
-
-{{< since "v1.15.0" >}}
+#### Ready on start {since="v1.15.0"}
 
 `sablierapp.dev/ready-on-start: "true"` reports the workload ready as soon as Sablier sends the scale-up, without waiting for its pods.
 
@@ -179,9 +172,7 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 [Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
 
-#### Running hours
-
-{{< since "v1.13.0" >}}
+#### Running hours {since="v1.13.0"}
 
 `sablierapp.dev/running-hours` keeps the workload running during a daily window, and `sablierapp.dev/running-days` (since v1.15.0) limits the window to some weekdays. Both values contain colons or commas, so set them as annotations:
 
@@ -193,9 +184,7 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 [Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
 
-#### Anti-affinity
-
-{{< since "v1.15.0" >}}
+#### Anti-affinity {since="v1.15.0"}
 
 `sablierapp.dev/anti-affinity` lists groups the workload backs off from: Sablier keeps it idle while any of them has an active session. Set a list of groups as an annotation.
 
@@ -203,9 +192,7 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 [Learn more about anti-affinity](/how-to-guides/anti-affinity/).
 
-#### Scale instead of stop
-
-{{< since "v1.13.0" >}}
+#### Scale instead of stop {since="v1.13.0"}
 
 With `sablierapp.dev/idle.replicas` set to `1` or more, Sablier keeps the workload running when idle instead of scaling it to zero, and can throttle it. `idle.cpu` and `idle.memory` set the CPU and memory **limits** while idle; `active.replicas`, `active.cpu` and `active.memory` restore them on the next session. CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes), such as `100m`, `2`, `64Mi` or `1Gi`.
 

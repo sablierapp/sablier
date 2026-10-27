@@ -1,0 +1,14 @@
+{{- /*
+  An inline "Since vX.Y.Z" badge linking to that release, or "Next release" for
+  an unreleased feature. Rendered next to page titles (front matter `since`) and
+  headings (`#### Enable {since="v1.4.0"}`).
+
+  @context string  release tag (e.g. "v1.13.0") or "next"
+*/ -}}
+{{- if eq . "next" -}}
+  {{- partial "shortcodes/badge.html" (dict "content" "Next release" "border" true "class" "since-badge") -}}
+{{- else -}}
+  <a href="https://github.com/sablierapp/sablier/releases/tag/{{ . }}" title="Since {{ . }}" target="_blank" class="since-badge-link not-prose hx:no-underline">
+    {{- partial "shortcodes/badge.html" (dict "content" (printf "Since %s" .) "border" true "class" "since-badge") -}}
+  </a>
+{{- end -}}

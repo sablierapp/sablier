@@ -1,0 +1,14 @@
+{{- /* Overrides Hextra's render-heading (v0.12.3) to show a "Since" badge from
+  a heading attribute, e.g. `#### Enable {since="v1.4.0"}` or since="next". The
+  badge is not part of the heading text, so the anchor and the table of contents
+  are unchanged. Everything else is unchanged from the theme; re-sync it when
+  bumping Hextra. */ -}}
+<h{{ .Level }} {{- with .Attributes.class }} class="{{ . }}" {{- end }}>
+  {{- .Text | safeHTML -}}
+  {{- with .Attributes.since }}{{ partial "since-badge.html" . }}{{ end -}}
+  {{- if gt .Level 1 -}}
+    <span class="hx:absolute hx:-mt-20" id="{{ .Anchor | safeURL }}"></span>
+    <a href="#{{ .Anchor | safeURL }}" class="subheading-anchor" aria-label="{{ (T "permalinkLabel") | default "Permalink for this section" }}"></a>
+  {{- end -}}
+</h{{ .Level }}>
+{{- /* Drop trailing newlines */ -}}
