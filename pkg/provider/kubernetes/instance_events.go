@@ -25,33 +25,37 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
 
-	// Run returns once the informer has stopped and its handlers have
-	// returned, so the channels can be closed after every Run returns, as the
-	// Provider interface requires on context cancellation.
+	// The informer handlers send to an internal channel. One goroutine
+	// forwards its events until the context is done, then keeps reading and
+	// dropping them, so a handler never blocks once the reader is gone and
+	// every informer can stop. Run returns after its handlers have returned:
+	// once every Run has returned, internal is closed, and so is the stream,
+	// as the Provider interface requires on context cancellation.
+	internal := make(chan sablier.InstanceEvent)
 	var wg sync.WaitGroup
 	run := func(informer cache.SharedIndexInformer) {
 		wg.Go(func() { informer.Run(ctx.Done()) })
 	}
-	run(p.watchDeployments(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
-	run(p.watchStatefulSets(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
+	run(p.watchDeployments(ctx, internal, wantStopped, wantStarted, wantCreated, wantRemoved))
+	run(p.watchStatefulSets(ctx, internal, wantStopped, wantStarted, wantCreated, wantRemoved))
 	// Only watch CloudNativePG Clusters when the CRD is present, to avoid noisy
 	// list/watch errors on clusters that don't run CloudNativePG.
 	if p.clusterCRDInstalled(ctx) {
-		run(p.watchClusters(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
+		run(p.watchClusters(ctx, internal, wantStopped, wantStarted, wantCreated, wantRemoved))
 	}
 	go func() {
 		wg.Wait()
-		close(eventsC)
-		close(errC)
+		close(internal)
+	}()
+	go func() {
+		defer close(errC)
+		defer close(eventsC)
+		for ev := range internal {
+			select {
+			case eventsC <- ev:
+			case <-ctx.Done():
+			}
+		}
 	}()
 	return sablier.InstanceEventStream{Events: eventsC, Err: errC}
-}
-
-// emit sends ev on instance unless ctx is done, so an event handler never
-// blocks once the stream's reader is gone and the informer can stop.
-func emit(ctx context.Context, instance chan<- sablier.InstanceEvent, ev sablier.InstanceEvent) {
-	select {
-	case instance <- ev:
-	case <-ctx.Done():
-	}
 }
