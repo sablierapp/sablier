@@ -13,6 +13,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Read-only by default; each job grants itself the permissions it needs.
+permissions:
+  contents: read
+
 # Allow one concurrent deployment; don't cancel an in-progress production deploy.
 concurrency:
   group: pages
