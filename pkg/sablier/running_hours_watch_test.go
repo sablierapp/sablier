@@ -61,7 +61,7 @@ func TestWatchRunningHours_StartsInstanceInsideWindow(t *testing.T) {
 	spec := insideWindowSpec()
 
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: spec}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		Return(sablier.InstanceInfo{Name: "myapp", RunningHours: spec, Status: sablier.InstanceStatusReady}, nil)
@@ -101,7 +101,7 @@ func TestWatchRunningHours_SkipsInstanceOutsideWindow(t *testing.T) {
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: spec}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		DoAndReturn(func(_ context.Context, _ string) (sablier.InstanceInfo, error) {
@@ -148,8 +148,36 @@ func TestWatchRunningHours_SkipsNonEnabledInstance(t *testing.T) {
 }
 
 // TestWatchRunningHours_SkipsInstanceWithoutRunningHoursLabel verifies that
-// instances without the running-hours label are skipped after InstanceInspect.
+// listed instances without the running-hours label are skipped before
+// InstanceInspect is called: inspecting is an API call per instance.
 func TestWatchRunningHours_SkipsInstanceWithoutRunningHoursLabel(t *testing.T) {
+	s, _, p := setupSablier(t)
+	s.RunningHoursRefreshFrequency = 24 * time.Hour
+
+	ctx, cancel := context.WithCancel(t.Context())
+
+	listed := make(chan struct{})
+	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
+		DoAndReturn(func(_ context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+			close(listed)
+			return []sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil
+		})
+
+	// InstanceInspect must NOT be called (gomock strict mode enforces this).
+
+	startWatcher(t, s, ctx, cancel)
+
+	select {
+	case <-listed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for reconcile to run")
+	}
+}
+
+// TestWatchRunningHours_SkipsInstanceWithoutValidatedRunningHours verifies
+// that an instance listed with a running-hours label is still skipped when
+// InstanceInspect reports no validated window.
+func TestWatchRunningHours_SkipsInstanceWithoutValidatedRunningHours(t *testing.T) {
 	s, _, p := setupSablier(t)
 	s.RunningHoursRefreshFrequency = 24 * time.Hour
 
@@ -157,7 +185,7 @@ func TestWatchRunningHours_SkipsInstanceWithoutRunningHoursLabel(t *testing.T) {
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: "25:00-26:00"}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		DoAndReturn(func(_ context.Context, _ string) (sablier.InstanceInfo, error) {
@@ -210,7 +238,7 @@ func TestWatchRunningHours_HandlesInstanceInspectError(t *testing.T) {
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: insideWindowSpec()}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		DoAndReturn(func(_ context.Context, _ string) (sablier.InstanceInfo, error) {
@@ -239,7 +267,7 @@ func TestWatchRunningHours_HandlesInvalidRunningHoursLabel(t *testing.T) {
 
 	inspected := make(chan struct{})
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: "not-a-valid-spec"}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		DoAndReturn(func(_ context.Context, _ string) (sablier.InstanceInfo, error) {
@@ -277,7 +305,7 @@ func TestWatchRunningHours_TickerTriggersReconciliation(t *testing.T) {
 			if calls == 2 {
 				close(second)
 			}
-			return []sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil
+			return []sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: spec}}, nil
 		}).AnyTimes()
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
@@ -349,8 +377,8 @@ func TestWatchRunningHours_MultipleInstances_MixedWindow(t *testing.T) {
 
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
 		Return([]sablier.InstanceConfiguration{
-			{Name: "active-app", Enabled: "true"},
-			{Name: "inactive-app", Enabled: "true"},
+			{Name: "active-app", Enabled: "true", RunningHours: inSpec},
+			{Name: "inactive-app", Enabled: "true", RunningHours: outSpec},
 		}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "active-app").
@@ -394,7 +422,7 @@ func TestWatchRunningHours_InstanceRequestError(t *testing.T) {
 	spec := insideWindowSpec()
 
 	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).
-		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true"}}, nil)
+		Return([]sablier.InstanceConfiguration{{Name: "myapp", Enabled: "true", RunningHours: spec}}, nil)
 
 	p.EXPECT().InstanceInspect(gomock.Any(), "myapp").
 		Return(sablier.InstanceInfo{Name: "myapp", RunningHours: spec}, nil)

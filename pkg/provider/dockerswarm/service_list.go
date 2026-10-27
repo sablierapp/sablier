@@ -50,9 +50,10 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:    s.Spec.Name,
-		Groups:  groups,
-		Enabled: enabled,
+		Name:         s.Spec.Name,
+		Groups:       groups,
+		Enabled:      enabled,
+		RunningHours: s.Spec.Labels[sablier.LabelRunningHours],
 	}
 }
 

@@ -33,9 +33,10 @@ func unitToInstance(u Unit) sablier.InstanceConfiguration {
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:    u.status.Name,
-		Groups:  groups,
-		Enabled: enabled,
+		Name:         u.status.Name,
+		Groups:       groups,
+		Enabled:      enabled,
+		RunningHours: u.labels[sablier.LabelRunningHours],
 	}
 }
 
