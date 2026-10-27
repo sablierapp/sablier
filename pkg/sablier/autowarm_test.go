@@ -418,3 +418,66 @@ func TestWatchAndWarmExternallyStarted_EventStreamClosed(t *testing.T) {
 		t.Fatal("timed out waiting for reconciliation after stream closure")
 	}
 }
+
+// TestWatchAndWarmExternallyStarted_ReadsEventsDuringScan verifies that a
+// reconciliation scan in progress does not stop the event stream from being
+// read. Providers send events from their watchers, which stay blocked until
+// the event is read: the Kubernetes informers then queue every notification
+// they receive meanwhile.
+func TestWatchAndWarmExternallyStarted_ReadsEventsDuringScan(t *testing.T) {
+	s, sessions, p := setupSablier(t)
+	s.ExternallyStartedScanInterval = 10 * time.Millisecond
+	s.DefaultSessionDuration = 3 * time.Minute
+
+	ctx, cancel := context.WithCancel(t.Context())
+
+	eventsC := make(chan sablier.InstanceEvent) // unbuffered, like the providers
+	errC := make(chan error, 1)
+
+	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
+	}).Return(sablier.InstanceEventStream{Events: eventsC, Err: errC})
+
+	// The scan stays in InstanceList until the watcher stops.
+	scanning := make(chan struct{}, 1)
+	p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: false}).
+		DoAndReturn(func(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+			select {
+			case scanning <- struct{}{}:
+			default:
+			}
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}).AnyTimes()
+
+	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(2)
+	ready := sablier.InstanceInfo{Name: "nginx", Status: sablier.InstanceStatusReady, Enabled: "true"}
+	p.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(ready, nil)
+
+	seeded := make(chan struct{})
+	sessions.EXPECT().Put(gomock.Any(), ready, 3*time.Minute).DoAndReturn(func(_ context.Context, _ sablier.InstanceInfo, _ time.Duration) error {
+		close(seeded)
+		return nil
+	})
+
+	startAutowarmWatcher(t, s, ctx, cancel)
+
+	select {
+	case <-scanning:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for the reconciliation scan to start")
+	}
+
+	select {
+	case eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: ready}:
+	case <-time.After(5 * time.Second):
+		t.Fatal("started event not read while a reconciliation scan is in progress")
+	}
+
+	select {
+	case <-seeded:
+		// success
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for externally-started instance to be warmed")
+	}
+}

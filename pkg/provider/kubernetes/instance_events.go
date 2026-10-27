@@ -8,6 +8,13 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
+// informerResync disables the periodic resync of the instance event informers.
+// Their update handlers drop updates whose ResourceVersion did not change, so a
+// resync only produces no-op notifications: one per watched object and period.
+// client-go queues them without bound behind a handler that is blocked sending
+// an event, which happens whenever the stream reader is busy.
+const informerResync = 0
+
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
 	wantStarted := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStarted)
