@@ -44,9 +44,10 @@ func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 	}
 
 	return sablier.InstanceConfiguration{
-		Name:    strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Groups:  groups,
-		Enabled: enabled,
+		Name:         strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
+		Groups:       groups,
+		Enabled:      enabled,
+		RunningHours: c.Labels[sablier.LabelRunningHours],
 	}
 }
 

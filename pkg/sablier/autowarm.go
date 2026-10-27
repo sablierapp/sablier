@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"time"
+	"sync"
 
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/store"
@@ -89,8 +89,11 @@ func (s *Sablier) WatchAndWarmExternallyStarted(ctx context.Context) {
 	eventsC := stream.Events
 	errC := stream.Err
 
-	ticker := time.NewTicker(s.ExternallyStartedScanInterval)
-	defer ticker.Stop()
+	var scans sync.WaitGroup
+	defer scans.Wait()
+	scans.Go(func() {
+		s.scanPeriodically(ctx, s.WarmAllUnregisteredInstances, "unregistered instance warm scan failed")
+	})
 
 	for {
 		select {
@@ -121,10 +124,6 @@ func (s *Sablier) WatchAndWarmExternallyStarted(ctx context.Context) {
 			s.l.ErrorContext(ctx, "started event stream permanently lost; relying on reconciliation ticker", slog.Any("error", err))
 			errC = nil
 			eventsC = nil
-		case <-ticker.C:
-			if err := s.WarmAllUnregisteredInstances(ctx); err != nil {
-				s.l.ErrorContext(ctx, "unregistered instance warm scan failed", slog.Any("error", err))
-			}
 		}
 	}
 }

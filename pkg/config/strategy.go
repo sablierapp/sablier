@@ -54,8 +54,8 @@ type BlockingStrategy struct {
 	// Since: v1.0.0
 	DefaultTimeout time.Duration
 
-	// DefaultRefreshFrequency is how often the blocking strategy polls instance readiness
-	// while waiting for workloads to start.
+	// DefaultRefreshFrequency is the maximum interval between two readiness checks
+	// while the blocking strategy waits for workloads to start.
 	// Env: SABLIER_STRATEGY_BLOCKING_DEFAULT_REFRESH_FREQUENCY
 	// CLI: --strategy.blocking.default-refresh-frequency
 	// Default: 5s

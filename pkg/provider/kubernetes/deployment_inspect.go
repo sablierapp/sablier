@@ -16,6 +16,9 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
+	cfg := sablierConfig(d.Labels, d.Annotations)
+	desired := desiredReplicas(cfg, config)
+
 	var info sablier.InstanceInfo
 	ready := *d.Spec.Replicas != 0 && *d.Spec.Replicas == d.Status.ReadyReplicas
 	if p.readyOnFirstReplica {
@@ -27,26 +30,26 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: d.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusReady,
 		}
 	} else if *d.Spec.Replicas == 0 {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: d.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStopped,
 		}
 	} else {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: d.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStarting,
 		}
 	}
 
-	sablier.PopulateEnabledAndGroup(&info, sablierConfig(d.Labels, d.Annotations))
+	sablier.PopulateEnabledAndGroup(&info, cfg)
 
 	var image string
 	if len(d.Spec.Template.Spec.Containers) > 0 {

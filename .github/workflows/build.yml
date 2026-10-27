@@ -72,7 +72,7 @@ jobs:
       run: cat test-report.json | go tool -modfile=tools.mod go-test-report
 
     - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+      uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
       # SONAR_TOKEN is not exposed to fork PRs, so the scan only runs for branches
       # pushed to this repo (pushes to main and same-repo PRs), never for forks.
       if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork }}
@@ -86,7 +86,7 @@ jobs:
     - name: Upload HTML Test report
       if: ${{ !cancelled() }}
       id: upload
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: html-test-report
         path: test_report.html

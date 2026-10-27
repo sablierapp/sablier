@@ -182,6 +182,11 @@ type InstanceConfiguration struct {
 	Name    string
 	Groups  []string
 	Enabled string
+	// RunningHours is the raw sablier.running-hours value, empty when the
+	// label is absent. It lets callers skip instances without a keep-warm
+	// window before inspecting them; the validated window comes from
+	// InstanceInspect.
+	RunningHours string
 }
 
 // IsEnabled reports whether the listed instance opted into Sablier management

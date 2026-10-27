@@ -37,7 +37,9 @@ func (s *Sablier) reconcileRunningHours(ctx context.Context) {
 
 	now := time.Now()
 	for _, configured := range instances {
-		if !configured.IsEnabled() {
+		// Inspecting is an API call per instance: skip the instances without
+		// a keep-warm window first, they are usually most of the fleet.
+		if !configured.IsEnabled() || configured.RunningHours == "" {
 			continue
 		}
 

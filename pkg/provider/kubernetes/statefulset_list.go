@@ -45,9 +45,10 @@ func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceCon
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
 
 	return sablier.InstanceConfiguration{
-		Name:    parsed.Original,
-		Groups:  groups,
-		Enabled: enabled,
+		Name:         parsed.Original,
+		Groups:       groups,
+		Enabled:      enabled,
+		RunningHours: config[sablier.LabelRunningHours],
 	}
 }
 

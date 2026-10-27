@@ -8,8 +8,11 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
+	"github.com/sablierapp/sablier/pkg/store/inmemory"
 	"go.uber.org/mock/gomock"
 
 	"gotest.tools/v3/assert"
@@ -334,7 +337,7 @@ func TestSessionsManager_RequestReadySessionCancelledByTimeout(t *testing.T) {
 			store.EXPECT().Get(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 			store.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-			provider.EXPECT().InstanceInspect(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil)
+			provider.EXPECT().InstanceInspect(gomock.Any(), gomock.Any()).Return(sablier.InstanceInfo{Name: "apache", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
 
 			errchan := make(chan error)
 			go func() {
@@ -365,4 +368,128 @@ func TestSessionsManager_RequestReadySession(t *testing.T) {
 
 		assert.NilError(t, <-errchan)
 	})
+}
+
+// setupSablierWithInMemoryStore uses a real session store, so each poll of a
+// blocking request reads the state that the previous poll wrote.
+func setupSablierWithInMemoryStore(t *testing.T) (*sablier.Sablier, *providertest.MockProvider) {
+	t.Helper()
+	p := providertest.NewMockProvider(gomock.NewController(t))
+	p.EXPECT().InstanceDependencies(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	return sablier.New(slogt.New(t), inmemory.NewInMemory(), p), p
+}
+
+// A running instance must not wait a full refresh interval before the blocking
+// request returns. See https://github.com/sablierapp/sablier/issues/282
+func TestRequestReadySession_RunningInstanceDoesNotWaitRefreshFrequency(t *testing.T) {
+	manager, provider := setupSablierWithInMemoryStore(t)
+	manager.BlockingRefreshFrequency = 5 * time.Second
+
+	running := sablier.InstanceInfo{Name: "whoami", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+	provider.EXPECT().InstanceInspect(gomock.Any(), "whoami").Return(running, nil).AnyTimes()
+	provider.EXPECT().InstanceStart(gomock.Any(), "whoami").Return(nil)
+
+	begin := time.Now()
+	session, err := manager.RequestReadySession(t.Context(), []string{"whoami"}, time.Minute, 30*time.Second)
+	elapsed := time.Since(begin)
+
+	assert.NilError(t, err)
+	assert.Assert(t, session.IsReady())
+	assert.Assert(t, elapsed < time.Second, "blocking request took %s", elapsed)
+}
+
+func TestRequestReadySession_ChecksAtLeastEveryRefreshFrequency(t *testing.T) {
+	manager, provider := setupSablierWithInMemoryStore(t)
+	manager.BlockingRefreshFrequency = 20 * time.Millisecond
+
+	begin := time.Now()
+	readyAt := begin.Add(1550 * time.Millisecond)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "whoami").DoAndReturn(func(_ context.Context, name string) (sablier.InstanceInfo, error) {
+		if time.Now().Before(readyAt) {
+			return sablier.InstanceInfo{Name: name, CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStarting}, nil
+		}
+		return sablier.InstanceInfo{Name: name, CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}, nil
+	}).AnyTimes()
+	provider.EXPECT().InstanceStart(gomock.Any(), "whoami").Return(nil)
+
+	session, err := manager.RequestReadySession(t.Context(), []string{"whoami"}, time.Minute, 5*time.Second)
+	elapsed := time.Since(begin)
+
+	assert.NilError(t, err)
+	assert.Assert(t, session.IsReady())
+	assert.Assert(t, elapsed < 2100*time.Millisecond, "blocking request took %s", elapsed)
+}
+
+// The start is released between two backoff checks. The request must return
+// when the start completes, not at the next backoff check.
+func TestRequestReadySession_ChecksAgainWhenStartCompletes(t *testing.T) {
+	manager, provider := setupSablierWithInMemoryStore(t)
+	manager.BlockingRefreshFrequency = 5 * time.Second
+
+	release := make(chan struct{})
+	running := sablier.InstanceInfo{Name: "whoami", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+	provider.EXPECT().InstanceInspect(gomock.Any(), "whoami").Return(running, nil).AnyTimes()
+	provider.EXPECT().InstanceStart(gomock.Any(), "whoami").DoAndReturn(func(context.Context, string) error {
+		<-release
+		return nil
+	})
+
+	type result struct {
+		session *sablier.SessionState
+		err     error
+	}
+	results := make(chan result, 1)
+	go func() {
+		session, err := manager.RequestReadySession(t.Context(), []string{"whoami"}, time.Minute, 30*time.Second)
+		results <- result{session, err}
+	}()
+
+	time.Sleep(1600 * time.Millisecond)
+	close(release)
+	releasedAt := time.Now()
+
+	select {
+	case r := <-results:
+		assert.NilError(t, r.err)
+		assert.Assert(t, r.session.IsReady())
+		assert.Assert(t, time.Since(releasedAt) < 750*time.Millisecond, "blocking request returned %s after the start completed", time.Since(releasedAt))
+	case <-time.After(10 * time.Second):
+		t.Fatal("blocking request did not return")
+	}
+}
+
+// An instance that stays starting must not cause a busy loop of readiness checks.
+func TestRequestReadySession_DoesNotBusyLoop(t *testing.T) {
+	tests := []struct {
+		name             string
+		refreshFrequency time.Duration
+	}{
+		{name: "after the start completes", refreshFrequency: 5 * time.Second},
+		{name: "with a zero refresh frequency", refreshFrequency: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager, provider := setupSablierWithInMemoryStore(t)
+			manager.BlockingRefreshFrequency = tt.refreshFrequency
+
+			var mu sync.Mutex
+			inspects := 0
+			starting := sablier.InstanceInfo{Name: "whoami", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStarting}
+			provider.EXPECT().InstanceInspect(gomock.Any(), "whoami").DoAndReturn(func(context.Context, string) (sablier.InstanceInfo, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				inspects++
+				return starting, nil
+			}).AnyTimes()
+			provider.EXPECT().InstanceStart(gomock.Any(), "whoami").Return(nil)
+
+			_, err := manager.RequestReadySession(t.Context(), []string{"whoami"}, time.Minute, 450*time.Millisecond)
+
+			_, ok := errors.AsType[sablier.ErrTimeout](err)
+			assert.Assert(t, ok, "expected ErrTimeout, got %v", err)
+			mu.Lock()
+			defer mu.Unlock()
+			assert.Assert(t, inspects < 10, "InstanceInspect was called %d times in 450ms", inspects)
+		})
+	}
 }
