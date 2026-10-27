@@ -1,150 +1,79 @@
-# Systemd Provider Example (user instance)
+# Systemd Examples
 
-This example shows how to run Sablier with the **systemd provider** using the
-**user** D-Bus. Instead of managing Docker
-containers, Sablier starts and stops systemd **user** units that opt in via an
-`[X-Sablier]` section in their unit file.
-
-The demo unit just runs `sleep infinity`; it is a stand-in to showcase the
-start/stop lifecycle.
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ User session (systemd --user)                                          │
-│                                                                        │
-│   ┌──────────┐                                                         │
-│   │  curl    │                                                         │
-│   └────┬─────┘                                                         │
-│        │ blocking request (group=demo)                                 │
-│        ▼                                                               │
-│   ┌────────────┐                                                       │
-│   │  sablier   │                                                       │
-│   │ (systemd   │                                                       │
-│   │  provider) │                                                       │
-│   └─────┬──────┘                                                       │
-│         │ D-Bus                                                        │
-│         ▼                                                              │
-│   ┌────────────────────┐                                               │
-│   │  demo.service      │                                               │
-│   │  [X-Sablier]       │                                               │
-│   └────────────────────┘                                               │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-When a session is requested, Sablier asks systemd to **start** `demo.service`;
-when the session expires, it asks systemd to **stop** it again. Sablier considers the unit ready as soon as systemd reports it as `active`.
-
-## Prerequisites
-
-- A Linux host with systemd and a running user session
-  works.
-- The `sablier` binary installed at `~/.local/bin/sablier`.
-- `curl` and `jq` for the walkthrough
+Runnable unit files for the [systemd provider](https://sablierapp.dev/providers/systemd/).
+The documentation includes these files directly, so what you read is what you
+install. Every example unit runs `sleep infinity`: a stand-in for your own
+service, to show the start and stop lifecycle.
 
 ## Files
 
-| File              | Purpose                                                                |
-| ----------------- | ---------------------------------------------------------------------- |
-| `sablier.yaml`    | Sablier configuration — selects the `systemd` provider (user instance) |
-| `demo.service`    | The demo unit Sablier manages (carries `[X-Sablier]`)                  |
-| `sablier.service` | Unit to run Sablier itself via `systemd --user`                        |
-| `Makefile`        | `install` / `uninstall` / `start` / `status` / `logs` / `demo`         |
+| File | Shows |
+|---|---|
+| `sablier.yaml` | Sablier configuration for the systemd **user** instance |
+| `sablier.service` | User unit that runs Sablier (`systemctl --user`) |
+| `system/sablier.yaml` | Sablier configuration for the systemd **system** instance |
+| `system/sablier.service` | System unit that runs Sablier as root |
+| `demo.service` | A unit in the `demo` group, the starting point for every other example |
+| `group.service` | One unit in two groups |
+| `ready-after.service` | A settling delay after the unit is active |
+| `ready-on-start.service` | Ready as soon as the start job is done |
+| `running-hours.service` | Kept running on weekdays during office hours |
+| `anti-affinity.service` | Kept idle while the `streaming` group is active |
+| `scale-mode.service` | Kept running with lower CPU and memory limits instead of stopped |
+| `blkio.service` | Kept running with block I/O throttled instead of stopped |
+| `Makefile` | `download` / `install` / `add` / `uninstall` / `start` / `status` / `logs` |
 
-## Sablier settings vs. `[X-Sablier]` keys
+Lines between `# region <name>` and `# endregion` are the excerpts the
+documentation shows; systemd and Sablier read them as comments.
 
-systemd units have no labels, so Sablier reads an `[X-Sablier]` section from the
-unit file instead. The keys use systemd-style casing and drop the `sablier.`
-prefix:
+## Run it
 
-| `sablier.*` label         | `[X-Sablier]` key |
-| ------------------------- | ----------------- |
-| `sablier.enable`          | `Enable`          |
-| `sablier.group`           | `Group`           |
-| `sablier.ready-after`     | `ReadyAfter`      |
-| `sablier.idle.replicas`   | `IdleReplicas`    |
-| `sablier.idle.cpu`        | `IdleCPU`         |
-| `sablier.idle.memory`     | `IdleMemory`      |
-| `sablier.active.replicas` | `ActiveReplicas`  |
-| `sablier.active.cpu`      | `ActiveCPU`       |
-| `sablier.active.memory`   | `ActiveMemory`    |
-
-`Enable=true` is required — Sablier refuses to start or stop any unit that has not explicitly opted in.
-
-## Walkthrough
-
-### 1. Install and start everything
+The `Makefile` uses the systemd **user** instance, so you need no root access.
+You need a Linux host with systemd, a running user session, `curl` and `jq`.
 
 ```bash
-make install
+make download   # Sablier release binary to ~/.local/bin/sablier
+make install    # sablier.yaml, sablier.service and demo.service
 ```
 
-This copies `sablier.yaml` and the two unit files into `~/.config/systemd/user`,
-runs `systemctl --user daemon-reload`, enables both units, and starts
-`sablier.service`. The `demo.service` unit is **enabled but not started**. It stays stopped until it is requested.
+`make install` copies the files to `~/.config/sablier` and
+`~/.config/systemd/user`, reloads the user manager, enables both units and
+starts Sablier. It only enables `demo.service`: an enabled unit stays loaded, so
+Sablier finds it, but it does not run until a session requests it.
 
-### 2. Request a session (blocking strategy)
+Request the `demo` group through the Sablier API, as a reverse proxy plugin
+would. The request opens a one-minute session:
 
 ```bash
-make start
+make start      # curl "http://localhost:10000/api/strategies/blocking?group=demo&session_duration=1m"
+make status     # demo.service is active
 ```
 
-Sablier asks systemd to start `demo.service` and returns once it is `active`:
+One minute after the last request, Sablier stops `demo.service`
+(`make status` shows it inactive). Run `make start` again: Sablier starts it
+and answers once systemd reports it active.
 
-```json
-{
-  "session": {
-    "instances": [
-      {
-        "instance": {
-          "name": "demo.service",
-          "currentReplicas": 1,
-          "desiredReplicas": 1,
-          "status": "ready",
-          "groups": ["demo"],
-          "enabled": "true",
-          "provider": "systemd",
-          "readyAt": "2026-08-19T20:51:41.376278224+02:00",
-          "config": {
-            "enabled": true,
-            "groups": ["demo"]
-          }
-        }
-      }
-    ],
-    "status": "ready"
-  }
-}
-```
-
-### 3. Confirm the unit is running
+Install any other example unit to try that setting, then request its group:
 
 ```bash
-make status
+make add UNIT=ready-after.service
+curl "http://localhost:10000/api/strategies/blocking?group=ready-after&session_duration=1m"
 ```
 
-### 4. Watch it stop on expiry
+`make logs` follows Sablier's logs. `make uninstall` removes Sablier and every
+example unit.
 
-The session lasts 1 minute. Wait for it to expire, then check again:
+## System instance
+
+To manage system units instead, install the files from `system/` as root:
 
 ```bash
-sleep 70
-make status
+sudo install -D -m 0644 system/sablier.yaml /etc/sablier/sablier.yaml
+sudo install -m 0644 system/sablier.service /etc/systemd/system/sablier.service
+sudo install -m 0644 demo.service /etc/systemd/system/demo.service
+sudo systemctl daemon-reload
+sudo systemctl enable demo.service
+sudo systemctl enable --now sablier.service
 ```
 
-### 5. Tear down
-
-```bash
-make uninstall
-```
-
-## Notes
-
-- This example uses `provider.systemd.user-instance: true`, so Sablier talks to
-  the **user** D-Bus. To manage system-level services instead, remove that line
-  (or set it to `false`), install the units to `/etc/systemd/system`, and run the
-  same `systemctl` commands **without** `--user` (these require `root`).
-- Only units carrying `Enable=true` in an `[X-Sablier]` section can be managed.
-- Sablier only discovers units that are **loaded** into the systemd manager. An
-  enabled unit is always loaded, which is why `make install` enables
-  `demo.service` even though it is not started until a session is requested.
+This expects the Sablier binary at `/usr/local/bin/sablier`.

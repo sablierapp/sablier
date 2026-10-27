@@ -1,0 +1,24 @@
+[Unit]
+Description=Sablier example: block I/O throttled when idle
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=blkio
+# Keep the unit running when the session expires.
+IdleReplicas=1
+# Relative weight (10-1000), applied as IOWeight=.
+IdleBlkioWeight=100
+ActiveBlkioWeight=500
+# Per-device limits: path:value, comma-separated for several devices.
+IdleBlkioDeviceReadBps=/dev/sda:10m
+IdleBlkioDeviceWriteBps=/dev/sda:10m
+IdleBlkioDeviceReadIOps=/dev/sda:100
+IdleBlkioDeviceWriteIOps=/dev/sda:100
+# endregion
+
+[Install]
+WantedBy=default.target

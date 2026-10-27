@@ -1,0 +1,13 @@
+[Unit]
+Description=Sablier
+Documentation=https://sablierapp.dev/providers/systemd/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# Runs as root: starting and stopping system units needs that privilege.
+ExecStart=/usr/local/bin/sablier start --configFile /etc/sablier/sablier.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

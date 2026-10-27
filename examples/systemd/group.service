@@ -1,0 +1,14 @@
+[Unit]
+Description=Sablier example: one unit in two groups
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=team-a,team-b
+# endregion
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Sablier example: ready as soon as the start job is done
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=ready-on-start
+ReadyOnStart=true
+# endregion
+
+[Install]
+WantedBy=default.target
