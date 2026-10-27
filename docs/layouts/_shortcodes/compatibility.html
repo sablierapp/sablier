@@ -14,10 +14,11 @@
     setting: ready-after # optional: the setting's heading anchor on provider pages
     example: scale-mode  # optional: folder under examples/
 
-  Each badge links to the provider page, where the configuration lives:
+  Each badge shows the provider and links to its page, where the configuration
+  lives; the status shows in a tooltip on hover and focus:
   - supported / differs → the `setting` section (or the page itself without one)
-  - unsupported         → the provider's Limitations section, badge "not yet"
-  - impossible          → the provider's Limitations section, badge "not possible"
+  - unsupported         → dimmed, links to the provider's Limitations section
+  - impossible          → dimmed, links to the provider's Limitations section
 */ -}}
 {{- $page := .Page -}}
 {{- $compat := $page.Params.compatibility -}}
@@ -26,25 +27,23 @@
 {{- $repo := "https://github.com/sablierapp/sablier" -}}
 <div class="feature-meta">
 {{- if $compat -}}
-  <div class="compat" role="list" aria-label="Configure it on your provider">
+  <div class="compat not-prose" role="list" aria-label="Configure it on your provider">
   <span class="compat-label">Configure it on</span>
   {{- range $p := site.Data.providers -}}
     {{- $status := index $compat $p.key -}}
     {{- if $status -}}
       {{- $icon := printf "/assets/img/%s" $p.icon -}}
-      {{- $cls := printf "compat-%s" $status -}}
-      {{- $label := $p.name -}}
-      {{- $title := printf "Configure it on %s" $p.name -}}
       {{- $anchor := cond (ne $setting nil) (printf "#%v" $setting) "" -}}
-      {{- if eq $status "unsupported" -}}
-        {{- $label = printf "%s · not yet" $p.name -}}{{- $title = printf "Not yet implemented on %s" $p.name -}}{{- $anchor = "#limitations" -}}
+      {{- $tip := "Supported" -}}
+      {{- if eq $status "differs" -}}
+        {{- $tip = "Supported, configured differently" -}}
+      {{- else if eq $status "unsupported" -}}
+        {{- $tip = "Not yet implemented" -}}{{- $anchor = "#limitations" -}}
       {{- else if eq $status "impossible" -}}
-        {{- $label = printf "%s · not possible" $p.name -}}{{- $title = printf "Not possible on %s" $p.name -}}{{- $anchor = "#limitations" -}}
-      {{- else if eq $status "differs" -}}
-        {{- $title = printf "Configure it on %s (configuration differs from other providers)" $p.name -}}
+        {{- $tip = "Not possible" -}}{{- $anchor = "#limitations" -}}
       {{- end -}}
       {{- if in (slice "supported" "differs" "unsupported" "impossible") $status -}}
-        <a class="compat-badge {{ $cls }}" role="listitem" title="{{ $title }}" href="{{ printf "providers/%s/%s" $p.page $anchor | relURL }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $label }}</span></a>
+        <a class="compat-badge compat-{{ $status }}" role="listitem" data-tooltip="{{ $tip }}" aria-label="{{ $p.name }}: {{ $tip }}" href="{{ printf "providers/%s/%s" $p.page $anchor | relURL }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $p.name }}</span></a>
       {{- end -}}
     {{- end -}}
   {{- end -}}

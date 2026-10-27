@@ -25,7 +25,7 @@
   page: proxmox_lxc
 - key: systemd
   name: Systemd
-  icon: systemd.svg
+  icon: systemd-icon.svg
   page: systemd
 - key: nomad
   name: Nomad
