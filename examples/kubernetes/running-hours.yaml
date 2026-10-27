@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+# region sablier
+metadata:
+  name: office-app
+  labels:
+    app: office-app
+    sablierapp.dev/enable: "true" # must be a label: discovery uses a label selector
+  annotations:
+    sablierapp.dev/group: office-app
+    sablierapp.dev/running-hours: "09:00-18:00" # colon: must be an annotation
+    sablierapp.dev/running-days: "Mon,Tue,Wed,Thu,Fri"
+# endregion
+spec:
+  selector:
+    matchLabels:
+      app: office-app
+  template:
+    metadata:
+      labels:
+        app: office-app
+    spec:
+      containers:
+        - name: office-app
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

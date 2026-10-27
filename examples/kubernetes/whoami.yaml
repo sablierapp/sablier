@@ -1,0 +1,39 @@
+# A Deployment Sablier scales to zero when idle and back up on demand, and the
+# Service your reverse proxy routes to.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+    sablierapp.dev/enable: "true"
+    sablierapp.dev/group: whoami
+spec:
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+        - name: whoami
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          # Sablier reports the Deployment ready once its pods pass this probe.
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+spec:
+  selector:
+    app: whoami
+  ports:
+    - port: 80

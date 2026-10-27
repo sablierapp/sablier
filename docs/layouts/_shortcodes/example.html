@@ -1,0 +1,42 @@
+{{- /*
+  Includes a file from the repository's examples/ directory (mounted at
+  assets/examples), so pages show the exact files users can run. The file name
+  links to the file on GitHub.
+
+  @param file    path under examples/
+  @param region  optional: only the lines between "# region <name>" and
+                 "# endregion". Region markers are never rendered.
+
+  @example
+    {{< example file="kubernetes/whoami.yaml" >}}
+    {{< example file="kubernetes/ready-after.yaml" region="sablier" >}}
+*/ -}}
+{{- $path := .Get "file" -}}
+{{- $region := .Get "region" -}}
+{{- $file := resources.Get (printf "examples/%s" $path) -}}
+{{- if not $file -}}
+  {{- errorf "example: examples/%s not found (%s)" $path .Position -}}
+{{- end -}}
+
+{{- $out := slice -}}
+{{- $in := not $region -}}
+{{- $found := false -}}
+{{- range split (strings.TrimRight "\n" $file.Content) "\n" -}}
+  {{- $t := trim . " \t" -}}
+  {{- if and $region (eq $t (printf "# region %s" $region)) -}}
+    {{- $in = true -}}{{- $found = true -}}
+  {{- else if and $region $in (eq $t "# endregion") -}}
+    {{- $in = false -}}
+  {{- else if or (hasPrefix $t "# region ") (eq $t "# endregion") -}}
+  {{- else if $in -}}
+    {{- $out = $out | append . -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $region (not $found) -}}
+  {{- errorf "example: region %q not found in examples/%s (%s)" $region $path .Position -}}
+{{- end -}}
+
+{{- $ext := path.Ext $path | strings.TrimPrefix "." -}}
+{{- $lang := index (dict "yml" "yaml" "service" "ini" "sh" "bash") $ext | default $ext -}}
+{{- $fence := printf "```%s {filename=%q base_url=%q}\n%s\n```" $lang (printf "examples/%s" $path) "https://github.com/sablierapp/sablier/blob/main/" (delimit $out "\n") -}}
+{{- $fence | .Page.RenderString (dict "display" "block") -}}

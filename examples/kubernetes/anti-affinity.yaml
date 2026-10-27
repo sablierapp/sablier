@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+# region sablier
+metadata:
+  name: batch-worker
+  labels:
+    app: batch-worker
+    sablierapp.dev/enable: "true" # must be a label: discovery uses a label selector
+  annotations:
+    sablierapp.dev/group: batch
+    sablierapp.dev/anti-affinity: "streaming"
+# endregion
+spec:
+  selector:
+    matchLabels:
+      app: batch-worker
+  template:
+    metadata:
+      labels:
+        app: batch-worker
+    spec:
+      containers:
+        - name: batch-worker
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

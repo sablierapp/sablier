@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+# region sablier
+metadata:
+  name: fast-starter
+  labels:
+    app: fast-starter
+    sablierapp.dev/enable: "true" # must be a label: discovery uses a label selector
+  annotations:
+    sablierapp.dev/group: fast-starter
+    sablierapp.dev/ready-on-start: "true"
+# endregion
+spec:
+  selector:
+    matchLabels:
+      app: fast-starter
+  template:
+    metadata:
+      labels:
+        app: fast-starter
+    spec:
+      containers:
+        - name: fast-starter
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

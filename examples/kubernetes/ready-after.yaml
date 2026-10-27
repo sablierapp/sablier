@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+# region sablier
+metadata:
+  name: slow-starter
+  labels:
+    app: slow-starter
+    sablierapp.dev/enable: "true" # must be a label: discovery uses a label selector
+  annotations:
+    sablierapp.dev/group: slow-starter
+    sablierapp.dev/ready-after: "30s"
+# endregion
+spec:
+  selector:
+    matchLabels:
+      app: slow-starter
+  template:
+    metadata:
+      labels:
+        app: slow-starter
+    spec:
+      containers:
+        - name: slow-starter
+          image: sablierapp/mimic:v0.3.3
+          args: ["-healthy=true"]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            exec:
+              command: ["/mimic", "healthcheck"]

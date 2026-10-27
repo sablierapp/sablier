@@ -1,0 +1,25 @@
+# Helm values for the sablier/sablier chart:
+#   helm install sablier sablier/sablier --namespace sablier --create-namespace -f values.yaml
+# region config
+config:
+  provider:
+    kubernetes:
+      # "_" (the default) is kept for backward compatibility; "." or "/"
+      # reads better in instance names such as deployment.default.whoami.1
+      delimiter: "."
+  sessions:
+    default-duration: 5m
+# endregion
+
+# region timezone
+# sablierapp.dev/running-hours windows use Sablier's local time.
+extraEnv:
+  - name: TZ
+    value: Europe/Paris
+# endregion
+
+# region rbac
+rbac:
+  cnpg: false     # true to manage CloudNativePG Clusters
+  otkRedis: false # true to manage OT-CONTAINER-KIT Redis instances
+# endregion

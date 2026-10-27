@@ -1,0 +1,82 @@
+# Sablier without Helm: kubectl create namespace sablier && kubectl apply -f sablier.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sablier
+  namespace: sablier
+---
+# region rbac
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sablier
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch", "patch"] # patch sets CPU/memory limits in scale mode
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "statefulsets/scale"]
+    verbs: ["get", "update"] # scale up and down
+  # Only to manage CloudNativePG Clusters.
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "watch", "patch"] # patch toggles hibernation
+  # Only to manage OT-CONTAINER-KIT Redis instances.
+  - apiGroups: ["redis.redis.opstreelabs.in"]
+    resources: ["redis"]
+    verbs: ["get", "patch"] # patch toggles skip-reconcile
+# endregion
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sablier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sablier
+subjects:
+  - kind: ServiceAccount
+    name: sablier
+    namespace: sablier
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sablier
+  namespace: sablier
+spec:
+  selector:
+    matchLabels:
+      app: sablier
+  template:
+    metadata:
+      labels:
+        app: sablier
+    spec:
+      serviceAccountName: sablier
+      containers:
+        - name: sablier
+          image: sablierapp/sablier:1.18.0 # x-release-please-version
+          # region args
+          args:
+            - start
+            - --provider.name=kubernetes
+          # endregion
+          ports:
+            - containerPort: 10000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 10000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sablier
+  namespace: sablier
+spec:
+  selector:
+    app: sablier
+  ports:
+    - port: 10000
