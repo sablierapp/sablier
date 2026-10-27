@@ -10,11 +10,30 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.InstanceInfo, error) {
+func (p *Provider) InstanceInspect(ctx context.Context, name string) (info sablier.InstanceInfo, err error) {
 	ref, err := p.resolve(ctx, name)
 	if err != nil {
 		return sablier.InstanceInfo{}, fmt.Errorf("cannot resolve instance %q: %w", name, err)
 	}
+
+	// Report the sablier tag on every return path. The pending-task paths do not
+	// read the container, so they read its tags here.
+	var tags []string
+	tagsRead := false
+	defer func() {
+		if err != nil {
+			return
+		}
+		if !tagsRead {
+			ct, ctErr := p.getContainer(ctx, ref)
+			if ctErr != nil {
+				p.l.WarnContext(ctx, "cannot read container tags", slog.String("name", ref.name), slog.Any("error", ctErr))
+				return
+			}
+			tags = containerTags(ct)
+		}
+		setEnabledAndGroups(&info, tags)
+	}()
 
 	// Check if there is a pending start task for this instance.
 	p.mu.Lock()
@@ -51,6 +70,7 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	if err != nil {
 		return sablier.InstanceInfo{}, err
 	}
+	tags, tagsRead = containerTags(ct), true
 
 	p.l.DebugContext(ctx, "container inspected",
 		slog.String("name", ref.name),
