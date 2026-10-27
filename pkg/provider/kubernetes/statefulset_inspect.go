@@ -60,6 +60,7 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      "statefulset",
+		Name:      config.Name,
 		Image:     image,
 		Labels:    labels,
 	}

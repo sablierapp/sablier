@@ -63,6 +63,7 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 	info.Kubernetes = &sablier.KubernetesWorkloadInfo{
 		Namespace: config.Namespace,
 		Kind:      "deployment",
+		Name:      config.Name,
 		Image:     image,
 		Labels:    labels,
 	}

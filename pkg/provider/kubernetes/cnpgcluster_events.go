@@ -129,6 +129,7 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 				Kubernetes: &sablier.KubernetesWorkloadInfo{
 					Namespace: u.GetNamespace(),
 					Kind:      KindCNPGCluster,
+					Name:      parsed.Name,
 					Image:     image,
 					Labels:    labels,
 				},

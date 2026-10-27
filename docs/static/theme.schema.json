@@ -83,7 +83,7 @@
         },
         "Kubernetes": {
           "$ref": "#/$defs/KubernetesWorkloadInfo",
-          "description": "Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Image .Kubernetes.Labels"
+          "description": "Kubernetes-specific workload metadata (only set when Provider is kubernetes). Fields are accessible in templates as .Kubernetes.Namespace .Kubernetes.Kind .Kubernetes.Name .Kubernetes.Image .Kubernetes.Labels"
         },
         "Podman": {
           "$ref": "#/$defs/PodmanContainerInfo",
@@ -116,6 +116,13 @@
             "Deployment"
           ]
         },
+        "name": {
+          "type": "string",
+          "description": "Workload name without namespace or kind (template access: .Kubernetes.Name)",
+          "examples": [
+            "my-app"
+          ]
+        },
         "image": {
           "type": "string",
           "description": "Workload image (template access: .Kubernetes.Image)",
@@ -136,6 +143,7 @@
       "required": [
         "namespace",
         "kind",
+        "name",
         "image"
       ]
     },

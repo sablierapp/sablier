@@ -18,6 +18,7 @@ type SwarmServiceInfo struct {
 type KubernetesWorkloadInfo struct {
 	Namespace string            `json:"namespace" jsonschema:"description=Kubernetes namespace (template access: .Kubernetes.Namespace),example=default"`
 	Kind      string            `json:"kind" jsonschema:"description=Workload kind (template access: .Kubernetes.Kind),example=Deployment"`
+	Name      string            `json:"name" jsonschema:"description=Workload name without namespace or kind (template access: .Kubernetes.Name),example=my-app"`
 	Image     string            `json:"image" jsonschema:"description=Workload image (template access: .Kubernetes.Image),example=nginx:latest"`
 	Labels    map[string]string `json:"labels,omitempty" jsonschema:"description=Workload labels (template access: .Kubernetes.Labels)"`
 }

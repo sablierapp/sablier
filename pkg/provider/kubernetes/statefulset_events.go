@@ -100,6 +100,7 @@ func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- 
 				Kubernetes: &sablier.KubernetesWorkloadInfo{
 					Namespace: ss.Namespace,
 					Kind:      "statefulset",
+					Name:      parsed.Name,
 					Image:     image,
 					Labels:    ss.Labels,
 				},
