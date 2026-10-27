@@ -40,7 +40,7 @@ sequenceDiagram
     Proxy-->>User: Content
 ```
 
-The waiting page is rendered from a [theme](/how-to-guides/loading-strategies/customize-theme/); use a built-in one or provide your own. To set up the dynamic strategy on a route, see [Show a waiting page](/how-to-guides/loading-strategies/show-waiting-page/).
+The waiting page is rendered from a [theme](/features/themes/); use a built-in one or provide your own. To set up the dynamic strategy on a route, see [Show a waiting page](/features/waiting-page/).
 
 ## Poke strategy
 
@@ -52,7 +52,7 @@ This strategy is useful for background services whose startup the caller does no
 
 Instances with the `sablier.ready-on-start=true` label are treated as ready as soon as the start is dispatched, even with the dynamic or blocking strategy. See the [Label reference](/reference/labels/#label-sablier-ready-on-start) for details.
 
-To set up the poke strategy on a route, see [Start without waiting](/how-to-guides/loading-strategies/start-without-waiting/).
+To set up the poke strategy on a route, see [Start without waiting](/features/start-without-waiting/).
 
 ```mermaid
 sequenceDiagram
@@ -92,7 +92,7 @@ sequenceDiagram
     Proxy-->>User: Content
 ```
 
-To set up the blocking strategy on a route, see [Block until ready](/how-to-guides/loading-strategies/block-until-ready/).
+To set up the blocking strategy on a route, see [Block until ready](/features/wait-until-ready/).
 
 ## Choosing a strategy
 

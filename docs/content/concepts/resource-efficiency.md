@@ -89,6 +89,6 @@ negligible compared to the resources saved by even a single stopped container.
 
 ## See also
 
-- [Metrics reference](/how-to-guides/advanced/observability/metrics/)
+- [Metrics reference](/features/metrics/)
 - [Performance benchmarks](/reference/performance/)
-- [Tracing](/how-to-guides/advanced/observability/tracing/)
+- [Tracing](/features/tracing/)

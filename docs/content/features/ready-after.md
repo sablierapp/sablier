@@ -1,9 +1,8 @@
 ---
-title: Delay readiness
-description: Delay when Sablier reports an instance as ready.
-weight: 134
-aliases:
-  - /features/ready-after/
+title: "Ready after"
+description: "Wait a little longer after an instance reports ready."
+icon: clock
+weight: 70
 compatibility:
   docker: supported
   swarm: supported
@@ -14,6 +13,8 @@ compatibility:
   nomad: supported
   ecs: supported
 setting: ready-after
+aliases:
+  - /how-to-guides/readiness/ready-after/
 ---
 
 {{< compatibility >}}

@@ -1,9 +1,8 @@
 ---
-title: Instance Groups
-description: Make one instance belong to several groups at once.
-weight: 138
-aliases:
-  - /features/multiple-groups/
+title: "Groups"
+description: "Start several instances together, and put one instance in several groups."
+icon: user-group
+weight: 50
 compatibility:
   docker: supported
   swarm: supported
@@ -14,6 +13,9 @@ compatibility:
   nomad: supported
   ecs: differs
 setting: group
+aliases:
+  - /features/multiple-groups/
+  - /how-to-guides/groups/
 ---
 
 {{< compatibility >}}

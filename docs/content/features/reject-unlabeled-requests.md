@@ -1,6 +1,10 @@
 ---
-title: Reject unlabeled requests
-weight: 164
+title: "Reject unlabeled requests"
+description: "Only serve requests for instances that opted in."
+icon: shield-exclamation
+weight: 170
+aliases:
+  - /how-to-guides/guardrails/reject-unlabeled-requests/
 ---
 
 Only serve requests for containers that carry the `sablier.enable=true` label, and reject requests targeting anything else.

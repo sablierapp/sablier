@@ -1,9 +1,8 @@
 ---
-title: Keep instances warm on a schedule
-description: Keep an instance warm during specific hours of the day.
-weight: 130
-aliases:
-  - /features/running-hours/
+title: "Running hours"
+description: "Keep an instance running during set hours of the day."
+icon: calendar
+weight: 100
 compatibility:
   docker: supported
   swarm: supported
@@ -14,6 +13,8 @@ compatibility:
   nomad: supported
   ecs: differs
 setting: running-hours
+aliases:
+  - /how-to-guides/lifecycle/running-hours/
 ---
 
 {{< compatibility >}}

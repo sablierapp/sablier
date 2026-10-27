@@ -62,7 +62,7 @@ aws cloudformation deploy --stack-name whoami --template-file whoami.yaml \
 Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of `http://whoami`. On the first request, Sablier sets the [desired count](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_definition_parameters.html#sd-desiredcount) to `1` and holds the request, or shows a waiting page, until the task is running. When the session expires, Sablier sets it back to `0`.
 
 {{< callout type="info" >}}
-Sablier sets the desired count of opted-in services to zero when it starts. A service you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier sets the desired count of opted-in services to zero when it starts. A service you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -131,7 +131,7 @@ Separate the groups with spaces, because a [tag value](https://docs.aws.amazon.c
 
 {{< example file="ecs/group.yaml" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="next"}
 
@@ -139,7 +139,7 @@ Separate the groups with spaces, because a [tag value](https://docs.aws.amazon.c
 
 {{< example file="ecs/ready-after.yaml" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="next"}
 
@@ -147,7 +147,7 @@ Separate the groups with spaces, because a [tag value](https://docs.aws.amazon.c
 
 {{< example file="ecs/ready-on-start.yaml" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="next"}
 
@@ -160,7 +160,7 @@ The window uses Sablier's local time. Set the time zone with the `TZ` [environme
 
 {{< example file="ecs/sablier.yaml" region="timezone" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="next"}
 
@@ -168,7 +168,7 @@ The window uses Sablier's local time. Set the time zone with the `TZ` [environme
 
 {{< example file="ecs/anti-affinity.yaml" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="next"}
 
@@ -181,7 +181,7 @@ Keep the service running when idle instead of scaling it to zero:
 
 On ECS, only the task count changes. The CPU and memory of a task belong to its [task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html), so Sablier ignores the CPU and memory tags and logs a warning.
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 ### Readiness
 
@@ -200,7 +200,7 @@ A rollout fails when the [deployment circuit breaker](https://docs.aws.amazon.co
 
 - One Sablier manages one [cluster](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/clusters.html). Run one Sablier per cluster.
 - Sablier ignores services that use the `DAEMON` [scheduling strategy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_definition_parameters.html#sd-schedulingstrategy): they have no desired count to scale.
-- [CPU](/how-to-guides/scaling-resources/scale-cpu/), [memory](/how-to-guides/scaling-resources/scale-memory/) and [block I/O](/how-to-guides/scaling-resources/scale-blkio/) throttling are not possible on ECS: they belong to the [task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html).
+- [CPU](/features/cpu-limits/), [memory](/features/memory-limits/) and [block I/O](/features/disk-io-limits/) throttling are not possible on ECS: they belong to the [task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html).
 - ECS publishes service changes to [EventBridge](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_cwe_events.html) only. Sablier polls the cluster every 10 seconds to detect services started, stopped, tagged or removed outside Sablier.
 
 ## Examples

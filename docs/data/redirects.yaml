@@ -18,11 +18,11 @@ redirects:
   - from: /strategies
     to: /concepts/strategies/
   - from: /themes
-    to: /how-to-guides/loading-strategies/customize-theme/
+    to: /features/themes/
   - from: /webhooks
-    to: /how-to-guides/webhooks/
+    to: /features/webhooks/
   - from: /tracing
-    to: /how-to-guides/advanced/observability/tracing/
+    to: /features/tracing/
   - from: /performance
     to: /reference/performance/
   - from: /resource-efficiency
@@ -71,18 +71,18 @@ redirects:
   # Keys include the old docsify "?id=" anchor and are matched exactly by the
   # redirect shim before the generic path lookup.
   - from: /configuration?id=multiple-groups-per-instance
-    to: /how-to-guides/groups/
+    to: /features/groups/
   - from: /configuration?id=sablierready-after
-    to: /how-to-guides/readiness/ready-after/
+    to: /features/ready-after/
   - from: /configuration?id=sablierready-on-start
-    to: /how-to-guides/readiness/ready-on-start/
+    to: /features/ready-on-start/
   - from: /configuration?id=sablierrunning-hours
-    to: /how-to-guides/lifecycle/running-hours/
+    to: /features/running-hours/
   - from: /configuration?id=sablierrunning-days
-    to: /how-to-guides/lifecycle/running-hours/
+    to: /features/running-hours/
   - from: /configuration?id=scale-mode
-    to: /how-to-guides/scaling-resources/scale-mode/
+    to: /features/scale-mode/
   - from: /configuration?id=block-io-blkio-throttling
-    to: /how-to-guides/scaling-resources/scale-blkio/
+    to: /features/disk-io-limits/
   - from: /configuration?id=anti-affinity
-    to: /how-to-guides/anti-affinity/
+    to: /features/anti-affinity/

@@ -143,7 +143,7 @@ Example: `"team-a,team-b"`
 Kubernetes must set a multi-value list as an **annotation**. Proxmox LXC uses one `sablier-group-<name>` tag per group. Nomad reads the job or task group `meta` block. An ECS tag value cannot contain a comma, so ECS separates the groups with a space.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/groups/)
+[Learn more](/features/groups/)
 
 ### `sablier.ready-after` {#label-sablier-ready-after}
 
@@ -153,7 +153,7 @@ The minimum settling delay after the instance first reports ready before Sablier
 
 Example: `"30s"`
 
-[Learn more](/how-to-guides/readiness/ready-after/)
+[Learn more](/features/ready-after/)
 
 ### `sablier.ready-on-start` {#label-sablier-ready-on-start}
 
@@ -163,7 +163,7 @@ Treats the instance as ready as soon as the start is dispatched, skipping the he
 
 Example: `"true"`
 
-[Learn more](/how-to-guides/readiness/ready-on-start/)
+[Learn more](/features/ready-on-start/)
 
 ### `sablier.running-hours` {#label-sablier-running-hours}
 
@@ -177,7 +177,7 @@ Example: `"09:00-18:00"`
 Kubernetes must set the colon value as an **annotation**.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/lifecycle/running-hours/)
+[Learn more](/features/running-hours/)
 
 ### `sablier.running-days` {#label-sablier-running-days}
 
@@ -191,7 +191,7 @@ Example: `"Mon,Tue,Wed,Thu,Fri"`
 Kubernetes must set the comma value as an **annotation**. ECS separates the days with a space.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/lifecycle/running-hours/)
+[Learn more](/features/running-hours/)
 
 ### `sablier.anti-affinity` {#label-sablier-anti-affinity}
 
@@ -205,7 +205,7 @@ Example: `"streaming"`
 Kubernetes must set a multi-value list as an **annotation**. ECS separates the groups with a space. Not supported on Proxmox LXC.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/anti-affinity/)
+[Learn more](/features/anti-affinity/)
 
 ### `sablier.idle.replicas` {#label-sablier-idle-replicas}
 
@@ -219,7 +219,7 @@ Example: `"1"`
 Not supported on Proxmox LXC.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-mode/)
+[Learn more](/features/scale-mode/)
 
 ### `sablier.idle.cpu` {#label-sablier-idle-cpu}
 
@@ -233,7 +233,7 @@ Example: `"0.1"`
 Kubernetes uses a resource quantity (e.g. `100m`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-cpu/)
+[Learn more](/features/cpu-limits/)
 
 ### `sablier.idle.memory` {#label-sablier-idle-memory}
 
@@ -247,7 +247,7 @@ Example: `"128m"`
 Kubernetes uses a resource quantity (e.g. `128Mi`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-memory/)
+[Learn more](/features/memory-limits/)
 
 ### `sablier.active.replicas` {#label-sablier-active-replicas}
 
@@ -261,7 +261,7 @@ Example: `"2"`
 Not supported on Proxmox LXC.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-mode/)
+[Learn more](/features/scale-mode/)
 
 ### `sablier.active.cpu` {#label-sablier-active-cpu}
 
@@ -275,7 +275,7 @@ Example: `"2.0"`
 Kubernetes uses a resource quantity (e.g. `2000m`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-cpu/)
+[Learn more](/features/cpu-limits/)
 
 ### `sablier.active.memory` {#label-sablier-active-memory}
 
@@ -289,7 +289,7 @@ Example: `"512m"`
 Kubernetes uses a resource quantity (e.g. `512Mi`). Not supported on Proxmox LXC, Nomad or ECS.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-memory/)
+[Learn more](/features/memory-limits/)
 
 ### `sablier.idle.blkio-weight` {#label-sablier-idle-blkio-weight}
 
@@ -303,7 +303,7 @@ Example: `"100"`
 Docker and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-weight` {#label-sablier-active-blkio-weight}
 
@@ -317,7 +317,7 @@ Example: `"500"`
 Docker and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.idle.blkio-weight-device` {#label-sablier-idle-blkio-weight-device}
 
@@ -331,7 +331,7 @@ Example: `"/dev/sda:100"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-weight-device` {#label-sablier-active-blkio-weight-device}
 
@@ -345,7 +345,7 @@ Example: `"/dev/sda:500"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.idle.blkio-device-read-bps` {#label-sablier-idle-blkio-device-read-bps}
 
@@ -359,7 +359,7 @@ Example: `"/dev/sda:10m"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-device-read-bps` {#label-sablier-active-blkio-device-read-bps}
 
@@ -373,7 +373,7 @@ Example: `"/dev/sda:100m"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.idle.blkio-device-write-bps` {#label-sablier-idle-blkio-device-write-bps}
 
@@ -387,7 +387,7 @@ Example: `"/dev/sda:10m"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-device-write-bps` {#label-sablier-active-blkio-device-write-bps}
 
@@ -401,7 +401,7 @@ Example: `"/dev/sda:100m"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.idle.blkio-device-read-iops` {#label-sablier-idle-blkio-device-read-iops}
 
@@ -415,7 +415,7 @@ Example: `"/dev/sda:100"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-device-read-iops` {#label-sablier-active-blkio-device-read-iops}
 
@@ -429,7 +429,7 @@ Example: `"/dev/sda:1000"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.idle.blkio-device-write-iops` {#label-sablier-idle-blkio-device-write-iops}
 
@@ -443,7 +443,7 @@ Example: `"/dev/sda:100"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 
 ### `sablier.active.blkio-device-write-iops` {#label-sablier-active-blkio-device-write-iops}
 
@@ -457,5 +457,5 @@ Example: `"/dev/sda:1000"`
 Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
-[Learn more](/how-to-guides/scaling-resources/scale-blkio/)
+[Learn more](/features/disk-io-limits/)
 

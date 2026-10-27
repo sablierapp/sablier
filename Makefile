@@ -35,10 +35,10 @@ check-openapi:
 	@go run ./cmd/openapigen | diff - docs/static/openapi.json || (echo "docs/static/openapi.json is out of date. Run 'make openapi' to regenerate."; exit 1)
 
 metrics-docs:
-	go run ./cmd/metricsgen -out docs/content/how-to-guides/advanced/observability/metrics.md
+	go run ./cmd/metricsgen -out docs/content/features/metrics.md
 
 check-metrics-docs:
-	@go run ./cmd/metricsgen | diff - docs/content/how-to-guides/advanced/observability/metrics.md || (echo "docs/content/how-to-guides/advanced/observability/metrics.md is out of date. Run 'make metrics-docs' to regenerate."; exit 1)
+	@go run ./cmd/metricsgen | diff - docs/content/features/metrics.md || (echo "docs/content/features/metrics.md is out of date. Run 'make metrics-docs' to regenerate."; exit 1)
 
 # Regenerate every committed generated file: the CLI, labels and metrics
 # reference docs, the theme JSON schema, and the OpenAPI spec.

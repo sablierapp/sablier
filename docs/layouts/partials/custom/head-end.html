@@ -57,6 +57,24 @@
 </script>
 
 {{- /*
+  Sidebar icons for the feature pages, from their `icon` front matter (a Hextra
+  icon name). Each icon is drawn as a CSS mask filled with the text color, so it
+  follows the sidebar's normal, hover and active colors in both themes. A hanging
+  indent keeps wrapped titles aligned with the text, not the icon.
+*/ -}}
+{{- with site.GetPage "/features" -}}
+<style>
+  {{- range $p := .RegularPages -}}
+    {{- with $svg := index site.Data.icons ($p.Params.icon | default "") -}}
+      {{- $mask := printf "url(\"data:image/svg+xml;base64,%s\")" (base64Encode $svg) }}
+  {{ printf ".hextra-sidebar-item > a[href$=%q] > span::before" $p.RelPermalink | safeCSS }} { content: ""; display: inline-block; width: 1.1em; height: 1.1em; margin-right: 0.45em; vertical-align: -0.2em; background-color: currentColor; -webkit-mask: {{ $mask | safeCSS }} center / contain no-repeat; mask: {{ $mask | safeCSS }} center / contain no-repeat; }
+  {{ printf ".hextra-sidebar-item > a[href$=%q] > span" $p.RelPermalink | safeCSS }} { padding-inline-start: 1.55em; text-indent: -1.55em; }
+    {{- end -}}
+  {{- end }}
+</style>
+{{- end }}
+
+{{- /*
   Clicking a sidebar section's name toggles the section in place, like its
   chevron, instead of loading the section's index page (most of them only list
   their children). Modifier and middle clicks still open the page.

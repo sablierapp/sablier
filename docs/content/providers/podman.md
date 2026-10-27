@@ -75,7 +75,7 @@ Opt a container in with the `sablier.enable` [label](https://docs.podman.io/en/l
 Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` [container](https://docs.podman.io/en/latest/markdown/podman-container.1.html). On the first request, Sablier starts the container and holds the request, or shows a waiting page, until its [health check](https://docs.podman.io/en/latest/markdown/podman-run.1.html#health-cmd-command-command-arg1) passes. When the session expires, Sablier stops it.
 
 {{< callout type="info" >}}
-Sablier stops opted-in containers when it starts. A container you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier stops opted-in containers when it starts. A container you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -88,7 +88,7 @@ Sablier stops opted-in containers when it starts. A container you start afterwar
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). The `--provider.docker.*` options do not apply.
 
-With [tracing](/how-to-guides/advanced/observability/tracing/) enabled, every call to the Podman API is a child span of the request that triggered it.
+With [tracing](/features/tracing/) enabled, every call to the Podman API is a child span of the request that triggered it.
 
 {{< details title="Other addresses" closed="true" >}}
 Sablier connects to `--provider.podman.uri` only: it ignores the `CONTAINER_HOST` and `DOCKER_HOST` environment variables. `ssh://` addresses are not supported.
@@ -151,7 +151,7 @@ Each excerpt below is the `labels` of a complete Compose file in [`examples/podm
 
 {{< example file="podman/group.yml" region="sablier" >}}
 
-A list of groups needs v1.13.0 or later. [Learn more about groups](/how-to-guides/groups/).
+A list of groups needs v1.13.0 or later. [Learn more about groups](/features/groups/).
 
 #### Ready after {since="v1.13.0"}
 
@@ -159,7 +159,7 @@ A list of groups needs v1.13.0 or later. [Learn more about groups](/how-to-guide
 
 {{< example file="podman/ready-after.yml" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="v1.15.0"}
 
@@ -167,7 +167,7 @@ A list of groups needs v1.13.0 or later. [Learn more about groups](/how-to-guide
 
 {{< example file="podman/ready-on-start.yml" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="v1.13.0"}
 
@@ -180,7 +180,7 @@ The window uses Sablier's local time, which is UTC in the Sablier image. Set the
 
 {{< example file="podman/running-hours.yml" region="timezone" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="v1.15.0"}
 
@@ -188,7 +188,7 @@ The window uses Sablier's local time, which is UTC in the Sablier image. Set the
 
 {{< example file="podman/anti-affinity.yml" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="v1.13.0"}
 
@@ -205,7 +205,7 @@ Memory values use the suffixes `b`, `k`, `m` and `g`, such as `64m` or `1g`. Sab
 - **Memory limits need Podman 5.1 or later.** Older versions lack the Docker-compatible update endpoint that Sablier calls.
 - **Rootless Podman may refuse to change limits.** It depends on the host's cgroup setup; see [`podman update`](https://docs.podman.io/en/latest/markdown/podman-update.1.html#cpu-period-limit).
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 ### Readiness
 
@@ -226,9 +226,9 @@ Podman schedules health checks with systemd timers. On a host without systemd, t
 
 - **Sablier always stops containers.** The pause strategy, [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy), is Docker-only.
 - **The restart policy is not honored.** [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) is Docker-only: a container that exits with code `0` is reported stopped, never completed.
-- **podman-compose does not record `depends_on`.** Sablier reads [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) from the `com.docker.compose.depends_on` label, which Docker Compose writes and [podman-compose](https://github.com/containers/podman-compose) does not. Put the dependencies in the same group instead. See [starting dependencies together](/how-to-guides/startup-dependencies/depends-on/).
+- **podman-compose does not record `depends_on`.** Sablier reads [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) from the `com.docker.compose.depends_on` label, which Docker Compose writes and [podman-compose](https://github.com/containers/podman-compose) does not. Put the dependencies in the same group instead. See [starting dependencies together](/features/startup-dependencies/depends-on/).
 - **CPU throttling has no effect.** Podman's Docker-compatible API drops the CPU limit that Sablier sends, so `sablier.idle.cpu` and `sablier.active.cpu` are ignored.
-- [Block I/O throttling](/how-to-guides/scaling-resources/scale-blkio/) is not available on Podman.
+- [Block I/O throttling](/features/disk-io-limits/) is not available on Podman.
 
 ## Examples
 

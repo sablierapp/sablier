@@ -1,6 +1,10 @@
 ---
-title: Warm externally-started instances
-weight: 162
+title: "Keep external starts warm"
+description: "Open a session for managed instances that start without a request."
+icon: fire
+weight: 160
+aliases:
+  - /how-to-guides/lifecycle/auto-warm-externally-started/
 ---
 
 Seed a session for managed instances that start without Sablier having initiated them, keeping them running instead of stopping them on arrival.
@@ -28,7 +32,7 @@ services:
 
 An externally-started managed container receives a seeded session and keeps running; once the session expires without traffic, Sablier stops it. A container with no Sablier labels is ignored.
 
-This is the non-destructive counterpart to [stopping externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/). A container labelled `sablier.enable=true` can start without Sablier having initiated it, for example through `docker compose up`, a deployment tool, or a manual `docker start`. When that happens, Sablier seeds a session for it using the default session duration instead of stopping it. The container keeps running until that session expires without traffic, then hibernates through the normal scale-to-zero lifecycle.
+This is the non-destructive counterpart to [stopping externally-started instances](/features/stop-external-starts/). A container labelled `sablier.enable=true` can start without Sablier having initiated it, for example through `docker compose up`, a deployment tool, or a manual `docker start`. When that happens, Sablier seeds a session for it using the default session duration instead of stopping it. The container keeps running until that session expires without traffic, then hibernates through the normal scale-to-zero lifecycle.
 
 ```mermaid
 flowchart LR

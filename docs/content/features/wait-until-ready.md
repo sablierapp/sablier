@@ -1,6 +1,10 @@
 ---
-title: Block until ready
-weight: 112
+title: "Wait until ready"
+description: "Hold the request until your instances are ready, with no waiting page."
+icon: pause
+weight: 30
+aliases:
+  - /how-to-guides/loading-strategies/block-until-ready/
 ---
 
 The **blocking** strategy holds the incoming request until your instances are ready, then forwards it.

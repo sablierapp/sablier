@@ -1,9 +1,8 @@
 ---
-title: Scale block I/O
-description: Throttle a workload's block I/O while idle on Docker or systemd.
-weight: 124
-aliases:
-  - /features/scale-mode/block-io/
+title: "Disk I/O limits"
+description: "Throttle an instance's disk I/O while it is idle."
+icon: database
+weight: 140
 compatibility:
   docker: supported
   swarm: unsupported
@@ -14,6 +13,9 @@ compatibility:
   nomad: impossible
   ecs: impossible
 setting: block-io
+aliases:
+  - /features/scale-mode/block-io/
+  - /how-to-guides/scaling-resources/scale-blkio/
 ---
 
 {{< compatibility >}}
@@ -41,6 +43,6 @@ flowchart LR
 - **Rates use byte units in powers of 1024:** `10m` is 10 MiB/s, `100k` is 100 KiB/s.
 - **IOPS values are plain integers.**
 - **Per-device values are `path:value` pairs**, separated by commas.
-- **All of them need `idle.replicas` at `1` or more**, and you should set the `active` value of every limit you set on `idle`. See [Scale instead of stop](/how-to-guides/scaling-resources/scale-mode/).
+- **All of them need `idle.replicas` at `1` or more**, and you should set the `active` value of every limit you set on `idle`. See [Scale instead of stop](/features/scale-mode/).
 
 Your provider page shows how the limits are applied, and their requirements.
