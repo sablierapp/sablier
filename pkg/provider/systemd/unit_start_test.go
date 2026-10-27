@@ -106,3 +106,15 @@ func TestSystemdProvider_InstanceStart_LoadsUnloadedUnit(t *testing.T) {
 	assert.NilError(t, p.InstanceStart(t.Context(), "web.service"))
 	assert.DeepEqual(t, m.Started(), []string{"web.service"})
 }
+
+// --provider.systemd.unit-patterns restricts the units Sablier deals with, also
+// when a request names a unit directly. See #1184.
+func TestSystemdProvider_InstanceStart_RejectsUnitOutsidePatterns(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{{name: "db.service", fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n")}})
+	p := newProviderForTest(t, m, time.Second, nil)
+	p.unitPatterns = []string{"web-*.service"}
+
+	err := p.InstanceStart(t.Context(), "db.service")
+	assert.ErrorContains(t, err, "does not match --provider.systemd.unit-patterns")
+	assert.Equal(t, len(m.Started()), 0)
+}
