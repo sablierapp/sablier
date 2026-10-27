@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/theme"
 	"github.com/sablierapp/sablier/pkg/version"
 	"github.com/stretchr/testify/assert"
@@ -312,4 +313,26 @@ func TestThemes_RenderServesAtLeastOneSecondOfRefreshInterval(t *testing.T) {
 				fmt.Sprintf(`<meta http-equiv="refresh" content="%s" />`, tt.want))
 		})
 	}
+}
+
+func TestThemes_RenderKubernetesWorkloadName(t *testing.T) {
+	const customTheme = `{{ range .InstanceStates }}{{ if .Kubernetes }}[{{ .Kubernetes.Namespace }}|{{ .Kubernetes.Kind }}|{{ .Kubernetes.Name }}]{{ else }}[{{ .Name }}]{{ end }}{{ end }}`
+	themes, err := theme.NewWithCustomThemes(fstest.MapFS{
+		"k8s-name.html": &fstest.MapFile{Data: []byte(customTheme)},
+	}, slogt.New(t))
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = themes.Render("k8s-name", theme.Options{
+		ShowDetails: true,
+		InstanceStates: []theme.Instance{
+			{
+				Name:       "deployment_ns_app_1",
+				Kubernetes: &sablier.KubernetesWorkloadInfo{Namespace: "ns", Kind: "deployment", Name: "app"},
+			},
+			StartingInstanceInfo, // Kubernetes is nil
+		},
+	}, &buf)
+	require.NoError(t, err)
+	assert.Equal(t, "[ns|deployment|app][starting-instance]", buf.String())
 }

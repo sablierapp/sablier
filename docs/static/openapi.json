@@ -275,6 +275,9 @@
             },
             "type": "object"
           },
+          "name": {
+            "type": "string"
+          },
           "namespace": {
             "type": "string"
           }
