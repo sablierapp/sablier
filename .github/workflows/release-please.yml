@@ -11,10 +11,10 @@ permissions:
 
 jobs:
   release:
+    # GITHUB_TOKEN only checks out the code: Release Please writes with the
+    # GitHub App token below, which carries its own permissions.
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
