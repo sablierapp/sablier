@@ -91,3 +91,9 @@ Sablier waits for systemd to report the unit as active before marking it `ready`
 {{< callout type="info" >}}
 Systemd units have no labels; Sablier reads the `[X-Sablier]` section from the unit file instead.
 {{< /callout >}}
+
+## Feature support
+
+Which Sablier features work with the Systemd provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "systemd" >}}

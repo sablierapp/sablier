@@ -139,3 +139,9 @@ When the deployment circuit breaker marks a rollout as `FAILED`, Sablier reports
 - Sablier changes the **desired count** only. The `sablier.idle.cpu`, `sablier.idle.memory`, `sablier.active.cpu` and `sablier.active.memory` tags are ignored with a warning, because on ECS the CPU and memory of a service belong to its task definition.
 - Only services with the `REPLICA` scheduling strategy are managed. A `DAEMON` service has no desired count.
 - ECS publishes service changes to EventBridge only. Sablier polls the cluster every 10 seconds to detect services that were started, stopped, tagged or removed outside of Sablier.
+
+## Feature support
+
+Which Sablier features work with the AWS ECS provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "ecs" >}}

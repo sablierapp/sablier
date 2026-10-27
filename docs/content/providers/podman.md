@@ -73,3 +73,9 @@ services:
 If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
 
 If the containers do not define a Healthcheck, then as soon as the container has the status `started` it is considered `ready`.
+
+## Feature support
+
+Which Sablier features work with the Podman provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "podman" >}}

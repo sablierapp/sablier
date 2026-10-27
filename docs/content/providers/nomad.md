@@ -249,3 +249,9 @@ Set `sablier.ready-after` to at least the refresh interval of the Traefik provid
 {{< callout type="info" >}}
 An uptime monitor that requests the application through Traefik renews the session on every check, so the task group never scales to 0. Monitor the Sablier `/health` endpoint and the Nomad job instead.
 {{< /callout >}}
+
+## Feature support
+
+Which Sablier features work with the Nomad provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "nomad" >}}

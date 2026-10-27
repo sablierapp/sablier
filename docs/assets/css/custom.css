@@ -119,6 +119,7 @@
 .dark .cm-impossible { color: #9ca3af; }
 .compat-legend { font-size: 0.8rem; margin-top: 0.75rem; opacity: 0.9; }
 .compat-legend .cm { font-weight: 700; }
+.provider-features td.cm { text-align: left; white-space: nowrap; }
 
 /* ---------- Provider & reverse-proxy icons in the sidebar ----------
    The icon is drawn on the title <span> (not the <a>, which is a
