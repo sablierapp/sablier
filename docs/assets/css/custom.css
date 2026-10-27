@@ -71,39 +71,6 @@
 }
 .dark .feature-example-label { background: rgba(255,255,255,0.08); color: #d1d5db; }
 
-/* ---------- Persistent per-provider tabs ---------- */
-.provider-tabs { margin: 1.5rem 0; }
-.provider-tabs-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  border-bottom: 1px solid rgba(128,128,128,0.25);
-  margin-bottom: 1rem;
-}
-.provider-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  padding: 0.4rem 0.75rem;
-  margin-bottom: -1px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  opacity: 0.65;
-}
-.provider-tab-btn:hover { opacity: 1; }
-.provider-tab-btn[data-state="selected"] {
-  opacity: 1;
-  border-bottom-color: hsl(var(--primary-hue), var(--primary-saturation), var(--primary-lightness));
-  color: hsl(var(--primary-hue), var(--primary-saturation), var(--primary-lightness));
-}
-.provider-tab-icon { height: 1.15em; width: auto; }
-.provider-tab-panel[hidden] { display: none !important; }
-
 /* ---------- Compatibility matrix ---------- */
 .compat-matrix { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
 .compat-matrix th, .compat-matrix td { border: 1px solid rgba(128,128,128,0.22); padding: 0.4rem 0.65rem; text-align: center; }
@@ -119,7 +86,6 @@
 .dark .cm-impossible { color: #9ca3af; }
 .compat-legend { font-size: 0.8rem; margin-top: 0.75rem; opacity: 0.9; }
 .compat-legend .cm { font-weight: 700; }
-.provider-features td.cm { text-align: left; white-space: nowrap; }
 
 /* ---------- Provider & reverse-proxy icons in the sidebar ----------
    The icon is drawn on the title <span> (not the <a>, which is a
@@ -183,3 +149,9 @@
 .since-badge-link, h1 .hextra-badge.since-badge, h2 .hextra-badge.since-badge, h3 .hextra-badge.since-badge, h4 .hextra-badge.since-badge { display: inline-block; vertical-align: middle; margin-inline-start: .6rem; }
 .since-badge-link .hextra-badge.since-badge { margin-inline-start: 0; }
 .since-badge > div { font-weight: 500; letter-spacing: normal; }
+
+/* ---------- "Configure it on" badges link to the provider pages ---------- */
+.compat-label { font-size: 0.8rem; font-weight: 600; opacity: 0.75; margin-inline-end: 0.15rem; align-self: center; }
+a.compat-badge { text-decoration: none; transition: filter .15s ease; }
+a.compat-badge:hover { filter: brightness(0.95); text-decoration: none; }
+.dark a.compat-badge:hover { filter: brightness(1.2); }

@@ -13,25 +13,12 @@ compatibility:
   systemd: differs
   nomad: supported
   ecs: differs
-example: multiple-groups
+setting: group
 ---
 
 {{< compatibility >}}
 
-This guide shows you how to make an instance belong to more than one group at once by providing a **comma-separated** list in the `sablier.group` label:
-
-```yaml
-# compose.yml
-services:
-  shared-api:
-    image: myorg/shared-api:latest
-    restart: unless-stopped
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=team-a,team-b"   # member of both groups
-```
-
-When a session is requested for **any** of its groups, the instance is started. A session for `team-a` starts every instance whose groups include `team-a`, including `shared-api`, and the same instance also starts for a `team-b` session.
+Put an instance in several groups at once by listing them in its `group` setting. A session for **any** of its groups starts it.
 
 ```mermaid
 flowchart LR
@@ -46,8 +33,9 @@ flowchart LR
     gb -->|start| api
 ```
 
-Practical rules:
+For example, a `shared-api` instance in the groups `team-a` and `team-b` starts for a `team-a` session and for a `team-b` session.
 
-- Spaces around separators are ignored (`"team-a , team-b"` is equivalent to `"team-a,team-b"`).
-- Duplicate group names are deduplicated silently.
-- An instance that loses all its group membership (e.g. the label/tag removed at runtime) is dropped from every group it belonged to.
+- **How you write the list depends on your provider.** Your provider page shows the syntax.
+- **Spaces around group names are ignored**, and duplicate names are removed.
+- **An instance without the setting is in the `default` group.**
+- **An instance that loses all its groups**, for example when the setting is removed at runtime, leaves every group it belonged to.

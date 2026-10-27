@@ -36,7 +36,7 @@ Use this to split a stack into important instances that visitors must wait for a
 
 ## How it works
 
-The `optional:` marker travels inside the instance name, so every reverse proxy plugin forwards it unchanged — no plugin upgrade is needed. Sablier strips the prefix when the session is requested; providers, sessions and metrics all see the clean instance name. No workload name can collide with the marker because Docker, Swarm, Podman and Kubernetes names cannot contain a colon.
+The `optional:` marker travels inside the instance name, so every reverse proxy plugin forwards it unchanged — no plugin upgrade is needed. Sablier strips the prefix when the session is requested; providers, sessions and metrics all see the clean instance name.
 
 The prefix works the same in a direct API call:
 

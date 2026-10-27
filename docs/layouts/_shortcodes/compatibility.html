@@ -1,6 +1,6 @@
 {{- /*
-  Renders the provider-compatibility badges (and optional example link) for a
-  feature page, from its front matter:
+  Renders the "Configure it on" provider badges (and optional example link) for
+  a feature page, from its front matter:
 
     compatibility:
       docker: supported | differs | unsupported | impossible
@@ -11,39 +11,40 @@
       systemd: ...
       nomad: ...
       ecs: ...
+    setting: ready-after # optional: the setting's heading anchor on provider pages
     example: scale-mode  # optional: folder under examples/
 
-  - supported   → green  badge "<Provider> compatible"
-  - differs     → orange badge "Partially <Provider> compatible"
-  - unsupported → grey   badge "<Provider> not yet implemented"
-  - impossible  → red    badge "<Provider> incompatible"
-
-  Badges are static (non-interactive) — no issue-request links.
+  Each badge links to the provider page, where the configuration lives:
+  - supported / differs → the `setting` section (or the page itself without one)
+  - unsupported         → the provider's Limitations section, badge "not yet"
+  - impossible          → the provider's Limitations section, badge "not possible"
 */ -}}
 {{- $page := .Page -}}
 {{- $compat := $page.Params.compatibility -}}
+{{- $setting := $page.Params.setting -}}
 {{- $example := $page.Params.example -}}
 {{- $repo := "https://github.com/sablierapp/sablier" -}}
 <div class="feature-meta">
 {{- if $compat -}}
-  <div class="compat" role="list" aria-label="Provider compatibility">
+  <div class="compat" role="list" aria-label="Configure it on your provider">
+  <span class="compat-label">Configure it on</span>
   {{- range $p := site.Data.providers -}}
     {{- $status := index $compat $p.key -}}
     {{- if $status -}}
       {{- $icon := printf "/assets/img/%s" $p.icon -}}
-      {{- $cls := "" -}}
-      {{- $label := "" -}}
-      {{- if eq $status "supported" -}}
-        {{- $cls = "compat-supported" -}}{{- $label = printf "%s compatible" $p.name -}}
-      {{- else if eq $status "differs" -}}
-        {{- $cls = "compat-differs" -}}{{- $label = printf "Partially %s compatible" $p.name -}}
-      {{- else if eq $status "unsupported" -}}
-        {{- $cls = "compat-unsupported" -}}{{- $label = printf "%s not yet implemented" $p.name -}}
+      {{- $cls := printf "compat-%s" $status -}}
+      {{- $label := $p.name -}}
+      {{- $title := printf "Configure it on %s" $p.name -}}
+      {{- $anchor := cond (ne $setting nil) (printf "#%v" $setting) "" -}}
+      {{- if eq $status "unsupported" -}}
+        {{- $label = printf "%s · not yet" $p.name -}}{{- $title = printf "Not yet implemented on %s" $p.name -}}{{- $anchor = "#limitations" -}}
       {{- else if eq $status "impossible" -}}
-        {{- $cls = "compat-impossible" -}}{{- $label = printf "%s incompatible" $p.name -}}
+        {{- $label = printf "%s · not possible" $p.name -}}{{- $title = printf "Not possible on %s" $p.name -}}{{- $anchor = "#limitations" -}}
+      {{- else if eq $status "differs" -}}
+        {{- $title = printf "Configure it on %s (configuration differs from other providers)" $p.name -}}
       {{- end -}}
-      {{- if $cls -}}
-        <span class="compat-badge {{ $cls }}" role="listitem" title="{{ $label }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $label }}</span></span>
+      {{- if in (slice "supported" "differs" "unsupported" "impossible") $status -}}
+        <a class="compat-badge {{ $cls }}" role="listitem" title="{{ $title }}" href="{{ printf "providers/%s/%s" $p.page $anchor | relURL }}"><img class="compat-icon" src="{{ $icon }}" alt="" loading="lazy" /><span>{{ $label }}</span></a>
       {{- end -}}
     {{- end -}}
   {{- end -}}

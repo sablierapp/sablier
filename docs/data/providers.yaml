@@ -1,28 +1,37 @@
-# Provider registry — the single source of truth for the compatibility badges
-# ({{< compatibility >}}) and the persistent per-provider tabs
-# ({{< provider-tabs >}}). `key` is used in page front matter and tab names;
-# `icon` is a file under static/assets/img/.
+# Provider registry — the single source of truth for the "Configure it on"
+# badges ({{< compatibility >}}) and the compatibility matrix. `key` is used in
+# feature page front matter;
+# `icon` is a file under static/assets/img/; `page` is the provider page under
+# content/providers/.
 - key: docker
   name: Docker
   icon: docker.svg
+  page: docker
 - key: swarm
   name: Docker Swarm
   icon: docker_swarm.png
+  page: docker_swarm
 - key: kubernetes
   name: Kubernetes
   icon: kubernetes.png
+  page: kubernetes
 - key: podman
   name: Podman
   icon: podman.png
+  page: podman
 - key: proxmox
   name: Proxmox LXC
   icon: proxmox.png
+  page: proxmox_lxc
 - key: systemd
   name: Systemd
   icon: systemd.svg
+  page: systemd
 - key: nomad
   name: Nomad
   icon: nomad.svg
+  page: nomad
 - key: ecs
   name: AWS ECS
   icon: ecs.svg
+  page: ecs

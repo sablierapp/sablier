@@ -13,35 +13,20 @@ compatibility:
   systemd: differs
   nomad: supported
   ecs: supported
-example: ready-on-start
+setting: ready-on-start
 ---
 
 {{< compatibility >}}
 
-This guide shows you how to mark an instance ready as soon as it starts, skipping its health check, with the `sablier.ready-on-start` label:
-
-```yaml
-# compose.yml
-services:
-  frigate:
-    image: frigate:latest
-    labels:
-      - "sablier.enable=true"
-      - "sablier.group=home"
-      - "sablier.ready-on-start=true"   # start frigate, don't wait for health
-```
-
-Some services only run in the background, such as NVR recorders, cache sidecars, and build agents. The main application works without them being healthy, but you still want Sablier to start them when a request arrives.
-
-Setting `sablier.ready-on-start=true` tells Sablier to dispatch the start but immediately treat the instance as ready, skipping the health check. The reverse proxy passes the request through without waiting.
+Start an instance without waiting for it to be ready, with the `ready-on-start` setting. Use it for background services the application works without, such as NVR recorders, cache sidecars or build agents: Sablier starts them on request, and the request passes through immediately.
 
 ```mermaid
 flowchart LR
     request[Request arrives] --> start[Instance starts]
-    start -->|skip health check| ready[Marked ready immediately]
+    start -->|skip readiness check| ready[Marked ready immediately]
     ready --> pass[Request passes through]
 ```
 
-- Only the instance with `sablier.ready-on-start=true` is affected. Other instances in the same session still wait for their health checks normally.
-- Accepts a Go boolean value such as `"true"` or `"1"`. Invalid values are ignored with a warning. An empty or absent value means no special treatment.
-- Works with both dynamic and blocking strategies, with no plugin-side changes needed.
+- **Only that instance skips the wait.** Other instances in the same session still wait until they are ready.
+- **The value is a Go boolean**, such as `true` or `1`. An invalid value is ignored with a warning; an empty or absent value changes nothing.
+- **It works with both the dynamic and blocking strategies**, with no change to the reverse proxy plugin.
