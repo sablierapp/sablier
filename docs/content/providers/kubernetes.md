@@ -80,7 +80,10 @@ Every `--provider.*` option that is not provider-specific also applies; see the 
 
 #### Deployments and StatefulSets
 
-Sablier scales [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) through their [`scale` subresource](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment). On stop, it scales to `0`. On start, it scales to [`sablierapp.dev/active.replicas`](#scale-instead-of-stop) when set, otherwise to the replica count of the [instance name](#instance-names) when above `1`, otherwise to `1`.
+Sablier scales [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) through their [`scale` subresource](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment):
+
+- **Stop** scales to `0`.
+- **Start** scales to [`active.replicas`](#scale-instead-of-stop) when set. Otherwise, it uses the replica count of the [instance name](#instance-names) when above `1`, or `1`.
 
 {{< example file="kubernetes/statefulset.yaml" region="sablier" >}}
 
@@ -114,15 +117,20 @@ If the scale fails, Sablier clears the annotation immediately, so the operator i
 
 ### Instance names
 
-A reverse proxy can target one workload by name instead of a group. Sablier names each workload after its kind, [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) and name:
+A reverse proxy can target one workload by name instead of a group. The `whoami` Deployment of the usage example is named:
 
 ```text
-<kind><delimiter><namespace><delimiter><name><delimiter><replicas>
+deployment_default_whoami_1
 ```
 
-`<kind>` is `deployment`, `statefulset` or `cnpgcluster`. A Redis instance is targeted through its StatefulSet. With the default delimiter, the `whoami` Deployment of the usage example is `deployment_default_whoami_1`; with `--provider.kubernetes.delimiter=.`, it is `deployment.default.whoami.1`.
+The name has four parts, separated by the [delimiter](#configuration) (`_` by default):
 
-`<replicas>` is the replica count Sablier scales to on start, since v1.15.0. Prefer groups: a name ties your proxy configuration to the workload's kind and namespace.
+- **Kind:** `deployment`, `statefulset` or `cnpgcluster`. Target a Redis instance through its StatefulSet.
+- **[Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)** of the workload.
+- **Name** of the workload.
+- **Replicas:** the replica count Sablier scales to on start, since v1.15.0.
+
+Prefer groups: a name ties your proxy configuration to the workload's kind and namespace.
 
 ### Labels {since="next"}
 
@@ -150,7 +158,9 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Group {since="v1.4.0"}
 
-`sablierapp.dev/group` assigns the workload to one or more groups. A session for any of them starts it. A workload without a group is in the `default` group. A list of groups contains commas, so set it as an [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
+`sablierapp.dev/group` puts the workload in one or more groups. A session for any of them starts it. Without it, the workload is in the `default` group.
+
+A list of groups contains commas, so set it as an [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
 
 {{< example file="kubernetes/group.yaml" region="sablier" >}}
 
@@ -174,7 +184,10 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Running hours {since="v1.13.0"}
 
-`sablierapp.dev/running-hours` keeps the workload running during a daily window, and `sablierapp.dev/running-days` (since v1.15.0) limits the window to some weekdays. Both values contain colons or commas, so set them as [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
+- `sablierapp.dev/running-hours` keeps the workload running during a daily window.
+- `sablierapp.dev/running-days` limits that window to some weekdays, since v1.15.0.
+
+Both values contain colons or commas, so set them as [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
 
 {{< example file="kubernetes/running-hours.yaml" region="sablier" >}}
 
@@ -194,11 +207,19 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 #### Scale instead of stop {since="v1.13.0"}
 
-With `sablierapp.dev/idle.replicas` set to `1` or more, Sablier keeps the workload running when idle instead of scaling it to zero, and can throttle it. `idle.cpu` and `idle.memory` set the CPU and memory [**limits**](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits) while idle; `active.replicas`, `active.cpu` and `active.memory` restore them on the next session. CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes), such as `100m`, `2`, `64Mi` or `1Gi`.
+Keep the workload running when idle, optionally throttled, instead of scaling it to zero:
+
+- `idle.replicas` set to `1` or more keeps that many replicas when idle.
+- `idle.cpu` and `idle.memory` set the CPU and memory [limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits) while idle.
+- `active.replicas`, `active.cpu` and `active.memory` restore them on the next session.
+
+CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes), such as `100m`, `2`, `64Mi` or `1Gi`.
 
 {{< example file="kubernetes/scale-mode.yaml" region="sablier" >}}
 
-Sablier changes the limits of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates)'s **first container**, which triggers a [rolling update](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment): new pods replace the old ones, so the service stays available. [Requests](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits) are not changed, so make sure your nodes can schedule the active limits.
+{{< callout type="warning" >}}
+Changing limits triggers a [rolling update](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment): new pods replace the old ones, so the service stays available. Sablier only changes the limits of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates)'s first container, never its [requests](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits), so make sure your nodes can schedule the active limits.
+{{< /callout >}}
 
 [Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
 

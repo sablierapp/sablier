@@ -21,6 +21,18 @@ Create a page with: hugo new content providers/<name>.md --kind provider
 - Show configuration with the example shortcode, from a runnable file under
   examples/<provider>/, never with a hand-copied snippet. Use a
   "# region <name>" / "# endregion" pair to show only part of a file.
+
+Writing style:
+
+1. Example first, then explain: one intro line, the excerpt, then short notes.
+2. One idea per sentence. Rules a reader must remember go in a list, with the
+   rule in bold first and the reason after it.
+3. At most two code spans per sentence; full keys belong in the example.
+4. The rule before the reason.
+5. Edge cases (legacy keys, precedence) go in a collapsed details block.
+6. Cut sentences that do not change what the reader does.
+
+docs/content/providers/kubernetes.md is the reference page.
 -->
 
 ## Introduction
