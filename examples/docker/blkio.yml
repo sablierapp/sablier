@@ -1,0 +1,19 @@
+# region sablier
+services:
+  backup:
+    labels:
+      - sablier.enable=true
+      - sablier.group=backup
+      - sablier.idle.replicas=1
+      - sablier.idle.blkio-weight=100   # relative weight, 10-1000
+      - sablier.active.blkio-weight=500
+      # Per-device limits need a daemon with API version 1.55 or newer:
+      # - sablier.idle.blkio-device-read-bps=/dev/sda:10m
+      # - sablier.active.blkio-device-read-bps=/dev/sda:100m
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s

@@ -1,0 +1,16 @@
+# region sablier
+services:
+  office-app:
+    labels:
+      - sablier.enable=true
+      - sablier.group=office-app
+      - sablier.running-hours=09:00-18:00
+      - sablier.running-days=Mon,Tue,Wed,Thu,Fri
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+

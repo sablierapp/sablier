@@ -1,0 +1,8 @@
+# Pause idle containers instead of stopping them. Compose replaces the whole
+# command of compose.yml with this one.
+services:
+  sablier:
+    command:
+      - start
+      - --provider.name=docker
+      - --provider.docker.strategy=pause

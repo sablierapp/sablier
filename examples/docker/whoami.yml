@@ -1,0 +1,14 @@
+services:
+  whoami:
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running-after=1s", "-healthy=true", "-healthy-after=2s"]
+    restart: unless-stopped
+    # Sablier reports the container ready once this health check passes.
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    labels:
+      - sablier.enable=true
+      - sablier.group=whoami

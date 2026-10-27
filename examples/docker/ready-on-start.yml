@@ -1,0 +1,11 @@
+# region sablier
+services:
+  worker:
+    labels:
+      - sablier.enable=true
+      - sablier.group=worker
+      - sablier.ready-on-start=true # ready as soon as the start is sent
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-running-after=10s"]
+    restart: unless-stopped

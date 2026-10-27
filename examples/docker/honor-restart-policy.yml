@@ -1,0 +1,9 @@
+# Report a one-shot container that exited 0 as completed, so a
+# service_completed_successfully dependency can resolve. Compose replaces
+# the whole command of compose.yml with this one.
+services:
+  sablier:
+    command:
+      - start
+      - --provider.name=docker
+      - --provider.docker.honor-restart-policy=true # deprecated: default in v2

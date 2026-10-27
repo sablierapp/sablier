@@ -1,0 +1,18 @@
+# region sablier
+services:
+  whoami-warm:
+    labels:
+      - sablier.enable=true
+      - sablier.group=whoami-warm
+      - sablier.idle.replicas=1   # keep the container running when idle
+      - sablier.idle.cpu=0.1      # decimal cores
+      - sablier.idle.memory=64m   # Docker units: b, k, m, g
+      - sablier.active.cpu=2
+      - sablier.active.memory=512m
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s

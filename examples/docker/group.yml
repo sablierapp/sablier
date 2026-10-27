@@ -1,0 +1,13 @@
+# region sablier
+services:
+  team-api:
+    labels:
+      - sablier.enable=true
+      - sablier.group=team-a,team-b # one container in two groups
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 1s

@@ -1,0 +1,6 @@
+# sablier.running-hours windows use Sablier's local time. The image defaults
+# to UTC.
+services:
+  sablier:
+    environment:
+      TZ: Europe/Paris

@@ -1,293 +1,340 @@
 ---
 title: Docker
 weight: 1
+since: v1.0.0
 aliases:
   - /tutorials/providers/docker/
+  - /how-to-guides/startup-dependencies/
+  - /how-to-guides/startup-dependencies/depends-on/
+  - /how-to-guides/startup-dependencies/restart-policy/
+  - /how-to-guides/advanced/security/
+  - /how-to-guides/advanced/security/docker-socket-proxy/
 ---
 
-This tutorial connects Sablier to Docker. You will select the Docker provider, run Sablier with access to the Docker socket, register a container so Sablier can manage it, and confirm Sablier knows when the container is ready. The Docker provider communicates with the `docker.sock` socket to start and stop containers on demand.
+## Introduction
 
-## Select the Docker provider
+The Docker provider stops idle [containers](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/) when their session expires, and starts them again when a request needs them. It can also pause them, or keep them running with throttled resources. Sablier runs as a container next to them and calls the [Docker Engine API](https://docs.docker.com/reference/api/engine/) through the [Docker socket](https://docs.docker.com/engine/daemon/). With [Docker Compose](https://docs.docker.com/compose/), it starts a container's [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) dependencies first.
 
-Set the [provider.name](/reference/cli/) property to `docker`.
+## Install Sablier
 
 {{< tabs >}}
-{{< tab name="File (YAML)" >}}
+{{< tab name="Docker socket" >}}
 
-```yaml
-provider:
-  name: docker
-```
+Run Sablier as a [Compose service](https://docs.docker.com/reference/compose-file/services/), with the [Docker socket](https://docs.docker.com/engine/daemon/) mounted:
 
-{{< /tab >}}
-{{< tab name="CLI" >}}
+{{< example file="docker/compose.yml" >}}
 
 ```bash
-sablier start --provider.name=docker
+docker compose up -d sablier
 ```
 
-{{< /tab >}}
-{{< tab name="Environment Variable" >}}
-
-```bash
-SABLIER_PROVIDER_NAME=docker
-```
-
-{{< /tab >}}
-{{< /tabs >}}
+`docker` is the default provider, so `--provider.name=docker` is optional.
 
 {{< callout type="warning" >}}
-**Ensure that Sablier has access to the docker socket.**
+The socket gives [root-level access](https://docs.docker.com/engine/security/#docker-daemon-attack-surface) to the host. To limit what Sablier can do, use a socket proxy.
 {{< /callout >}}
 
-Run Sablier with the socket mounted:
+{{< /tab >}}
+{{< tab name="Socket proxy" >}}
 
-```yaml
-services:
-  sablier:
-    image: sablierapp/sablier:{{< version >}}
-    restart: always
-    command:
-      - start
-      - --provider.name=docker
-    volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
-```
+Put a [socket proxy](https://github.com/linuxserver/docker-socket-proxy) between Sablier and the [Docker socket](https://docs.docker.com/engine/daemon/), so Sablier reaches only the API endpoints it needs. Use this file instead of `compose.yml`:
 
-## Connecting to a remote or TLS-protected daemon
+{{< example file="docker/socket-proxy.yml" >}}
 
-By default Sablier connects to the local Docker socket. To reach a remote or TLS-protected daemon, set the standard Docker environment variables on the Sablier container; Sablier reads them through the Docker client.
+- **`CONTAINERS=1`** lets Sablier list and inspect containers.
+- **`EVENTS=1` and `VERSION=1`** let it follow container events and check the connection at startup.
+- **`POST=1` is required.** After a stop, Sablier waits for the container to exit, and no `ALLOW_*` flag covers that endpoint. `CONTAINERS=1` still scopes it to containers: images, networks and volumes stay blocked.
+- **Only the proxy mounts the socket**, on an [internal network](https://docs.docker.com/reference/compose-file/networks/#internal) that nothing outside the host can reach.
 
-| Variable | Purpose |
-|----------|---------|
-| `DOCKER_HOST` | Daemon socket or address, for example `tcp://127.0.0.1:2376`. |
-| `DOCKER_API_VERSION` | Pin the Docker Engine API version instead of negotiating it. |
-| `DOCKER_CERT_PATH` | Directory holding `ca.pem`, `cert.pem` and `key.pem` for a TLS connection. |
-| `DOCKER_TLS_VERIFY` | Set to a non-empty value to verify the daemon's TLS certificate. |
-
-These are the standard Docker CLI variables, so an environment that already works with the `docker` CLI works with Sablier unchanged.
-
-## Register a container
-
-For Sablier to work, it needs to know which docker container to start and stop. Register a container by opting in with labels:
-
-```yaml
-services:
-  whoami:
-    image: acouvreur/whoami:v1.10.2
-    restart: unless-stopped
-    labels:
-      - sablier.enable=true
-      - sablier.group=mygroup
-```
-
-## Strategies
-
-The Docker provider supports two strategies for managing containers:
-
-### Stop Strategy (default)
-
-The `stop` strategy completely stops containers when they become idle and starts them again when needed.
-
-{{< tabs >}}
-{{< tab name="File (YAML)" >}}
-
-```yaml
-provider:
-  docker:
-    strategy: stop
-```
+The proxy answers `403 Forbidden` to every other endpoint.
 
 {{< /tab >}}
-{{< tab name="CLI" >}}
+{{< tab name="Remote daemon" >}}
 
-```bash
-sablier start --provider.docker.strategy=stop
-```
+Sablier reads the standard [Docker environment variables](https://docs.docker.com/reference/cli/docker/#environment-variables). Set them on its container to manage a remote [daemon](https://docs.docker.com/engine/daemon/), for example over [TLS](https://docs.docker.com/engine/security/protect-access/#use-tls-https-to-protect-the-docker-daemon-socket). Use this file instead of `compose.yml`:
 
-{{< /tab >}}
-{{< tab name="Environment Variable" >}}
+{{< example file="docker/remote.yml" >}}
 
-```bash
-SABLIER_PROVIDER_DOCKER_STRATEGY=stop
-```
+- **`DOCKER_HOST`** is the daemon address, such as `tcp://docker.example.com:2376`.
+- **`DOCKER_CERT_PATH` turns TLS on.** The directory holds the client certificates, as in the example.
+- **Set `DOCKER_TLS_VERIFY=1`.** Without it, Sablier doesn't verify the daemon's certificate.
+- **`DOCKER_API_VERSION`** pins the API version instead of negotiating it. Use it for debugging only.
+
+{{< details title="Differences from the docker CLI" closed="true" >}}
+- Sablier doesn't read certificates from `~/.docker`. Without `DOCKER_CERT_PATH`, it connects without TLS, whatever `DOCKER_TLS_VERIFY` says.
+- Sablier doesn't support `ssh://` hosts.
+{{< /details >}}
 
 {{< /tab >}}
 {{< /tabs >}}
 
-### Pause Strategy
+Reverse proxy plugins reach Sablier at `http://sablier:10000` from a container on the same [Compose network](https://docs.docker.com/compose/how-tos/networking/).
 
-The `pause` strategy pauses containers instead of stopping them. This is faster than stop/start as the container state remains in memory, but uses more system resources.
+If the connection to the daemon drops, Sablier reconnects on its own. It waits one more second after each failed attempt, up to 30 seconds.
 
-{{< tabs >}}
-{{< tab name="File (YAML)" >}}
+## Usage example
 
-```yaml
-provider:
-  docker:
-    strategy: pause
-```
+Opt a container in with the `sablier.enable` [label](https://docs.docker.com/engine/manage-resources/labels/), and give it a group:
 
-{{< /tab >}}
-{{< tab name="CLI" >}}
+{{< example file="docker/whoami.yml" >}}
+
+Add it to the [Compose project](https://docs.docker.com/compose/how-tos/project-name/) that runs Sablier, and [create](https://docs.docker.com/reference/cli/docker/compose/create/) the container without starting it:
 
 ```bash
-sablier start --provider.docker.strategy=pause
+docker compose -f compose.yml -f whoami.yml create whoami
 ```
 
-{{< /tab >}}
-{{< tab name="Environment Variable" >}}
+Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` service. On the first request, Sablier starts the container and holds the request, or shows a waiting page, until its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck) passes. When the session expires, Sablier stops it.
 
-```bash
-SABLIER_PROVIDER_DOCKER_STRATEGY=pause
-```
+{{< callout type="info" >}}
+Sablier stops opted-in containers when it starts. A container you start afterwards, with `docker compose up`, `docker start` or a [restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/), keeps running until its first session expires. To avoid that, [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+{{< /callout >}}
 
-{{< /tab >}}
-{{< /tabs >}}
+## Provider reference
 
-## Confirm when the container is ready
+### Configuration
 
-If the container defines a Healthcheck, then it will check for healthiness before stating the `ready` status.
-
-If the containers do not define a Healthcheck, then as soon as the container has the status `started`, it is considered `ready`.
-
-## Restart policies and one-shot (init) containers
-
-Sablier respects the container's [Docker restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/) when deciding whether an **exited** container is a problem or simply *done*.
-
-This matters for one-shot **init / migration** containers: containers that run a task once, exit with code `0`, and are not meant to run again (for example a database migration that must complete before the application boots).
-
-By default Sablier keeps its **historical behavior** and reports any container that exits with code `0` as `stopped`. To make Sablier honor the restart policy instead, enable the `honor-restart-policy` option (see below). With it enabled, the exited status is decided as follows:
-
-| Container state | Restart policy | Sablier status |
+| Option | Default | Description |
 |---|---|---|
-| Exited, code `0` | `no` / `on-failure` | **`completed`** (the container ran and finished its job) |
-| Exited, code `0` | `always` / `unless-stopped` | `stopped` (a long-running service that was stopped; Sablier starts it again on demand) |
-| Exited, non-zero code | any | `error` (surfaced as a failure) |
+| [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy) | `stop` | `stop` or `pause` idle containers. See [Pause instead of stop](#pause-instead-of-stop). Since v1.11.0. |
+| [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) | `false` | Report a one-shot container that exited `0` as completed. See [One-shot containers](#one-shot-containers). Deprecated: the default in v2. Since v1.15.0. |
 
-> `completed` is a distinct status from `ready`: a `ready` container is running and serving traffic, whereas a `completed` container ran once and exited. A `completed` dependency satisfies a `service_completed_successfully` condition, but never a `service_healthy` one.
+Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). Sablier connects to the daemon with the [Docker environment variables](#install-sablier). With [tracing](/how-to-guides/advanced/observability/tracing/) on, every Docker API call becomes a span, with no daemon configuration.
 
-> Docker normalizes an **unset** restart policy to `no`, so an unset policy is indistinguishable from an explicit `restart: "no"`. With `honor-restart-policy` enabled, both are reported as `completed`.
+### Workloads
 
-### Honor the restart policy
+#### Containers
 
-> [!WARNING]
-> **Deprecated.** This option only exists to preserve backward compatibility. It
-> will be **removed in v2**, where honoring the restart policy becomes the
-> default behavior.
+Sablier starts and stops [containers](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/) that already exist:
 
-When enabled, Sablier honors the container's restart policy on a successful exit
-(`no`/`on-failure` map to `completed`, and `always`/`unless-stopped` map to `starting`) instead of
-always reporting an exited container as `stopped`. This is required for the
-one-shot init / migration container pattern described above (and used by the
-[`depends-on`](#ordering-containers-with-depends_on) example).
+- **Stop** runs the equivalent of [`docker stop`](https://docs.docker.com/reference/cli/docker/container/stop/), then waits for the container to exit. Docker sends the stop signal, then kills the container after its [stop grace period](https://docs.docker.com/reference/compose-file/services/#stop_grace_period).
+- **Start** runs the equivalent of [`docker start`](https://docs.docker.com/reference/cli/docker/container/start/). A container that is already running is left alone.
 
-A complete, runnable example is available in [`examples/restart-policy`](https://github.com/sablierapp/sablier/tree/main/examples/restart-policy).
+Sablier never creates, recreates or removes a container. After [`docker compose down`](https://docs.docker.com/reference/cli/docker/compose/down/), create the containers again.
 
-{{< tabs >}}
-{{< tab name="File (YAML)" >}}
+Give managed containers `restart: unless-stopped` or `restart: "no"`. With `always`, Docker restarts a container Sablier stopped [when the daemon restarts](https://docs.docker.com/engine/containers/start-containers-automatically/#restart-policy-details).
 
-```yaml
-provider:
-  docker:
-    honor-restart-policy: true
-```
+#### Pause instead of stop {since="v1.11.0"}
 
-{{< /tab >}}
-{{< tab name="CLI" >}}
+Set `--provider.docker.strategy=pause` to [pause](https://docs.docker.com/reference/cli/docker/container/pause/) idle containers instead of stopping them:
 
-```bash
-sablier start --provider.docker.honor-restart-policy=true
-```
+{{< example file="docker/pause.yml" >}}
 
-{{< /tab >}}
-{{< tab name="Environment Variable" >}}
+- **Stop** frees the container's CPU and memory. The next request waits for the application to boot.
+- **Pause** freezes the container's processes and keeps their memory. The next request resumes them instantly.
 
-```bash
-SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY=true
-```
+The strategy applies to every container. A container that is stopped rather than paused is started as usual.
 
-{{< /tab >}}
-{{< /tabs >}}
+### Docker Compose
 
-Default: `false` (historical behavior, where exited containers are reported as `stopped`).
+Compose sets these [labels](https://docs.docker.com/engine/manage-resources/labels/) on every container it creates:
 
-## Ordering containers with `depends_on`
+- **`com.docker.compose.project`:** the [project](https://docs.docker.com/compose/how-tos/project-name/) name.
+- **`com.docker.compose.service`:** the [service](https://docs.docker.com/reference/compose-file/services/) name.
+- **`com.docker.compose.depends_on`:** the service's dependencies, as `service:condition:restart` entries.
 
-When you have a stack where one container must start **after** another (a web app that needs its database to be healthy, or that waits for a migration to finish), declare the relationship with Docker Compose [`depends_on`](https://docs.docker.com/compose/how-tos/startup-order/).
+Sablier reads them to start a container's dependencies. A container created without Compose has no dependencies.
 
-```yaml
-services:
-  app:
-    image: myapp
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      migration:
-        condition: service_completed_successfully
-    labels:
-      - sablier.enable=true
-      - sablier.group=mystack
+#### Start dependencies together {since="v1.15.0"}
 
-  db:
-    image: postgres
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "pg_isready"]
-      interval: 1s
-    labels:
-      - sablier.enable=true
-      - sablier.group=mystack
+Declare the order with [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on). When a request starts a container, Sablier starts its dependencies first:
 
-  migration:
-    image: myapp
-    command: ["migrate"]
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-```
+{{< example file="docker/depends-on.yml" >}}
 
-> Note that `migration` is **not** labeled. It is a one-shot job that exits on
-> completion, so there is nothing for Sablier to keep alive or scale to zero.
-> It is started on-demand only because `app` declares a `depends_on` on it.
+A request for the `app` group starts `db` and waits until it is healthy. It then starts `migration` and waits until it has completed. Only then does it start `app`. Sablier waits for each [condition](https://docs.docker.com/compose/how-tos/startup-order/):
 
-> The `service_completed_successfully` condition relies on the exited
-> `migration` container being reported as `completed`. Enable
-> [`--provider.docker.honor-restart-policy=true`](#honor-the-restart-policy) so
-> Sablier honors the `restart: "no"` policy; without it, the exited container is
-> reported as `stopped` and the condition never resolves.
-
-When Sablier is asked to start a container, it reads the `com.docker.compose.depends_on` label (written automatically by `docker compose`) and **starts every dependency first**, recursively, waiting for each declared condition before continuing. All four Compose conditions are supported:
-
-| Condition | Sablier waits until |
+| Condition | Sablier waits until the dependency is |
 |---|---|
-| `service_started` | the dependency is running |
-| `service_healthy` | the dependency passes its health check |
-| `service_completed_successfully` | the dependency has exited with code `0` (reported as `completed`) |
-| `service_running_or_healthy` | the dependency is running, or healthy if it has a health check |
+| `service_started` (default) | running, or has completed |
+| `service_healthy` | running and [healthy](https://docs.docker.com/reference/compose-file/services/#healthcheck), or running without a health check |
+| `service_completed_successfully` | completed: exited `0` under a non-restarting policy. Requires [the restart policy option](#one-shot-containers). |
 
-### Do I need `sablier.enable` on a dependency?
+Decide whether to label each dependency:
 
-This is the key decision when wiring up a multi-service stack:
+- **Dependencies need no labels to start.** Sablier starts every dependency a container declares, opted in or not.
+- **Sablier only stops opted-in containers.** Give a dependency `sablier.enable=true` and the same group to stop it with the group. Leave it unlabeled to keep it running, for example a database that other apps share.
+- **Never label a one-shot container.** A session is ready only when every member is ready, and a container that exits by design never is.
+- **A dependency that already meets its condition is left alone.** Sablier doesn't restart a running database, and doesn't run a completed migration again.
 
-| You want Sablier to | Label the dependency? |
+{{< details title="How Sablier resolves dependencies" closed="true" >}}
+- Sablier looks for dependencies in the same Compose project only. It skips the dependencies of a container without a project label, and logs a warning.
+- It skips a dependency service that has no container, and logs a warning.
+- When a service has several containers, it picks a running one, otherwise the first name in alphabetical order.
+- It resolves dependencies of dependencies, and starts independent ones in parallel.
+- If the graph has a cycle, it ignores the dependencies, logs a warning, and starts the container alone.
+- A dependency that exits with an error, or is dead, fails the start.
+- It ignores the `restart` option of `depends_on`.
+- The whole start, dependencies included, must finish within five minutes.
+- It also accepts the condition `service_running_or_healthy`: running, healthy or not. Compose never writes it. Any other unknown condition behaves like `service_started`.
+{{< /details >}}
+
+#### One-shot containers {since="v1.15.0"}
+
+A one-shot container, such as a migration, runs once and exits `0`. For a `service_completed_successfully` dependency on it to resolve, set `--provider.docker.honor-restart-policy`:
+
+{{< example file="docker/honor-restart-policy.yml" >}}
+
+With it, Sablier reads the container's [restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/) when it exits:
+
+| Exit code | Restart policy | Status |
+|---|---|---|
+| `0` | `no` or `on-failure` | **completed**: the job is done. |
+| `0` | `always` or `unless-stopped` | **stopped**: Sablier starts it again on demand. |
+| Not `0` | any | **error** |
+
+Without the option, every container that exits `0` is **stopped**. The condition never resolves, and the start times out.
+
+- **A completed container doesn't run again.** Later requests find it completed and skip it, until you recreate it.
+- **Give long-running containers `restart: unless-stopped`.** Docker reports a missing restart policy as `no`, so a container without one looks completed once Sablier stops it, if it exits `0`.
+
+{{< callout type="warning" >}}
+`--provider.docker.honor-restart-policy` is deprecated. It will be removed in v2, where honoring the restart policy becomes the default.
+{{< /callout >}}
+
+### Instance names
+
+A reverse proxy can target one container by name instead of a group. The `whoami` container of the usage example is named:
+
+```text
+demo-whoami-1
+```
+
+The name is the container's name. Compose names containers `<project>-<service>-<index>`, unless you set a [`container_name`](https://docs.docker.com/reference/compose-file/services/#container_name).
+
+Prefer groups: a name ties your proxy configuration to the project name.
+
+### Labels
+
+Sablier reads [labels](https://docs.docker.com/engine/manage-resources/labels/) on the container. In Compose, set them under the service's [`labels`](https://docs.docker.com/reference/compose-file/services/#labels), as a list or a map:
+
+{{< example file="docker/group.yml" region="sablier" >}}
+
+- **`sablier.enable` must be `true`.** Sablier lists containers with the filter `sablier.enable=true`.
+- **Labels are fixed when the container is created.** Docker [can't change them](https://docs.docker.com/engine/manage-resources/labels/#manage-labels-on-objects) afterwards, so recreate the container after you edit them.
+- **Don't use `deploy.labels`.** Compose sets them [on the service only](https://docs.docker.com/reference/compose-file/deploy/#labels), not on its containers.
+
+The [label reference](/reference/labels/) lists every key.
+
+### Workload settings
+
+Each excerpt below comes from a Compose file in [`examples/docker`](https://github.com/sablierapp/sablier/tree/main/examples/docker). Add it to `compose.yml` with another `-f` flag.
+
+#### Enable {since="v1.4.0"}
+
+`sablier.enable=true` opts the container in. It is required, and any other value is ignored. See the [usage example](#usage-example).
+
+#### Group {since="v1.4.0"}
+
+`sablier.group` puts the container in one or more comma-separated groups. A session for any of them starts it. Without it, the container is in the `default` group.
+
+{{< example file="docker/group.yml" region="sablier" >}}
+
+[Learn more about groups](/how-to-guides/groups/).
+
+#### Ready after {since="v1.13.0"}
+
+`sablier.ready-after` keeps reporting the container as not ready for a settling delay after its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck) first passes. Use it when the container passes its health check before it can serve traffic.
+
+{{< example file="docker/ready-after.yml" region="sablier" >}}
+
+[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+
+#### Ready on start {since="v1.15.0"}
+
+`sablier.ready-on-start=true` reports the container ready as soon as Sablier starts it, without waiting for its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck).
+
+{{< example file="docker/ready-on-start.yml" region="sablier" >}}
+
+[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+
+#### Running hours {since="v1.13.0"}
+
+- `sablier.running-hours` keeps the container running during a daily window.
+- `sablier.running-days` limits that window to some weekdays, since v1.15.0.
+
+{{< example file="docker/running-hours.yml" region="sablier" >}}
+
+The window uses Sablier's local time. The Sablier image defaults to UTC: set the `TZ` [environment variable](https://docs.docker.com/reference/compose-file/services/#environment) to change it.
+
+{{< example file="docker/timezone.yml" >}}
+
+[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+
+#### Anti-affinity {since="v1.15.0"}
+
+`sablier.anti-affinity` lists groups the container backs off from: Sablier keeps it idle while any of them has an active session.
+
+{{< example file="docker/anti-affinity.yml" region="sablier" >}}
+
+[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+
+#### Scale instead of stop {since="v1.13.0"}
+
+Keep the container running when idle, optionally throttled, instead of stopping it:
+
+- `sablier.idle.replicas=1` keeps it running when idle.
+- `idle.cpu` and `idle.memory` set its [CPU and memory limits](https://docs.docker.com/engine/containers/resource_constraints/) while idle.
+- `active.cpu` and `active.memory` restore them on the next session.
+
+{{< example file="docker/scale-mode.yml" region="sablier" >}}
+
+Sablier changes the limits with the equivalent of [`docker update --cpus=0.1 --memory=64m`](https://docs.docker.com/reference/cli/docker/container/update/).
+
+- **CPU is in cores**, as a decimal: `0.5` is half a core.
+- **Memory uses Docker units:** `b`, `k`, `m` or `g`.
+- **Set the active limits.** Docker keeps an idle limit until another update replaces it.
+- **A memory limit disables swap.** Docker needs the swap limit updated with the memory limit, so Sablier sets both to the same value.
+- **Start the container yourself.** In this mode, Sablier never starts or stops it, so use `docker compose up` instead of `create`.
+- **Set active labels only with an idle replica count of `1` or more.** Otherwise Sablier stops the container when idle, but only updates its limits on the next session.
+
+Replica counts above `1` and `sablier.active.replicas` have no effect: a container is one replica.
+
+[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+
+#### Block I/O {since="v1.15.0"}
+
+In scale mode, Sablier can also throttle the container's [block I/O](https://docs.docker.com/engine/containers/resource_constraints/) while idle:
+
+{{< example file="docker/blkio.yml" region="sablier" >}}
+
+| Labels (`idle` and `active`) | Value |
 |---|---|
-| **Start** it on-demand **and stop it** when the group is idle | Yes, with `sablier.enable=true` and the same `sablier.group` |
-| **Start** it on-demand but **keep it running** (e.g. a database shared by several apps) | No Sablier labels |
-| Run a **one-shot job** (migration / seed / init) that exits by design | No, never label it |
+| `blkio-weight` | Relative weight from `10` to `1000`. Other values, including `0`, are ignored. |
+| `blkio-weight-device` | `path:weight` |
+| `blkio-device-read-bps`, `blkio-device-write-bps` | `path:rate`, in Docker byte units: `10m` is 10 MB/s. |
+| `blkio-device-read-iops`, `blkio-device-write-iops` | `path:iops`, an integer. |
 
-- **Starting** a `depends_on` dependency never requires a label. As long as a *labeled* container declares the dependency, Sablier starts the dependency and waits for its condition, even if the dependency has no `sablier.*` labels.
-- **Stopping** only ever happens for containers explicitly registered with `sablier.enable=true` in the group. Sablier will never stop a container it was not told to manage.
-- **Never** add a one-shot container (one that exits on completion) to a **blocking** group. The blocking strategy waits for every group member to be *running*, so a container that exits by design would prevent the group from ever becoming ready. Leave it unlabeled and let `depends_on` start it instead.
+- **Separate several devices with commas**, for example `/dev/sda:10m,/dev/sdb:5m`.
+- **Set the active values.** Docker keeps an idle limit until another update replaces it.
+- **Per-device limits need a daemon with API version 1.55 or newer.** Older daemons accept the update but [ignore them](https://github.com/moby/moby/issues/52650), and Sablier logs a warning. `blkio-weight` works with every version.
 
-> In short: label a dependency when you want it scaled to zero together with the rest of the group. Leave it unlabeled when it should stay up; Sablier will still start it on-demand to satisfy the ordering.
+If Docker returns warnings for the update, Sablier logs them.
 
-A complete, runnable example is available in [`examples/depends-on`](https://github.com/sablierapp/sablier/tree/main/examples/depends-on).
+[Learn more about throttling block I/O](/how-to-guides/scaling-resources/scale-blkio/).
 
-## Feature support
+### Readiness
 
-Which Sablier features work with the Docker provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+Sablier reports a container:
 
-{{< provider-features "docker" >}}
+- **ready** when it is running and its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck) passes. Without a health check, as soon as it is running.
+- **starting** while it is created, paused, restarting or being removed, or running with a health check that is starting or unhealthy.
+- **stopped** when it exited with code `0`.
+- **completed** when it is a [one-shot container](#one-shot-containers) that finished.
+- **error** when it exited with another code, or is dead.
+
+Give your containers a health check. Without one, Sablier logs a warning and lets traffic in before the application may be ready. An unhealthy container counts as still starting, so a broken one fails when the request times out.
+
+### Limitations
+
+- Sablier manages the containers of one Docker daemon. For [Swarm](https://docs.docker.com/engine/swarm/) services, use the [Docker Swarm provider](/providers/docker_swarm/).
+- Sablier doesn't create containers: create them before the first request.
+- `DOCKER_HOST` doesn't support `ssh://` hosts.
+- The strategy applies to every container: you can't pause some and stop others.
+- Sablier starts `depends_on` dependencies only for containers that Compose created.
+- A start, dependencies included, times out after five minutes.
+- Per-device block I/O limits need a daemon with API version 1.55 or newer.
+
+## Examples
+
+- [`examples/docker`](https://github.com/sablierapp/sablier/tree/main/examples/docker): every Compose file on this page, with instructions to run them.
+- [Getting started](/tutorials/getting-started/): a complete setup with Docker and Caddy.

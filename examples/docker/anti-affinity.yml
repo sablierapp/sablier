@@ -1,0 +1,14 @@
+# region sablier
+services:
+  streaming:
+    labels:
+      - sablier.enable=true
+      - sablier.group=streaming
+    image: sablierapp/mimic:v0.3.3
+  background:
+    labels:
+      - sablier.enable=true
+      - sablier.group=background
+      - sablier.anti-affinity=streaming # idle while "streaming" is active
+# endregion
+    image: sablierapp/mimic:v0.3.3
