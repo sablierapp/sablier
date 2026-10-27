@@ -1,6 +1,8 @@
 ---
 title: AWS ECS
 weight: 7
+aliases:
+  - /tutorials/providers/ecs/
 ---
 
 This tutorial connects Sablier to Amazon ECS. You will select the ECS provider, give Sablier AWS credentials with the permissions it needs, register an ECS service with tags so Sablier can scale it, and confirm Sablier knows when the service is ready. The ECS provider communicates with the ECS API to move the desired count of a service between zero and its active replicas on demand.

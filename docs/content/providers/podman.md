@@ -1,6 +1,8 @@
 ---
 title: Podman
 weight: 4
+aliases:
+  - /tutorials/providers/podman/
 ---
 
 This tutorial connects Sablier to Podman. You will select the Podman provider, run Sablier with access to the Podman socket, register a container so Sablier can manage it, and confirm Sablier knows when the container is ready. The Podman provider communicates with the `podman.sock` socket to start and stop containers on demand.
