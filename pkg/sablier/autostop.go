@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -71,6 +72,28 @@ func (s *Sablier) isStartedByUs(ctx context.Context, name string) bool {
 	return err == nil
 }
 
+// scanPeriodically runs scan every ExternallyStartedScanInterval until ctx is
+// done. WatchAndStopExternallyStarted and WatchAndWarmExternallyStarted run it
+// apart from their event loop: a scan inspects instances one by one and can
+// take minutes on a large fleet, while the event stream must keep being read.
+// Providers send events from their watchers, which stay blocked until the
+// event is read.
+func (s *Sablier) scanPeriodically(ctx context.Context, scan func(context.Context) error, failure string) {
+	ticker := time.NewTicker(s.ExternallyStartedScanInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := scan(ctx); err != nil {
+				s.l.ErrorContext(ctx, failure, slog.Any("error", err))
+			}
+		}
+	}
+}
+
 // WatchAndStopExternallyStarted continuously stops instances that have
 // sablier.enable=true but were not started by Sablier. It combines
 // event-driven detection (InstanceEventStarted) with a periodic
@@ -85,8 +108,11 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 	eventsC := stream.Events
 	errC := stream.Err
 
-	ticker := time.NewTicker(s.ExternallyStartedScanInterval)
-	defer ticker.Stop()
+	var scans sync.WaitGroup
+	defer scans.Wait()
+	scans.Go(func() {
+		s.scanPeriodically(ctx, s.StopAllUnregisteredInstances, "unregistered instance scan failed")
+	})
 
 	for {
 		select {
@@ -121,10 +147,6 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 			s.l.ErrorContext(ctx, "started event stream permanently lost; relying on reconciliation ticker", slog.Any("error", err))
 			errC = nil
 			eventsC = nil
-		case <-ticker.C:
-			if err := s.StopAllUnregisteredInstances(ctx); err != nil {
-				s.l.ErrorContext(ctx, "unregistered instance scan failed", slog.Any("error", err))
-			}
 		}
 	}
 }
