@@ -21,12 +21,21 @@ func (p *Provider) InstanceInspect(ctx context.Context, name string) (sablier.In
 	var info sablier.InstanceInfo
 	// "created", "running", "paused", "restarting", "removing", "exited", or "dead"
 	switch spec.Container.State.Status {
-	case container.StateCreated, container.StatePaused, container.StateRestarting, container.StateRemoving:
+	case container.StateCreated, container.StateRestarting, container.StateRemoving:
 		info = sablier.InstanceInfo{
 			Name:            name,
 			CurrentReplicas: 0,
 			DesiredReplicas: 1,
 			Status:          sablier.InstanceStatusStarting,
+		}
+	case container.StatePaused:
+		// A paused container is idle: it is the stopped state of the pause
+		// strategy, and starting it unpauses it.
+		info = sablier.InstanceInfo{
+			Name:            name,
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
 		}
 	case container.StateRunning:
 		if spec.Container.State.Health != nil {

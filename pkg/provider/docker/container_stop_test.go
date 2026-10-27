@@ -100,6 +100,27 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 			err: fmt.Errorf("cannot inspect container: Error response from daemon: No such container: non-existent"),
 		},
 		{
+			// After a Sablier restart, the startup auto-stop pauses running
+			// containers again, including those already paused. See #1181.
+			name: "already paused container pause is a no-op",
+			args: args{
+				do: func(dind *dindContainer) (string, error) {
+					c, err := dind.CreateMimic(ctx, MimicOptions{})
+					if err != nil {
+						return "", err
+					}
+					if _, err = dind.client.ContainerStart(ctx, c.ID, client.ContainerStartOptions{}); err != nil {
+						return "", err
+					}
+					if _, err = dind.client.ContainerPause(ctx, c.ID, client.ContainerPauseOptions{}); err != nil {
+						return "", err
+					}
+					return c.ID, nil
+				},
+			},
+			err: nil,
+		},
+		{
 			name: "container pause as expected",
 			args: args{
 				do: func(dind *dindContainer) (string, error) {

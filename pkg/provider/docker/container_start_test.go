@@ -158,3 +158,33 @@ func TestDockerClassicProvider_Unpause(t *testing.T) {
 		})
 	}
 }
+
+// A container paused outside Sablier must start, whatever the strategy:
+// docker start refuses a paused container. See #1181.
+func TestDockerClassicProvider_Start_PausedContainerWithStopStrategy(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	c := sharedDinD
+
+	result, err := c.CreateMimic(ctx, MimicOptions{})
+	assert.NilError(t, err)
+	_, err = c.client.ContainerStart(ctx, result.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+	_, err = c.client.ContainerPause(ctx, result.ID, client.ContainerPauseOptions{})
+	assert.NilError(t, err)
+
+	p, err := docker.New(ctx, c.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	err = p.InstanceStart(t.Context(), result.ID)
+	assert.NilError(t, err)
+
+	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, spec.Container.State.Running, true)
+	assert.Equal(t, spec.Container.State.Paused, false)
+}

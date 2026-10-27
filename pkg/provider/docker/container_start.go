@@ -69,7 +69,9 @@ func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
 		return nil
 	}
 
-	if p.strategy == "pause" {
+	// docker start refuses a paused container, so unpause it whatever the
+	// strategy: it may have been paused outside Sablier.
+	if p.strategy == "pause" || spec.Container.State.Paused {
 		span.SetAttributes(attribute.String("operation", "unpause"))
 		return p.dockerUnpause(ctx, name)
 	}
