@@ -1,6 +1,8 @@
 ---
 title: Honor the restart policy
-weight: 170
+weight: 2
+aliases:
+  - /how-to-guides/startup-dependencies/restart-policy/
 ---
 
 Report a container that exits `0` under a non-restarting policy as `completed`, so a one-shot dependency's `service_completed_successfully` condition can resolve.
@@ -61,6 +63,34 @@ Use this when a managed service depends on a one-shot init or migration containe
 ## Flags
 
 - [`--provider.docker.honor-restart-policy`](/reference/cli/): report a container that exits `0` under a non-restarting policy as `completed`.
+
+{{< tabs >}}
+{{< tab name="File (YAML)" >}}
+
+```yaml
+provider:
+  docker:
+    honor-restart-policy: true
+```
+
+{{< /tab >}}
+{{< tab name="CLI" >}}
+
+```bash
+sablier start --provider.docker.honor-restart-policy=true
+```
+
+{{< /tab >}}
+{{< tab name="Environment Variable" >}}
+
+```bash
+SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY=true
+```
+
+{{< /tab >}}
+{{< /tabs >}}
+
+Default: `false` (historical behavior, where exited containers are reported as `stopped`).
 
 {{< callout type="warning" >}}
 `--provider.docker.honor-restart-policy` is **deprecated**. It exists only for backward compatibility and will be removed in v2, where honoring the restart policy becomes the default behavior.

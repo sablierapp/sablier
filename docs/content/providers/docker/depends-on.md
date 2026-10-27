@@ -1,6 +1,9 @@
 ---
 title: Start dependencies together
-weight: 168
+weight: 1
+aliases:
+  - /how-to-guides/startup-dependencies/depends-on/
+  - /how-to-guides/startup-dependencies/
 ---
 
 Bring a managed service's entire `depends_on` graph back up in order, waiting for each declared condition, the moment a request arrives.
@@ -63,6 +66,15 @@ Many applications cannot start in isolation. A web app often needs its database 
 
 The Docker provider does this by reading each container's Compose [`depends_on`](https://docs.docker.com/compose/how-tos/startup-order/) relationships (Compose records them in the `com.docker.compose.depends_on` label) and starting every dependency, recursively, before the container that needs it, waiting for each declared condition to be satisfied.
 
+All four Compose conditions are supported:
+
+| Condition | Sablier waits until |
+|---|---|
+| `service_started` | the dependency is running |
+| `service_healthy` | the dependency passes its health check |
+| `service_completed_successfully` | the dependency has exited with code `0` (reported as `completed`) |
+| `service_running_or_healthy` | the dependency is running, or healthy if it has a health check |
+
 ## When to use it
 
 Use this when a managed service has dependencies that must be up and ready before it starts, such as a database (`service_healthy`) or a one-shot migration job (`service_completed_successfully`).
@@ -73,6 +85,6 @@ Use this when a managed service has dependencies that must be up and ready befor
 - **Stopping** only happens for containers explicitly labelled `sablier.enable=true` and belonging to the group. Label a dependency (for example a database) if you want it scaled to zero with the group; leave it unlabeled if it should keep running.
 - **Never** put a one-shot container (a migration or init job that exits by design) into a blocking group. The blocking strategy waits for every group member to be running, so an exited container would keep the group from ever becoming ready. Leave it unlabeled and let `depends_on` trigger it.
 
-A one-shot dependency resolving `service_completed_successfully` relies on the exited container being reported as `completed`. See [Honor the restart policy](/how-to-guides/startup-dependencies/restart-policy/).
+A one-shot dependency resolving `service_completed_successfully` relies on the exited container being reported as `completed`. See [Honor the restart policy](/providers/docker/restart-policy/).
 
 See the [runnable example](https://github.com/sablierapp/sablier/tree/main/examples/depends-on).

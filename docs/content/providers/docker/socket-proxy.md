@@ -1,6 +1,9 @@
 ---
 title: Use a Docker socket proxy
-weight: 172
+weight: 3
+aliases:
+  - /how-to-guides/advanced/security/docker-socket-proxy/
+  - /how-to-guides/advanced/security/
 ---
 
 Put a dedicated socket proxy between Sablier and `/var/run/docker.sock`, so Sablier reaches only the Docker API endpoints it actually needs.
