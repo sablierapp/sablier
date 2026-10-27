@@ -35,6 +35,28 @@ func TestParseName(t *testing.T) {
 			hasError: false,
 		},
 		{
+			name:     "Largest int32 replica count",
+			input:    "deployment:namespace:name:2147483647",
+			opts:     ParseOptions{Delimiter: ":"},
+			expected: ParsedName{Original: "deployment:namespace:name:2147483647", Kind: "deployment", Namespace: "namespace", Name: "name", Replicas: 2147483647},
+			hasError: false,
+		},
+		{
+			// Must fail instead of wrapping around to a negative int32.
+			name:     "Replica count above int32",
+			input:    "deployment:namespace:name:2147483648",
+			opts:     ParseOptions{Delimiter: ":"},
+			expected: ParsedName{},
+			hasError: true,
+		},
+		{
+			name:     "Negative replica count",
+			input:    "deployment:namespace:name:-1",
+			opts:     ParseOptions{Delimiter: ":"},
+			expected: ParsedName{},
+			hasError: true,
+		},
+		{
 			name:     "Invalid name with incorrect delimiter",
 			input:    "statefulset:namespace:name:1",
 			opts:     ParseOptions{Delimiter: "#"},

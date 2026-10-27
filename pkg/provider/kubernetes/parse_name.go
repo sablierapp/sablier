@@ -27,9 +27,14 @@ func ParseName(name string, opts ParseOptions) (ParsedName, error) {
 		return ParsedName{}, fmt.Errorf("invalid name [%s] should be: kind%snamespace%sname%sreplicas", name, opts.Delimiter, opts.Delimiter, opts.Delimiter)
 	}
 
-	replicas, err := strconv.Atoi(split[3])
+	// Parse as 32 bits: replicas are an int32 in the Kubernetes API, and a
+	// larger value must fail rather than wrap around.
+	replicas, err := strconv.ParseInt(split[3], 10, 32)
 	if err != nil {
-		return ParsedName{}, err
+		return ParsedName{}, fmt.Errorf("invalid replica count in [%s]: %w", name, err)
+	}
+	if replicas < 0 {
+		return ParsedName{}, fmt.Errorf("invalid replica count in [%s]: must not be negative", name)
 	}
 
 	return ParsedName{
