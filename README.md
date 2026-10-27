@@ -3,6 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/sablierapp/sablier)](https://goreportcard.com/report/github.com/sablierapp/sablier)
 [![Discord](https://img.shields.io/discord/1298488955947454464?logo=discord&logoColor=5865F2&cacheSeconds=1&link=http%3A%2F%2F)](https://discord.gg/WXYp59KeK9)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sablierapp/sablier/badge)](https://scorecard.dev/viewer/?uri=github.com/sablierapp/sablier)
+[![Tested with LocalStack](https://img.shields.io/badge/tested%20with-LocalStack-39227A)](https://localstack.cloud)
 
 Free and open-source software that starts workloads on demand and stops them after a period of inactivity.
 
@@ -60,6 +61,7 @@ Whether you're running on a resource-constrained device like a **Raspberry Pi**,
 - [Support](#support)
 - [Sponsor](#sponsor)
   - [DigitalOcean](#digitalocean)
+  - [LocalStack](#localstack)
 
 
 ## Installation
@@ -772,5 +774,17 @@ Every contribution, no matter the size, makes a real difference. Thank you for c
 <p>
   <a href="https://www.digitalocean.com/?refcode=67b25d34f559&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge">
     <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
+  </a>
+</p>
+
+### LocalStack
+
+<p>The AWS ECS provider is tested against <a href="https://localstack.cloud">LocalStack</a>, supported by the LocalStack for Open Source program:</p>
+<p>
+  <a href="https://localstack.cloud">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./docs/static/assets/img/localstack-logo-horizontal-light.svg">
+      <img src="./docs/static/assets/img/localstack-logo-horizontal-color.svg" alt="LocalStack" width="201px">
+    </picture>
   </a>
 </p>
