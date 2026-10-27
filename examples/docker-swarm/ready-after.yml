@@ -1,0 +1,16 @@
+# Reported ready 30 seconds after its tasks pass their healthcheck.
+#   docker stack deploy -c ready-after.yml demo
+# region sablier
+services:
+  slow-starter:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=slow-starter
+        - sablier.ready-after=30s
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

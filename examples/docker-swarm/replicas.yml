@@ -1,0 +1,17 @@
+# Scaled to three replicas on start, and to zero when idle.
+#   docker stack deploy -c replicas.yml demo
+# region sablier
+services:
+  web:
+    deploy:
+      replicas: 3
+      labels:
+        - sablier.enable=true
+        - sablier.group=web
+        - sablier.active.replicas=3 # without it, Sablier starts one replica
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

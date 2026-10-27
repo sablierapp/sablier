@@ -1,0 +1,15 @@
+# One service in two groups: a session for either one starts it.
+#   docker stack deploy -c group.yml demo
+# region sablier
+services:
+  team-api:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=team-a,team-b
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

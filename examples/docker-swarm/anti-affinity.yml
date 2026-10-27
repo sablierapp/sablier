@@ -1,0 +1,16 @@
+# Kept idle while the streaming group has an active session.
+#   docker stack deploy -c anti-affinity.yml demo
+# region sablier
+services:
+  batch-worker:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=batch
+        - sablier.anti-affinity=streaming
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

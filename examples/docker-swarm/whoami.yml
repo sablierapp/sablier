@@ -1,0 +1,15 @@
+# A service Sablier scales to zero when idle and back up on demand:
+#   docker stack deploy -c whoami.yml demo
+services:
+  whoami:
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    # Sablier reports the service ready once its tasks pass this healthcheck.
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
+    deploy:
+      # Service labels, not container labels: Sablier reads deploy.labels.
+      labels:
+        - sablier.enable=true
+        - sablier.group=whoami

@@ -1,0 +1,17 @@
+# Kept running on weekdays from 09:00 to 18:00, Sablier's local time.
+#   docker stack deploy -c running-hours.yml demo
+# region sablier
+services:
+  office-app:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=office-app
+        - sablier.running-hours=09:00-18:00
+        - sablier.running-days=Mon,Tue,Wed,Thu,Fri
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s

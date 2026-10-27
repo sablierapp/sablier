@@ -1,0 +1,20 @@
+# Kept at one throttled replica when idle instead of zero.
+#   docker stack deploy -c scale-mode.yml demo
+# region sablier
+services:
+  warm-api:
+    deploy:
+      labels:
+        - sablier.enable=true
+        - sablier.group=warm-api
+        - sablier.idle.replicas=1
+        - sablier.idle.cpu=0.1
+        - sablier.idle.memory=64m
+        - sablier.active.cpu=2
+        - sablier.active.memory=512m
+# endregion
+    image: sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
