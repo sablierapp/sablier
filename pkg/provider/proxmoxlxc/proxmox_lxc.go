@@ -48,6 +48,7 @@ type Provider struct {
 
 	mu           sync.RWMutex
 	cache        map[string]containerRef // hostname or VMID string → ref
+	ambiguous    map[string][]int        // hostname shared by tagged containers → their VMIDs
 	pendingTasks map[string]*pendingTask // instance name → start task awaiting completion
 }
 
@@ -115,6 +116,13 @@ func (p *Provider) resolve(ctx context.Context, name string) (containerRef, erro
 		return ref, nil
 	}
 
+	p.mu.RLock()
+	vmids, ambiguous := p.ambiguous[name]
+	p.mu.RUnlock()
+	if ambiguous {
+		return containerRef{}, fmt.Errorf("hostname %q is ambiguous: tagged containers %v share it, request one by its ID", name, vmids)
+	}
+
 	return containerRef{}, fmt.Errorf("container %q not found", name)
 }
 
@@ -157,18 +165,23 @@ type discoveredContainer struct {
 }
 
 // scanContainers scans all nodes for LXC containers and rebuilds the cache.
-// All containers are cached so that resolve() can find any container by name or VMID
-// (matching Docker/Podman behavior where labels are not required for direct access).
-// Returns only sablier-tagged containers for use by InstanceList/InstanceGroups.
+// Every container is cached by VMID, so resolve() can reach any container
+// (matching Docker/Podman behavior where labels are not required for direct
+// access). Hostnames resolve to sablier-tagged containers first: an untagged
+// container only gets its hostname when no tagged container has it. A hostname
+// shared by several tagged containers is ambiguous: it resolves to none of
+// them, and they are left out of the result, but the scan goes on.
+// Returns only the sablier-tagged containers for InstanceList/InstanceGroups.
 func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, error) {
 	nodes, err := p.client.Nodes(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list nodes: %w", err)
 	}
 
-	var discovered []discoveredContainer
 	newCache := make(map[string]containerRef)
-	sablierNames := make(map[string]containerRef) // for duplicate detection among managed containers
+	var tagged []discoveredContainer
+	taggedByName := make(map[string][]containerRef)
+	untaggedByName := make(map[string]containerRef)
 
 	for _, ns := range nodes {
 		node, err := p.client.Node(ctx, ns.Node)
@@ -189,24 +202,17 @@ func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, e
 				vmid: int(c.VMID),
 				name: c.Name,
 			}
-
-			// Cache all containers for resolve() lookups.
-			newCache[c.Name] = ref
 			newCache[strconv.Itoa(int(c.VMID))] = ref
 
 			tags := parseTags(c.Tags)
 			if !hasSablierTag(tags) {
+				if _, seen := untaggedByName[c.Name]; !seen {
+					untaggedByName[c.Name] = ref
+				}
 				continue
 			}
-
-			// Check for hostname collision among sablier-managed containers.
-			if existing, ok := sablierNames[c.Name]; ok {
-				return nil, fmt.Errorf("duplicate hostname %q found on node %q (VMID %d) and node %q (VMID %d) among sablier-managed containers",
-					c.Name, existing.node, existing.vmid, ns.Node, int(c.VMID))
-			}
-			sablierNames[c.Name] = ref
-
-			discovered = append(discovered, discoveredContainer{
+			taggedByName[c.Name] = append(taggedByName[c.Name], ref)
+			tagged = append(tagged, discoveredContainer{
 				ref:    ref,
 				tags:   tags,
 				status: c.Status,
@@ -214,8 +220,34 @@ func (p *Provider) scanContainers(ctx context.Context) ([]discoveredContainer, e
 		}
 	}
 
+	ambiguous := make(map[string][]int)
+	discovered := make([]discoveredContainer, 0, len(tagged))
+	for _, d := range tagged {
+		refs := taggedByName[d.ref.name]
+		if len(refs) > 1 {
+			if _, reported := ambiguous[d.ref.name]; !reported {
+				vmids := make([]int, len(refs))
+				for i, r := range refs {
+					vmids[i] = r.vmid
+				}
+				ambiguous[d.ref.name] = vmids
+				p.l.WarnContext(ctx, "tagged containers share a hostname, skipping it; rename one or request them by ID",
+					slog.String("hostname", d.ref.name), slog.Any("vmids", vmids))
+			}
+			continue
+		}
+		newCache[d.ref.name] = d.ref
+		discovered = append(discovered, d)
+	}
+	for name, ref := range untaggedByName {
+		if _, isTagged := taggedByName[name]; !isTagged {
+			newCache[name] = ref
+		}
+	}
+
 	p.mu.Lock()
 	p.cache = newCache
+	p.ambiguous = ambiguous
 	p.mu.Unlock()
 
 	return discovered, nil

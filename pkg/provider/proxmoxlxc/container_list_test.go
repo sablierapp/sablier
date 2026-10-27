@@ -74,19 +74,25 @@ func TestProxmoxLXCProvider_InstanceList_MultiNode(t *testing.T) {
 	})
 }
 
+// Two tagged containers with the same hostname make that hostname ambiguous.
+// Sablier skips it, but keeps managing every other container. See #1179.
 func TestProxmoxLXCProvider_InstanceList_DuplicateHostname(t *testing.T) {
 	t.Parallel()
 
 	server := proxmoxlxc.MockServer(t, []string{"pve1", "pve2"}, []proxmoxlxc.TestContainer{
 		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
 		{VMID: 200, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve2"},
+		{VMID: 300, Name: "api", Status: "running", Tags: "sablier", Node: "pve1"},
 	})
 
 	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
 	assert.NilError(t, err)
 
-	_, err = p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
-	assert.ErrorContains(t, err, "duplicate hostname")
+	got, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, got, []sablier.InstanceConfiguration{
+		{Name: "api", Groups: []string{"default"}, Enabled: "true"},
+	})
 }
 
 func TestProxmoxLXCProvider_InstanceGroups(t *testing.T) {
