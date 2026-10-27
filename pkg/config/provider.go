@@ -109,9 +109,9 @@ type Kubernetes struct {
 }
 
 type Podman struct {
-	// Uri is the connection URI for the Podman service.
-	// Accepted schemes: unix://, tcp://, ssh://.
-	// Leave empty to fall back to the CONTAINER_HOST environment variable.
+	// Uri is the address of the Podman API service.
+	// Accepted schemes: unix:// and tcp://.
+	// Leave empty to fall back to the DOCKER_HOST environment variable.
 	// Env: SABLIER_PROVIDER_PODMAN_URI
 	// CLI: --provider.podman.uri
 	// Default: "unix:///run/podman/podman.sock"
@@ -259,7 +259,8 @@ type ECS struct {
 	Cluster string
 
 	// Region is the AWS region of the cluster. Leave empty to use the AWS SDK
-	// resolution (AWS_REGION, the shared config profile, or the instance metadata).
+	// resolution (AWS_REGION or the shared config profile). The region is not
+	// read from the EC2 instance metadata, so set it when running on EC2.
 	// Env: SABLIER_PROVIDER_ECS_REGION
 	// CLI: --provider.ecs.region
 	// Default: ""

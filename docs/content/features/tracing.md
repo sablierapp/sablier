@@ -143,8 +143,9 @@ TLS-insecure transport is wrapped (not bypassed).
 ### Nomad
 
 The Nomad API client is created with an `otelhttp`-wrapped HTTP client. The
-TLS settings from the standard `NOMAD_CACERT`, `NOMAD_CLIENT_CERT`,
-`NOMAD_CLIENT_KEY` and `NOMAD_SKIP_VERIFY` environment variables are applied
+TLS settings from the standard `NOMAD_CACERT`, `NOMAD_CAPATH`,
+`NOMAD_CLIENT_CERT`, `NOMAD_CLIENT_KEY`, `NOMAD_TLS_SERVER_NAME` and
+`NOMAD_SKIP_VERIFY` environment variables are applied
 to the wrapped transport. The long-lived event stream request produces one
 span for the whole connection.
 
