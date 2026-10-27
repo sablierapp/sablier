@@ -139,7 +139,7 @@ func buildProperties(profile sablier.ResourceProfile, clear sablier.ResourceProf
 }
 
 // applyResources applies a resource profile to a unit at runtime. Runtime
-// properties are dropped on daemon-reload or unit restart.
+// properties last until the next reboot, like systemctl set-property --runtime.
 func (p *Provider) applyResources(ctx context.Context, name string, profile, clear sablier.ResourceProfile) error {
 	props, err := buildProperties(profile, clear)
 	if err != nil {

@@ -194,7 +194,7 @@ const (
 	LabelActiveBlkioWeightDevice = "sablier.active.blkio-weight-device"
 
 	// LabelIdleBlkioReadBps is the per-device read throughput limit applied when
-	// idle (Docker byte units, e.g. `10m` = 10 MB/s).
+	// idle (Docker byte units, e.g. `10m` = 10 MiB/s).
 	//
 	// type: `path:rate` list
 	// example: "/dev/sda:10m"

@@ -110,7 +110,7 @@ aws ecs tag-resource --resource-arn <service-arn> \
 | [`sablier.active.blkio-weight`](#label-sablier-active-blkio-weight) | The relative block I/O scheduling weight restored when active. |
 | [`sablier.idle.blkio-weight-device`](#label-sablier-idle-blkio-weight-device) | The per-device I/O scheduling weight applied when idle. |
 | [`sablier.active.blkio-weight-device`](#label-sablier-active-blkio-weight-device) | The per-device I/O scheduling weight restored when active. |
-| [`sablier.idle.blkio-device-read-bps`](#label-sablier-idle-blkio-device-read-bps) | The per-device read throughput limit applied when idle (Docker byte units, e.g. `10m` = 10 MB/s). |
+| [`sablier.idle.blkio-device-read-bps`](#label-sablier-idle-blkio-device-read-bps) | The per-device read throughput limit applied when idle (Docker byte units, e.g. `10m` = 10 MiB/s). |
 | [`sablier.active.blkio-device-read-bps`](#label-sablier-active-blkio-device-read-bps) | The per-device read throughput limit restored when active. |
 | [`sablier.idle.blkio-device-write-bps`](#label-sablier-idle-blkio-device-write-bps) | The per-device write throughput limit applied when idle. |
 | [`sablier.active.blkio-device-write-bps`](#label-sablier-active-blkio-device-write-bps) | The per-device write throughput limit restored when active. |
@@ -349,7 +349,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 ### `sablier.idle.blkio-device-read-bps` {#label-sablier-idle-blkio-device-read-bps}
 
-The per-device read throughput limit applied when idle (Docker byte units, e.g. `10m` = 10 MB/s).
+The per-device read throughput limit applied when idle (Docker byte units, e.g. `10m` = 10 MiB/s).
 
 {{< badge "`path:rate` list" >}} {{< badge content="Next release" >}}
 

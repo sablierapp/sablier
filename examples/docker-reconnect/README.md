@@ -85,5 +85,6 @@ level=WARN  msg="reconnecting event stream" attempt=2 backoff=2s
 level=DEBUG msg="event received" event=...   ← back to normal after reconnect
 ```
 
-The reconnect loop retries up to **10 times** before giving up, so a brief
-outage (a few tens of seconds) will be recovered transparently.
+The reconnect loop never gives up: it retries with a linear backoff (one more
+second per attempt, capped at 30 seconds), so an outage of any length is
+recovered transparently once the daemon is back.

@@ -301,7 +301,7 @@ In scale mode, Sablier can also throttle the container's [block I/O](https://doc
 |---|---|
 | `blkio-weight` | Relative weight from `10` to `1000`. Other values, including `0`, are ignored. |
 | `blkio-weight-device` | `path:weight` |
-| `blkio-device-read-bps`, `blkio-device-write-bps` | `path:rate`, in Docker byte units: `10m` is 10 MB/s. |
+| `blkio-device-read-bps`, `blkio-device-write-bps` | `path:rate`, in Docker byte units: `10m` is 10 MiB/s. |
 | `blkio-device-read-iops`, `blkio-device-write-iops` | `path:iops`, an integer. |
 
 - **Separate several devices with commas**, for example `/dev/sda:10m,/dev/sdb:5m`.
