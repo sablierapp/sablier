@@ -24,9 +24,15 @@ type composeDependency struct {
 	Condition string
 }
 
+// composeConditionRunningOrHealthy is the condition Docker Compose gives a
+// depends_on label entry that has no condition, written by older Compose
+// versions: the dependency must be running, or healthy if it has a health check.
+const composeConditionRunningOrHealthy = "running_or_healthy"
+
 // parseComposeDependsOn parses the com.docker.compose.depends_on label, a
-// comma-separated list of "service:condition:restart" entries. Malformed
-// entries are skipped.
+// comma-separated list of "service:condition:restart" entries. An entry with
+// only a service name gets composeConditionRunningOrHealthy, as in Compose.
+// Entries without a service name are skipped.
 func parseComposeDependsOn(label string) []composeDependency {
 	label = strings.TrimSpace(label)
 	if label == "" {
@@ -40,12 +46,16 @@ func parseComposeDependsOn(label string) []composeDependency {
 			continue
 		}
 		parts := strings.Split(entry, ":")
-		if len(parts) < 2 || parts[0] == "" {
+		if parts[0] == "" {
 			continue
+		}
+		condition := composeConditionRunningOrHealthy
+		if len(parts) > 1 {
+			condition = parts[1]
 		}
 		deps = append(deps, composeDependency{
 			Service:   parts[0],
-			Condition: parts[1],
+			Condition: condition,
 		})
 	}
 	return deps

@@ -49,10 +49,20 @@ func TestParseComposeDependsOn(t *testing.T) {
 		},
 		{
 			name:  "skips malformed entries",
-			label: "db:service_healthy:false,,broken,:service_started:false,ok:service_started:false",
+			label: "db:service_healthy:false,,:service_started:false,ok:service_started:false",
 			want: []composeDependency{
 				{Service: "db", Condition: "service_healthy"},
 				{Service: "ok", Condition: "service_started"},
+			},
+		},
+		{
+			// Older Compose versions wrote only the service name. Compose reads
+			// such an entry as running_or_healthy, so Sablier must too.
+			name:  "legacy entry without condition",
+			label: "db,migration:service_completed_successfully:false",
+			want: []composeDependency{
+				{Service: "db", Condition: "running_or_healthy"},
+				{Service: "migration", Condition: "service_completed_successfully"},
 			},
 		},
 		{
