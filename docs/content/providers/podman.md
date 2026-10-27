@@ -226,7 +226,7 @@ Podman schedules health checks with systemd timers. On a host without systemd, t
 
 - **Sablier always stops containers.** The pause strategy, [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy), is Docker-only.
 - **The restart policy is not honored.** [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) is Docker-only: a container that exits with code `0` is reported stopped, never completed.
-- **podman-compose does not record `depends_on`.** Sablier reads [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) from the `com.docker.compose.depends_on` label, which Docker Compose writes and [podman-compose](https://github.com/containers/podman-compose) does not. Put the dependencies in the same group instead. See [starting dependencies together](/features/startup-dependencies/depends-on/).
+- **podman-compose does not record `depends_on`.** Sablier reads [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) from the `com.docker.compose.depends_on` label, which Docker Compose writes and [podman-compose](https://github.com/containers/podman-compose) does not. Put the dependencies in the same group instead. See [starting dependencies together](/providers/docker/#start-dependencies-together).
 - **CPU throttling has no effect.** Podman's Docker-compatible API drops the CPU limit that Sablier sends, so `sablier.idle.cpu` and `sablier.active.cpu` are ignored.
 - [Block I/O throttling](/features/disk-io-limits/) is not available on Podman.
 

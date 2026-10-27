@@ -4,11 +4,11 @@ weight: 1
 since: v1.0.0
 aliases:
   - /tutorials/providers/docker/
-  - /features/startup-dependencies/
-  - /features/startup-dependencies/depends-on/
-  - /features/startup-dependencies/restart-policy/
-  - /features/security/
-  - /features/security/docker-socket-proxy/
+  - /how-to-guides/startup-dependencies/
+  - /how-to-guides/startup-dependencies/depends-on/
+  - /how-to-guides/startup-dependencies/restart-policy/
+  - /how-to-guides/advanced/security/
+  - /how-to-guides/advanced/security/docker-socket-proxy/
 ---
 
 ## Introduction
