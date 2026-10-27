@@ -16,7 +16,7 @@ func TestSystemdProvider_InstanceList(t *testing.T) {
 		{
 			name:         "web.service",
 			active:       true,
-			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a,team-b\n"),
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a,team-b\nRunningHours=09:00-18:00\n"),
 		},
 		{
 			name:         "db.service",
@@ -36,14 +36,14 @@ func TestSystemdProvider_InstanceList(t *testing.T) {
 	active, err := p.InstanceList(ctx, provider.InstanceListOptions{})
 	assert.NilError(t, err)
 	assert.DeepEqual(t, active, []sablier.InstanceConfiguration{
-		{Name: "web.service", Groups: []string{"team-a", "team-b"}, Enabled: "true"},
+		{Name: "web.service", Groups: []string{"team-a", "team-b"}, Enabled: "true", RunningHours: "09:00-18:00"},
 	})
 
 	all, err := p.InstanceList(ctx, provider.InstanceListOptions{All: true})
 	assert.NilError(t, err)
 	assert.DeepEqual(t, all, []sablier.InstanceConfiguration{
 		{Name: "db.service", Groups: []string{"default"}, Enabled: "true"},
-		{Name: "web.service", Groups: []string{"team-a", "team-b"}, Enabled: "true"},
+		{Name: "web.service", Groups: []string{"team-a", "team-b"}, Enabled: "true", RunningHours: "09:00-18:00"},
 	})
 }
 
