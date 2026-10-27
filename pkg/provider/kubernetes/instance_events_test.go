@@ -31,6 +31,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
+	defer waitStreamClosed(t, cancel, stream)
 
 	t.Run("deployment is scaled to 0 replicas", func(t *testing.T) {
 		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
@@ -154,6 +155,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
+		defer waitStreamClosed(t, testCancel, stream)
 
 		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(testCtx, d.Name, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -196,6 +198,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
+		defer waitStreamClosed(t, testCancel, stream)
 
 		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(testCtx, ss.Name, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -243,6 +246,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
+	defer waitStreamClosed(t, cancel, stream)
 
 	t.Run("deployment is created", func(t *testing.T) {
 		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})

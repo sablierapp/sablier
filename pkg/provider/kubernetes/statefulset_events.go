@@ -35,10 +35,10 @@ func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- 
 			info, err := p.InstanceInspect(ctx, parsed.Original)
 			if err != nil {
 				p.l.WarnContext(ctx, "inspect after add event failed, using bare info", "statefulset", parsed.Original, "error", err)
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: parsed.Original, Provider: sablier.ProviderKubernetes}}
+				emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: parsed.Original, Provider: sablier.ProviderKubernetes}})
 				return
 			}
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
+			emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info})
 		},
 		UpdateFunc: func(old, new any) {
 			newStatefulSet, ok := eventObject[*appsv1.StatefulSet](new)
@@ -63,20 +63,20 @@ func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- 
 				info, err := p.InstanceInspect(ctx, parsed.Original)
 				if err != nil {
 					p.l.WarnContext(ctx, "inspect after scale-to-0 event failed, using bare info", "statefulset", parsed.Original, "error", err)
-					instance <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderKubernetes}}
+					emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStopped, Provider: sablier.ProviderKubernetes}})
 					return
 				}
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info}
+				emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info})
 			}
 			if wantStarted && oldReplicas == 0 && newReplicas != 0 {
 				parsed := StatefulSetName(newStatefulSet, ParseOptions{Delimiter: p.delimiter})
 				info, err := p.InstanceInspect(ctx, parsed.Original)
 				if err != nil {
 					p.l.WarnContext(ctx, "inspect after scale-from-0 event failed, using bare info", "statefulset", parsed.Original, "error", err)
-					instance <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderKubernetes}}
+					emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: parsed.Original, Status: sablier.InstanceStatusStarting, Provider: sablier.ProviderKubernetes}})
 					return
 				}
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: info}
+				emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: info})
 			}
 		},
 		DeleteFunc: func(obj any) {
@@ -107,10 +107,10 @@ func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- 
 			}
 			sablier.PopulateEnabledAndGroup(&info, sablierConfig(ss.Labels, ss.Annotations))
 			if wantRemoved {
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info}
+				emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: info})
 			}
 			if wantStopped {
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info}
+				emit(ctx, instance, sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: info})
 			}
 		},
 	}

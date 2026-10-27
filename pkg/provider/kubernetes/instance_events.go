@@ -3,9 +3,11 @@ package kubernetes
 import (
 	"context"
 	"slices"
+	"sync"
 
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"k8s.io/client-go/tools/cache"
 )
 
 // informerResync disables the periodic resync of the instance event informers.
@@ -22,15 +24,34 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	wantRemoved := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventRemoved)
 	eventsC := make(chan sablier.InstanceEvent)
 	errC := make(chan error, 1)
-	informer := p.watchDeployments(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved)
-	go informer.Run(ctx.Done())
-	informer = p.watchStatefulSets(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved)
-	go informer.Run(ctx.Done())
+
+	// Run returns once the informer has stopped and its handlers have
+	// returned, so the channels can be closed after every Run returns, as the
+	// Provider interface requires on context cancellation.
+	var wg sync.WaitGroup
+	run := func(informer cache.SharedIndexInformer) {
+		wg.Go(func() { informer.Run(ctx.Done()) })
+	}
+	run(p.watchDeployments(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
+	run(p.watchStatefulSets(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
 	// Only watch CloudNativePG Clusters when the CRD is present, to avoid noisy
 	// list/watch errors on clusters that don't run CloudNativePG.
 	if p.clusterCRDInstalled(ctx) {
-		informer = p.watchClusters(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved)
-		go informer.Run(ctx.Done())
+		run(p.watchClusters(ctx, eventsC, wantStopped, wantStarted, wantCreated, wantRemoved))
 	}
+	go func() {
+		wg.Wait()
+		close(eventsC)
+		close(errC)
+	}()
 	return sablier.InstanceEventStream{Events: eventsC, Err: errC}
+}
+
+// emit sends ev on instance unless ctx is done, so an event handler never
+// blocks once the stream's reader is gone and the informer can stop.
+func emit(ctx context.Context, instance chan<- sablier.InstanceEvent, ev sablier.InstanceEvent) {
+	select {
+	case instance <- ev:
+	case <-ctx.Done():
+	}
 }
