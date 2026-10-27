@@ -1,6 +1,10 @@
 ---
-title: Enable tracing
-weight: 152
+title: "Tracing"
+description: "Send OpenTelemetry traces of requests and provider calls."
+icon: search
+weight: 210
+aliases:
+  - /how-to-guides/advanced/observability/tracing/
 ---
 
 Sablier supports distributed tracing via [OpenTelemetry](https://opentelemetry.io/).

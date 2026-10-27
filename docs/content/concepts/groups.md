@@ -48,7 +48,7 @@ When a request hits `/whoami`, Sablier starts the `demo` group and waits accordi
 
 ## One instance, several groups
 
-An instance can belong to more than one group at the same time; a session for **any** of them starts it. This is useful for shared dependencies. See [Instance groups](/how-to-guides/groups/) for the rules and per-provider examples.
+An instance can belong to more than one group at the same time; a session for **any** of them starts it. This is useful for shared dependencies. See [Instance groups](/features/groups/) for the rules and per-provider examples.
 
 ## Groups and sessions
 

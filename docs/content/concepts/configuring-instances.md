@@ -25,7 +25,7 @@ Everything beyond opting in is optional and expressed the same way. Labels contr
 - `sablier.group`: the group(s) this instance belongs to (see [Groups](/concepts/groups/)).
 - `sablier.running-hours` / `sablier.running-days`: keep the instance warm on a schedule.
 - `sablier.ready-after` / `sablier.ready-on-start`: tune when Sablier considers the instance ready.
-- `sablier.idle.*` / `sablier.active.*`: throttle CPU, memory and block I/O instead of stopping (see [scale mode](/how-to-guides/scaling-resources/scale-mode/)).
+- `sablier.idle.*` / `sablier.active.*`: throttle CPU, memory and block I/O instead of stopping (see [scale mode](/features/scale-mode/)).
 
 The [Label reference](/reference/labels/) documents every key, its type and the version it was introduced in.
 

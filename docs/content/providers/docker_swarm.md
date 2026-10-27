@@ -34,7 +34,7 @@ Opt a [service](https://docs.docker.com/engine/swarm/how-swarm-mode-works/servic
 Deploy it with `docker stack deploy -c whoami.yml demo`. Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the service. On the first request, Sablier scales the service to one [replica](https://docs.docker.com/reference/compose-file/deploy/#replicas) and holds the request, or shows a waiting page, until its [task](https://docs.docker.com/engine/swarm/how-swarm-mode-works/swarm-task-states/) passes its [healthcheck](https://docs.docker.com/reference/compose-file/services/#healthcheck). When the session expires, Sablier scales it back to zero.
 
 {{< callout type="info" >}}
-Sablier scales opted-in services to zero when it starts. A service you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier scales opted-in services to zero when it starts. A service you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -103,7 +103,7 @@ Each excerpt below is the start of a complete stack file in [`examples/docker-sw
 
 {{< example file="docker-swarm/group.yml" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="v1.13.0"}
 
@@ -111,7 +111,7 @@ Each excerpt below is the start of a complete stack file in [`examples/docker-sw
 
 {{< example file="docker-swarm/ready-after.yml" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="v1.15.0"}
 
@@ -119,7 +119,7 @@ Each excerpt below is the start of a complete stack file in [`examples/docker-sw
 
 {{< example file="docker-swarm/ready-on-start.yml" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="v1.13.0"}
 
@@ -132,7 +132,7 @@ The window uses Sablier's local time. Set the time zone with the `TZ` [environme
 
 {{< example file="docker-swarm/sablier.yml" region="timezone" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="v1.15.0"}
 
@@ -140,7 +140,7 @@ The window uses Sablier's local time. Set the time zone with the `TZ` [environme
 
 {{< example file="docker-swarm/anti-affinity.yml" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="v1.13.0"}
 
@@ -158,7 +158,7 @@ CPU is in decimal cores, such as `0.5`. Memory uses Docker units, such as `64m` 
 Changing limits updates the service's task template, so Swarm replaces its [tasks](https://docs.docker.com/engine/swarm/how-swarm-mode-works/swarm-task-states/) with a [rolling update](https://docs.docker.com/engine/swarm/swarm-tutorial/rolling-update/). Sablier changes limits, never reservations. An idle limit stays in place on the next session unless you set its `active` counterpart.
 {{< /callout >}}
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 ### Readiness
 
@@ -177,8 +177,8 @@ Swarm marks a task running only once its container passes its [healthcheck](http
 - Start always scales to `sablier.active.replicas`, one replica by default, whatever `deploy.replicas` says.
 - A service is ready only when all its desired tasks run: no option accepts the first ready task.
 - Sablier does not start [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) services. Put dependencies in the same group instead.
-- [Block I/O throttling](/how-to-guides/scaling-resources/scale-blkio/) is not available on Docker Swarm.
-- [`docker stack deploy`](https://docs.docker.com/reference/cli/docker/stack/deploy/) sets each service back to its `deploy.replicas`, or one replica when unset. Redeploying a stack starts its stopped services, and Sablier treats them as [started externally](/how-to-guides/lifecycle/auto-stop-externally-started/).
+- [Block I/O throttling](/features/disk-io-limits/) is not available on Docker Swarm.
+- [`docker stack deploy`](https://docs.docker.com/reference/cli/docker/stack/deploy/) sets each service back to its `deploy.replicas`, or one replica when unset. Redeploying a stack starts its stopped services, and Sablier treats them as [started externally](/features/stop-external-starts/).
 
 ## Examples
 

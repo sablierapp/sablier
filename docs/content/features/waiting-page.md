@@ -1,6 +1,10 @@
 ---
-title: Show a waiting page
-weight: 110
+title: "Waiting page"
+description: "Show a page that refreshes until your instances are ready."
+icon: globe-alt
+weight: 10
+aliases:
+  - /how-to-guides/loading-strategies/show-waiting-page/
 ---
 
 The **dynamic** strategy serves a self-refreshing waiting page while your instances start, then reloads into the real service once they are ready.
@@ -40,10 +44,10 @@ The strategy is chosen in your reverse-proxy plugin configuration, not on the Sa
 - `display_name`: the name shown on the waiting page.
 - Refresh and theme options let you control how often the page reloads and how it looks.
 
-To change the look of the page, pick a built-in theme or provide your own; see [Customize the theme](/how-to-guides/loading-strategies/customize-theme/). See the [themes example](https://github.com/sablierapp/sablier/tree/main/examples/custom-theme).
+To change the look of the page, pick a built-in theme or provide your own; see [Customize the theme](/features/themes/). See the [themes example](https://github.com/sablierapp/sablier/tree/main/examples/custom-theme).
 
 ## Related
 
 - [Strategies](/concepts/strategies/): how the dynamic strategy works conceptually.
-- [Customize the theme](/how-to-guides/loading-strategies/customize-theme/): style the waiting page.
+- [Customize the theme](/features/themes/): style the waiting page.
 - [Reverse proxies](/reverse-proxies/): the exact plugin syntax for each proxy.

@@ -1,7 +1,8 @@
 ---
-title: Mark instances as optional (best-effort)
-description: Start an instance with the session without letting its readiness or failures block the session.
-weight: 137
+title: "Optional instances"
+description: "Start an instance without making the request wait for it."
+icon: eye-off
+weight: 90
 compatibility:
   docker: supported
   swarm: supported
@@ -11,6 +12,8 @@ compatibility:
   systemd: supported
   nomad: supported
   ecs: supported
+aliases:
+  - /how-to-guides/readiness/optional-instances/
 ---
 
 {{< compatibility >}}
@@ -53,5 +56,5 @@ GET /api/strategies/dynamic?names=whoami&names=optional:whoami-helper&session_du
 
 ## Related
 
-- [Mark ready on start](/how-to-guides/readiness/ready-on-start/) — skip the health check but still require a successful start.
-- [Settling delay](/how-to-guides/readiness/ready-after/) — the opposite direction: require extra readiness time.
+- [Mark ready on start](/features/ready-on-start/) — skip the health check but still require a successful start.
+- [Settling delay](/features/ready-after/) — the opposite direction: require extra readiness time.

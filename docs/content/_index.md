@@ -57,7 +57,7 @@ cascade:
   {{< hextra/feature-card
     title="Scale, don't stop"
     icon="chip"
-    link="/how-to-guides/scaling-resources/scale-mode/"
+    link="/features/scale-mode/"
     subtitle="Keep workloads warm with throttled CPU, memory and block I/O instead of full cold starts."
   >}}
   {{< hextra/feature-card

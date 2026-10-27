@@ -214,7 +214,7 @@ This configuration applies to requests for `http://localhost:8080/whoami`:
 - After one minute without traffic, the containers stop.
 - The dynamic strategy shows a waiting page while the service starts, using the display name `My Whoami Service`, the built-in `ghost` theme, and the instance details.
 
-Sablier ships several built-in themes, including `ghost`, `shuffle`, `hacker-terminal`, `matrix`, and `retro`. You can also provide your own. See [Customize your theme](/how-to-guides/loading-strategies/customize-theme/).
+Sablier ships several built-in themes, including `ghost`, `shuffle`, `hacker-terminal`, `matrix`, and `retro`. You can also provide your own. See [Customize your theme](/features/themes/).
 
 ### Reach the endpoint and watch it load
 
@@ -235,7 +235,7 @@ The waiting page refreshes on its own. When `whoami` reports ready, Sablier relo
 You have now followed a request through the full path: a stopped service, a waiting page, and the running application. This is scale-to-zero from end to end.
 
 {{< callout type="info" >}}
-To hold the request until the service is ready instead of showing a waiting page, replace the `dynamic` block with a `blocking` block. To start instances without waiting at all, use a `poke` block. See [Loading strategies](/how-to-guides/loading-strategies/) for all three.
+To hold the request until the service is ready instead of showing a waiting page, replace the `dynamic` block with a `blocking` block. To start instances without waiting at all, use a `poke` block. See [Loading strategies](/features/) for all three.
 {{< /callout >}}
 
 {{% /steps %}}

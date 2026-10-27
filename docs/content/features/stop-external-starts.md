@@ -1,6 +1,10 @@
 ---
-title: Stop externally-started instances
-weight: 160
+title: "Stop external starts"
+description: "Stop managed instances that start without a request."
+icon: stop
+weight: 150
+aliases:
+  - /how-to-guides/lifecycle/auto-stop-externally-started/
 ---
 
 Automatically stop managed instances that start without Sablier having initiated them, so traffic is only ever served after a client explicitly requests the instance.

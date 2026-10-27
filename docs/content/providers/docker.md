@@ -4,11 +4,11 @@ weight: 1
 since: v1.0.0
 aliases:
   - /tutorials/providers/docker/
-  - /how-to-guides/startup-dependencies/
-  - /how-to-guides/startup-dependencies/depends-on/
-  - /how-to-guides/startup-dependencies/restart-policy/
-  - /how-to-guides/advanced/security/
-  - /how-to-guides/advanced/security/docker-socket-proxy/
+  - /features/startup-dependencies/
+  - /features/startup-dependencies/depends-on/
+  - /features/startup-dependencies/restart-policy/
+  - /features/security/
+  - /features/security/docker-socket-proxy/
 ---
 
 ## Introduction
@@ -87,7 +87,7 @@ docker compose -f compose.yml -f whoami.yml create whoami
 Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` service. On the first request, Sablier starts the container and holds the request, or shows a waiting page, until its [health check](https://docs.docker.com/reference/compose-file/services/#healthcheck) passes. When the session expires, Sablier stops it.
 
 {{< callout type="info" >}}
-Sablier stops opted-in containers when it starts. A container you start afterwards, with `docker compose up`, `docker start` or a [restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/), keeps running until its first session expires. To avoid that, [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier stops opted-in containers when it starts. A container you start afterwards, with `docker compose up`, `docker start` or a [restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/), keeps running until its first session expires. To avoid that, [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -99,7 +99,7 @@ Sablier stops opted-in containers when it starts. A container you start afterwar
 | [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy) | `stop` | `stop` or `pause` idle containers. See [Pause instead of stop](#pause-instead-of-stop). Since v1.11.0. |
 | [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) | `false` | Report a one-shot container that exited `0` as completed. See [One-shot containers](#one-shot-containers). Deprecated: the default in v2. Since v1.15.0. |
 
-Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). Sablier connects to the daemon with the [Docker environment variables](#install-sablier). With [tracing](/how-to-guides/advanced/observability/tracing/) on, every Docker API call becomes a span, with no daemon configuration.
+Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). Sablier connects to the daemon with the [Docker environment variables](#install-sablier). With [tracing](/features/tracing/) on, every Docker API call becomes a span, with no daemon configuration.
 
 ### Workloads
 
@@ -229,7 +229,7 @@ Each excerpt below comes from a Compose file in [`examples/docker`](https://gith
 
 {{< example file="docker/group.yml" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="v1.13.0"}
 
@@ -237,7 +237,7 @@ Each excerpt below comes from a Compose file in [`examples/docker`](https://gith
 
 {{< example file="docker/ready-after.yml" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="v1.15.0"}
 
@@ -245,7 +245,7 @@ Each excerpt below comes from a Compose file in [`examples/docker`](https://gith
 
 {{< example file="docker/ready-on-start.yml" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="v1.13.0"}
 
@@ -258,7 +258,7 @@ The window uses Sablier's local time. The Sablier image defaults to UTC: set the
 
 {{< example file="docker/timezone.yml" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="v1.15.0"}
 
@@ -266,7 +266,7 @@ The window uses Sablier's local time. The Sablier image defaults to UTC: set the
 
 {{< example file="docker/anti-affinity.yml" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="v1.13.0"}
 
@@ -289,7 +289,7 @@ Sablier changes the limits with the equivalent of [`docker update --cpus=0.1 --m
 
 Replica counts above `1` and `sablier.active.replicas` have no effect: a container is one replica.
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 #### Block I/O {since="v1.15.0"}
 
@@ -310,7 +310,7 @@ In scale mode, Sablier can also throttle the container's [block I/O](https://doc
 
 If Docker returns warnings for the update, Sablier logs them.
 
-[Learn more about throttling block I/O](/how-to-guides/scaling-resources/scale-blkio/).
+[Learn more about throttling block I/O](/features/disk-io-limits/).
 
 ### Readiness
 

@@ -1,9 +1,8 @@
 ---
-title: Scale memory
-description: Throttle a workload's memory while idle and restore it when a session starts.
-weight: 122
-aliases:
-  - /features/scale-mode/memory/
+title: "Memory limits"
+description: "Lower an instance's memory limit while it is idle."
+icon: server
+weight: 130
 compatibility:
   docker: differs
   swarm: differs
@@ -14,6 +13,9 @@ compatibility:
   nomad: unsupported
   ecs: impossible
 setting: scale-instead-of-stop
+aliases:
+  - /features/scale-mode/memory/
+  - /how-to-guides/scaling-resources/scale-memory/
 ---
 
 {{< compatibility >}}
@@ -33,5 +35,5 @@ flowchart LR
 | `idle.memory` | the session expires |
 | `active.memory` | a session is requested |
 
-- **Both need `idle.replicas` at `1` or more.** See [Scale instead of stop](/how-to-guides/scaling-resources/scale-mode/) for the shared idle and active model.
+- **Both need `idle.replicas` at `1` or more.** See [Scale instead of stop](/features/scale-mode/) for the shared idle and active model.
 - **The value format depends on your provider**, for example `64m` or `64Mi`. Your provider page shows it, along with side effects such as swap or restarts.

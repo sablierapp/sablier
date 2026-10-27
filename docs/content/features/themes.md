@@ -1,9 +1,12 @@
 ---
-title: Customize your theme
-weight: 111
+title: "Waiting page themes"
+description: "Change how the waiting page looks, or bring your own theme."
+icon: color-swatch
+weight: 20
 aliases:
   - /strategies/themes/
   - /themes/
+  - /how-to-guides/loading-strategies/customize-theme/
 ---
 
 This guide shows you how to customize the waiting page shown while an instance starts.

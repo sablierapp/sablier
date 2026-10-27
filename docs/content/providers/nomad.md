@@ -70,7 +70,7 @@ Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `
 The demo runs the busybox web server of the Nomad image with the [`raw_exec` driver](https://developer.hashicorp.com/nomad/docs/deploy/task-driver/raw_exec), so it works on a [development agent](https://developer.hashicorp.com/nomad/commands/agent#dev). Use your own driver and image.
 
 {{< callout type="info" >}}
-Sablier scales opted-in task groups to zero when it starts. A job you register afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier scales opted-in task groups to zero when it starts. A job you register afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ### With Traefik
@@ -114,7 +114,7 @@ Sablier reads TLS settings from the [environment variables](https://developer.ha
 `NOMAD_HTTP_AUTH` sets HTTP basic authentication, as `user:password`.
 {{< /details >}}
 
-With [tracing](/how-to-guides/advanced/observability/tracing/) enabled, every Nomad API call is a child span. The event stream is one span for the whole connection.
+With [tracing](/features/tracing/) enabled, every Nomad API call is a child span. The event stream is one span for the whole connection.
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/).
 
@@ -188,7 +188,7 @@ Each excerpt below is the `meta` of a task group in a complete job in [`examples
 
 {{< example file="nomad/group.nomad.hcl" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="next"}
 
@@ -196,7 +196,7 @@ Each excerpt below is the `meta` of a task group in a complete job in [`examples
 
 {{< example file="nomad/ready-after.nomad.hcl" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="next"}
 
@@ -204,7 +204,7 @@ Each excerpt below is the `meta` of a task group in a complete job in [`examples
 
 {{< example file="nomad/ready-on-start.nomad.hcl" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="next"}
 
@@ -217,7 +217,7 @@ The window uses Sablier's local time. In the Sablier job, set the time zone with
 
 {{< example file="nomad/sablier.nomad.hcl" region="env" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="next"}
 
@@ -225,7 +225,7 @@ The window uses Sablier's local time. In the Sablier job, set the time zone with
 
 {{< example file="nomad/anti-affinity.nomad.hcl" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="next"}
 
@@ -238,7 +238,7 @@ Keep the task group running when idle instead of scaling it to zero:
 
 Nomad supports the counts only. CPU and memory limits belong to the task [resources](https://developer.hashicorp.com/nomad/docs/job-specification/resources) block, so Sablier ignores `idle.cpu` and `idle.memory`, and their `active` counterparts.
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 ### Readiness
 
@@ -260,8 +260,8 @@ An allocation without deployment health, for example in a batch job, is ready as
 - Sablier can't scale [system](https://developer.hashicorp.com/nomad/docs/concepts/scheduling/schedulers#system) and [sysbatch](https://developer.hashicorp.com/nomad/docs/concepts/scheduling/schedulers#system-batch) jobs: they have no count.
 - Sablier skips [periodic](https://developer.hashicorp.com/nomad/docs/job-specification/periodic) and [parameterized](https://developer.hashicorp.com/nomad/docs/job-specification/parameterized) parent jobs, which never run themselves.
 - A task group with a [scaling block](https://developer.hashicorp.com/nomad/docs/job-specification/scaling#min) must allow `min = 0`. Otherwise Nomad rejects the scale to zero.
-- [CPU](/how-to-guides/scaling-resources/scale-cpu/) and [memory](/how-to-guides/scaling-resources/scale-memory/) throttling are not available on Nomad: Sablier only changes the count.
-- [Block I/O throttling](/how-to-guides/scaling-resources/scale-blkio/) is not available on Nomad.
+- [CPU](/features/cpu-limits/) and [memory](/features/memory-limits/) throttling are not available on Nomad: Sablier only changes the count.
+- [Block I/O throttling](/features/disk-io-limits/) is not available on Nomad.
 
 ## Examples
 

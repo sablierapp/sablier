@@ -60,7 +60,7 @@ Opt a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/dep
 Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` [Service](https://kubernetes.io/docs/concepts/services-networking/service/). On the first request, Sablier scales the Deployment to one [replica](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment) and holds the request, or shows a waiting page, until the [pod](https://kubernetes.io/docs/concepts/workloads/pods/) is ready. When the session expires, Sablier scales it back to zero.
 
 {{< callout type="info" >}}
-Sablier scales opted-in workloads to zero when it starts. A workload you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier scales opted-in workloads to zero when it starts. A workload you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -164,7 +164,7 @@ A list of groups contains commas, so set it as an [annotation](https://kubernete
 
 {{< example file="kubernetes/group.yaml" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="v1.13.0"}
 
@@ -172,7 +172,7 @@ A list of groups contains commas, so set it as an [annotation](https://kubernete
 
 {{< example file="kubernetes/ready-after.yaml" region="sablier" >}}
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="v1.15.0"}
 
@@ -180,7 +180,7 @@ A list of groups contains commas, so set it as an [annotation](https://kubernete
 
 {{< example file="kubernetes/ready-on-start.yaml" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="v1.13.0"}
 
@@ -195,7 +195,7 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 {{< example file="kubernetes/values.yaml" region="timezone" >}}
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="v1.15.0"}
 
@@ -203,7 +203,7 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 {{< example file="kubernetes/anti-affinity.yaml" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="v1.13.0"}
 
@@ -221,7 +221,7 @@ CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/con
 Changing limits triggers a [rolling update](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment): new pods replace the old ones, so the service stays available. Sablier only changes the limits of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates)'s first container, never its [requests](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits), so make sure your nodes can schedule the active limits.
 {{< /callout >}}
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 ### Readiness
 
@@ -238,7 +238,7 @@ A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotatio
 ### Limitations
 
 - Sablier must run as a [pod](https://kubernetes.io/docs/concepts/workloads/pods/) in the cluster it manages: it only uses [in-cluster credentials](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/).
-- [Block I/O throttling](/how-to-guides/scaling-resources/scale-blkio/) is not available on Kubernetes.
+- [Block I/O throttling](/features/disk-io-limits/) is not available on Kubernetes.
 - CPU and memory throttling applies to the first container of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) only, and restarts the pods.
 - Without the Redis permissions, Sablier logs a warning and scales the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) anyway; the operator then scales it back up.
 

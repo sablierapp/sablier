@@ -1,6 +1,10 @@
 ---
-title: Start without waiting
-weight: 111
+title: "Start without waiting"
+description: "Start your instances and let the request through immediately."
+icon: lightning-bolt
+weight: 40
+aliases:
+  - /how-to-guides/loading-strategies/start-without-waiting/
 ---
 
 The **poke** strategy starts your instances and immediately lets the request continue. Unlike the `blocking` and `dynamic` strategies, it never waits for an instance to become ready and never displays a waiting page.

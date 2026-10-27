@@ -1,9 +1,8 @@
 ---
-title: Mark ready on start
-description: Treat an instance as ready as soon as it starts, skipping the health check.
-weight: 136
-aliases:
-  - /features/ready-on-start/
+title: "Ready on start"
+description: "Treat an instance as ready as soon as it starts."
+icon: play
+weight: 80
 compatibility:
   docker: supported
   swarm: supported
@@ -14,6 +13,8 @@ compatibility:
   nomad: supported
   ecs: supported
 setting: ready-on-start
+aliases:
+  - /how-to-guides/readiness/ready-on-start/
 ---
 
 {{< compatibility >}}

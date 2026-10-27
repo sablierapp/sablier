@@ -71,7 +71,7 @@ Opt a [container](https://pve.proxmox.com/pve-docs/chapter-pct.html) in with the
 Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the container's address. On the first request, Sablier starts the container and holds the request, or shows a waiting page, until the container has an IP address. When the session expires, Sablier stops it.
 
 {{< callout type="info" >}}
-Sablier stops opted-in containers that are running when it starts. A container you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier stops opted-in containers that are running when it starts. A container you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -85,7 +85,7 @@ Sablier stops opted-in containers that are running when it starts. A container y
 | [`--provider.proxmox-lxc.token-secret`](/reference/cli/#opt-provider-proxmox-lxc-token-secret) | | Required. The API token secret. |
 | [`--provider.proxmox-lxc.tls-insecure`](/reference/cli/#opt-provider-proxmox-lxc-tls-insecure) | `false` | Skip TLS certificate verification. Prefer trusting the cluster CA. |
 
-Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). With [tracing](/how-to-guides/advanced/observability/tracing/) on, each Proxmox VE API call is a child span, with or without `tls-insecure`.
+Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). With [tracing](/features/tracing/) on, each Proxmox VE API call is a child span, with or without `tls-insecure`.
 
 ### Workloads
 
@@ -150,7 +150,7 @@ Add one tag per group, since v1.13.0. Earlier releases only read the first one.
 
 Remove a group tag, or the `sablier` tag, and Sablier drops the container from that group at its next scan.
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 ### Readiness
 
@@ -168,9 +168,9 @@ Sablier doesn't check the service inside the container. The waiting page can cle
 ### Limitations
 
 - Sablier manages LXC containers only, not [virtual machines](https://pve.proxmox.com/pve-docs/chapter-qm.html).
-- Tags can't carry values, so these settings are not available: [Ready after](/how-to-guides/readiness/ready-after/), [Ready on start](/how-to-guides/readiness/ready-on-start/), [Running hours](/how-to-guides/lifecycle/running-hours/), [Anti-affinity](/how-to-guides/anti-affinity/), [Scale instead of stop](/how-to-guides/scaling-resources/scale-mode/), and [CPU](/how-to-guides/scaling-resources/scale-cpu/), [memory](/how-to-guides/scaling-resources/scale-memory/) or [block I/O](/how-to-guides/scaling-resources/scale-blkio/) throttling.
-- Don't enable [`--provider.reject-unlabeled-requests`](/how-to-guides/guardrails/reject-unlabeled-requests/) or [`--provider.verify-enabled-on-expiration`](/how-to-guides/guardrails/verify-enabled-on-expiration/). Sablier doesn't see the `sablier` tag when it inspects a container, so it rejects every request by name, or never stops an expired container.
-- Proxmox VE has no event stream, so Sablier polls the API every 10 seconds. It notices a container stopped outside Sablier within that delay, and [stops an externally-started one](/how-to-guides/lifecycle/auto-stop-externally-started/) within 30 seconds.
+- Tags can't carry values, so these settings are not available: [Ready after](/features/ready-after/), [Ready on start](/features/ready-on-start/), [Running hours](/features/running-hours/), [Anti-affinity](/features/anti-affinity/), [Scale instead of stop](/features/scale-mode/), and [CPU](/features/cpu-limits/), [memory](/features/memory-limits/) or [block I/O](/features/disk-io-limits/) throttling.
+- Don't enable [`--provider.reject-unlabeled-requests`](/features/reject-unlabeled-requests/) or [`--provider.verify-enabled-on-expiration`](/features/verify-before-stopping/). Sablier doesn't see the `sablier` tag when it inspects a container, so it rejects every request by name, or never stops an expired container.
+- Proxmox VE has no event stream, so Sablier polls the API every 10 seconds. It notices a container stopped outside Sablier within that delay, and [stops an externally-started one](/features/stop-external-starts/) within 30 seconds.
 
 ## Examples
 

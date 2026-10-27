@@ -1,9 +1,8 @@
 ---
-title: Scale CPU
-description: Throttle a workload's CPU while idle and restore it when a session starts.
+title: "CPU limits"
+description: "Lower an instance's CPU limit while it is idle."
+icon: chip
 weight: 120
-aliases:
-  - /features/scale-mode/cpu/
 compatibility:
   docker: differs
   swarm: differs
@@ -14,6 +13,9 @@ compatibility:
   nomad: unsupported
   ecs: impossible
 setting: scale-instead-of-stop
+aliases:
+  - /features/scale-mode/cpu/
+  - /how-to-guides/scaling-resources/scale-cpu/
 ---
 
 {{< compatibility >}}
@@ -33,5 +35,5 @@ flowchart LR
 | `idle.cpu` | the session expires |
 | `active.cpu` | a session is requested |
 
-- **Both need `idle.replicas` at `1` or more**, so the workload keeps running while idle. See [Scale instead of stop](/how-to-guides/scaling-resources/scale-mode/) for the shared idle and active model.
+- **Both need `idle.replicas` at `1` or more**, so the workload keeps running while idle. See [Scale instead of stop](/features/scale-mode/) for the shared idle and active model.
 - **The value format depends on your provider**, for example decimal cores or a resource quantity. Your provider page shows it.

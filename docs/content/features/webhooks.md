@@ -1,6 +1,10 @@
 ---
-title: Webhooks
-weight: 154
+title: "Webhooks"
+description: "Notify an HTTP endpoint when instances start or stop."
+icon: bell
+weight: 190
+aliases:
+  - /how-to-guides/webhooks/
 ---
 
 Sablier can POST a normalized JSON notification to one or more HTTP endpoints whenever a managed instance **starts** or **stops**.

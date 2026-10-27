@@ -1,6 +1,10 @@
 ---
-title: Verify enabled on expiration
-weight: 166
+title: "Re-check before stopping"
+description: "Check that an instance still opts in before stopping it."
+icon: shield-check
+weight: 180
+aliases:
+  - /how-to-guides/guardrails/verify-enabled-on-expiration/
 ---
 
 Inspect an instance before stopping it when its session expires, and skip the stop if it is not labelled `sablier.enable=true`.

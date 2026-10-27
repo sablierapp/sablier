@@ -1,9 +1,8 @@
 ---
-title: Anti-affinity
-description: Force an instance idle while another group has an active session.
-weight: 132
-aliases:
-  - /features/anti-affinity/
+title: "Anti-affinity"
+description: "Stop or throttle an instance while another group is in use."
+icon: switch-horizontal
+weight: 60
 compatibility:
   docker: supported
   swarm: supported
@@ -14,6 +13,8 @@ compatibility:
   nomad: supported
   ecs: differs
 setting: anti-affinity
+aliases:
+  - /how-to-guides/anti-affinity/
 ---
 
 {{< compatibility >}}
@@ -35,7 +36,7 @@ How it works:
 
 - **When a session for a listed group becomes active**, Sablier forces the instance to its idle state:
   - a plain instance is **stopped** (paused with the Docker pause strategy);
-  - an instance in [scale mode](/how-to-guides/scaling-resources/scale-mode/) gets its **idle resource profile** instead.
+  - an instance in [scale mode](/features/scale-mode/) gets its **idle resource profile** instead.
 - **When that session expires** and no other listed group is active, Sablier **restores** the instances it forced idle: it starts them again, or applies their active profile.
 - **You can list several groups.** The instance stays idle while **any** of them is active.
 

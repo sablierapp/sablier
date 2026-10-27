@@ -100,7 +100,7 @@ curl "http://localhost:10000/api/strategies/blocking?group=demo&session_duration
 ```
 
 {{< callout type="info" >}}
-Sablier stops opted-in units that are active when it starts. A unit you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
+Sablier stops opted-in units that are active when it starts. A unit you start afterwards keeps running until its first session expires, unless you [stop externally-started instances](/features/stop-external-starts/).
 {{< /callout >}}
 
 ## Provider reference
@@ -189,7 +189,7 @@ Each excerpt below is the `[X-Sablier]` section of a complete unit file in [`exa
 
 {{< example file="systemd/group.service" region="sablier" >}}
 
-[Learn more about groups](/how-to-guides/groups/).
+[Learn more about groups](/features/groups/).
 
 #### Ready after {since="v1.18.0"}
 
@@ -199,7 +199,7 @@ Each excerpt below is the `[X-Sablier]` section of a complete unit file in [`exa
 
 Use it when your service is active before it can serve traffic. With [`Type=simple` or `Type=exec`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#Type=), a service is active as soon as its process starts.
 
-[Learn more about delaying readiness](/how-to-guides/readiness/ready-after/).
+[Learn more about delaying readiness](/features/ready-after/).
 
 #### Ready on start {since="v1.18.0"}
 
@@ -207,7 +207,7 @@ Use it when your service is active before it can serve traffic. With [`Type=simp
 
 {{< example file="systemd/ready-on-start.service" region="sablier" >}}
 
-[Learn more about marking ready on start](/how-to-guides/readiness/ready-on-start/).
+[Learn more about marking ready on start](/features/ready-on-start/).
 
 #### Running hours {since="v1.18.0"}
 
@@ -218,7 +218,7 @@ Use it when your service is active before it can serve traffic. With [`Type=simp
 
 The window uses Sablier's local time: the host's time zone, unless you set `TZ` in the [`Environment=`](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#Environment=) of Sablier's unit.
 
-[Learn more about running hours](/how-to-guides/lifecycle/running-hours/).
+[Learn more about running hours](/features/running-hours/).
 
 #### Anti-affinity {since="v1.18.0"}
 
@@ -226,7 +226,7 @@ The window uses Sablier's local time: the host's time zone, unless you set `TZ` 
 
 {{< example file="systemd/anti-affinity.service" region="sablier" >}}
 
-[Learn more about anti-affinity](/how-to-guides/anti-affinity/).
+[Learn more about anti-affinity](/features/anti-affinity/).
 
 #### Scale instead of stop {since="v1.18.0"}
 
@@ -248,7 +248,7 @@ Sablier sets the limits as [resource control](https://www.freedesktop.org/softwa
 - **Active limits apply on every start**, even when `IdleReplicas` is `0` and the unit is stopped when idle.
 - **One unit runs at most.** `IdleReplicas` and `ActiveReplicas` above `1` count as `1`, and Sablier logs a warning.
 
-[Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
+[Learn more about scaling instead of stopping](/features/scale-mode/).
 
 #### Block I/O {since="v1.18.0"}
 
@@ -273,7 +273,7 @@ Each key pair sets one resource control property:
 - **Omitted per-device limits are cleared on the switch.** Sablier replaces the whole device list, so the idle limits above are removed when a session starts.
 - **These are runtime properties**, like the [CPU and memory limits](#scale-instead-of-stop).
 
-[Learn more about throttling block I/O](/how-to-guides/scaling-resources/scale-blkio/).
+[Learn more about throttling block I/O](/features/disk-io-limits/).
 
 ### Readiness
 
