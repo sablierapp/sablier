@@ -40,7 +40,7 @@ flowchart LR
 
 | Piece | What it is |
 |-------|------------|
-| [Provider](/tutorials/providers/) | How Sablier talks to your platform (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, systemd, AWS ECS). One provider is configured per Sablier server. |
+| [Provider](/providers/) | How Sablier talks to your platform (Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, systemd, AWS ECS). One provider is configured per Sablier server. |
 | Instance | A single workload Sablier manages: a container, a service, a Deployment, and so on. |
 | [Label](/reference/labels/) | How you opt an instance in and configure it. Sablier discovers what it manages by reading labels from the provider. |
 | [Group](/concepts/groups/) | A named handle for one or more instances. Your reverse proxy targets a group, not individual instance names. |
@@ -64,7 +64,7 @@ The plugin calls the Sablier API for the [group](/concepts/groups/) configured o
 
 ### Sablier starts the instances
 
-Sablier looks up which instances belong to that group (discovered from your [labels](/concepts/configuring-instances/)) and asks the [provider](/tutorials/providers/) to start them.
+Sablier looks up which instances belong to that group (discovered from your [labels](/concepts/configuring-instances/)) and asks the [provider](/providers/) to start them.
 
 ### The user waits, according to the strategy
 

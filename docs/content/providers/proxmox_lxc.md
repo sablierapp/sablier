@@ -1,6 +1,8 @@
 ---
 title: Proxmox LXC
 weight: 5
+aliases:
+  - /tutorials/providers/proxmox_lxc/
 ---
 
 This tutorial connects Sablier to Proxmox. You will select the Proxmox LXC provider, create an API token so Sablier can reach the Proxmox VE API, register an LXC container with tags so Sablier can manage it, and confirm Sablier knows when the container is ready. The Proxmox LXC provider communicates with the Proxmox VE API to start and stop LXC containers on demand.

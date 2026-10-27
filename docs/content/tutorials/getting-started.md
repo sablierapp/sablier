@@ -40,7 +40,7 @@ flowchart LR
 
 ## Identify your provider
 
-First, identify your [provider](/tutorials/providers/). The provider is how Sablier talks to your platform. You can see the available providers on the [providers](/tutorials/providers/) page.
+First, identify your [provider](/providers/). The provider is how Sablier talks to your platform. You can see the available providers on the [providers](/providers/) page.
 
 ## Identify your reverse proxy
 
@@ -48,7 +48,7 @@ Next, identify your [reverse proxy](/tutorials/reverse-proxies/). The reverse-pr
 
 ## Connect it all together
 
-This tutorial uses the [Docker provider](/tutorials/providers/docker/) and the [Caddy reverse proxy plugin](/tutorials/reverse-proxies/caddy/). The steps are the same for other combinations; only the provider and plugin configuration change.
+This tutorial uses the [Docker provider](/providers/docker/) and the [Caddy reverse proxy plugin](/tutorials/reverse-proxies/caddy/). The steps are the same for other combinations; only the provider and plugin configuration change.
 
 {{% steps %}}
 

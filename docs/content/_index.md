@@ -39,7 +39,7 @@ cascade:
   {{< hextra/feature-card
     title="Any provider"
     icon="server"
-    link="/tutorials/providers/"
+    link="/providers/"
     subtitle="Docker, Docker Swarm, Kubernetes, Podman, Proxmox LXC, systemd, Nomad and AWS ECS. One API for all of them."
   >}}
   {{< hextra/feature-card
@@ -72,7 +72,7 @@ cascade:
 
 ## What is Sablier?
 
-Sablier is a **free** and **open-source** API that starts your workloads on demand and stops them when there's no activity. Your workloads can be a Docker container, a Kubernetes deployment, and [more](/tutorials/providers/).
+Sablier is a **free** and **open-source** API that starts your workloads on demand and stops them when there's no activity. Your workloads can be a Docker container, a Kubernetes deployment, and [more](/providers/).
 
 It integrates with multiple reverse proxies and offers different loading [strategies](/concepts/strategies/), so you can start containers on demand and shut them down automatically once they're idle.
 

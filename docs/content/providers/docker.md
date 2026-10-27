@@ -1,6 +1,8 @@
 ---
 title: Docker
 weight: 1
+aliases:
+  - /tutorials/providers/docker/
 ---
 
 This tutorial connects Sablier to Docker. You will select the Docker provider, run Sablier with access to the Docker socket, register a container so Sablier can manage it, and confirm Sablier knows when the container is ready. The Docker provider communicates with the `docker.sock` socket to start and stop containers on demand.

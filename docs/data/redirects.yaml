@@ -33,17 +33,17 @@ redirects:
     to: /reference/versioning/
   # Providers (the old "overview" page is now the section landing page)
   - from: /providers/overview
-    to: /tutorials/providers/
+    to: /providers/
   - from: /providers/docker
-    to: /tutorials/providers/docker/
+    to: /providers/docker/
   - from: /providers/docker_swarm
-    to: /tutorials/providers/docker_swarm/
+    to: /providers/docker_swarm/
   - from: /providers/kubernetes
-    to: /tutorials/providers/kubernetes/
+    to: /providers/kubernetes/
   - from: /providers/podman
-    to: /tutorials/providers/podman/
+    to: /providers/podman/
   - from: /providers/proxmox_lxc
-    to: /tutorials/providers/proxmox_lxc/
+    to: /providers/proxmox_lxc/
   # Reverse proxy plugins
   - from: /plugins/overview
     to: /tutorials/reverse-proxies/

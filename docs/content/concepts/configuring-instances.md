@@ -3,7 +3,7 @@ title: Labels & annotations
 weight: 412
 ---
 
-Sablier never modifies your application and keeps no central list of the workloads it manages. Instead, you **opt each workload in and configure it declaratively**, using the labelling mechanism your platform already provides. Sablier discovers what to manage by reading these labels from the [provider](/tutorials/providers/).
+Sablier never modifies your application and keeps no central list of the workloads it manages. Instead, you **opt each workload in and configure it declaratively**, using the labelling mechanism your platform already provides. Sablier discovers what to manage by reading these labels from the [provider](/providers/).
 
 ## Opt in with `sablier.enable`
 

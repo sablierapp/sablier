@@ -34,7 +34,7 @@ menu:
       url: /tutorials/getting-started/
       weight: 1
     - name: Providers
-      url: /tutorials/providers/
+      url: /providers/
       weight: 2
     - name: Reverse Proxies
       url: /tutorials/reverse-proxies/

@@ -1,6 +1,8 @@
 ---
 title: Systemd
 weight: 6
+aliases:
+  - /tutorials/providers/systemd/
 ---
 
 This tutorial connects Sablier to systemd. You will select the Systemd provider, give Sablier access to the system or user systemd bus, register a unit so Sablier can manage it, and confirm Sablier knows when the unit is ready.

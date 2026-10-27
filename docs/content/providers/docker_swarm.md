@@ -1,6 +1,8 @@
 ---
 title: Docker Swarm
 weight: 2
+aliases:
+  - /tutorials/providers/docker_swarm/
 ---
 
 This tutorial connects Sablier to Docker Swarm. You will select the Docker Swarm provider, run Sablier with access to the Docker socket, register a service so Sablier can scale it, and confirm Sablier knows when the service is ready. The Docker Swarm provider communicates with the `docker.sock` socket to scale services on demand.

@@ -1,6 +1,8 @@
 ---
 title: Nomad
 weight: 7
+aliases:
+  - /tutorials/providers/nomad/
 ---
 
 This tutorial connects Sablier to [HashiCorp Nomad](https://developer.hashicorp.com/nomad). You will select the Nomad provider, point Sablier at the Nomad API with an ACL token, register a job task group so Sablier can manage it, and confirm Sablier knows when the task group is ready. The Nomad provider scales task groups to zero and back through the Nomad scaling API.

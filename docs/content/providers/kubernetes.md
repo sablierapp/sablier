@@ -1,6 +1,8 @@
 ---
 title: Kubernetes
 weight: 3
+aliases:
+  - /tutorials/providers/kubernetes/
 ---
 
 This tutorial connects Sablier to Kubernetes. You will select the Kubernetes provider, grant Sablier the roles it needs to use the Kubernetes API, register a Deployment so Sablier can scale it, and confirm Sablier knows when the Deployment is ready. Sablier assumes that it is deployed within the Kubernetes cluster to use the Kubernetes API internally.
