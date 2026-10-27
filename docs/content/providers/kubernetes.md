@@ -234,3 +234,9 @@ This makes it straightforward to group a Redis instance with the rest of an appl
 {{< callout type="info" >}}
 The `redis.redis.opstreelabs.in` RBAC rule (see above) is required for Sablier to patch the skip-reconcile annotation on the Redis CR. If the rule is absent or the CRD is not installed, Sablier logs a warning and scales the StatefulSet anyway. The operator will reconcile replicas back, but no other harm is done.
 {{< /callout >}}
+
+## Feature support
+
+Which Sablier features work with the Kubernetes provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "kubernetes" >}}

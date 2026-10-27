@@ -75,3 +75,9 @@ Sablier checks for the service replicas. As soon as the current replicas matches
 {{< callout type="info" >}}
 Docker Swarm uses the container's healthcheck to check if the container is up and running. So the provider has a native healthcheck support.
 {{< /callout >}}
+
+## Feature support
+
+Which Sablier features work with the Docker Swarm provider. A ≈ mark means the feature works, but you configure it differently than on other providers. See the [compatibility matrix](/reference/compatibility/) to compare every provider.
+
+{{< provider-features "swarm" >}}
