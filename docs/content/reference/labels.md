@@ -159,7 +159,7 @@ Example: `"30s"`
 
 Treats the instance as ready as soon as the start is dispatched, skipping the health check.
 
-{{< badge "boolean" >}} {{< badge content="Next release" >}}
+{{< badge "boolean" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"true"`
 
@@ -183,7 +183,7 @@ Kubernetes must set the colon value as an **annotation**.
 
 Restricts the `sablier.running-hours` window to specific weekdays.
 
-{{< badge "comma-separated weekdays" >}} {{< badge content="Default: every day" >}} {{< badge content="Next release" >}}
+{{< badge "comma-separated weekdays" >}} {{< badge content="Default: every day" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"Mon,Tue,Wed,Thu,Fri"`
 
@@ -197,7 +197,7 @@ Kubernetes must set the comma value as an **annotation**. ECS separates the days
 
 Lists the group names this instance backs off from; it is forced idle while any listed group has an active session.
 
-{{< badge "comma-separated list" >}} {{< badge content="Next release" >}}
+{{< badge "comma-separated list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"streaming"`
 
@@ -295,7 +295,7 @@ Kubernetes uses a resource quantity (e.g. `512Mi`). Not supported on Proxmox LXC
 
 The relative block I/O scheduling weight applied when idle.
 
-{{< badge "integer `10`-`1000`" >}} {{< badge content="Next release" >}}
+{{< badge "integer `10`-`1000`" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"100"`
 
@@ -309,7 +309,7 @@ Docker and systemd.
 
 The relative block I/O scheduling weight restored when active.
 
-{{< badge "integer `10`-`1000`" >}} {{< badge content="Next release" >}}
+{{< badge "integer `10`-`1000`" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"500"`
 
@@ -323,7 +323,7 @@ Docker and systemd.
 
 The per-device I/O scheduling weight applied when idle.
 
-{{< badge "`path:weight` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:weight` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:100"`
 
@@ -337,7 +337,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device I/O scheduling weight restored when active.
 
-{{< badge "`path:weight` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:weight` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:500"`
 
@@ -351,7 +351,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device read throughput limit applied when idle (Docker byte units, e.g. `10m` = 10 MiB/s).
 
-{{< badge "`path:rate` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:rate` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:10m"`
 
@@ -365,7 +365,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device read throughput limit restored when active.
 
-{{< badge "`path:rate` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:rate` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:100m"`
 
@@ -379,7 +379,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device write throughput limit applied when idle.
 
-{{< badge "`path:rate` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:rate` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:10m"`
 
@@ -393,7 +393,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device write throughput limit restored when active.
 
-{{< badge "`path:rate` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:rate` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:100m"`
 
@@ -407,7 +407,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device read IOPS limit applied when idle.
 
-{{< badge "`path:iops` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:iops` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:100"`
 
@@ -421,7 +421,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device read IOPS limit restored when active.
 
-{{< badge "`path:iops` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:iops` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:1000"`
 
@@ -435,7 +435,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device write IOPS limit applied when idle.
 
-{{< badge "`path:iops` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:iops` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:100"`
 
@@ -449,7 +449,7 @@ Docker (daemon API >= 1.55) and systemd.
 
 The per-device write IOPS limit restored when active.
 
-{{< badge "`path:iops` list" >}} {{< badge content="Next release" >}}
+{{< badge "`path:iops` list" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 Example: `"/dev/sda:1000"`
 

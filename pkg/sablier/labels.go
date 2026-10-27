@@ -52,7 +52,7 @@ const (
 	// type: boolean
 	// example: "true"
 	// feature: /features/ready-on-start/
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelReadyOnStart = "sablier.ready-on-start"
 
 	// LabelRunningHours is a daily keep-warm window in local time. Overnight
@@ -74,7 +74,7 @@ const (
 	// feature: /features/running-hours/
 	// providers: Kubernetes must set the comma value as an **annotation**.
 	// ECS separates the days with a space.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelRunningDays = "sablier.running-days"
 
 	// LabelAntiAffinity lists the group names this instance backs off from; it is
@@ -85,7 +85,7 @@ const (
 	// feature: /features/anti-affinity/
 	// providers: Kubernetes must set a multi-value list as an **annotation**.
 	// ECS separates the groups with a space. Not supported on Proxmox LXC.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelAntiAffinity = "sablier.anti-affinity"
 
 	// LabelIdleReplicas is the replica count when idle. `0` stops the workload;
@@ -160,7 +160,7 @@ const (
 	// example: "100"
 	// feature: /features/disk-io-limits/
 	// providers: Docker and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioWeight = "sablier.idle.blkio-weight"
 
 	// LabelActiveBlkioWeight is the relative block I/O scheduling weight restored
@@ -170,7 +170,7 @@ const (
 	// example: "500"
 	// feature: /features/disk-io-limits/
 	// providers: Docker and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioWeight = "sablier.active.blkio-weight"
 
 	// LabelIdleBlkioWeightDevice is the per-device I/O scheduling weight applied
@@ -180,7 +180,7 @@ const (
 	// example: "/dev/sda:100"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioWeightDevice = "sablier.idle.blkio-weight-device"
 
 	// LabelActiveBlkioWeightDevice is the per-device I/O scheduling weight
@@ -190,7 +190,7 @@ const (
 	// example: "/dev/sda:500"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioWeightDevice = "sablier.active.blkio-weight-device"
 
 	// LabelIdleBlkioReadBps is the per-device read throughput limit applied when
@@ -200,7 +200,7 @@ const (
 	// example: "/dev/sda:10m"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioReadBps = "sablier.idle.blkio-device-read-bps"
 
 	// LabelActiveBlkioReadBps is the per-device read throughput limit restored
@@ -210,7 +210,7 @@ const (
 	// example: "/dev/sda:100m"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioReadBps = "sablier.active.blkio-device-read-bps"
 
 	// LabelIdleBlkioWriteBps is the per-device write throughput limit applied
@@ -220,7 +220,7 @@ const (
 	// example: "/dev/sda:10m"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioWriteBps = "sablier.idle.blkio-device-write-bps"
 
 	// LabelActiveBlkioWriteBps is the per-device write throughput limit restored
@@ -230,7 +230,7 @@ const (
 	// example: "/dev/sda:100m"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioWriteBps = "sablier.active.blkio-device-write-bps"
 
 	// LabelIdleBlkioReadIOps is the per-device read IOPS limit applied when idle.
@@ -239,7 +239,7 @@ const (
 	// example: "/dev/sda:100"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioReadIOps = "sablier.idle.blkio-device-read-iops"
 
 	// LabelActiveBlkioReadIOps is the per-device read IOPS limit restored when
@@ -249,7 +249,7 @@ const (
 	// example: "/dev/sda:1000"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioReadIOps = "sablier.active.blkio-device-read-iops"
 
 	// LabelIdleBlkioWriteIOps is the per-device write IOPS limit applied when
@@ -259,7 +259,7 @@ const (
 	// example: "/dev/sda:100"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelIdleBlkioWriteIOps = "sablier.idle.blkio-device-write-iops"
 
 	// LabelActiveBlkioWriteIOps is the per-device write IOPS limit restored when
@@ -269,6 +269,6 @@ const (
 	// example: "/dev/sda:1000"
 	// feature: /features/disk-io-limits/
 	// providers: Docker (daemon API >= 1.55) and systemd.
-	// since: NEXT_RELEASE
+	// since: v1.15.0
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
 )

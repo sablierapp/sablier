@@ -176,7 +176,7 @@ SABLIER_PROVIDER_AUTO_STOP_ON_STARTUP=true
 
 Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them
 
-{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 ```yaml
 # sablier.yaml
@@ -196,7 +196,7 @@ SABLIER_PROVIDER_AUTO_WARM_EXTERNALLY_STARTED=false
 
 Honor the container restart policy on successful exit: report "no"/"on-failure" containers as completed and exited "always"/"unless-stopped" containers as stopped. Deprecated: will become the default in v2.
 
-{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.15.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.15.0" >}}
 
 ```yaml
 # sablier.yaml
@@ -369,7 +369,7 @@ SABLIER_PROVIDER_KUBERNETES_QPS=5
 
 Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas
 
-{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.16.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.16.0" >}}
 
 ```yaml
 # sablier.yaml
@@ -631,7 +631,7 @@ SABLIER_PROVIDER_REJECT_UNLABELED_REQUESTS=false
 
 Restrict managed units to those matching the given glob patterns (e.g. podman-*.service)
 
-{{< badge "stringSlice" >}} {{< badge content="Default: []" >}} {{< badge content="Next release" >}}
+{{< badge "stringSlice" >}} {{< badge content="Default: []" >}} {{< badge content="Since v1.18.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.18.0" >}}
 
 ```yaml
 # sablier.yaml
@@ -652,7 +652,7 @@ SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS=[]
 
 Use the systemd user instance instead of the system instance (useful for Podman quadlets in user mode)
 
-{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.18.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.18.0" >}}
 
 ```yaml
 # sablier.yaml

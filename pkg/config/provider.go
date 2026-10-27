@@ -39,7 +39,7 @@ type Provider struct {
 	// Env: SABLIER_PROVIDER_AUTO_WARM_EXTERNALLY_STARTED
 	// CLI: --provider.auto-warm-externally-started
 	// Default: false
-	// Since: NEXT_RELEASE
+	// Since: v1.15.0
 	AutoWarmExternallyStarted bool
 
 	// RejectUnlabeledRequests rejects requests for instances that do not carry
@@ -104,7 +104,7 @@ type Kubernetes struct {
 	// Env: SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA
 	// CLI: --provider.kubernetes.ready-on-first-replica
 	// Default: false
-	// Since: NEXT_RELEASE
+	// Since: v1.16.0
 	ReadyOnFirstReplica bool
 }
 
@@ -147,7 +147,7 @@ type Docker struct {
 	// Env: SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY
 	// CLI: --provider.docker.honor-restart-policy
 	// Default: false
-	// Since: NEXT_RELEASE
+	// Since: v1.15.0
 	HonorRestartPolicy bool
 }
 
@@ -160,7 +160,7 @@ type Systemd struct {
 	// Env: SABLIER_PROVIDER_SYSTEMD_USER_INSTANCE
 	// CLI: --provider.systemd.user-instance
 	// Default: false
-	// Since: NEXT_RELEASE
+	// Since: v1.18.0
 	UserInstance bool
 
 	// UnitPatterns optionally restricts the units Sablier manages to those
@@ -172,7 +172,7 @@ type Systemd struct {
 	// Env: SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS
 	// CLI: --provider.systemd.unit-patterns
 	// Default: []
-	// Since: NEXT_RELEASE
+	// Since: v1.18.0
 	UnitPatterns []string
 }
 
