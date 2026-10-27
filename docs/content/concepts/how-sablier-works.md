@@ -46,7 +46,7 @@ flowchart LR
 | [Group](/concepts/groups/) | A named handle for one or more instances. Your reverse proxy targets a group, not individual instance names. |
 | Session | The set of instances started together for a request. It stays active while traffic keeps arriving and expires after a period of inactivity. |
 | [Strategy](/concepts/strategies/) | How the reverse-proxy plugin waits while instances start, either a self-refreshing waiting page (dynamic) or a held request (blocking). |
-| [Reverse-proxy plugin](/tutorials/reverse-proxies/) | The integration inside your proxy that intercepts requests and calls the Sablier API. |
+| [Reverse-proxy plugin](/reverse-proxies/) | The integration inside your proxy that intercepts requests and calls the Sablier API. |
 
 If these terms are new to you, the [Glossary](/reference/glossary/) gives a one-line definition of each.
 
@@ -87,5 +87,5 @@ Sablier has no central file that lists your applications. Instead you configure 
 {{< cards >}}
   {{< card link="/tutorials/configuration/" title="Configure Sablier" icon="cog" subtitle="The server you run: which provider it connects to, strategy defaults, sessions and observability." >}}
   {{< card link="/concepts/configuring-instances/" title="Configure your instances" icon="tag" subtitle="The workloads Sablier manages, opted in and tuned with labels, annotations or tags." >}}
-  {{< card link="/tutorials/reverse-proxies/" title="Connect your reverse proxy" icon="switch-horizontal" subtitle="The plugin that intercepts requests and calls Sablier to start a group." >}}
+  {{< card link="/reverse-proxies/" title="Connect your reverse proxy" icon="switch-horizontal" subtitle="The plugin that intercepts requests and calls Sablier to start a group." >}}
 {{< /cards >}}

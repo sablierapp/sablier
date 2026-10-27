@@ -32,7 +32,7 @@ flowchart LR
 
 ## Select the dynamic strategy
 
-The strategy is chosen in your reverse-proxy plugin configuration, not on the Sablier server. For example, with the Caddy plugin you opt in with a `dynamic { ... }` block, as shown above. Each reverse proxy has its own syntax. See [Reverse proxies](/tutorials/reverse-proxies/) for the exact configuration of your plugin.
+The strategy is chosen in your reverse-proxy plugin configuration, not on the Sablier server. For example, with the Caddy plugin you opt in with a `dynamic { ... }` block, as shown above. Each reverse proxy has its own syntax. See [Reverse proxies](/reverse-proxies/) for the exact configuration of your plugin.
 
 ## Tune the waiting page
 
@@ -46,4 +46,4 @@ To change the look of the page, pick a built-in theme or provide your own; see [
 
 - [Strategies](/concepts/strategies/): how the dynamic strategy works conceptually.
 - [Customize the theme](/how-to-guides/loading-strategies/customize-theme/): style the waiting page.
-- [Reverse proxies](/tutorials/reverse-proxies/): the exact plugin syntax for each proxy.
+- [Reverse proxies](/reverse-proxies/): the exact plugin syntax for each proxy.

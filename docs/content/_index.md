@@ -45,7 +45,7 @@ cascade:
   {{< hextra/feature-card
     title="Reverse-proxy native"
     icon="puzzle"
-    link="/tutorials/reverse-proxies/"
+    link="/reverse-proxies/"
     subtitle="Drop-in middleware for Traefik, Caddy, Nginx, Envoy, Istio and Apache APISIX."
   >}}
   {{< hextra/feature-card

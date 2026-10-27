@@ -131,12 +131,12 @@
 .hextra-sidebar-item > a[href$="/providers/proxmox_lxc/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/nomad/"] > span::before,
 .hextra-sidebar-item > a[href$="/providers/ecs/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/envoy/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/istio/"] > span::before,
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/apacheapisix/"] > span::before {
+.hextra-sidebar-item > a[href$="/reverse-proxies/traefik/"] > span::before,
+.hextra-sidebar-item > a[href$="/reverse-proxies/caddy/"] > span::before,
+.hextra-sidebar-item > a[href$="/reverse-proxies/nginx_proxywasm/"] > span::before,
+.hextra-sidebar-item > a[href$="/reverse-proxies/envoy/"] > span::before,
+.hextra-sidebar-item > a[href$="/reverse-proxies/istio/"] > span::before,
+.hextra-sidebar-item > a[href$="/reverse-proxies/apacheapisix/"] > span::before {
   content: "";
   display: inline-block;
   width: 1.1em;
@@ -154,12 +154,12 @@
 .hextra-sidebar-item > a[href$="/providers/proxmox_lxc/"] > span::before { background-image: url("/assets/img/proxmox.png"); }
 .hextra-sidebar-item > a[href$="/providers/nomad/"] > span::before { background-image: url("/assets/img/nomad.svg"); }
 .hextra-sidebar-item > a[href$="/providers/ecs/"] > span::before { background-image: url("/assets/img/ecs.svg"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/traefik/"] > span::before { background-image: url("/assets/img/traefik.png"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/caddy/"] > span::before { background-image: url("/assets/img/caddy.png"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/nginx_proxywasm/"] > span::before { background-image: url("/assets/img/nginx.svg"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/envoy/"] > span::before { background-image: url("/assets/img/envoy.png"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/istio/"] > span::before { background-image: url("/assets/img/istio.png"); }
-.hextra-sidebar-item > a[href$="/tutorials/reverse-proxies/apacheapisix/"] > span::before { background-image: url("/assets/img/apacheapisix.png"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/traefik/"] > span::before { background-image: url("/assets/img/traefik.png"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/caddy/"] > span::before { background-image: url("/assets/img/caddy.png"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/nginx_proxywasm/"] > span::before { background-image: url("/assets/img/nginx.svg"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/envoy/"] > span::before { background-image: url("/assets/img/envoy.png"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/istio/"] > span::before { background-image: url("/assets/img/istio.png"); }
+.hextra-sidebar-item > a[href$="/reverse-proxies/apacheapisix/"] > span::before { background-image: url("/assets/img/apacheapisix.png"); }
 
 /* ---------- GitHub-changelog-style contrast: muted body, standout bold ----------
    Dim the article prose so that bold text (and inline code chips) carry the

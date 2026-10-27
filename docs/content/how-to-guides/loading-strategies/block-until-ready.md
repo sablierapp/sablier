@@ -20,7 +20,7 @@ flowchart LR
 
 ## Select the blocking strategy
 
-The strategy is chosen in your reverse-proxy plugin configuration. Each proxy has its own syntax for opting a route into the blocking strategy. See [Reverse proxies](/tutorials/reverse-proxies/) for the exact configuration of your plugin.
+The strategy is chosen in your reverse-proxy plugin configuration. Each proxy has its own syntax for opting a route into the blocking strategy. See [Reverse proxies](/reverse-proxies/) for the exact configuration of your plugin.
 
 ## Blocking timeout
 
@@ -29,4 +29,4 @@ The plugin holds the request open only up to a timeout. If the instances are not
 ## Related
 
 - [Strategies](/concepts/strategies/): how the blocking strategy works conceptually.
-- [Reverse proxies](/tutorials/reverse-proxies/): the exact plugin syntax for each proxy.
+- [Reverse proxies](/reverse-proxies/): the exact plugin syntax for each proxy.

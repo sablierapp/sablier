@@ -20,7 +20,7 @@
   {{- $lang = partial "utils/hugo-compat/language-locale.html" site.Language | default `zh-CN` -}}
 {{- end -}}
 
-{{- /* Version-independent discussion term, e.g. "tutorials/reverse-proxies/".
+{{- /* Version-independent discussion term, e.g. "reverse-proxies/traefik/".
   Derived from the baseURL path rather than a hardcoded version pattern so it
   keeps working whatever prefix scheme build.sh uses. The home page trims to the
   empty string, which giscus would reject, hence the "index" fallback. */ -}}
