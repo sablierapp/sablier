@@ -9,4 +9,4 @@ metadata:
     sablierapp.dev/group: whoami
 spec:
   kubernetesConfig:
-    image: quay.io/opstree/redis:v7.0.12
+    image: quay.io/opstree/redis:v8.10.1
