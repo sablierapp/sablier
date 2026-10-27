@@ -14,6 +14,10 @@ Create a page with: hugo new content providers/<name>.md --kind provider
 - Set `since` in the front matter to the release that added the provider, and
   mark every setting heading with it: #### Group {since="v1.4.0"}
   (since="next" for an unreleased feature).
+- Link the first mention of each platform concept in every section (label,
+  Deployment, service account…) to the platform's official documentation, so
+  readers know exactly which concept is meant. Use inline links: reference-style
+  links do not resolve inside tabs, callouts or details blocks.
 - Show configuration with the example shortcode, from a runnable file under
   examples/<provider>/, never with a hand-copied snippet. Use a
   "# region <name>" / "# endregion" pair to show only part of a file.

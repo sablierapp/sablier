@@ -8,21 +8,21 @@ aliases:
 
 ## Introduction
 
-The Kubernetes provider scales Deployments and StatefulSets to zero replicas when their session expires, and back up when a request needs them. It can also hibernate CloudNativePG Clusters and pause OT-CONTAINER-KIT Redis instances. Sablier runs as a pod in the cluster and calls the Kubernetes API with its service account.
+The Kubernetes provider scales [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) to [zero replicas](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment) when their session expires, and back up when a request needs them. It can also hibernate CloudNativePG Clusters and pause OT-CONTAINER-KIT Redis instances. Sablier runs as a [pod](https://kubernetes.io/docs/concepts/workloads/pods/) in the cluster and calls the Kubernetes API with its [service account](https://kubernetes.io/docs/concepts/security/service-accounts/).
 
 ## Install Sablier
 
 {{< tabs >}}
 {{< tab name="Helm" >}}
 
-Install the chart in its own namespace:
+Install the [Helm chart](https://helm.sh/docs/intro/using_helm/) in its own [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/):
 
 ```bash
 helm repo add sablier https://sablierapp.github.io/helm-charts
 helm install sablier sablier/sablier --namespace sablier --create-namespace -f values.yaml
 ```
 
-The chart selects the Kubernetes provider and creates the service account and RBAC Sablier needs. Set Sablier's [configuration](/reference/cli/) under `config`:
+The chart selects the Kubernetes provider and creates the [service account](https://kubernetes.io/docs/concepts/security/service-accounts/) and [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) Sablier needs. Set Sablier's [configuration](/reference/cli/) under `config` in your [values file](https://helm.sh/docs/chart_template_guide/values_files/):
 
 {{< example file="kubernetes/values.yaml" region="config" >}}
 
@@ -30,12 +30,12 @@ To manage CloudNativePG Clusters or Redis instances, grant the extra permissions
 
 {{< example file="kubernetes/values.yaml" region="rbac" >}}
 
-Reverse proxy plugins reach Sablier at `http://sablier-sablier.sablier:10000`: the chart names the Service `sablier-<release>`.
+Reverse proxy plugins reach Sablier at `http://sablier-sablier.sablier:10000`: the chart names the [Service](https://kubernetes.io/docs/concepts/services-networking/service/) `sablier-<release>`.
 
 {{< /tab >}}
 {{< tab name="Manifests" >}}
 
-Create the namespace, then apply the service account, RBAC, Deployment and Service:
+Create the [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/), then apply the [service account](https://kubernetes.io/docs/concepts/security/service-accounts/), [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and [Service](https://kubernetes.io/docs/concepts/services-networking/service/):
 
 ```bash
 kubectl create namespace sablier
@@ -49,15 +49,15 @@ Reverse proxy plugins reach Sablier at `http://sablier.sablier:10000`.
 {{< /tab >}}
 {{< /tabs >}}
 
-The CloudNativePG and Redis permissions are optional. Without them, or without their CRDs, Sablier skips those integrations.
+The CloudNativePG and Redis permissions are optional. Without them, or without their [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/), Sablier skips those integrations.
 
 ## Usage example
 
-Opt a Deployment in with the `sablierapp.dev/enable` label, and give it a group:
+Opt a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) in with the `sablierapp.dev/enable` [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/), and give it a group:
 
 {{< example file="kubernetes/whoami.yaml" >}}
 
-Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` Service. On the first request, Sablier scales the Deployment to one replica and holds the request, or shows a waiting page, until the pod is ready. When the session expires, Sablier scales it back to zero.
+Then configure your [reverse proxy](/reverse-proxies/) to call Sablier for the `whoami` group in front of the `whoami` [Service](https://kubernetes.io/docs/concepts/services-networking/service/). On the first request, Sablier scales the Deployment to one [replica](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment) and holds the request, or shows a waiting page, until the [pod](https://kubernetes.io/docs/concepts/workloads/pods/) is ready. When the session expires, Sablier scales it back to zero.
 
 {{< callout type="info" >}}
 Sablier scales opted-in workloads to zero when it starts. A workload you deploy afterwards keeps running until its first session expires, unless you [stop externally-started instances](/how-to-guides/lifecycle/auto-stop-externally-started/).
@@ -80,15 +80,15 @@ Every `--provider.*` option that is not provider-specific also applies; see the 
 
 #### Deployments and StatefulSets
 
-Sablier scales Deployments and StatefulSets through their `scale` subresource. On stop, it scales to `0`. On start, it scales to [`sablierapp.dev/active.replicas`](#scale-instead-of-stop) when set, otherwise to the replica count of the [instance name](#instance-names) when above `1`, otherwise to `1`.
+Sablier scales [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) and [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) through their [`scale` subresource](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment). On stop, it scales to `0`. On start, it scales to [`sablierapp.dev/active.replicas`](#scale-instead-of-stop) when set, otherwise to the replica count of the [instance name](#instance-names) when above `1`, otherwise to `1`.
 
 {{< example file="kubernetes/statefulset.yaml" region="sablier" >}}
 
 #### CloudNativePG Clusters {since="v1.13.0"}
 
-Sablier starts and stops [CloudNativePG](https://cloudnative-pg.io/) `Cluster` resources with the operator's [declarative hibernation](https://cloudnative-pg.io/documentation/current/declarative_hibernation/):
+Sablier starts and stops [CloudNativePG](https://cloudnative-pg.io/) `Cluster` [custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) with the [operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)'s [declarative hibernation](https://cloudnative-pg.io/documentation/current/declarative_hibernation/):
 
-- **Stop** sets `cnpg.io/hibernation: "on"`. The operator removes the cluster's pods and keeps its PVCs.
+- **Stop** sets `cnpg.io/hibernation: "on"`. The operator removes the cluster's [pods](https://kubernetes.io/docs/concepts/workloads/pods/) and keeps its [PVCs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 - **Start** sets `cnpg.io/hibernation: "off"`, and the operator resumes the cluster.
 
 {{< example file="kubernetes/cnpg-cluster.yaml" >}}
@@ -101,20 +101,20 @@ Resuming a hibernated cluster takes longer than a scale-up: the PVCs are reattac
 
 #### OT-CONTAINER-KIT Redis instances {since="v1.14.0"}
 
-The [OT-CONTAINER-KIT redis-operator](https://github.com/OT-CONTAINER-KIT/redis-operator) reconciles its StatefulSets back to their replica count, which would undo a scale to zero. Sablier pauses the operator around each scale:
+The [OT-CONTAINER-KIT redis-operator](https://github.com/OT-CONTAINER-KIT/redis-operator) reconciles its [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) back to their replica count, which would undo a scale to zero. Sablier pauses the operator around each scale:
 
-- **Stop** sets `redis.opstreelabs.in/skip-reconcile: "true"` on the `Redis` resource, then scales its StatefulSet to `0`.
+- **Stop** sets the `redis.opstreelabs.in/skip-reconcile: "true"` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) on the `Redis` resource, then scales its StatefulSet to `0`.
 - **Start** scales the StatefulSet back to `1`, then removes the annotation so the operator resumes.
 
 If the scale fails, Sablier clears the annotation immediately, so the operator is never left paused with pods running.
 
-Label the `Redis` resource. The operator copies the labels to the StatefulSet it manages:
+[Label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) the `Redis` resource. The operator copies the labels to the StatefulSet it manages:
 
 {{< example file="kubernetes/redis.yaml" >}}
 
 ### Instance names
 
-A reverse proxy can target one workload by name instead of a group. Sablier names each workload:
+A reverse proxy can target one workload by name instead of a group. Sablier names each workload after its kind, [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) and name:
 
 ```text
 <kind><delimiter><namespace><delimiter><name><delimiter><replicas>
@@ -130,8 +130,8 @@ On Kubernetes, Sablier keys start with `sablierapp.dev/` instead of `sablier.`:
 
 {{< example file="kubernetes/group.yaml" region="sablier" >}}
 
-- **`enable` must be a label.** Sablier finds workloads with a label selector, and selectors can't read annotations.
-- **Values with commas or colons must be annotations.** Kubernetes doesn't allow them in labels, so a list of groups or a time window goes in an annotation.
+- **`enable` must be a [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).** Sablier finds workloads with a [label selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors), and selectors can't read [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
+- **Values with commas or colons must be annotations.** Kubernetes [doesn't allow them in labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set), so a list of groups or a time window goes in an annotation.
 - **Any other key can be either.** If a key is set as both, the annotation wins.
 
 The [label reference](/reference/labels/) lists every key.
@@ -146,11 +146,11 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Enable {since="v1.4.0"}
 
-`sablierapp.dev/enable: "true"` opts the workload in. It is required, must be a label, and any other value is ignored. See the [usage example](#usage-example).
+`sablierapp.dev/enable: "true"` opts the workload in. It is required, must be a [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/), and any other value is ignored. See the [usage example](#usage-example).
 
 #### Group {since="v1.4.0"}
 
-`sablierapp.dev/group` assigns the workload to one or more groups. A session for any of them starts it. A workload without a group is in the `default` group. A list of groups contains commas, so set it as an annotation:
+`sablierapp.dev/group` assigns the workload to one or more groups. A session for any of them starts it. A workload without a group is in the `default` group. A list of groups contains commas, so set it as an [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
 
 {{< example file="kubernetes/group.yaml" region="sablier" >}}
 
@@ -158,7 +158,7 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Ready after {since="v1.13.0"}
 
-`sablierapp.dev/ready-after` keeps reporting the workload as not ready for a settling delay after its pods first become ready. Use it when a pod passes its readiness probe before it can serve traffic.
+`sablierapp.dev/ready-after` keeps reporting the workload as not ready for a settling delay after its [pods](https://kubernetes.io/docs/concepts/workloads/pods/) first become ready. Use it when a pod passes its [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes) before it can serve traffic.
 
 {{< example file="kubernetes/ready-after.yaml" region="sablier" >}}
 
@@ -166,7 +166,7 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Ready on start {since="v1.15.0"}
 
-`sablierapp.dev/ready-on-start: "true"` reports the workload ready as soon as Sablier sends the scale-up, without waiting for its pods.
+`sablierapp.dev/ready-on-start: "true"` reports the workload ready as soon as Sablier sends the [scale-up](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment), without waiting for its [pods](https://kubernetes.io/docs/concepts/workloads/pods/).
 
 {{< example file="kubernetes/ready-on-start.yaml" region="sablier" >}}
 
@@ -174,11 +174,11 @@ Each excerpt below is the `metadata` of a complete manifest in [`examples/kubern
 
 #### Running hours {since="v1.13.0"}
 
-`sablierapp.dev/running-hours` keeps the workload running during a daily window, and `sablierapp.dev/running-days` (since v1.15.0) limits the window to some weekdays. Both values contain colons or commas, so set them as annotations:
+`sablierapp.dev/running-hours` keeps the workload running during a daily window, and `sablierapp.dev/running-days` (since v1.15.0) limits the window to some weekdays. Both values contain colons or commas, so set them as [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/):
 
 {{< example file="kubernetes/running-hours.yaml" region="sablier" >}}
 
-The window uses Sablier's local time. With Helm, set the time zone with the `TZ` environment variable:
+The window uses Sablier's local time. With Helm, set the time zone with the `TZ` [environment variable](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/):
 
 {{< example file="kubernetes/values.yaml" region="timezone" >}}
 
@@ -186,7 +186,7 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 #### Anti-affinity {since="v1.15.0"}
 
-`sablierapp.dev/anti-affinity` lists groups the workload backs off from: Sablier keeps it idle while any of them has an active session. Set a list of groups as an annotation.
+`sablierapp.dev/anti-affinity` lists groups the workload backs off from: Sablier keeps it idle while any of them has an active session. Set a list of groups as an [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
 
 {{< example file="kubernetes/anti-affinity.yaml" region="sablier" >}}
 
@@ -194,32 +194,32 @@ The window uses Sablier's local time. With Helm, set the time zone with the `TZ`
 
 #### Scale instead of stop {since="v1.13.0"}
 
-With `sablierapp.dev/idle.replicas` set to `1` or more, Sablier keeps the workload running when idle instead of scaling it to zero, and can throttle it. `idle.cpu` and `idle.memory` set the CPU and memory **limits** while idle; `active.replicas`, `active.cpu` and `active.memory` restore them on the next session. CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes), such as `100m`, `2`, `64Mi` or `1Gi`.
+With `sablierapp.dev/idle.replicas` set to `1` or more, Sablier keeps the workload running when idle instead of scaling it to zero, and can throttle it. `idle.cpu` and `idle.memory` set the CPU and memory [**limits**](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits) while idle; `active.replicas`, `active.cpu` and `active.memory` restore them on the next session. CPU and memory use [resource quantities](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes), such as `100m`, `2`, `64Mi` or `1Gi`.
 
 {{< example file="kubernetes/scale-mode.yaml" region="sablier" >}}
 
-Sablier changes the limits of the pod template's **first container**, which triggers a rolling restart: new pods replace the old ones, so the service stays available. Requests are not changed, so make sure your nodes can schedule the active limits.
+Sablier changes the limits of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates)'s **first container**, which triggers a [rolling update](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment): new pods replace the old ones, so the service stays available. [Requests](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits) are not changed, so make sure your nodes can schedule the active limits.
 
 [Learn more about scaling instead of stopping](/how-to-guides/scaling-resources/scale-mode/).
 
 ### Readiness
 
-Sablier reports a Deployment or StatefulSet:
+Sablier reports a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) or [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/):
 
 - **ready** when it has at least one desired replica and all of them are ready. With `--provider.kubernetes.ready-on-first-replica`, one ready replica is enough.
-- **stopped** when it is scaled to `0`, even while pods are still terminating.
+- **stopped** when it is scaled to `0`, even while [pods](https://kubernetes.io/docs/concepts/workloads/pods/) are still terminating.
 - **starting** otherwise.
 
-A replica is ready when its pod passes its [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/), so give your containers one.
+A replica is ready when its pod passes its [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes), so give your containers one.
 
-A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` annotation is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
+A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
 
 ### Limitations
 
-- Sablier must run as a pod in the cluster it manages: it only uses in-cluster credentials.
+- Sablier must run as a [pod](https://kubernetes.io/docs/concepts/workloads/pods/) in the cluster it manages: it only uses [in-cluster credentials](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/).
 - [Block I/O throttling](/how-to-guides/scaling-resources/scale-blkio/) is not available on Kubernetes.
-- CPU and memory throttling applies to the first container of the pod template only, and restarts the pods.
-- Without the Redis permissions, Sablier logs a warning and scales the StatefulSet anyway; the operator then scales it back up.
+- CPU and memory throttling applies to the first container of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) only, and restarts the pods.
+- Without the Redis permissions, Sablier logs a warning and scales the [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) anyway; the operator then scales it back up.
 
 ## Examples
 
