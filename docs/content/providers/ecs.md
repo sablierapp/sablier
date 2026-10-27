@@ -94,7 +94,7 @@ A reverse proxy can target one service by name instead of a group. The `whoami` 
 whoami
 ```
 
-The instance name is the [service name](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Service.html), without the cluster. Service names are only unique within a cluster, so one Sablier manages one cluster.
+The instance name is the [service name](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Service.html), without the cluster. Service names are only unique within a cluster, so one Sablier manages one cluster. A request can also name the service by its [ARN](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-account-settings.html#ecs-resource-ids): it resolves to the service name and shares its session.
 
 Prefer groups: a name ties your proxy configuration to the service.
 

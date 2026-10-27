@@ -47,3 +47,14 @@ type Provider interface {
 
 	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) InstanceEventStream
 }
+
+// InstanceNameResolver is implemented by providers that accept several names
+// for one instance, such as an AWS ECS service ARN or a Proxmox LXC container
+// ID. Sessions are stored under the name InstanceInspect reports, so Sablier
+// resolves a requested name before looking up its session: every name of an
+// instance then shares one session.
+type InstanceNameResolver interface {
+	// InstanceName returns the name InstanceInspect reports for name, or name
+	// itself when it cannot resolve it.
+	InstanceName(ctx context.Context, name string) string
+}

@@ -143,3 +143,41 @@ func (mr *MockProviderMockRecorder) InstanceStop(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceStop", reflect.TypeOf((*MockProvider)(nil).InstanceStop), ctx, name)
 }
+
+// MockInstanceNameResolver is a mock of InstanceNameResolver interface.
+type MockInstanceNameResolver struct {
+	ctrl     *gomock.Controller
+	recorder *MockInstanceNameResolverMockRecorder
+	isgomock struct{}
+}
+
+// MockInstanceNameResolverMockRecorder is the mock recorder for MockInstanceNameResolver.
+type MockInstanceNameResolverMockRecorder struct {
+	mock *MockInstanceNameResolver
+}
+
+// NewMockInstanceNameResolver creates a new mock instance.
+func NewMockInstanceNameResolver(ctrl *gomock.Controller) *MockInstanceNameResolver {
+	mock := &MockInstanceNameResolver{ctrl: ctrl}
+	mock.recorder = &MockInstanceNameResolverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockInstanceNameResolver) EXPECT() *MockInstanceNameResolverMockRecorder {
+	return m.recorder
+}
+
+// InstanceName mocks base method.
+func (m *MockInstanceNameResolver) InstanceName(ctx context.Context, name string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceName", ctx, name)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// InstanceName indicates an expected call of InstanceName.
+func (mr *MockInstanceNameResolverMockRecorder) InstanceName(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceName", reflect.TypeOf((*MockInstanceNameResolver)(nil).InstanceName), ctx, name)
+}

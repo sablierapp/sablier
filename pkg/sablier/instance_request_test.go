@@ -8,8 +8,11 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -729,4 +732,35 @@ func TestInstanceRequest_ReadyAfter_GracePeriodRespectedByPolling(t *testing.T) 
 	session, err := manager.RequestReadySession(ctx, []string{"nginx"}, time.Minute, 5*time.Second)
 	assert.NilError(t, err)
 	assert.Assert(t, session.IsReady())
+}
+
+// resolvingProvider is a provider that also resolves instance names, like the
+// AWS ECS and Proxmox LXC providers.
+type resolvingProvider struct {
+	*providertest.MockProvider
+	*providertest.MockInstanceNameResolver
+}
+
+// A request by an alias of an instance (an ECS service ARN, a Proxmox
+// container ID) must find the session stored under the name the provider
+// reports, instead of starting the instance again on every request. See #1178
+// and #1185.
+func TestInstanceRequest_ResolvesInstanceNameBeforeSessionLookup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	p := providertest.NewMockProvider(ctrl)
+	r := providertest.NewMockInstanceNameResolver(ctrl)
+	sessions := storetest.NewMockStore(ctrl)
+	manager := sablier.New(slogt.New(t), sessions, resolvingProvider{p, r})
+	ctx := t.Context()
+
+	const arn = "arn:aws:ecs:us-east-1:123456789012:service/apps/web"
+	r.EXPECT().InstanceName(gomock.Any(), arn).Return("web")
+	ready := sablier.InstanceInfo{Name: "web", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+	sessions.EXPECT().Get(ctx, "web").Return(ready, nil)
+	sessions.EXPECT().Put(ctx, ready, time.Minute).Return(nil)
+
+	info, err := manager.InstanceRequest(ctx, arn, time.Minute)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusReady))
+	assert.Equal(t, info.Name, "web")
 }

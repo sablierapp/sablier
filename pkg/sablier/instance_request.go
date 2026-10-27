@@ -206,6 +206,20 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	return info, nil
 }
 
+// instanceName resolves name to the name the provider reports for the
+// instance, when the provider accepts several names for one instance. See
+// InstanceNameResolver.
+func (s *Sablier) instanceName(ctx context.Context, name string) string {
+	r, ok := s.provider.(InstanceNameResolver)
+	if !ok {
+		return name
+	}
+	if resolved := r.InstanceName(ctx, name); resolved != "" {
+		return resolved
+	}
+	return name
+}
+
 func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
 	return s.instanceRequest(ctx, name, duration, false)
 }
@@ -214,6 +228,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 	if name == "" {
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}
+	name = s.instanceName(ctx, name)
 
 	// Anti-affinity: while one of this instance's antagonist groups holds an
 	// active session, it must stay idle. Report it as not-ready with an
