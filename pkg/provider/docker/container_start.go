@@ -52,13 +52,21 @@ func (p *Provider) startSingle(ctx context.Context, name string) (err error) {
 				slog.String("memory", sc.Active.Memory),
 				slog.Int("blkio_weight", int(sc.Active.BlkioWeight)),
 			)
-			return p.applyResources(ctx, name, sc.Active)
+			if err := p.applyResources(ctx, name, sc.Active); err != nil {
+				return err
+			}
 		}
-		span.SetAttributes(
-			attribute.String("operation", "scale_mode.noop"),
-			attribute.Int("idle_replicas", int(sc.Idle.Replicas)),
-		)
-		return nil
+		// A scale-mode container stopped by a session expiry (idle.replicas
+		// 0) or outside Sablier still has to start.
+		if spec.Container.State.Running {
+			if !sc.Active.HasResources() {
+				span.SetAttributes(
+					attribute.String("operation", "scale_mode.noop"),
+					attribute.Int("idle_replicas", int(sc.Idle.Replicas)),
+				)
+			}
+			return nil
+		}
 	}
 
 	// A container that is already running (and not paused) needs no action.
