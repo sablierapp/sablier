@@ -67,6 +67,10 @@ func parseIOpsRate(s string) (uint64, error) {
 
 // applyResources updates the resource limits of a running container using cgroup
 // constraints (docker update). Fields with zero/empty values are left unchanged.
+// cpuPeriodMicros is the CFS period used with CPUQuota: the kernel default,
+// 100ms, so a quota of 50000 means half a CPU.
+const cpuPeriodMicros = 100_000
+
 func (p *Provider) applyResources(ctx context.Context, name string, profile sablier.ResourceProfile) error {
 	// Per-device blkio limits are silently dropped by daemons older than
 	// API 1.55 (moby/moby#52650): the update succeeds but the cgroup is never
@@ -88,7 +92,12 @@ func (p *Provider) applyResources(ctx context.Context, name string, profile sabl
 		if err != nil {
 			return err
 		}
-		resources.NanoCPUs = v
+		if p.CPUQuota {
+			resources.CPUPeriod = cpuPeriodMicros
+			resources.CPUQuota = v * cpuPeriodMicros / 1e9
+		} else {
+			resources.NanoCPUs = v
+		}
 	}
 
 	if profile.Memory != "" {

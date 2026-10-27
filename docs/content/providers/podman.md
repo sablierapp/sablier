@@ -192,11 +192,13 @@ The window uses Sablier's local time, which is UTC in the Sablier image. Set the
 
 #### Scale instead of stop {since="v1.13.0"}
 
-Keep the container running when idle, optionally with a lower memory limit, instead of stopping it:
+Keep the container running when idle, optionally with lower CPU and memory limits, instead of stopping it:
 
 - `sablier.idle.replicas=1` keeps the container running when idle.
-- `sablier.idle.memory` sets its [memory limit](https://docs.podman.io/en/latest/markdown/podman-update.1.html#memory-m-number-unit) while idle. It needs `sablier.idle.replicas=1`.
-- `sablier.active.memory` sets the limit again on the next session.
+- `sablier.idle.cpu` and `sablier.idle.memory` set its [CPU](https://docs.podman.io/en/latest/markdown/podman-update.1.html#cpu-quota-limit) and [memory](https://docs.podman.io/en/latest/markdown/podman-update.1.html#memory-m-number-unit) limits while idle. They need `sablier.idle.replicas=1`.
+- `sablier.active.cpu` and `sablier.active.memory` set the limits again on the next session.
+
+CPU values are cores, such as `0.5`. Sablier sends them as a CPU quota over a 100 ms period, the form Podman's Docker-compatible API reads.
 
 Memory values use the suffixes `b`, `k`, `m` and `g`, such as `64m` or `1g`. Sablier sets the swap limit to the same value, which disables swap for the container.
 
@@ -227,7 +229,6 @@ Podman schedules health checks with systemd timers. On a host without systemd, t
 - **Sablier always stops containers.** The pause strategy, [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy), is Docker-only.
 - **The restart policy is not honored.** [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) is Docker-only: a container that exits with code `0` is reported stopped, never completed.
 - **podman-compose does not record `depends_on`.** Sablier reads [`depends_on`](https://docs.docker.com/reference/compose-file/services/#depends_on) from the `com.docker.compose.depends_on` label, which Docker Compose writes and [podman-compose](https://github.com/containers/podman-compose) does not. Put the dependencies in the same group instead. See [starting dependencies together](/providers/docker/#start-dependencies-together).
-- **CPU throttling has no effect.** Podman's Docker-compatible API drops the CPU limit that Sablier sends, so `sablier.idle.cpu` and `sablier.active.cpu` are ignored.
 - [Block I/O throttling](/features/disk-io-limits/) is not available on Podman.
 
 ## Examples

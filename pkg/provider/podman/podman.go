@@ -31,6 +31,8 @@ func New(ctx context.Context, cli *client.Client, logger *slog.Logger) (*Provide
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to podman: %w", err)
 	}
+	// Podman's Docker-compatible update ignores NanoCPUs.
+	inner.CPUQuota = true
 
 	return &Provider{Provider: inner}, nil
 }

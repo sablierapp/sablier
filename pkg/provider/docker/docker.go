@@ -35,6 +35,10 @@ type Provider struct {
 	// Deprecated: transitional flag for backward compatibility; honoring the
 	// restart policy will become the default in v2.
 	HonorRestartPolicy bool
+
+	// CPUQuota makes scale mode send CPU limits as a CFS quota and period
+	// instead of NanoCPUs. Podman's Docker-compatible API ignores NanoCPUs.
+	CPUQuota bool
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {
