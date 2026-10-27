@@ -1,0 +1,16 @@
+# Sablier configuration for the Proxmox LXC provider.
+# Pass the token secret in SABLIER_PROVIDER_PROXMOX_LXC_TOKEN_SECRET rather
+# than writing it here.
+# region provider
+provider:
+  name: proxmox_lxc
+  proxmox-lxc:
+    url: "https://pve1.example.com:8006/api2/json"
+    token-id: "sablier@pve!sablier"
+# endregion
+server:
+  port: 10000
+sessions:
+  default-duration: 5m
+logging:
+  level: info

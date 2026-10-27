@@ -74,6 +74,10 @@
                 {
                     "type": "generic",
                     "path": "examples/podman/sablier.sh"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/proxmox-lxc/compose.yml"
                 }
             ]
         }
