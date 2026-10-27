@@ -33,8 +33,8 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 			return
 		}
 
-		// Track previously seen running containers
-		running := make(map[string]bool)
+		// Track previously seen running containers, with their tags
+		running := make(map[string][]string)
 
 		// Initial scan
 		discovered, err := p.scanContainers(ctx)
@@ -43,7 +43,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 		} else {
 			for _, d := range discovered {
 				if d.status == "running" {
-					running[d.ref.name] = true
+					running[d.ref.name] = d.tags
 				}
 			}
 		}
@@ -75,27 +75,29 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 
 				consecutiveErrors = 0
 
-				currentRunning := make(map[string]bool)
+				currentRunning := make(map[string][]string)
 				for _, d := range discovered {
 					if d.status == "running" {
-						currentRunning[d.ref.name] = true
+						currentRunning[d.ref.name] = d.tags
 					}
 				}
 
 				// Detect containers that were running but are no longer
 				if wantStopped {
-					for name := range running {
-						if !currentRunning[name] {
+					for name, tags := range running {
+						if _, ok := currentRunning[name]; !ok {
 							p.l.DebugContext(ctx, "container stopped detected", slog.String("name", name))
+							info := sablier.InstanceInfo{
+								Name:            name,
+								CurrentReplicas: 0,
+								DesiredReplicas: p.desiredReplicas,
+								Status:          sablier.InstanceStatusStopped,
+							}
+							setEnabledAndGroups(&info, tags)
 							select {
 							case eventsC <- sablier.InstanceEvent{
 								Type: provider.InstanceEventStopped,
-								Info: sablier.InstanceInfo{
-									Name:            name,
-									CurrentReplicas: 0,
-									DesiredReplicas: p.desiredReplicas,
-									Status:          sablier.InstanceStatusStopped,
-								},
+								Info: info,
 							}:
 							case <-ctx.Done():
 								return
@@ -106,18 +108,20 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 
 				// Detect containers that were not running but are now
 				if wantStarted {
-					for name := range currentRunning {
-						if !running[name] {
+					for name, tags := range currentRunning {
+						if _, ok := running[name]; !ok {
 							p.l.DebugContext(ctx, "container started detected", slog.String("name", name))
+							info := sablier.InstanceInfo{
+								Name:            name,
+								CurrentReplicas: p.desiredReplicas,
+								DesiredReplicas: p.desiredReplicas,
+								Status:          sablier.InstanceStatusStarting,
+							}
+							setEnabledAndGroups(&info, tags)
 							select {
 							case eventsC <- sablier.InstanceEvent{
 								Type: provider.InstanceEventStarted,
-								Info: sablier.InstanceInfo{
-									Name:            name,
-									CurrentReplicas: p.desiredReplicas,
-									DesiredReplicas: p.desiredReplicas,
-									Status:          sablier.InstanceStatusStarting,
-								},
+								Info: info,
 							}:
 							case <-ctx.Done():
 								return

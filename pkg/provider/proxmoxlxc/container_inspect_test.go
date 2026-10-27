@@ -25,6 +25,8 @@ func TestProxmoxLXCProvider_InstanceInspect(t *testing.T) {
 				CurrentReplicas: 1,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusReady,
+				Enabled:         "true",
+				Groups:          []string{"default"},
 			},
 		},
 		{
@@ -35,6 +37,8 @@ func TestProxmoxLXCProvider_InstanceInspect(t *testing.T) {
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusStopped,
+				Enabled:         "true",
+				Groups:          []string{"default"},
 			},
 		},
 		{
@@ -45,6 +49,8 @@ func TestProxmoxLXCProvider_InstanceInspect(t *testing.T) {
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusError,
+				Enabled:         "true",
+				Groups:          []string{"default"},
 				Message:         "container status \"unknown\" not handled",
 			},
 		},
@@ -83,6 +89,8 @@ func TestProxmoxLXCProvider_InstanceInspect_ByVMID(t *testing.T) {
 		CurrentReplicas: 1,
 		DesiredReplicas: 1,
 		Status:          sablier.InstanceStatusReady,
+		Enabled:         "true",
+		Groups:          []string{"default"},
 	})
 }
 
@@ -104,6 +112,8 @@ func TestProxmoxLXCProvider_InstanceInspect_ByNodeVMID(t *testing.T) {
 		CurrentReplicas: 1,
 		DesiredReplicas: 1,
 		Status:          sablier.InstanceStatusReady,
+		Enabled:         "true",
+		Groups:          []string{"default"},
 	})
 }
 
@@ -117,4 +127,64 @@ func TestProxmoxLXCProvider_InstanceInspect_NotFound(t *testing.T) {
 
 	_, err = p.InstanceInspect(t.Context(), "nonexistent")
 	assert.ErrorContains(t, err, "not found")
+}
+
+// Sablier's core checks IsEnabled on inspected instances (reject-unlabeled-requests,
+// verify-enabled-on-expiration), so inspect must report the sablier tag. See #1177.
+func TestProxmoxLXCProvider_InstanceInspect_EnabledFromTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		container   proxmoxlxc.TestContainer
+		wantEnabled bool
+		wantGroups  []string
+	}{
+		{
+			name:        "tagged container is enabled with its groups",
+			container:   proxmoxlxc.TestContainer{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier;sablier-group-web", Node: "pve1"},
+			wantEnabled: true,
+			wantGroups:  []string{"web"},
+		},
+		{
+			name:        "untagged container is not enabled",
+			container:   proxmoxlxc.TestContainer{VMID: 101, Name: "other", Status: "stopped", Tags: "", Node: "pve1"},
+			wantEnabled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{tt.container})
+			p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+			assert.NilError(t, err)
+
+			got, err := p.InstanceInspect(t.Context(), tt.container.Name)
+			assert.NilError(t, err)
+			assert.Equal(t, got.IsEnabled(), tt.wantEnabled)
+			if tt.wantEnabled {
+				assert.DeepEqual(t, got.Groups, tt.wantGroups)
+			}
+		})
+	}
+}
+
+// A second request while the start task runs inspects through the pending-task
+// path, which must report the tag too, or reject-unlabeled-requests rejects it.
+func TestProxmoxLXCProvider_InstanceInspect_EnabledWhileStartPending(t *testing.T) {
+	t.Parallel()
+
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
+		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1", StartTaskState: proxmoxlxc.TaskRunning},
+	})
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	assert.NilError(t, p.InstanceStart(t.Context(), "web"))
+	got, err := p.InstanceInspect(t.Context(), "web")
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStarting)
+	assert.Equal(t, got.IsEnabled(), true)
 }

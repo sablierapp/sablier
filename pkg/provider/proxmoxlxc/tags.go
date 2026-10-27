@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	proxmox "github.com/luthermonson/go-proxmox"
+	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
 const (
@@ -41,4 +42,24 @@ func extractGroups(tags []string) []string {
 		return []string{"default"}
 	}
 	return groups
+}
+
+// containerTags returns the tags of a container, read from its configuration
+// and, failing that, from its status.
+func containerTags(ct *proxmox.Container) []string {
+	if ct.ContainerConfig != nil && ct.ContainerConfig.Tags != "" {
+		return parseTags(ct.ContainerConfig.Tags)
+	}
+	return parseTags(ct.Tags)
+}
+
+// setEnabledAndGroups reports a container with the "sablier" tag as enabled,
+// with the groups of its "sablier-group-<name>" tags, like the labels of other
+// providers. A container without the tag is left as not enabled.
+func setEnabledAndGroups(info *sablier.InstanceInfo, tags []string) {
+	if !hasSablierTag(tags) {
+		return
+	}
+	info.Enabled = "true"
+	info.Groups = extractGroups(tags)
 }

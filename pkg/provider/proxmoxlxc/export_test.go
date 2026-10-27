@@ -29,6 +29,12 @@ func MockServer(t *testing.T, nodes []string, containers []TestContainer) *httpt
 	return mockServer(t, nodes, containers)
 }
 
+// MockServerWithControl is MockServer, plus a function that changes the status
+// the mock reports for a container.
+func MockServerWithControl(t *testing.T, nodes []string, containers []TestContainer) (*httptest.Server, func(vmid int, status string)) {
+	return mockServerWithControl(t, nodes, containers)
+}
+
 // NewTestClient creates a Proxmox client configured for the mock server.
 func NewTestClient(serverURL string) *proxmox.Client {
 	return proxmox.NewClient(

@@ -169,8 +169,7 @@ Sablier doesn't check the service inside the container. The waiting page can cle
 
 - Sablier manages LXC containers only, not [virtual machines](https://pve.proxmox.com/pve-docs/chapter-qm.html).
 - Tags can't carry values, so these settings are not available: [Ready after](/features/ready-after/), [Ready on start](/features/ready-on-start/), [Running hours](/features/running-hours/), [Anti-affinity](/features/anti-affinity/), [Scale instead of stop](/features/scale-mode/), and [CPU](/features/cpu-limits/), [memory](/features/memory-limits/) or [block I/O](/features/disk-io-limits/) throttling.
-- Don't enable [`--provider.reject-unlabeled-requests`](/features/reject-unlabeled-requests/) or [`--provider.verify-enabled-on-expiration`](/features/verify-before-stopping/). Sablier doesn't see the `sablier` tag when it inspects a container, so it rejects every request by name, or never stops an expired container.
-- Proxmox VE has no event stream, so Sablier polls the API every 10 seconds. It notices a container stopped outside Sablier within that delay, and [stops an externally-started one](/features/stop-external-starts/) within 30 seconds.
+- Proxmox VE has no event stream, so Sablier polls the API every 10 seconds. It notices a container started or stopped outside Sablier within that delay, and [stops an externally-started one](/features/stop-external-starts/) when it notices it.
 
 ## Examples
 

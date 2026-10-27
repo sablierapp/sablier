@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -49,11 +50,37 @@ type testContainer struct {
 // mockServer sets up a mock Proxmox API server with the given nodes and containers.
 func mockServer(t *testing.T, nodes []string, containers []testContainer) *httptest.Server {
 	t.Helper()
+	srv, _ := mockServerWithControl(t, nodes, containers)
+	return srv
+}
+
+// mockServerWithControl is mockServer, plus a function that changes the status
+// the mock reports for a container, to simulate a container started or stopped
+// outside Sablier.
+func mockServerWithControl(t *testing.T, nodes []string, containers []testContainer) (*httptest.Server, func(vmid int, status string)) {
+	t.Helper()
 
 	// Build per-node container lists
 	nodeContainers := make(map[string][]testContainer)
 	for _, c := range containers {
 		nodeContainers[c.Node] = append(nodeContainers[c.Node], c)
+	}
+
+	// Current status of each container, changeable while the server runs.
+	var mu sync.Mutex
+	statuses := make(map[int]string)
+	for _, c := range containers {
+		statuses[c.VMID] = c.Status
+	}
+	statusOf := func(vmid int) string {
+		mu.Lock()
+		defer mu.Unlock()
+		return statuses[vmid]
+	}
+	setStatus := func(vmid int, status string) {
+		mu.Lock()
+		defer mu.Unlock()
+		statuses[vmid] = status
 	}
 
 	mux := http.NewServeMux()
@@ -91,7 +118,12 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 
 		// GET /api2/json/nodes/{node}/lxc
 		mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/lxc", node), func(w http.ResponseWriter, r *http.Request) {
-			writeJSON(t, w, nodeContainers[node])
+			list := make([]testContainer, 0, len(nodeContainers[node]))
+			for _, c := range nodeContainers[node] {
+				c.Status = statusOf(c.VMID)
+				list = append(list, c)
+			}
+			writeJSON(t, w, list)
 		})
 
 		// GET /api2/json/nodes/{node}/lxc/{vmid}/status/current and /config
@@ -101,7 +133,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 				writeJSON(t, w, map[string]any{
 					"vmid":   c.VMID,
 					"name":   c.Name,
-					"status": c.Status,
+					"status": statusOf(c.VMID),
 					"tags":   c.Tags,
 					"node":   node,
 				})
@@ -117,7 +149,7 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 
 			// GET /api2/json/nodes/{node}/lxc/{vmid}/interfaces
 			mux.HandleFunc(fmt.Sprintf("GET /api2/json/nodes/%s/lxc/%d/interfaces", node, c.VMID), func(w http.ResponseWriter, r *http.Request) {
-				if c.Status == "running" {
+				if statusOf(c.VMID) == "running" {
 					writeJSON(t, w, []map[string]string{
 						{"name": "lo", "hwaddr": "00:00:00:00:00:00", "inet": "127.0.0.1/8", "inet6": "::1/128"},
 						{"name": "eth0", "hwaddr": "bc:24:11:89:67:07", "inet": "192.168.1.100/24", "inet6": "fe80::1/64"},
@@ -206,5 +238,5 @@ func mockServer(t *testing.T, nodes []string, containers []testContainer) *httpt
 	// the in-memory network (https://pkg.go.dev/net/http/httptest#Server).
 	srv := httptest.NewTestServer(t, mux)
 	srv.Start()
-	return srv
+	return srv, setStatus
 }
