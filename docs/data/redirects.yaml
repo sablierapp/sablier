@@ -46,22 +46,22 @@ redirects:
     to: /providers/proxmox_lxc/
   # Reverse proxy plugins
   - from: /plugins/overview
-    to: /tutorials/reverse-proxies/
+    to: /reverse-proxies/
   - from: /plugins/apacheapisix
-    to: /tutorials/reverse-proxies/apacheapisix/
+    to: /reverse-proxies/apacheapisix/
   - from: /plugins/caddy
-    to: /tutorials/reverse-proxies/caddy/
+    to: /reverse-proxies/caddy/
   - from: /plugins/envoy
-    to: /tutorials/reverse-proxies/envoy/
+    to: /reverse-proxies/envoy/
   - from: /plugins/istio
-    to: /tutorials/reverse-proxies/istio/
+    to: /reverse-proxies/istio/
   # Old NJS nginx link had no dedicated page; point at the closest match.
   - from: /plugins/nginx
-    to: /tutorials/reverse-proxies/nginx_proxywasm/
+    to: /reverse-proxies/nginx_proxywasm/
   - from: /plugins/nginx_proxywasm
-    to: /tutorials/reverse-proxies/nginx_proxywasm/
+    to: /reverse-proxies/nginx_proxywasm/
   - from: /plugins/traefik
-    to: /tutorials/reverse-proxies/traefik/
+    to: /reverse-proxies/traefik/
   # Guides
   - from: /guides/overview
     to: /guides/

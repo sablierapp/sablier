@@ -44,7 +44,7 @@ route /whoami {
 }
 ```
 
-When a request hits `/whoami`, Sablier starts the `demo` group and waits according to the configured [strategy](/concepts/strategies/) before letting the request through. Each reverse proxy expresses this differently; see [Reverse proxies](/tutorials/reverse-proxies/).
+When a request hits `/whoami`, Sablier starts the `demo` group and waits according to the configured [strategy](/concepts/strategies/) before letting the request through. Each reverse proxy expresses this differently; see [Reverse proxies](/reverse-proxies/).
 
 ## One instance, several groups
 

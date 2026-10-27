@@ -30,7 +30,7 @@ flowchart LR
 
 ## Select the poke strategy
 
-Configure the strategy in your reverse proxy plugin. Each supported reverse proxy has its own syntax for enabling the poke strategy on a route. See [Reverse proxies](/tutorials/reverse-proxies/) for configuration examples.
+Configure the strategy in your reverse proxy plugin. Each supported reverse proxy has its own syntax for enabling the poke strategy on a route. See [Reverse proxies](/reverse-proxies/) for configuration examples.
 
 ## How it works
 
@@ -82,4 +82,4 @@ http:
 ## Related
 
 - [Strategies](/concepts/strategies/): how the poke strategy works conceptually.
-- [Reverse proxies](/tutorials/reverse-proxies/): the exact plugin syntax for each proxy.
+- [Reverse proxies](/reverse-proxies/): the exact plugin syntax for each proxy.

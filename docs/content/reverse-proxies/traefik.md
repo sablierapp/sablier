@@ -1,6 +1,8 @@
 ---
 title: Traefik
 weight: 1
+aliases:
+  - /tutorials/reverse-proxies/traefik/
 ---
 
 The Traefik integration is a middleware plugin, loaded at runtime via Yaegi. It lives in its own repository.
