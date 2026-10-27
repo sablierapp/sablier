@@ -32,6 +32,13 @@ func activeReplicas(sc sablier.ScaleConfig, labels map[string]string, parsed Par
 	return sc.Active.Replicas
 }
 
+// desiredReplicas is the replica count shown as the target of a workload. It
+// resolves exactly like the start path, so the displayed value matches what
+// InstanceStart scales to. cfg is the merged labels/annotations map.
+func desiredReplicas(cfg map[string]string, parsed ParsedName) int32 {
+	return activeReplicas(sablier.ScaleConfigFromLabels(cfg), cfg, parsed)
+}
+
 func (p *Provider) InstanceStart(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "kubernetes.instance.start",
 		trace.WithAttributes(attribute.String("instance", name)))

@@ -13,6 +13,9 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		return sablier.InstanceInfo{}, err
 	}
 
+	cfg := sablierConfig(ss.Labels, ss.Annotations)
+	desired := desiredReplicas(cfg, config)
+
 	var info sablier.InstanceInfo
 	ready := *ss.Spec.Replicas != 0 && *ss.Spec.Replicas == ss.Status.ReadyReplicas
 	if p.readyOnFirstReplica {
@@ -24,26 +27,26 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: ss.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusReady,
 		}
 	} else if *ss.Spec.Replicas == 0 {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: ss.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStopped,
 		}
 	} else {
 		info = sablier.InstanceInfo{
 			Name:            config.Original,
 			CurrentReplicas: ss.Status.ReadyReplicas,
-			DesiredReplicas: config.Replicas,
+			DesiredReplicas: desired,
 			Status:          sablier.InstanceStatusStarting,
 		}
 	}
 
-	sablier.PopulateEnabledAndGroup(&info, sablierConfig(ss.Labels, ss.Annotations))
+	sablier.PopulateEnabledAndGroup(&info, cfg)
 
 	var image string
 	if len(ss.Spec.Template.Spec.Containers) > 0 {
