@@ -1,0 +1,15 @@
+[Unit]
+Description=Sablier example: kept idle while the streaming group is active
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=batch
+AntiAffinity=streaming
+# endregion
+
+[Install]
+WantedBy=default.target

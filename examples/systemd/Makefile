@@ -1,8 +1,20 @@
-.PHONY: install uninstall start status logs
+.PHONY: download install add uninstall start status logs
+
+SABLIER_VERSION := 1.18.0 # x-release-please-version
+VERSION := $(strip $(SABLIER_VERSION))
+ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/' -e 's/armv7l/armv7/')
 
 XDG_UNITS := $(HOME)/.config/systemd/user
 SABLIER_UNIT := $(XDG_UNITS)/sablier.service
 DEMO_UNIT := $(XDG_UNITS)/demo.service
+# Every example unit in this folder, except Sablier itself.
+EXAMPLE_UNITS := $(filter-out sablier.service,$(wildcard *.service))
+
+# Download the Sablier release binary to ~/.local/bin/sablier.
+download:
+	install -d $(HOME)/.local/bin
+	curl -fsSL https://github.com/sablierapp/sablier/releases/download/v$(VERSION)/sablier-$(VERSION)-linux-$(ARCH).tar.gz \
+		| tar -xz -C $(HOME)/.local/bin sablier
 
 # Install the demo unit and Sablier, then start Sablier.
 # Uses the systemd *user* instance, so no root / sudo is required.
@@ -16,12 +28,21 @@ install:
 	systemctl --user enable demo.service
 	systemctl --user start sablier.service
 
-# Remove the demo unit and Sablier configuration.
+# Install and enable one more example unit: make add UNIT=ready-after.service
+add:
+	@test -n "$(UNIT)" || { echo "usage: make add UNIT=<name>.service"; exit 1; }
+	install -m 0644 $(UNIT) $(XDG_UNITS)/$(UNIT)
+	systemctl --user daemon-reload
+	systemctl --user enable $(UNIT)
+
+# Remove Sablier, its configuration and every example unit.
 uninstall:
 	-systemctl --user stop sablier.service
 	-systemctl --user disable sablier.service
-	-systemctl --user disable demo.service
-	-rm -f $(DEMO_UNIT) $(SABLIER_UNIT) $(HOME)/.config/sablier/sablier.yaml
+	-for unit in $(EXAMPLE_UNITS); do \
+		if [ -f $(XDG_UNITS)/$$unit ]; then systemctl --user disable --now $$unit; rm -f $(XDG_UNITS)/$$unit; fi; \
+	done
+	-rm -f $(SABLIER_UNIT) $(HOME)/.config/sablier/sablier.yaml
 	systemctl --user daemon-reload
 
 # Ask Sablier to start the demo group (blocking strategy, 1 minute session).
@@ -37,4 +58,3 @@ status:
 # Follow Sablier logs.
 logs:
 	journalctl --user -u sablier -f
-

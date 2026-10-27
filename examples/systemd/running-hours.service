@@ -1,0 +1,16 @@
+[Unit]
+Description=Sablier example: kept running on weekdays during office hours
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=running-hours
+RunningHours=09:00-18:00
+RunningDays=Mon,Tue,Wed,Thu,Fri
+# endregion
+
+[Install]
+WantedBy=default.target

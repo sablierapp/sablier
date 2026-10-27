@@ -4,9 +4,11 @@ Description=Sablier demo service (systemd provider)
 [Service]
 ExecStart=/usr/bin/sleep infinity
 
+# region sablier
 [X-Sablier]
 Enable=true
 Group=demo
+# endregion
 
 [Install]
 WantedBy=default.target

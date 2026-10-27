@@ -1,0 +1,9 @@
+provider:
+  name: systemd
+  systemd:
+    # Optional: only consider units whose name matches one of these patterns.
+    # Remove to consider every loaded unit.
+    unit-patterns:
+      - "*.service"
+server:
+  port: 10000

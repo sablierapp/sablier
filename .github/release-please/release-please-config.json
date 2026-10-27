@@ -78,6 +78,10 @@
                 {
                     "type": "generic",
                     "path": "examples/proxmox-lxc/compose.yml"
+                },
+                {
+                    "type": "generic",
+                    "path": "examples/systemd/Makefile"
                 }
             ]
         }

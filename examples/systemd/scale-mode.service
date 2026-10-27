@@ -1,0 +1,22 @@
+[Unit]
+Description=Sablier example: kept running with lower CPU and memory limits when idle
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=scale-mode
+# Keep the unit running when the session expires.
+IdleReplicas=1
+# CPU in cores: 0.1 is CPUQuota=10%, 2 is CPUQuota=200%.
+IdleCPU=0.1
+ActiveCPU=2
+# Memory in Docker units, applied as MemoryMax=.
+IdleMemory=64m
+ActiveMemory=512m
+# endregion
+
+[Install]
+WantedBy=default.target

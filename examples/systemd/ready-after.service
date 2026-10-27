@@ -1,0 +1,15 @@
+[Unit]
+Description=Sablier example: settling delay after the unit is active
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+
+# region sablier
+[X-Sablier]
+Enable=true
+Group=ready-after
+ReadyAfter=30s
+# endregion
+
+[Install]
+WantedBy=default.target
