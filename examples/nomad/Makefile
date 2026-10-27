@@ -1,4 +1,7 @@
-.PHONY: up down logs start status
+.PHONY: up down logs run start request status
+
+JOB ?= whoami.nomad.hcl
+GROUP ?= demo
 
 # Start Nomad and Sablier, then register the whoami job with count 0.
 up:
@@ -13,10 +16,19 @@ down:
 logs:
 	docker compose logs -f sablier
 
+# Register another job of this folder: make run JOB=ready-after.nomad.hcl
+run:
+	docker compose exec nomad nomad job run -detach /jobs/$(JOB)
+
 # Ask Sablier for whoami/web (blocking strategy, 1 minute session).
 start:
 	@echo ">>> Requesting whoami/web (blocking, 1m session)..."
 	time curl -sf "http://localhost:10000/api/strategies/blocking?names=whoami/web&session_duration=1m" | jq .
+
+# Ask Sablier for a group: make request GROUP=slow-starter
+request:
+	@echo ">>> Requesting group $(GROUP) (blocking, 1m session)..."
+	time curl -sf "http://localhost:10000/api/strategies/blocking?group=$(GROUP)&session_duration=1m" | jq .
 
 # Show the count and the allocations of the whoami job.
 status:

@@ -14,7 +14,8 @@ services:
     cgroup: host
     volumes:
       - ./raw_exec.hcl:/etc/nomad.d/raw_exec.hcl:ro
-      - ./whoami.nomad.hcl:/jobs/whoami.nomad.hcl:ro
+      # The job files of this folder, for "make run JOB=<file>".
+      - ./:/jobs:ro
     ports:
       - "4646:4646" # Nomad API and UI
       - "8080:8080" # Task group whoami/web
@@ -25,15 +26,19 @@ services:
       retries: 30
 
   sablier:
-    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:1.18.0} # x-release-please-version
+    # region sablier
     command:
       - start
       - --provider.name=nomad
       - --provider.nomad.address=http://nomad:4646
+      # The development agent has no ACLs. With ACLs, add the token:
+      # - --provider.nomad.token=<secret ID>
       - --logging.level=debug
       - --sessions.default-duration=1m
       - --sessions.expiration-interval=10s
       - --strategy.blocking.default-timeout=2m
+    # endregion
     ports:
       - "10000:10000"
     depends_on:
