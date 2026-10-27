@@ -1,0 +1,19 @@
+# A container Sablier never stops: it lowers its memory limit when idle and
+# restores it on the next session. Needs Podman 5.1 or later.
+#
+#   podman compose -f compose.yml -f scale-mode.yml up -d
+services:
+  cache:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: cache
+      sablier.idle.replicas: "1"
+      sablier.idle.memory: 64m
+      sablier.active.memory: 512m
+    # endregion

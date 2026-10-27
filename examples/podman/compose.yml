@@ -1,0 +1,39 @@
+# Sablier and one container it starts on demand and stops when idle.
+#
+#   podman compose up -d
+#
+# Rootless Podman: point PODMAN_SOCKET at your user's socket first:
+#
+#   PODMAN_SOCKET=$XDG_RUNTIME_DIR/podman/podman.sock podman compose up -d
+#
+# Image names are fully qualified: Podman does not resolve short names
+# unless your registries.conf allows it.
+services:
+  # region sablier
+  sablier:
+    image: docker.io/sablierapp/sablier:1.18.0 # x-release-please-version
+    command:
+      - start
+      - --provider.name=podman
+    volumes:
+      - ${PODMAN_SOCKET:-/run/podman/podman.sock}:/run/podman/podman.sock
+    security_opt:
+      - label=disable # lets the container use the socket on SELinux hosts
+    ports:
+      - "10000:10000"
+  # endregion
+
+  # region whoami
+  whoami:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    labels:
+      sablier.enable: "true"
+      sablier.group: whoami
+    # Sablier reports the container ready once this check passes.
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    ports:
+      - "8080:80"
+  # endregion

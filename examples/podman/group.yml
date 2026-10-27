@@ -1,0 +1,15 @@
+# One container in two groups: a session for either group starts it.
+#
+#   podman compose -f compose.yml -f group.yml up -d
+services:
+  api:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: team-a,team-b
+    # endregion

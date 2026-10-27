@@ -1,0 +1,17 @@
+# A container that passes its health check before it can serve traffic.
+# Sablier keeps reporting it as not ready for 15s after it turns healthy.
+#
+#   podman compose -f compose.yml -f ready-after.yml up -d
+services:
+  slow-starter:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true", "-healthy-after=5s"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 2s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: slow-starter
+      sablier.ready-after: 15s
+    # endregion

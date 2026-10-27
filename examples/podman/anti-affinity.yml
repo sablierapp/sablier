@@ -1,0 +1,27 @@
+# A background container that Sablier keeps stopped while the streaming
+# group has an active session.
+#
+#   podman compose -f compose.yml -f anti-affinity.yml up -d
+services:
+  streaming:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    labels:
+      sablier.enable: "true"
+      sablier.group: streaming
+
+  background:
+    image: docker.io/sablierapp/mimic:v0.3.3
+    command: ["-healthy=true"]
+    healthcheck:
+      test: ["CMD", "/mimic", "healthcheck"]
+      interval: 5s
+    # region sablier
+    labels:
+      sablier.enable: "true"
+      sablier.group: background
+      sablier.anti-affinity: streaming
+    # endregion
