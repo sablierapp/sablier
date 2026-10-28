@@ -19,6 +19,32 @@ func isThemeFile(filePath string, d fs.DirEntry) bool {
 	return d != nil && !d.IsDir() && path.Ext(filePath) == ".html"
 }
 
+// isKubeletDir reports whether the walked entry is one of the "..<timestamp>"
+// directories in which Kubernetes keeps the files of a ConfigMap, Secret or
+// projected volume. The volume links each of its files into that directory
+// through "..data", so walking it as well registered every theme a second time,
+// named after a timestamp that changes with every update of the volume.
+func isKubeletDir(filePath string, d fs.DirEntry) bool {
+	return d.IsDir() && filePath != "." && strings.HasPrefix(d.Name(), "..")
+}
+
+// isLinkToFile reports whether the theme symlink at filePath resolves to a
+// regular file. A link that leaves the themes directory, or that points to a
+// directory, would otherwise fail in bundleHTML and abort loading every custom
+// theme, so it is skipped with a warning instead.
+func (t *Themes) isLinkToFile(f fs.FS, filePath string) bool {
+	info, err := fs.Stat(f, filePath)
+	if err != nil {
+		t.l.Warn("skipping theme", slog.String("path", filePath), slog.Any("reason", err))
+		return false
+	}
+	if !info.Mode().IsRegular() {
+		t.l.Warn("skipping theme", slog.String("path", filePath), slog.String("reason", "symlink does not point to a regular file"))
+		return false
+	}
+	return true
+}
+
 func (t *Themes) ParseTemplatesFS(f fs.FS) error {
 	return fs.WalkDir(f, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -51,7 +77,13 @@ func (t *Themes) ParseAndBundleTemplatesFS(f fs.FS) error {
 		if err != nil {
 			return err
 		}
+		if isKubeletDir(filePath, d) {
+			return fs.SkipDir
+		}
 		if !isThemeFile(filePath, d) {
+			return nil
+		}
+		if d.Type()&fs.ModeSymlink != 0 && !t.isLinkToFile(f, filePath) {
 			return nil
 		}
 		t.l.Info("theme found", slog.String("path", filePath))

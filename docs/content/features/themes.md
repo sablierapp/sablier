@@ -49,8 +49,15 @@ so leaving the default in place costs nothing when you have no custom themes.
 
 Sablier will recursively search for themes with the `.html` extension.
 
-- You **cannot** load new themes added to the folder without restarting
-- You **can** modify existing theme files without restarting
+Symbolic links are followed as long as they are relative and stay inside the folder. Any other
+link is ignored, both for themes and for their assets. Sablier does not descend into a linked
+directory.
+
+The folder can be a Kubernetes ConfigMap or Secret volume. Sablier ignores the volume's hidden
+`..<timestamp>` directory, so each theme is named after its key, such as `brand` for `brand.html`.
+
+Themes are read once, at startup: restart Sablier to pick up a new theme or a change to an
+existing one.
 
 ## Asset bundling
 

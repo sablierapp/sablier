@@ -23,8 +23,9 @@ const maxAssetBytes = 10 << 20 // 10 MiB
 //
 // Security note: path traversal via ".." is already blocked by fs.ValidPath,
 // which the fs.FS contract requires every Open implementation to enforce.
-// Symlink following must be prevented at the fs.FS construction site (see
-// noSymlinkFS) because fs.ReadFile itself has no way to detect symlinks.
+// Symlinks that leave the themes directory must be refused at the fs.FS
+// construction site (see NewWithCustomThemesFromPath) because fs.ReadFile
+// itself has no way to detect symlinks.
 func safeReadFile(f fs.FS, name string) ([]byte, error) {
 	file, err := f.Open(name)
 	if err != nil {
