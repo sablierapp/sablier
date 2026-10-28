@@ -26,5 +26,7 @@ jobs:
             go.sum
             tools.mod
 
+      # -p 1: the activity integration test counts the kernel's eBPF links,
+      # so it must not run alongside the bpf package's tests.
       - name: Run eBPF kernel and activity integration tests
-        run: go test -tags=nomsgpack -exec sudo -run 'TestCounter|TestTracker|TestActivity' ./pkg/activity/bpf/ ./pkg/activity/
+        run: go test -p 1 -tags=nomsgpack -exec sudo -run 'TestCounter|TestTracker|TestActivity' ./pkg/activity/bpf/ ./pkg/activity/
