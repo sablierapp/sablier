@@ -35,11 +35,9 @@ import (
 // DialFunc opens one connection to the provider's events API.
 type DialFunc func(ctx context.Context) client.EventsResult
 
-// BuildFunc converts a raw events API message into the instance events it
-// carries, in the order the consumer must see them. It returns false when the
-// message is not relevant to the subscription. One message can carry more than
-// one event: a Docker rename is the removal of the old name followed by the
-// adoption of the new one, and the order is part of it.
+// BuildFunc converts a raw events API message into instance events, sent in
+// order. It returns false when the message is not relevant to the subscription.
+// A message can produce several events (a Docker rename produces two).
 type BuildFunc func(ctx context.Context, msg events.Message) ([]sablier.InstanceEvent, bool)
 
 // Stream opens the events API via dial and keeps consuming it until ctx is

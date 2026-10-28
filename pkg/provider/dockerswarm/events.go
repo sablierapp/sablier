@@ -71,8 +71,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 			return sablier.InstanceEvent{}, false
 		}
 	}
-	// A swarm service message carries one event; the shared stream takes a slice so a
-	// provider whose one message means several events (Docker's rename) can say so.
+	// A service message always produces a single event.
 	build := func(ctx context.Context, msg events.Message) ([]sablier.InstanceEvent, bool) {
 		event, ok := buildOne(ctx, msg)
 		if !ok {
