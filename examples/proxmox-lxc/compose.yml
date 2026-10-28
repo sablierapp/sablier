@@ -1,6 +1,6 @@
 services:
   sablier:
-    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    image: sablierapp/sablier:1.19.0 # x-release-please-version
     command:
       - start
       - --configFile=/etc/sablier/sablier.yaml

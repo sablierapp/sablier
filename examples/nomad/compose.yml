@@ -26,7 +26,7 @@ services:
       retries: 30
 
   sablier:
-    image: ${SABLIER_IMAGE:-sablierapp/sablier:1.18.0} # x-release-please-version
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:1.19.0} # x-release-please-version
     # region sablier
     command:
       - start

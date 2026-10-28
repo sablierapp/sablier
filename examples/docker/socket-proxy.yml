@@ -21,7 +21,7 @@ services:
       - socket-proxy
 
   sablier:
-    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    image: sablierapp/sablier:1.19.0 # x-release-please-version
     restart: unless-stopped
     command:
       - start

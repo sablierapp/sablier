@@ -1,5 +1,86 @@
 # Changelog
 
+## [1.19.0](https://github.com/sablierapp/sablier/compare/v1.18.0...v1.19.0) (2026-10-28)
+
+
+### Features
+
+* **api:** add operationIds to the OpenAPI spec ([#1224](https://github.com/sablierapp/sablier/issues/1224)) ([b63a877](https://github.com/sablierapp/sablier/commit/b63a877327a65cb0af58b491d1c58aaa1fdcfb88))
+* **api:** filter the events stream by instance names or group ([#1229](https://github.com/sablierapp/sablier/issues/1229)) ([980655b](https://github.com/sablierapp/sablier/commit/980655b6fa3dd00ce8652e15edbdaf6ee5c7a3db))
+* **client:** add a standard-library Go client for the Sablier API ([#1225](https://github.com/sablierapp/sablier/issues/1225)) ([3cf282c](https://github.com/sablierapp/sablier/commit/3cf282cecf90f42bc605346b2392e9cca67749e6))
+* **ecs:** add the AWS ECS provider ([#1123](https://github.com/sablierapp/sablier/issues/1123)) ([5407360](https://github.com/sablierapp/sablier/commit/540736030228f07b9b6a167adf99f0ab57fdc63f))
+* **kubernetes:** expose workload name to themes ([#1160](https://github.com/sablierapp/sablier/issues/1160)) ([fe0398a](https://github.com/sablierapp/sablier/commit/fe0398a417ecf4cb4accf2b9d29e2e1edc925daf))
+* **kubernetes:** support public sablierapp.dev label keys ([#1114](https://github.com/sablierapp/sablier/issues/1114)) ([2771b53](https://github.com/sablierapp/sablier/commit/2771b53f2414e099bc69fc4abadde58fd55acc77)), closes [#449](https://github.com/sablierapp/sablier/issues/449)
+* **nomad:** add the Nomad provider ([#1122](https://github.com/sablierapp/sablier/issues/1122)) ([c88419b](https://github.com/sablierapp/sablier/commit/c88419b75e7ecaba6c4aa2bf905dc5cc5327c88a))
+
+
+### Bug Fixes
+
+* **api:** describe error responses as they go on the wire in the OpenAPI spec ([#1223](https://github.com/sablierapp/sablier/issues/1223)) ([82a47f3](https://github.com/sablierapp/sablier/commit/82a47f313d38ee9659e15bd1588a886bb181eefd))
+* **api:** return the documented session shape from the poke strategy ([#1222](https://github.com/sablierapp/sablier/issues/1222)) ([57957cf](https://github.com/sablierapp/sablier/commit/57957cf09ab9cf783181bf45587436c2ff047c54))
+* **docker:** honor depends_on entries without a condition like Compose ([#1203](https://github.com/sablierapp/sablier/issues/1203)) ([7219555](https://github.com/sablierapp/sablier/commit/72195554ab7ccf6a30af7fb05d73468db76689b0)), closes [#1182](https://github.com/sablierapp/sablier/issues/1182)
+* **docker:** start stopped containers in scale mode ([#1212](https://github.com/sablierapp/sablier/issues/1212)) ([5c52934](https://github.com/sablierapp/sablier/commit/5c529342c5111a42000d6112b1575b02a1702155))
+* **docker:** treat paused containers as idle ([#1213](https://github.com/sablierapp/sablier/issues/1213)) ([b6d2447](https://github.com/sablierapp/sablier/commit/b6d24476002fa11ab800f172125badb48bde2b3c))
+* embed fallback CA roots so the scratch image can verify HTTPS ([#1207](https://github.com/sablierapp/sablier/issues/1207)) ([7cfbf80](https://github.com/sablierapp/sablier/commit/7cfbf80da3eca12cfc50209066a99a9818b29a07))
+* keep instance event watchers from queueing notifications without bound ([#1157](https://github.com/sablierapp/sablier/issues/1157)) ([36a1d94](https://github.com/sablierapp/sablier/commit/36a1d940c1f2ef2418464c4d774f1f6a5784ef9d))
+* **kubernetes:** close the event stream and stop informers on cancel ([#1218](https://github.com/sablierapp/sablier/issues/1218)) ([9ab6b01](https://github.com/sablierapp/sablier/commit/9ab6b01d6d873054395967cdc5aa387471883e74))
+* **kubernetes:** list only the running workloads when All is false ([#1112](https://github.com/sablierapp/sablier/issues/1112)) ([9a1b640](https://github.com/sablierapp/sablier/commit/9a1b640e04f3fe6055b8c4c7cb604535d55d84a3)), closes [#1095](https://github.com/sablierapp/sablier/issues/1095)
+* **kubernetes:** parse the instance name replica count as int32 ([#1217](https://github.com/sablierapp/sablier/issues/1217)) ([2c485b1](https://github.com/sablierapp/sablier/commit/2c485b198ffdc41f5f966c58b3b19cdc253ec796))
+* **kubernetes:** show sablier.active.replicas as desired replicas ([#1159](https://github.com/sablierapp/sablier/issues/1159)) ([4a36d1f](https://github.com/sablierapp/sablier/commit/4a36d1fb37bc36da3ddacbc05aab89cce8e03833))
+* **podman:** send scale-mode CPU limits as a quota and period ([#1214](https://github.com/sablierapp/sablier/issues/1214)) ([38c3bd9](https://github.com/sablierapp/sablier/commit/38c3bd945d1356e3a904017f3ed909ab14a86466))
+* **proxmox:** prefer tagged containers for hostnames, skip ambiguous ones ([#1211](https://github.com/sablierapp/sablier/issues/1211)) ([f398059](https://github.com/sablierapp/sablier/commit/f398059191bea211ab80e56538e524ca4bd9576b)), closes [#1179](https://github.com/sablierapp/sablier/issues/1179)
+* **proxmox:** report the sablier tag as Enabled on inspect and events ([#1206](https://github.com/sablierapp/sablier/issues/1206)) ([1eb88cb](https://github.com/sablierapp/sablier/commit/1eb88cb2854b69b9c34f2af4d961bde53adee464))
+* replace stale since: NEXT_RELEASE markers with real versions ([#1205](https://github.com/sablierapp/sablier/issues/1205)) ([69bb240](https://github.com/sablierapp/sablier/commit/69bb2400f0fe2fe23e69bbb3c22cfe47ed012517))
+* resolve instance name aliases before the session lookup ([#1210](https://github.com/sablierapp/sablier/issues/1210)) ([0eee4aa](https://github.com/sablierapp/sablier/commit/0eee4aa3665fc28b4855bf31afcd186544343f84)), closes [#1178](https://github.com/sablierapp/sablier/issues/1178) [#1185](https://github.com/sablierapp/sablier/issues/1185)
+* **strategy:** do not wait a full refresh interval in blocking strategy ([#1117](https://github.com/sablierapp/sablier/issues/1117)) ([59fb00d](https://github.com/sablierapp/sablier/commit/59fb00d1c7ec2583900cea31ce8d6a3d14c11b7c)), closes [#282](https://github.com/sablierapp/sablier/issues/282)
+* **swarm:** leave global services out of groups ([#1208](https://github.com/sablierapp/sablier/issues/1208)) ([272d904](https://github.com/sablierapp/sablier/commit/272d9043044b2fedab327368defe34597392522e))
+* **theme:** serve at least one second of refresh interval to the waiting page ([#1143](https://github.com/sablierapp/sablier/issues/1143)) ([94ec4d9](https://github.com/sablierapp/sablier/commit/94ec4d9561fba9f02347fc254730199c17549239))
+* **tinykv:** send onExpire when a stale timer is in the same cycle ([#1111](https://github.com/sablierapp/sablier/issues/1111)) ([2d147f8](https://github.com/sablierapp/sablier/commit/2d147f848a9e689380f4eac3e56e27f5a02d2cb3)), closes [#1110](https://github.com/sablierapp/sablier/issues/1110)
+
+
+### Performance Improvements
+
+* **sablier:** skip instances without running-hours before inspecting them ([#1158](https://github.com/sablierapp/sablier/issues/1158)) ([7b3876d](https://github.com/sablierapp/sablier/commit/7b3876dc5dadb8b2097cadb1b7b2cafffd1336aa))
+
+
+### Documentation
+
+* add systemd to feature compatibility front matter ([#1164](https://github.com/sablierapp/sablier/issues/1164)) ([7ab9cad](https://github.com/sablierapp/sablier/commit/7ab9cada87748fea80d94cec623344b7ec3975d0))
+* add the systemd sidebar icon and toggle sidebar sections in place ([#1192](https://github.com/sablierapp/sablier/issues/1192)) ([0b68b32](https://github.com/sablierapp/sablier/commit/0b68b324ee05591e9dffe8bbe4bb990bdc640456))
+* credit LocalStack as a supporter ([#1163](https://github.com/sablierapp/sablier/issues/1163)) ([a023afd](https://github.com/sablierapp/sablier/commit/a023afd0272c6e8b9ccba28095228ff183247152))
+* **docker-swarm:** rewrite the provider page on the shared outline ([#1171](https://github.com/sablierapp/sablier/issues/1171)) ([484050b](https://github.com/sablierapp/sablier/commit/484050bf7a525aeb6f02ec8b2c954350b971cc42))
+* **docker:** rewrite the provider page on the shared outline ([#1170](https://github.com/sablierapp/sablier/issues/1170)) ([8ca0ce4](https://github.com/sablierapp/sablier/commit/8ca0ce4ecb72802125a1cc48a2db8a4bde19bded))
+* **ecs:** rewrite the provider page on the shared outline ([#1176](https://github.com/sablierapp/sablier/issues/1176)) ([a5b4be1](https://github.com/sablierapp/sablier/commit/a5b4be1d6c30fb1e9f6d86b9e8ae0fac76c80ba5))
+* fix stale code comments and docs ([#1204](https://github.com/sablierapp/sablier/issues/1204)) ([e34092a](https://github.com/sablierapp/sablier/commit/e34092ad34ade83431524946b8872d037c28649e)), closes [#1188](https://github.com/sablierapp/sablier/issues/1188)
+* flatten the how-to guides into a Features list with icons ([#1201](https://github.com/sablierapp/sablier/issues/1201)) ([e46c947](https://github.com/sablierapp/sablier/commit/e46c947acac80f7224ba6357438e2b507abcbd23))
+* **kubernetes:** rewrite the provider page on a shared outline ([#1169](https://github.com/sablierapp/sablier/issues/1169)) ([c0cd799](https://github.com/sablierapp/sablier/commit/c0cd7999a7986b60c58ccf466a4d7c877c38b08a))
+* list feature support on each provider page ([#1166](https://github.com/sablierapp/sablier/issues/1166)) ([f33a474](https://github.com/sablierapp/sablier/commit/f33a474dffdd0a55d001effb640efc649772d45c))
+* make feature pages provider-neutral and link them to provider pages ([#1191](https://github.com/sablierapp/sablier/issues/1191)) ([da7e902](https://github.com/sablierapp/sablier/commit/da7e9022d26f3ab228ce16bd670a87876fe0dfb5))
+* **nomad:** rewrite the provider page on the shared outline ([#1175](https://github.com/sablierapp/sablier/issues/1175)) ([93a83c8](https://github.com/sablierapp/sablier/commit/93a83c890d1a290027d4d1f57cb638bdb7a38a6e))
+* **podman:** rewrite the provider page on the shared outline ([#1172](https://github.com/sablierapp/sablier/issues/1172)) ([e3a346e](https://github.com/sablierapp/sablier/commit/e3a346e7fc232a138e0955a4dd6cf531b9245e99))
+* promote providers to a top-level section ([#1165](https://github.com/sablierapp/sablier/issues/1165)) ([bb5978c](https://github.com/sablierapp/sablier/commit/bb5978cc7f6b73a4df48e01419ffc15056754b60))
+* promote reverse proxies to a top-level section ([#1167](https://github.com/sablierapp/sablier/issues/1167)) ([4c4b423](https://github.com/sablierapp/sablier/commit/4c4b423ac3494144961574f638facd22496308df))
+* **proxmox-lxc:** rewrite the provider page on the shared outline ([#1173](https://github.com/sablierapp/sablier/issues/1173)) ([3c87656](https://github.com/sablierapp/sablier/commit/3c876564ea2fd2626d4d6d68aa27b3c2b410da5a))
+* restore the old how-to redirects on the Docker page ([#1215](https://github.com/sablierapp/sablier/issues/1215)) ([cf7100e](https://github.com/sablierapp/sablier/commit/cf7100e1c517f8c622fdc97057a1495517915484))
+* **systemd:** rewrite the provider page on the shared outline ([#1174](https://github.com/sablierapp/sablier/issues/1174)) ([3f12ace](https://github.com/sablierapp/sablier/commit/3f12acede0cb7b6d28af80c58ad0689271858a50))
+
+
+### Code Refactoring
+
+* **sablier:** use strings.CutLast to parse blkio device lists ([#1118](https://github.com/sablierapp/sablier/issues/1118)) ([cdc1e0a](https://github.com/sablierapp/sablier/commit/cdc1e0a8466902a6ca6514c51fc8702e271b1b67))
+
+
+### Tests
+
+* **sablier:** let async starts finish before tests end ([#1220](https://github.com/sablierapp/sablier/issues/1220)) ([314fc3b](https://github.com/sablierapp/sablier/commit/314fc3b666c0efa23d614afb1b06614ff9da3250))
+* use httptest.NewTestServer in the webhook, metrics and proxmoxlxc tests ([#1119](https://github.com/sablierapp/sablier/issues/1119)) ([346c009](https://github.com/sablierapp/sablier/commit/346c009637e2f69c52a8673d017e993903a4fc9b))
+* use testing/synctest for time-based tests ([#1121](https://github.com/sablierapp/sablier/issues/1121)) ([e4c307a](https://github.com/sablierapp/sablier/commit/e4c307ac577b20c2638fe856a5e22f585bc661d3))
+
+
+### Chores
+
+* **main:** release client 0.1.0 ([#1231](https://github.com/sablierapp/sablier/issues/1231)) ([0e88907](https://github.com/sablierapp/sablier/commit/0e88907d4792f0fec33d46d871a04b15496427ca))
+
 ## [1.18.0](https://github.com/sablierapp/sablier/compare/v1.17.0...v1.18.0) (2026-09-02)
 
 

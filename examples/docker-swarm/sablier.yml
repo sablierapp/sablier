@@ -2,7 +2,7 @@
 #   docker stack deploy -c sablier.yml sablier
 services:
   sablier:
-    image: sablierapp/sablier:1.18.0 # x-release-please-version
+    image: sablierapp/sablier:1.19.0 # x-release-please-version
     command:
       - start
       - --provider.name=docker_swarm
