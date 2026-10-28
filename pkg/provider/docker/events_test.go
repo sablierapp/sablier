@@ -36,7 +36,7 @@ func TestDockerClassicProvider_InstanceEvents(t *testing.T) {
 	err = WaitForContainerRunning(ctx, dind.client, c.ID)
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 
@@ -71,7 +71,7 @@ func TestDockerClassicProvider_InstanceEvents_Started(t *testing.T) {
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
@@ -102,7 +102,7 @@ func TestDockerClassicProvider_InstanceEvents_Created(t *testing.T) {
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
 
@@ -141,7 +141,7 @@ func TestDockerClassicProvider_InstanceEvents_Removed(t *testing.T) {
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventRemoved},
 	})
 
@@ -158,4 +158,19 @@ func TestDockerClassicProvider_InstanceEvents_Removed(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatalf("timed out waiting for container removed event: %v", ctx.Err())
 	}
+}
+
+// subscribe opens an event stream bound to ctx and closes it before the test
+// ends, so the provider never logs to a finished test (the race detector
+// reports that).
+func subscribe(ctx context.Context, t *testing.T, p *docker.Provider, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	stream := p.InstanceEvents(ctx, opts)
+	t.Cleanup(func() {
+		cancel()
+		for range stream.Events {
+		}
+	})
+	return stream
 }

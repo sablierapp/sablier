@@ -10,6 +10,7 @@ import (
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/podman"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"gotest.tools/v3/assert"
 )
 
@@ -36,7 +37,7 @@ func TestPodmanProvider_InstanceEvents(t *testing.T) {
 	err = WaitForContainerRunning(ctx, pind.client, c.ID)
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 
@@ -69,7 +70,7 @@ func TestPodmanProvider_InstanceEvents_Started(t *testing.T) {
 	inspected, err := pind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
@@ -85,4 +86,19 @@ func TestPodmanProvider_InstanceEvents_Started(t *testing.T) {
 	case err := <-stream.Err:
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+// subscribe opens an event stream bound to ctx and closes it before the test
+// ends, so the provider never logs to a finished test (the race detector
+// reports that).
+func subscribe(ctx context.Context, t *testing.T, p *podman.Provider, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	stream := p.InstanceEvents(ctx, opts)
+	t.Cleanup(func() {
+		cancel()
+		for range stream.Events {
+		}
+	})
+	return stream
 }
