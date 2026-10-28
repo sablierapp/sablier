@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -70,13 +71,17 @@ func newRedisOperatorTestProvider(t *testing.T, sts *appsv1.StatefulSet) (*Provi
 			Spec: autoscalingv1.ScaleSpec{Replicas: stsReplicas[name]},
 		}, nil
 	})
-	client.PrependReactor("update", "statefulsets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+	client.PrependReactor("patch", "statefulsets", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		if action.GetSubresource() != "scale" {
 			return false, nil, nil
 		}
-		s := action.(k8stesting.UpdateAction).GetObject().(*autoscalingv1.Scale)
-		stsReplicas[s.Name] = s.Spec.Replicas
-		return true, s, nil
+		pa := action.(k8stesting.PatchAction)
+		var s autoscalingv1.Scale
+		if err := json.Unmarshal(pa.GetPatch(), &s); err != nil {
+			return true, nil, err
+		}
+		stsReplicas[pa.GetName()] = s.Spec.Replicas
+		return true, nil, nil
 	})
 
 	// Dynamic client — pre-create the Redis CR so annotations can be patched.
@@ -278,7 +283,7 @@ func TestInstanceStop_ClearsAnnotationOnScaleFailure(t *testing.T) {
 	p, dyn := newRedisOperatorTestProvider(t, sts)
 
 	// Inject a scale failure.
-	p.Client.(*k8sfake.Clientset).PrependReactor("update", "statefulsets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+	p.Client.(*k8sfake.Clientset).PrependReactor("patch", "statefulsets", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		if action.GetSubresource() == "scale" {
 			return true, nil, fmt.Errorf("simulated scale failure")
 		}
