@@ -12,7 +12,7 @@ compatibility:
   systemd: unsupported
   nomad: unsupported
   ecs: unsupported
-setting: activity.enable
+setting: activity-tracking
 example: activity
 ---
 

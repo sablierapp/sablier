@@ -273,8 +273,10 @@ const (
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
 
 	// LabelActivityEnable opts the instance into eBPF activity tracking:
-	// traffic on its ports opens or extends its session. Requires
-	// `sablier.enable`.
+	// traffic on its ports opens or extends the sessions of its groups, like a
+	// proxy request. Without a `sablier.group` label, it extends only the
+	// instance's own session. Requires `sablier.enable` and
+	// `--activity.enabled`.
 	//
 	// type: boolean
 	// default: `false`
@@ -295,6 +297,8 @@ const (
 	LabelActivityPorts = "sablier.activity.ports"
 
 	// LabelActivitySessionDuration is the session duration granted by activity.
+	// It must be longer than `--activity.interval`, or the instance isn't
+	// watched.
 	//
 	// type: duration
 	// default: `--sessions.default-duration`
@@ -304,8 +308,9 @@ const (
 	// since: NEXT_RELEASE
 	LabelActivitySessionDuration = "sablier.activity.session-duration"
 
-	// LabelActivityMinBytes is the number of bytes a flow must carry before it
-	// counts as activity.
+	// LabelActivityMinBytes is the number of bytes the instance must exchange
+	// on its watched ports in one `--activity.interval`, both directions
+	// together, to count as active.
 	//
 	// type: Docker units
 	// default: `64k`
@@ -315,11 +320,15 @@ const (
 	// since: NEXT_RELEASE
 	LabelActivityMinBytes = "sablier.activity.min-bytes"
 
-	// LabelActivityIgnoreSource lists source addresses whose traffic is not
-	// counted as activity.
+	// LabelActivityIgnoreSource marks a container whose traffic never counts as
+	// activity, for any watched instance. Set it on the source container,
+	// managed by Sablier or not: Sablier ignores that container's current IPs.
+	// A container with host networking has no IP of its own: ignore its host's
+	// address with `--activity.ignore-cidrs` instead.
 	//
-	// type: comma-separated list of IPs or CIDRs
-	// example: "10.0.0.0/8, 192.168.1.5"
+	// type: boolean
+	// default: `false`
+	// example: "true"
 	// feature: /features/activity/
 	// providers: Docker only.
 	// since: NEXT_RELEASE

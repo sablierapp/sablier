@@ -24,6 +24,7 @@ them into one project named `demo`.
 | `anti-affinity.yml` | Forced idle while the `streaming` group is active |
 | `scale-mode.yml` | Kept running with throttled CPU and memory instead of stopped |
 | `blkio.yml` | Kept running with a lower block I/O weight instead of stopped |
+| `activity.yml` | Traffic on `whoami`'s port keeping its session open, with eBPF |
 | `pause.yml` | Sablier pausing idle containers instead of stopping them |
 | `depends-on.yml` | A Compose `depends_on` graph: an app, its database and a one-shot migration |
 | `honor-restart-policy.yml` | Sablier reporting the one-shot migration as completed |
@@ -69,6 +70,10 @@ create its services. Two exceptions:
   docker compose create app db migration
   curl "http://localhost:10000/api/strategies/blocking?group=app&session_duration=1m"
   ```
+
+`activity.yml` needs a Linux host on amd64 or arm64 with cgroup v2, and a
+Sablier release with activity tracking. [`examples/activity`](../activity) has
+a runnable demo.
 
 `socket-proxy.yml` and `remote.yml` replace `compose.yml`, for example
 `COMPOSE_FILE=socket-proxy.yml:whoami.yml`. `remote.yml` needs a reachable

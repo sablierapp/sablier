@@ -1,0 +1,19 @@
+# region sablier
+services:
+  sablier:
+    command:
+      - start
+      - --provider.name=docker
+      - --activity.enabled=true
+    # eBPF needs the host cgroup namespace and two capabilities.
+    cgroup: host
+    cap_add:
+      - BPF
+      - NET_ADMIN
+  whoami:
+    labels:
+      - sablier.activity.enable=true # traffic on its exposed port, 80, counts
+      - sablier.activity.session-duration=5m
+# endregion
+    ports:
+      - "8080:80"
