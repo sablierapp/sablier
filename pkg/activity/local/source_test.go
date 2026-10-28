@@ -156,6 +156,17 @@ func TestSource_WatchTwiceReplacesSlot(t *testing.T) {
 	assert.Equal(t, len(ft.used), 1)
 }
 
+// Sablier's own addresses are ignored; loopback is ignored on its own.
+func TestInterfaceAddrs_LeavesOutLoopback(t *testing.T) {
+	addrs, err := interfaceAddrs()
+
+	assert.NilError(t, err)
+	for _, a := range addrs {
+		assert.Assert(t, !a.IsLoopback(), "%s", a)
+		assert.Assert(t, !a.Is4In6(), "%s is not unmapped", a)
+	}
+}
+
 func TestSource_StaleNamesInstancesOfStaleSlots(t *testing.T) {
 	ft := newFakeTracker()
 	s, host := newSource(t, ft)

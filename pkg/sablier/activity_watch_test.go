@@ -135,9 +135,17 @@ func expectListings(p *providertest.MockProvider, listings ...[]sablier.Instance
 func startWatchActivity(t *testing.T, s *sablier.Sablier, p *providertest.MockProvider, src sablier.ActivitySource) chan<- sablier.InstanceEvent {
 	t.Helper()
 	events := make(chan sablier.InstanceEvent, 1)
+	startWatchActivityWithStream(t, s, p, src, sablier.InstanceEventStream{Events: events, Err: make(chan error)})
+	return events
+}
+
+// startWatchActivityWithStream runs WatchActivity on src until the test ends,
+// with the provider handing out stream.
+func startWatchActivityWithStream(t *testing.T, s *sablier.Sablier, p *providertest.MockProvider, src sablier.ActivitySource, stream sablier.InstanceEventStream) {
+	t.Helper()
 	p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventStopped, provider.InstanceEventRemoved},
-	}).Return(sablier.InstanceEventStream{Events: events, Err: make(chan error)})
+	}).Return(stream)
 
 	done := make(chan struct{})
 	go func() {
@@ -147,7 +155,6 @@ func startWatchActivity(t *testing.T, s *sablier.Sablier, p *providertest.MockPr
 	// t.Context is cancelled before cleanups run: wait for the loop to return.
 	t.Cleanup(func() { <-done })
 	synctest.Wait()
-	return events
 }
 
 // started sends a started event for each instance and waits for the loop to
@@ -388,6 +395,48 @@ func TestWatchActivity_ReconcileGoesOnWhenStaleCheckFails(t *testing.T) {
 			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil)
 		expectListings(p, []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}})
 		startWatchActivity(t, s, p, src)
+
+		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex"})
+	})
+}
+
+// Without events, reconciliation still watches the instances that start.
+func TestWatchActivity_EventStreamClosedKeepsReconciling(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = 30 * time.Second
+		src := newFakeSource()
+		p.EXPECT().InstanceInspect(gomock.Any(), "plex").
+			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil)
+		expectListings(p, nil, []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}})
+		events, errs := make(chan sablier.InstanceEvent), make(chan error)
+		startWatchActivityWithStream(t, s, p, src, sablier.InstanceEventStream{Events: events, Err: errs})
+
+		close(events)
+		close(errs)
+		synctest.Wait()
+		time.Sleep(s.ActivityReconcileInterval + time.Second)
+		synctest.Wait()
+
+		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex"})
+	})
+}
+
+func TestWatchActivity_EventStreamLostKeepsReconciling(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = 30 * time.Second
+		src := newFakeSource()
+		p.EXPECT().InstanceInspect(gomock.Any(), "plex").
+			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil)
+		expectListings(p, nil, []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}})
+		errs := make(chan error)
+		startWatchActivityWithStream(t, s, p, src, sablier.InstanceEventStream{Events: make(chan sablier.InstanceEvent), Err: errs})
+
+		errs <- errors.New("docker events: connection reset")
+		synctest.Wait()
+		time.Sleep(s.ActivityReconcileInterval + time.Second)
+		synctest.Wait()
 
 		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex"})
 	})
