@@ -54,6 +54,11 @@ func main() {
 	// is byte-stable (required for the check-openapi freshness test).
 	normalize(doc3)
 
+	// swag can only declare one media type per operation, so error responses
+	// inherit the success media type and rfc7807.Problem's Go field layout.
+	// Describe them as they go on the wire instead.
+	problemDetails(doc3)
+
 	if err := doc3.Validate(context.Background()); err != nil {
 		log.Fatalf("validate openapi 3.0: %v", err)
 	}
@@ -72,6 +77,49 @@ func main() {
 		log.Fatalf("write %s: %v", *out, err)
 	}
 	log.Printf("OpenAPI %s spec written to %s", doc3.OpenAPI, *out)
+}
+
+const problemRef = "#/components/schemas/rfc7807.Problem"
+
+// problemDetails rewrites every response whose body is an rfc7807.Problem to
+// the application/problem+json media type that AbortWithProblemDetail sends,
+// and replaces the Problem schema with its RFC 7807 JSON form: "instance" is a
+// URI reference string (not a url.URL object) and problem types add extension
+// members such as availableGroups.
+func problemDetails(doc *openapi3.T) {
+	uriReference := openapi3.NewStringSchema()
+	uriReference.Format = "uri-reference"
+	problem := openapi3.NewObjectSchema().
+		WithProperty("type", uriReference).
+		WithProperty("title", openapi3.NewStringSchema()).
+		WithProperty("status", openapi3.NewIntegerSchema()).
+		WithProperty("detail", openapi3.NewStringSchema()).
+		WithProperty("instance", uriReference).
+		WithAnyAdditionalProperties()
+	problem.Description = "An RFC 7807 problem detail. Problem types may add extension members."
+	doc.Components.Schemas["rfc7807.Problem"] = openapi3.NewSchemaRef("", problem)
+
+	// url.URL and url.Userinfo were only reachable through Problem.Instance.
+	delete(doc.Components.Schemas, "url.URL")
+	delete(doc.Components.Schemas, "url.Userinfo")
+
+	for _, pathItem := range doc.Paths.Map() {
+		for _, op := range pathItem.Operations() {
+			for _, resp := range op.Responses.Map() {
+				if resp.Value == nil {
+					continue
+				}
+				for _, mt := range resp.Value.Content {
+					if mt.Schema != nil && mt.Schema.Ref == problemRef {
+						resp.Value.Content = openapi3.Content{
+							"application/problem+json": {Schema: openapi3.NewSchemaRef(problemRef, problem)},
+						}
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 // normalize makes the generated document byte-stable across runs: it sorts
