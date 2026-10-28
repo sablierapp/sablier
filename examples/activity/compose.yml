@@ -1,0 +1,60 @@
+services:
+  sablier:
+    image: ${SABLIER_IMAGE:-sablierapp/sablier:latest}
+    command:
+      - start
+      - --provider.name=docker
+      - --logging.level=debug
+      # /metrics shows each session's expiry and the bytes counted per instance.
+      - --server.metrics.enabled=true
+      - --activity.enabled=true
+      # Read the counters every 5s (default 20s) so the demo runs in two minutes.
+      - --activity.interval=5s
+    # Activity tracking attaches eBPF programs to the watched containers'
+    # cgroups. It needs the host cgroup namespace plus CAP_BPF and
+    # CAP_NET_ADMIN (before Linux 5.11, also CAP_SYS_RESOURCE).
+    cgroup: host
+    cap_add:
+      - BPF
+      - NET_ADMIN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "10000:10000"
+
+  # Think Plex: an nginx serving a 200 MB file. Traffic on its exposed port 80,
+  # in either direction, opens or extends the sessions of its groups.
+  stream:
+    image: nginx:1.30.0-alpine
+    command:
+      - /bin/sh
+      - -c
+      - truncate -s 200M /usr/share/nginx/html/video.bin && exec nginx -g 'daemon off;'
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=stream"
+      - "sablier.activity.enable=true"
+      - "sablier.activity.session-duration=30s"
+    ports:
+      - "8080:80"
+
+  # Think a dashboard widget: it fetches 1 MiB from stream every 2s, far more
+  # than the default sablier.activity.min-bytes. The ignore-source label makes
+  # Sablier ignore its traffic, so it never keeps stream running.
+  poller:
+    image: curlimages/curl:8.17.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          echo "$$(date +%s) $$(curl -s -o /dev/null -r 0-1048575 -w '%{http_code} %{size_download}' http://stream/video.bin)"
+          sleep 2
+        done
+    labels:
+      - "sablier.activity.ignore-source=true"
+
+  # The client of the demo: `make demo` runs it to download from stream. It has
+  # no labels, so its traffic counts.
+  downloader:
+    image: curlimages/curl:8.17.0
+    profiles: ["demo"]
