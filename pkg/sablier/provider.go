@@ -2,6 +2,7 @@ package sablier
 
 import (
 	"context"
+	"net/netip"
 
 	"github.com/sablierapp/sablier/pkg/provider"
 )
@@ -57,4 +58,27 @@ type InstanceNameResolver interface {
 	// InstanceName returns the name InstanceInspect reports for name, or name
 	// itself when it cannot resolve it.
 	InstanceName(ctx context.Context, name string) string
+}
+
+// ActivityTarget is what an ActivitySource needs to watch a running instance's
+// traffic on the local host.
+type ActivityTarget struct {
+	// CgroupPath is the instance's absolute cgroup v2 directory, as seen by
+	// Sablier.
+	CgroupPath string
+	// Ports are the ports the instance exposes, the default for
+	// sablier.activity.ports.
+	Ports []Port
+}
+
+// ActivityHost is implemented by providers whose instances can be watched for
+// activity on the host Sablier runs on. Like InstanceNameResolver, it is found
+// by type assertion on the Provider.
+type ActivityHost interface {
+	// InstanceActivityTarget returns the cgroup v2 path and exposed ports of a
+	// running instance.
+	InstanceActivityTarget(ctx context.Context, name string) (ActivityTarget, error)
+	// ActivityIgnoredSources returns the current IPs of every container
+	// labeled sablier.activity.ignore-source=true, managed by Sablier or not.
+	ActivityIgnoredSources(ctx context.Context) ([]netip.Addr, error)
 }

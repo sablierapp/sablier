@@ -16,6 +16,11 @@ type Recorder interface {
 	RecordActiveInstance(instance string)
 	RecordInactiveInstance(instance string)
 	RecordInstanceStop(instance, reason string)
+	// RecordActivityBytes adds the bytes counted on a watched instance's
+	// ports since the previous activity tick.
+	RecordActivityBytes(instance string, bytes uint64)
+	// SetActivityWatched sets the number of instances watched for activity.
+	SetActivityWatched(count int)
 }
 
 // Noop is the zero-overhead default recorder.
@@ -30,3 +35,5 @@ func (Noop) DiscardReadyWait(string)                      {}
 func (Noop) RecordActiveInstance(string)                  {}
 func (Noop) RecordInactiveInstance(string)                {}
 func (Noop) RecordInstanceStop(string, string)            {}
+func (Noop) RecordActivityBytes(string, uint64)           {}
+func (Noop) SetActivityWatched(int)                       {}

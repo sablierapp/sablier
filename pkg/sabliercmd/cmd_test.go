@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/sabliercmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -87,6 +88,25 @@ func TestPrecedence(t *testing.T) {
 		gotOutput := output.String()
 
 		assert.Equal(t, string(wantConfig), gotOutput)
+	})
+
+	t.Run("string slice from env var", func(t *testing.T) {
+		// Whitespace-separated values have worked since unit-patterns was
+		// introduced; comma-separated values match the flag's syntax.
+		t.Setenv("SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS", "podman-*.service app-*.service")
+		t.Setenv("SABLIER_ACTIVITY_IGNORE_CIDRS", "10.4.0.0/16,192.168.4.0/24")
+
+		sabliercmd.ResetConfig()
+		cmd := sabliercmd.NewRootCommand()
+		output := &bytes.Buffer{}
+		cmd.SetOut(output)
+		cmd.SetArgs([]string{"start"})
+		assert.NilError(t, cmd.Execute())
+
+		var got config.Config
+		assert.NilError(t, json.Unmarshal(output.Bytes(), &got))
+		assert.DeepEqual(t, got.Provider.Systemd.UnitPatterns, []string{"podman-*.service", "app-*.service"})
+		assert.DeepEqual(t, got.Activity.IgnoreCIDRs, []string{"10.4.0.0/16", "192.168.4.0/24"})
 	})
 
 	t.Run("legacy env var", func(t *testing.T) {
@@ -172,6 +192,9 @@ func TestPrecedence(t *testing.T) {
 			"--strategy.dynamic.default-refresh-frequency", "3h",
 			"--strategy.blocking.default-timeout", "3h",
 			"--strategy.blocking.default-refresh-frequency", "3h",
+			"--activity.enabled=true",
+			"--activity.interval", "3h",
+			"--activity.ignore-cidrs", "10.3.0.0/16,192.168.3.0/24",
 		})
 		_ = cmd.Execute()
 

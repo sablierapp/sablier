@@ -81,5 +81,10 @@
     "Endpoint": "http://localhost:4318",
     "ServiceName": "sablier",
     "SamplingRate": 1
+  },
+  "Activity": {
+    "Enabled": false,
+    "Interval": 20000000000,
+    "IgnoreCIDRs": null
   }
 }

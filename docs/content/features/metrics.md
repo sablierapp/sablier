@@ -33,6 +33,8 @@ When `server.metrics.enabled` is `true`, Sablier registers a `GET <base-path>/me
 
 | Name | Type | Labels | Description |
 |------|------|--------|-------------|
+| `sablier_activity_bytes_total` | counter | `instance` | Total bytes counted on the watched ports of each instance watched for activity, in both directions, minus ignored sources. |
+| `sablier_activity_watched_instances` | gauge | — | Number of instances currently watched for activity. |
 | `sablier_group_active_instances` | gauge | `group` | Number of instances in the group with an active session. |
 | `sablier_group_locked` | gauge | `group` | Whether the group has at least one instance with an active session (1) or not (0). |
 | `sablier_instance_active_seconds_total` | counter | `instance` | Cumulative seconds each instance has spent in the Ready state. Incremented each time an instance's session expires. Use increase() or rate() over a time window to compute the active fraction. |

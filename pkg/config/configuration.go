@@ -9,6 +9,7 @@ type Config struct {
 	Strategy Strategy
 	Webhooks Webhooks
 	Tracing  Tracing
+	Activity Activity
 }
 
 func NewConfig() Config {
@@ -21,5 +22,6 @@ func NewConfig() Config {
 		Strategy: NewStrategyConfig(),
 		Webhooks: NewWebhooksConfig(),
 		Tracing:  NewTracingConfig(),
+		Activity: NewActivityConfig(),
 	}
 }

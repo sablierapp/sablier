@@ -271,4 +271,67 @@ const (
 	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: v1.15.0
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
+
+	// LabelActivityEnable opts the instance into eBPF activity tracking:
+	// traffic on its ports opens or extends the sessions of its groups, like a
+	// proxy request. Without a `sablier.group` label, it extends only the
+	// instance's own session. Requires `sablier.enable` and
+	// `--activity.enabled`.
+	//
+	// type: boolean
+	// default: `false`
+	// example: "true"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityEnable = "sablier.activity.enable"
+
+	// LabelActivityPorts lists the ports watched for traffic. The protocol is
+	// tcp, the default, or udp.
+	//
+	// type: comma-separated `port[/proto]` list
+	// default: the container's exposed TCP and UDP ports
+	// example: "32400, 1900/udp"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityPorts = "sablier.activity.ports"
+
+	// LabelActivitySessionDuration is the session duration granted by activity.
+	// It must be longer than `--activity.interval`, or the instance isn't
+	// watched.
+	//
+	// type: duration
+	// default: `--sessions.default-duration`
+	// example: "30m"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivitySessionDuration = "sablier.activity.session-duration"
+
+	// LabelActivityMinBytes is the number of bytes the instance must exchange
+	// on its watched ports in one `--activity.interval`, both directions
+	// together, to count as active.
+	//
+	// type: Docker units
+	// default: `64k`
+	// example: "64k"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityMinBytes = "sablier.activity.min-bytes"
+
+	// LabelActivityIgnoreSource marks a container whose traffic never counts as
+	// activity, for any watched instance. Set it on the source container,
+	// managed by Sablier or not: Sablier ignores that container's current IPs.
+	// A container with host networking has no IP of its own: ignore its host's
+	// address with `--activity.ignore-cidrs` instead.
+	//
+	// type: boolean
+	// default: `false`
+	// example: "true"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityIgnoreSource = "sablier.activity.ignore-source"
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/moby/moby/client"
 	"go.opentelemetry.io/otel"
@@ -39,6 +40,10 @@ type Provider struct {
 	// CPUQuota makes scale mode send CPU limits as a CFS quota and period
 	// instead of NanoCPUs. Podman's Docker-compatible API ignores NanoCPUs.
 	CPUQuota bool
+
+	// cgroupDriver caches the daemon's cgroup driver ("systemd" or "cgroupfs").
+	cgroupMu     sync.Mutex
+	cgroupDriver string
 }
 
 func New(ctx context.Context, cli *client.Client, logger *slog.Logger, strategy string) (*Provider, error) {

@@ -78,6 +78,69 @@ func TestInstanceConfigFromLabels(t *testing.T) {
 				Scale:   &ScaleConfig{Idle: ResourceProfile{Replicas: 1}, Active: ResourceProfile{Replicas: 1}},
 			},
 		},
+		{
+			name:   "activity requires sablier.enable",
+			labels: map[string]string{LabelActivityEnable: "true"},
+			want:   InstanceConfig{},
+		},
+		{
+			name:   "activity defaults",
+			labels: map[string]string{LabelEnable: "true", LabelActivityEnable: "true"},
+			want: InstanceConfig{
+				Enabled:  true,
+				Groups:   []string{"default"},
+				Activity: &ActivityConfig{MinBytes: DefaultActivityMinBytes},
+			},
+		},
+		{
+			name: "activity full",
+			labels: map[string]string{
+				LabelEnable:                  "true",
+				LabelGroup:                   "plex",
+				LabelActivityEnable:          "true",
+				LabelActivityPorts:           "32400",
+				LabelActivitySessionDuration: "30m",
+				LabelActivityMinBytes:        "64k",
+			},
+			want: InstanceConfig{
+				Enabled: true,
+				Groups:  []string{"plex"},
+				Activity: &ActivityConfig{
+					Ports:           []Port{{Number: 32400, Proto: "tcp"}},
+					SessionDuration: 30 * time.Minute,
+					MinBytes:        65536,
+					Groups:          []string{"plex"},
+				},
+			},
+		},
+		{
+			name: "explicit default group is refreshed",
+			labels: map[string]string{
+				LabelEnable:         "true",
+				LabelGroup:          "default",
+				LabelActivityEnable: "true",
+			},
+			want: InstanceConfig{
+				Enabled:  true,
+				Groups:   []string{"default"},
+				Activity: &ActivityConfig{MinBytes: DefaultActivityMinBytes, Groups: []string{"default"}},
+			},
+		},
+		{
+			name: "invalid activity values fall back",
+			labels: map[string]string{
+				LabelEnable:                  "true",
+				LabelActivityEnable:          "true",
+				LabelActivityPorts:           "abc",
+				LabelActivitySessionDuration: "soon",
+				LabelActivityMinBytes:        "lots",
+			},
+			want: InstanceConfig{
+				Enabled:  true,
+				Groups:   []string{"default"},
+				Activity: &ActivityConfig{MinBytes: DefaultActivityMinBytes},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -149,11 +212,16 @@ func TestInstanceConfigurationFromLabels_MatchesInstanceConfigFromLabels(t *test
 		{LabelEnable: "TRUE", LabelAntiAffinity: "streaming"},
 		{LabelAntiAffinity: " , "},
 		{LabelEnable: "true", LabelRunningHours: "02:00-04:00"},
+		{LabelEnable: "true", LabelActivityEnable: "true"},
+		{LabelEnable: "true", LabelActivityEnable: "TRUE"},
+		{LabelEnable: "false", LabelActivityEnable: "true"},
+		{LabelActivityEnable: "true"},
 	} {
 		got := InstanceConfigurationFromLabels("web", labels)
 		want := InstanceConfigFromLabels(labels, nil)
 		assert.DeepEqual(t, got.Groups, want.Groups)
 		assert.DeepEqual(t, got.AntiAffinity, want.AntiAffinity)
+		assert.Equal(t, got.Activity, want.Activity != nil)
 		assert.Equal(t, got.IsEnabled(), want.Enabled)
 		assert.Equal(t, got.Name, "web")
 		assert.Equal(t, got.Enabled, labels[LabelEnable])

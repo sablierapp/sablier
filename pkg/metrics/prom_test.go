@@ -63,6 +63,24 @@ func TestPromRecorder_Counters(t *testing.T) {
 	mustCounter(t, r, "sablier_instance_stops_total", map[string]string{"instance": "nginx", "reason": "unregistered"}, 1)
 }
 
+func TestPromRecorder_Activity(t *testing.T) {
+	r := metrics.NewPromRecorder()
+
+	r.RecordActivityBytes("plex", 100)
+	r.RecordActivityBytes("plex", 50)
+	r.SetActivityWatched(2)
+
+	mustCounter(t, r, "sablier_activity_bytes_total", map[string]string{"instance": "plex"}, 150)
+
+	m := findMetric(t, r, "sablier_activity_watched_instances", map[string]string{})
+	if m == nil {
+		t.Fatal("gauge sablier_activity_watched_instances not found")
+	}
+	if got := m.GetGauge().GetValue(); got != 2 {
+		t.Errorf("sablier_activity_watched_instances = %v, want 2", got)
+	}
+}
+
 // findMetric gathers the registry and returns the first metric matching
 // (name, labels), or nil if not present.
 func findMetric(t *testing.T, r *metrics.PromRecorder, name string, labels map[string]string) *io_prometheus_client.Metric {

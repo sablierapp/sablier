@@ -68,6 +68,74 @@ Config file path. If not defined, looks for sablier.(yml|yaml|toml) in /etc/sabl
 --configFile=<string>
 ```
 
+## Activity {#category-activity}
+
+| Option | Description |
+|--------|-------------|
+| [`--activity.enabled`](#opt-activity-enabled) | Count instance traffic with eBPF: traffic to instances labeled sablier.activity.enable=true opens or extends their sessions. |
+| [`--activity.ignore-cidrs`](#opt-activity-ignore-cidrs) | Source address ranges whose traffic never counts as activity, for clients that are not containers (e.g. 192.168.1.10/32 for a poller on the host network) |
+| [`--activity.interval`](#opt-activity-interval) | How often the activity counters are read. |
+
+### `--activity.enabled` {#opt-activity-enabled}
+
+Count instance traffic with eBPF: traffic to instances labeled sablier.activity.enable=true opens or extends their sessions. Needs Linux (amd64 or arm64), cgroup v2, CAP_BPF, CAP_NET_ADMIN and the host cgroup namespace, and the Docker provider
+
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+activity:
+  enabled: false
+```
+
+```bash
+# Environment variable
+SABLIER_ACTIVITY_ENABLED=false
+
+# Command-line flag
+--activity.enabled=false
+```
+
+### `--activity.ignore-cidrs` {#opt-activity-ignore-cidrs}
+
+Source address ranges whose traffic never counts as activity, for clients that are not containers (e.g. 192.168.1.10/32 for a poller on the host network)
+
+{{< badge "stringSlice" >}} {{< badge content="Default: []" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+activity:
+  ignore-cidrs: []
+```
+
+```bash
+# Environment variable
+SABLIER_ACTIVITY_IGNORE_CIDRS=[]
+
+# Command-line flag
+--activity.ignore-cidrs=[]
+```
+
+### `--activity.interval` {#opt-activity-interval}
+
+How often the activity counters are read. Must be greater than 0, and shorter than the activity session durations
+
+{{< badge "duration" >}} {{< badge content="Default: 20s" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+activity:
+  interval: 20s
+```
+
+```bash
+# Environment variable
+SABLIER_ACTIVITY_INTERVAL=20s
+
+# Command-line flag
+--activity.interval=20s
+```
+
 ## Logging {#category-logging}
 
 | Option | Description |

@@ -312,6 +312,19 @@ If Docker returns warnings for the update, Sablier logs them.
 
 [Learn more about throttling block I/O](/features/disk-io-limits/).
 
+#### Activity tracking {since="next"}
+
+`sablier.activity.enable=true` lets traffic on the container's ports open or extend the sessions of its groups, with or without a proxy. Sablier counts the bytes with eBPF, so it needs `--activity.enabled=true`, the host cgroup namespace, and the `BPF` and `NET_ADMIN` capabilities:
+
+{{< example file="docker/activity.yml" region="sablier" >}}
+
+- `sablier.activity.ports` lists the watched ports. It defaults to the container's exposed TCP and UDP ports.
+- `sablier.activity.session-duration` sets how long traffic keeps the session open. It must be longer than `--activity.interval`.
+- `sablier.activity.min-bytes` sets how many bytes count as activity in one interval.
+- `sablier.activity.ignore-source=true` on any container, managed or not, makes Sablier ignore its traffic. Use it on dashboards that poll your services.
+
+[Learn more about activity tracking](/features/activity/).
+
 ### Readiness
 
 Sablier reports a container:

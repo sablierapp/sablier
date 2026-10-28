@@ -104,6 +104,19 @@ type Rfc7807Problem struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// SablierActivityConfig defines model for sablier.ActivityConfig.
+type SablierActivityConfig struct {
+	// Groups nil: refresh only this instance
+	Groups   *[]string `json:"groups,omitempty"`
+	MinBytes *int      `json:"minBytes,omitempty"`
+
+	// Ports nil: the provider's exposed TCP and UDP ports
+	Ports *[]SablierPort `json:"ports,omitempty"`
+
+	// SessionDuration 0: --sessions.default-duration
+	SessionDuration *TimeDuration `json:"sessionDuration,omitempty"`
+}
+
 // SablierBlkioThrottleDevice defines model for sablier.BlkioThrottleDevice.
 type SablierBlkioThrottleDevice struct {
 	Path *string `json:"path,omitempty"`
@@ -127,6 +140,10 @@ type SablierDockerContainerInfo struct {
 
 // SablierInstanceConfig defines model for sablier.InstanceConfig.
 type SablierInstanceConfig struct {
+	// Activity Activity holds the eBPF activity-tracking configuration. It is nil
+	// unless sablier.enable and sablier.activity.enable are both "true".
+	Activity *SablierActivityConfig `json:"activity,omitempty"`
+
 	// AntiAffinity AntiAffinity lists the groups this instance backs off from
 	// (sablier.anti-affinity).
 	AntiAffinity *[]string `json:"antiAffinity,omitempty"`
@@ -246,6 +263,14 @@ type SablierPodmanContainerInfo struct {
 	Id     *string            `json:"id,omitempty"`
 	Image  *string            `json:"image,omitempty"`
 	Labels *map[string]string `json:"labels,omitempty"`
+}
+
+// SablierPort defines model for sablier.Port.
+type SablierPort struct {
+	Number *int `json:"number,omitempty"`
+
+	// Proto "tcp" or "udp"
+	Proto *string `json:"proto,omitempty"`
 }
 
 // SablierProviderType defines model for sablier.ProviderType.

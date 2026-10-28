@@ -189,6 +189,13 @@ type InstanceConfiguration struct {
 	// window before inspecting them; the validated window comes from
 	// InstanceInspect.
 	RunningHours string
+	// Activity reports that the instance opted into activity tracking
+	// (sablier.enable=true and sablier.activity.enable=true). It lets
+	// WatchActivity skip the other instances before inspecting them; the
+	// validated configuration comes from InstanceInspect. Build it with
+	// InstanceConfigurationFromLabels so it matches the inspect path.
+	Activity bool
+
 	// AntiAffinity is the parsed sablier.anti-affinity value, nil when the
 	// label is absent. It lets the anti-affinity registry be rebuilt from a
 	// single list call instead of inspecting every instance. Build it with

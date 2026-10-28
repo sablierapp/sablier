@@ -21,6 +21,8 @@ type PromRecorder struct {
 	instanceStartDuration  *prometheus.HistogramVec
 	instanceReadyDuration  *prometheus.HistogramVec
 	instanceActiveDuration *prometheus.CounterVec
+	activityBytes          *prometheus.CounterVec
+	activityWatched        prometheus.Gauge
 
 	activeMu        sync.RWMutex
 	activeInstances map[string]struct{}
@@ -88,6 +90,19 @@ func NewPromRecorder() *PromRecorder {
 		},
 		[]string{"instance"},
 	)
+	r.activityBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "sablier_activity_bytes_total",
+			Help: "Total bytes counted on the watched ports of each instance watched for activity, in both directions, minus ignored sources.",
+		},
+		[]string{"instance"},
+	)
+	r.activityWatched = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "sablier_activity_watched_instances",
+			Help: "Number of instances currently watched for activity.",
+		},
+	)
 
 	reg.MustRegister(
 		r.sessionRequests,
@@ -96,6 +111,8 @@ func NewPromRecorder() *PromRecorder {
 		r.instanceStartDuration,
 		r.instanceReadyDuration,
 		r.instanceActiveDuration,
+		r.activityBytes,
+		r.activityWatched,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -118,6 +135,14 @@ func (r *PromRecorder) RecordInstanceStartFailure(instance string) {
 
 func (r *PromRecorder) RecordInstanceStop(instance, reason string) {
 	r.instanceStops.WithLabelValues(instance, reason).Inc()
+}
+
+func (r *PromRecorder) RecordActivityBytes(instance string, bytes uint64) {
+	r.activityBytes.WithLabelValues(instance).Add(float64(bytes))
+}
+
+func (r *PromRecorder) SetActivityWatched(count int) {
+	r.activityWatched.Set(float64(count))
 }
 
 func (r *PromRecorder) RecordInstanceStartEnd(instance string, dur time.Duration) {

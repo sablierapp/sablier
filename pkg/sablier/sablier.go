@@ -65,6 +65,11 @@ type Sablier struct {
 	// reconciled. Defaults to 30 seconds.
 	RunningHoursRefreshFrequency time.Duration
 
+	// ActivityReconcileInterval is how often WatchActivity lists the running
+	// instances to correct its watch set, as a safety net for missed events.
+	// Defaults to 30 seconds.
+	ActivityReconcileInterval time.Duration
+
 	// rejectUnlabeledRequests blocks direct named requests unless sablier.enable=true.
 	rejectUnlabeledRequests bool
 
@@ -95,6 +100,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		ExternallyStartedScanInterval: 30 * time.Second,
 		DefaultSessionDuration:        5 * time.Minute,
 		RunningHoursRefreshFrequency:  30 * time.Second,
+		ActivityReconcileInterval:     30 * time.Second,
 	}
 }
 

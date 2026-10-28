@@ -118,6 +118,11 @@ aws ecs tag-resource --resource-arn <service-arn> \
 | [`sablier.active.blkio-device-read-iops`](#label-sablier-active-blkio-device-read-iops) | The per-device read IOPS limit restored when active. |
 | [`sablier.idle.blkio-device-write-iops`](#label-sablier-idle-blkio-device-write-iops) | The per-device write IOPS limit applied when idle. |
 | [`sablier.active.blkio-device-write-iops`](#label-sablier-active-blkio-device-write-iops) | The per-device write IOPS limit restored when active. |
+| [`sablier.activity.enable`](#label-sablier-activity-enable) | Opts the instance into eBPF activity tracking: traffic on its ports opens or extends the sessions of its groups, like a proxy request. |
+| [`sablier.activity.ports`](#label-sablier-activity-ports) | Lists the ports watched for traffic. |
+| [`sablier.activity.session-duration`](#label-sablier-activity-session-duration) | The session duration granted by activity. |
+| [`sablier.activity.min-bytes`](#label-sablier-activity-min-bytes) | The number of bytes the instance must exchange on its watched ports in one `--activity.interval`, both directions together, to count as active. |
+| [`sablier.activity.ignore-source`](#label-sablier-activity-ignore-source) | Marks a container whose traffic never counts as activity, for any watched instance. |
 
 ### `sablier.enable` {#label-sablier-enable}
 
@@ -458,4 +463,74 @@ Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/features/disk-io-limits/)
+
+### `sablier.activity.enable` {#label-sablier-activity-enable}
+
+Opts the instance into eBPF activity tracking: traffic on its ports opens or extends the sessions of its groups, like a proxy request. Without a `sablier.group` label, it extends only the instance's own session. Requires `sablier.enable` and `--activity.enabled`.
+
+{{< badge "boolean" >}} {{< badge content="Default: `false`" >}} {{< badge content="Next release" >}}
+
+Example: `"true"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.ports` {#label-sablier-activity-ports}
+
+Lists the ports watched for traffic. The protocol is tcp, the default, or udp.
+
+{{< badge "comma-separated `port[/proto]` list" >}} {{< badge content="Default: the container's exposed TCP and UDP ports" >}} {{< badge content="Next release" >}}
+
+Example: `"32400, 1900/udp"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.session-duration` {#label-sablier-activity-session-duration}
+
+The session duration granted by activity. It must be longer than `--activity.interval`, or the instance isn't watched.
+
+{{< badge "duration" >}} {{< badge content="Default: `--sessions.default-duration`" >}} {{< badge content="Next release" >}}
+
+Example: `"30m"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.min-bytes` {#label-sablier-activity-min-bytes}
+
+The number of bytes the instance must exchange on its watched ports in one `--activity.interval`, both directions together, to count as active.
+
+{{< badge "Docker units" >}} {{< badge content="Default: `64k`" >}} {{< badge content="Next release" >}}
+
+Example: `"64k"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.ignore-source` {#label-sablier-activity-ignore-source}
+
+Marks a container whose traffic never counts as activity, for any watched instance. Set it on the source container, managed by Sablier or not: Sablier ignores that container's current IPs. A container with host networking has no IP of its own: ignore its host's address with `--activity.ignore-cidrs` instead.
+
+{{< badge "boolean" >}} {{< badge content="Default: `false`" >}} {{< badge content="Next release" >}}
+
+Example: `"true"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
 
