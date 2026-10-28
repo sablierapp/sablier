@@ -32,6 +32,7 @@ type BlockingRequest struct {
 // @Failure      400  {object}  rfc7807.Problem  "Validation error"
 // @Failure      404  {object}  rfc7807.Problem  "Group or instance not found"
 // @Failure      500  {object}  rfc7807.Problem  "Internal error"
+// @Failure      503  {object}  rfc7807.Problem  "Request cancelled before the session was ready"
 // @Failure      504  {object}  rfc7807.Problem  "Session was not ready before the timeout"
 // @Router       /api/strategies/blocking [get]
 func StartBlocking(router *gin.RouterGroup, s *ServeStrategy) {

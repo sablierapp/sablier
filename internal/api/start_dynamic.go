@@ -39,6 +39,7 @@ type DynamicRequest struct {
 // @Param        theme              query  string    false  "Theme name for the waiting page."
 // @Success      200  {string}  string  "HTML waiting page"
 // @Header       200  {string}  X-Sablier-Session-Status  "ready or not-ready"
+// @Failure      400  {object}  rfc7807.Problem  "Validation error"
 // @Failure      404  {object}  rfc7807.Problem  "Group or theme not found"
 // @Failure      500  {object}  rfc7807.Problem  "Internal error"
 // @Router       /api/strategies/dynamic [get]

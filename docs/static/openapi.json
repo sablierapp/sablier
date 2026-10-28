@@ -49,12 +49,15 @@
         "type": "object"
       },
       "rfc7807.Problem": {
+        "additionalProperties": true,
+        "description": "An RFC 7807 problem detail. Problem types may add extension members.",
         "properties": {
           "detail": {
             "type": "string"
           },
           "instance": {
-            "$ref": "#/components/schemas/url.URL"
+            "format": "uri-reference",
+            "type": "string"
           },
           "status": {
             "type": "integer"
@@ -63,6 +66,7 @@
             "type": "string"
           },
           "type": {
+            "format": "uri-reference",
             "type": "string"
           }
         },
@@ -423,61 +427,6 @@
       "time.Duration": {
         "format": "int64",
         "type": "integer"
-      },
-      "url.URL": {
-        "properties": {
-          "forceQuery": {
-            "description": "ForceQuery indicates whether the original URL contained a query ('?') character.\nWhen set, the String method will include a trailing '?', even when RawQuery is empty.",
-            "type": "boolean"
-          },
-          "fragment": {
-            "description": "fragment for references (without '#')",
-            "type": "string"
-          },
-          "host": {
-            "description": "\"host\" or \"host:port\" (see Hostname and Port methods)",
-            "type": "string"
-          },
-          "omitHost": {
-            "description": "OmitHost indicates the URL has an empty host (authority).\nWhen set, the String method will not include the host when it is empty.",
-            "type": "boolean"
-          },
-          "opaque": {
-            "description": "encoded opaque data",
-            "type": "string"
-          },
-          "path": {
-            "description": "path (relative paths may omit leading slash)",
-            "type": "string"
-          },
-          "rawFragment": {
-            "description": "RawFragment is an optional field containing an encoded fragment hint.\nSee the EscapedFragment method for more details.\n\nIn general, code should call EscapedFragment instead of reading RawFragment.",
-            "type": "string"
-          },
-          "rawPath": {
-            "description": "RawPath is an optional field containing an encoded path hint.\nSee the EscapedPath method for more details.\n\nIn general, code should call EscapedPath instead of reading RawPath.",
-            "type": "string"
-          },
-          "rawQuery": {
-            "description": "RawQuery contains the encoded query values, without the initial '?'.\nUse URL.Query to decode the query.",
-            "type": "string"
-          },
-          "scheme": {
-            "type": "string"
-          },
-          "user": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/url.Userinfo"
-              }
-            ],
-            "description": "username and password information"
-          }
-        },
-        "type": "object"
-      },
-      "url.Userinfo": {
-        "type": "object"
       }
     }
   },
@@ -616,7 +565,7 @@
           },
           "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -626,7 +575,7 @@
           },
           "404": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -636,7 +585,7 @@
           },
           "500": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -644,9 +593,19 @@
             },
             "description": "Internal error"
           },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Request cancelled before the session was ready"
+          },
           "504": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -744,9 +703,19 @@
               }
             }
           },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
           "404": {
             "content": {
-              "text/html": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -756,7 +725,7 @@
           },
           "500": {
             "content": {
-              "text/html": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -824,7 +793,7 @@
           },
           "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -834,7 +803,7 @@
           },
           "404": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
@@ -844,7 +813,7 @@
           },
           "500": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/rfc7807.Problem"
                 }
