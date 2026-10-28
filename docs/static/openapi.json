@@ -72,6 +72,36 @@
         },
         "type": "object"
       },
+      "sablier.ActivityConfig": {
+        "properties": {
+          "groups": {
+            "description": "nil: refresh only this instance",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "minBytes": {
+            "type": "integer"
+          },
+          "ports": {
+            "description": "nil: the provider's exposed ports",
+            "items": {
+              "$ref": "#/components/schemas/sablier.Port"
+            },
+            "type": "array"
+          },
+          "sessionDuration": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/time.Duration"
+              }
+            ],
+            "description": "0: --sessions.default-duration"
+          }
+        },
+        "type": "object"
+      },
       "sablier.BlkioThrottleDevice": {
         "properties": {
           "path": {
@@ -114,6 +144,14 @@
       },
       "sablier.InstanceConfig": {
         "properties": {
+          "activity": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/sablier.ActivityConfig"
+              }
+            ],
+            "description": "Activity holds the eBPF activity-tracking configuration. It is nil\nunless sablier.enable and sablier.activity.enable are both \"true\"."
+          },
           "antiAffinity": {
             "description": "AntiAffinity lists the groups this instance backs off from\n(sablier.anti-affinity).",
             "items": {
@@ -324,6 +362,18 @@
               "type": "string"
             },
             "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "sablier.Port": {
+        "properties": {
+          "number": {
+            "type": "integer"
+          },
+          "proto": {
+            "description": "\"tcp\" or \"udp\"",
+            "type": "string"
           }
         },
         "type": "object"

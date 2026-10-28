@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"strconv"
 	"time"
+
+	"github.com/docker/go-units"
 )
 
 // InstanceConfig is the typed, parsed form of the sablier.* labels an
@@ -42,6 +44,9 @@ type InstanceConfig struct {
 	// Scale holds the idle/active resource profiles when any non-default
 	// scale-mode label is present (sablier.idle.* / sablier.active.*).
 	Scale *ScaleConfig `json:"scale,omitempty"`
+	// Activity holds the eBPF activity-tracking configuration. It is nil
+	// unless sablier.enable and sablier.activity.enable are both "true".
+	Activity *ActivityConfig `json:"activity,omitempty"`
 }
 
 // InstanceConfigFromLabels parses every sablier.* label into a typed
@@ -110,5 +115,46 @@ func InstanceConfigFromLabels(labels map[string]string, l *slog.Logger) Instance
 		sc.Active.Replicas > 1 || sc.Active.HasResources() {
 		cfg.Scale = &sc
 	}
+	if cfg.Enabled && labels[LabelActivityEnable] == "true" {
+		cfg.Activity = activityConfigFromLabels(labels, l)
+	}
 	return cfg
+}
+
+func activityConfigFromLabels(labels map[string]string, l *slog.Logger) *ActivityConfig {
+	a := &ActivityConfig{MinBytes: DefaultActivityMinBytes}
+	if v := labels[LabelActivityPorts]; v != "" {
+		if ports, err := ParseActivityPorts(v); err == nil {
+			a.Ports = ports
+		} else {
+			l.Warn("invalid sablier.activity.ports label value, ignoring",
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		}
+	}
+	if v := labels[LabelActivitySessionDuration]; v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			a.SessionDuration = d
+		} else {
+			l.Warn("invalid sablier.activity.session-duration label value, ignoring",
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		}
+	}
+	if v := labels[LabelActivityMinBytes]; v != "" {
+		if n, err := units.RAMInBytes(v); err == nil && n >= 0 {
+			a.MinBytes = uint64(n)
+		} else {
+			l.Warn("invalid sablier.activity.min-bytes label value, ignoring",
+				slog.String("value", v),
+				slog.Any("error", err),
+			)
+		}
+	}
+	if labels[LabelGroup] != "" {
+		a.Groups = ParseGroups(labels[LabelGroup])
+	}
+	return a
 }

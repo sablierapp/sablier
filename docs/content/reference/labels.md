@@ -118,6 +118,11 @@ aws ecs tag-resource --resource-arn <service-arn> \
 | [`sablier.active.blkio-device-read-iops`](#label-sablier-active-blkio-device-read-iops) | The per-device read IOPS limit restored when active. |
 | [`sablier.idle.blkio-device-write-iops`](#label-sablier-idle-blkio-device-write-iops) | The per-device write IOPS limit applied when idle. |
 | [`sablier.active.blkio-device-write-iops`](#label-sablier-active-blkio-device-write-iops) | The per-device write IOPS limit restored when active. |
+| [`sablier.activity.enable`](#label-sablier-activity-enable) | Opts the instance into eBPF activity tracking: traffic on its ports opens or extends its session. |
+| [`sablier.activity.ports`](#label-sablier-activity-ports) | Lists the ports watched for traffic. |
+| [`sablier.activity.session-duration`](#label-sablier-activity-session-duration) | The session duration granted by activity. |
+| [`sablier.activity.min-bytes`](#label-sablier-activity-min-bytes) | The number of bytes a flow must carry before it counts as activity. |
+| [`sablier.activity.ignore-source`](#label-sablier-activity-ignore-source) | Lists source addresses whose traffic is not counted as activity. |
 
 ### `sablier.enable` {#label-sablier-enable}
 
@@ -458,4 +463,74 @@ Docker (daemon API >= 1.55) and systemd.
 {{< /callout >}}
 
 [Learn more](/features/disk-io-limits/)
+
+### `sablier.activity.enable` {#label-sablier-activity-enable}
+
+Opts the instance into eBPF activity tracking: traffic on its ports opens or extends its session. Requires `sablier.enable`.
+
+{{< badge "boolean" >}} {{< badge content="Default: `false`" >}} {{< badge content="Next release" >}}
+
+Example: `"true"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.ports` {#label-sablier-activity-ports}
+
+Lists the ports watched for traffic.
+
+{{< badge "comma-separated `port[/proto]` list" >}} {{< badge content="Default: the container's exposed ports" >}} {{< badge content="Next release" >}}
+
+Example: `"32400, 1900/udp"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.session-duration` {#label-sablier-activity-session-duration}
+
+The session duration granted by activity.
+
+{{< badge "duration" >}} {{< badge content="Default: `--sessions.default-duration`" >}} {{< badge content="Next release" >}}
+
+Example: `"30m"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.min-bytes` {#label-sablier-activity-min-bytes}
+
+The number of bytes a flow must carry before it counts as activity.
+
+{{< badge "Docker units" >}} {{< badge content="Default: `64k`" >}} {{< badge content="Next release" >}}
+
+Example: `"64k"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
+
+### `sablier.activity.ignore-source` {#label-sablier-activity-ignore-source}
+
+Lists source addresses whose traffic is not counted as activity.
+
+{{< badge "comma-separated list of IPs or CIDRs" >}} {{< badge content="Next release" >}}
+
+Example: `"10.0.0.0/8, 192.168.1.5"`
+
+{{< callout type="info" >}}
+Docker only.
+{{< /callout >}}
+
+[Learn more](/features/activity/)
 

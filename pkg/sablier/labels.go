@@ -271,4 +271,57 @@ const (
 	// providers: Docker (daemon API >= 1.55) and systemd.
 	// since: v1.15.0
 	LabelActiveBlkioWriteIOps = "sablier.active.blkio-device-write-iops"
+
+	// LabelActivityEnable opts the instance into eBPF activity tracking:
+	// traffic on its ports opens or extends its session. Requires
+	// `sablier.enable`.
+	//
+	// type: boolean
+	// default: `false`
+	// example: "true"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityEnable = "sablier.activity.enable"
+
+	// LabelActivityPorts lists the ports watched for traffic.
+	//
+	// type: comma-separated `port[/proto]` list
+	// default: the container's exposed ports
+	// example: "32400, 1900/udp"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityPorts = "sablier.activity.ports"
+
+	// LabelActivitySessionDuration is the session duration granted by activity.
+	//
+	// type: duration
+	// default: `--sessions.default-duration`
+	// example: "30m"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivitySessionDuration = "sablier.activity.session-duration"
+
+	// LabelActivityMinBytes is the number of bytes a flow must carry before it
+	// counts as activity.
+	//
+	// type: Docker units
+	// default: `64k`
+	// example: "64k"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityMinBytes = "sablier.activity.min-bytes"
+
+	// LabelActivityIgnoreSource lists source addresses whose traffic is not
+	// counted as activity.
+	//
+	// type: comma-separated list of IPs or CIDRs
+	// example: "10.0.0.0/8, 192.168.1.5"
+	// feature: /features/activity/
+	// providers: Docker only.
+	// since: NEXT_RELEASE
+	LabelActivityIgnoreSource = "sablier.activity.ignore-source"
 )
