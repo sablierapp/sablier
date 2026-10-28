@@ -138,6 +138,16 @@ func (c *Client) StartPoke(ctx context.Context, params StartPokeParams) (*Respon
 // get calls a strategy endpoint. The error is only for failures to get an
 // HTTP response: transport errors, cancellation, or an unreadable body.
 func (c *Client) get(ctx context.Context, path string, params any) (*Response, error) {
+	resp, err := c.do(ctx, path, params, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return readResponse(resp)
+}
+
+// do sends a GET request to an endpoint and returns the unread response.
+func (c *Client) do(ctx context.Context, path string, params any, header http.Header) (*http.Response, error) {
 	u := c.baseURL.JoinPath(path)
 	u.RawQuery = encodeQuery(params).Encode()
 
@@ -145,14 +155,16 @@ func (c *Client) get(ctx context.Context, path string, params any) (*Response, e
 	if err != nil {
 		return nil, err
 	}
+	for name, values := range header {
+		req.Header[name] = values
+	}
 	req.Header.Set("User-Agent", c.userAgent)
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
+	return c.httpClient.Do(req)
+}
 
+// readResponse reads resp into a Response. It does not close resp.Body.
+func readResponse(resp *http.Response) (*Response, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read sablier response: %w", err)
