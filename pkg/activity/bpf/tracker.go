@@ -2,7 +2,12 @@
 // of cgroup_skb eBPF programs, one pair per watched cgroup.
 package bpf
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+)
 
 var (
 	ErrNotSupported = errors.New("activity tracking requires Linux on amd64 or arm64")
@@ -46,5 +51,32 @@ func (p *slotPool) alloc() (Slot, error) {
 func (p *slotPool) free(s Slot) {
 	if int(s) < len(p.used) {
 		p.used[s] = false
+	}
+}
+
+// cgroupNotFoundError is returned when a watched cgroup doesn't exist. The
+// usual cause is Sablier running in its own cgroup namespace, where it can't
+// see the containers' cgroups.
+type cgroupNotFoundError struct {
+	path string
+	err  error
+}
+
+func (e *cgroupNotFoundError) Error() string {
+	return fmt.Sprintf("cgroup %s not found: run Sablier with cgroup: host on the Docker host", e.path)
+}
+
+func (e *cgroupNotFoundError) Unwrap() error { return e.err }
+
+// checkCgroup checks that the cgroup directory at path exists.
+func checkCgroup(path string) error {
+	_, err := os.Stat(path)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, fs.ErrNotExist):
+		return &cgroupNotFoundError{path: path, err: err}
+	default:
+		return fmt.Errorf("cgroup %s: %w", path, err)
 	}
 }

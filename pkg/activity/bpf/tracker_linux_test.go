@@ -4,6 +4,8 @@ package bpf
 
 import (
 	"encoding/binary"
+	"errors"
+	"io/fs"
 	"net/netip"
 	"os"
 	"slices"
@@ -268,4 +270,18 @@ func TestTracker_UnwatchThenWatchStartsAtZero(t *testing.T) {
 	totals, err = tr.Read()
 	assert.NilError(t, err)
 	assert.DeepEqual(t, totals, map[Slot]uint64{s: 0})
+}
+
+// Without cgroup: host, Sablier sees its own cgroup namespace and the
+// containers' cgroups are missing. Needs no privileges: Watch fails before it
+// touches the kernel.
+func TestTracker_WatchMissingCgroup(t *testing.T) {
+	tr := &Tracker{watches: make(map[Slot]*watch), ignored: make(map[counterLpmKey]struct{})}
+	path := "/sys/fs/cgroup/sablier-test-missing/0123abcd"
+
+	_, err := tr.Watch(path, []Port{{Number: 8080, Proto: ProtoTCP}})
+
+	assert.Error(t, err, "cgroup "+path+" not found: run Sablier with cgroup: host on the Docker host")
+	assert.Assert(t, errors.Is(err, fs.ErrNotExist), "%v", err)
+	assert.Assert(t, !slices.Contains(tr.slots.used[:], true), "a slot leaked")
 }

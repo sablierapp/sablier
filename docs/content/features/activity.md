@@ -69,10 +69,17 @@ services:
 ```
 
 - **`cgroup: host` plus `cap_add: [BPF, NET_ADMIN]` is all it takes.** That's what was measured on a Raspberry Pi 4 with Docker 29.7.1 and kernel 6.8.0-1065-raspi, and Docker's default seccomp profile allowed the rest. Before Linux 5.11, also add `SYS_RESOURCE`.
-- **Without them, Sablier refuses to start** and names what's missing:
+- **Without the capabilities, Sablier refuses to start** and names what it needs:
 
   ```text
-  Error: --activity.enabled: remove the memlock limit (needs CAP_BPF and CAP_NET_ADMIN, and cgroup: host; before Linux 5.11 also CAP_SYS_RESOURCE): failed to set memlock rlimit: operation not permitted
+  Error: --activity.enabled: load eBPF maps (needs CAP_BPF and CAP_NET_ADMIN, and cgroup: host; before Linux 5.11 also CAP_SYS_RESOURCE): assign values: field Bytes: map bytes: map create: operation not permitted (MEMLOCK may be too low, consider rlimit.RemoveMemlock)
+  ```
+
+- **Without `cgroup: host`, Sablier starts but can't watch any container.** It can't reliably tell that it runs in its own cgroup namespace, so it doesn't refuse to start. It logs a warning at startup when it appears to, then a warning for each container it fails to watch, retried every 30s:
+
+  ```text
+  WRN Sablier appears to run in a private cgroup namespace; activity tracking needs cgroup: host
+  WRN cannot watch instance for activity instance=stream error="cgroup /sys/fs/cgroup/docker/<id> not found: run Sablier with cgroup: host on the Docker host"
   ```
 
 - **With `--activity.enabled=false`, the default,** Sablier loads nothing and needs no extra privileges.

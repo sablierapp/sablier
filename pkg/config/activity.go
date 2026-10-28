@@ -8,8 +8,9 @@ import "time"
 type Activity struct {
 	// Enabled loads the eBPF programs that count instance traffic. It needs
 	// Linux on amd64 or arm64 with cgroup v2, CAP_BPF and CAP_NET_ADMIN, the
-	// host cgroup namespace, and a provider that supports activity tracking
-	// (Docker). When any of these is missing, Sablier refuses to start.
+	// host cgroup namespace, and the Docker provider. Without the host cgroup
+	// namespace, Sablier starts but can't watch any instance, and logs a
+	// warning for each; when anything else is missing, it refuses to start.
 	// Env: SABLIER_ACTIVITY_ENABLED
 	// CLI: --activity.enabled
 	// Default: false

@@ -126,6 +126,12 @@ func portKey(s Slot, p Port) counterPortKey {
 // Watch starts counting the traffic of the cgroup at cgroupPath (a cgroup v2
 // directory) on ports. Its total starts at zero.
 func (t *Tracker) Watch(cgroupPath string, ports []Port) (Slot, error) {
+	// link.AttachCgroup formats a missing path into a plain string: check it
+	// first, so the error names the likely cause and wraps fs.ErrNotExist.
+	if err := checkCgroup(cgroupPath); err != nil {
+		return 0, err
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

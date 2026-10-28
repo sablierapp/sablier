@@ -1,7 +1,10 @@
 package sabliercmd
 
 import (
+	"bytes"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -84,6 +87,39 @@ func TestSetupActivity_InvalidInterval(t *testing.T) {
 			assertActivityError(t, err, "--activity.interval", "greater than 0")
 			assert.Assert(t, src == nil)
 			assert.Assert(t, closer == nil)
+		})
+	}
+}
+
+func TestWarnPrivateCgroupNamespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  *string // nil: no file
+		wantWarn bool
+	}{
+		{name: "private namespace", content: new("0::/\n"), wantWarn: true},
+		{name: "host namespace, systemd driver", content: new("0::/system.slice/docker-0123abcd.scope\n")},
+		{name: "host namespace, cgroupfs driver", content: new("0::/docker/0123abcd\n")},
+		{name: "cgroup v1", content: new("12:pids:/\n11:memory:/\n0::/\n")},
+		{name: "no file"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "cgroup")
+			if tt.content != nil {
+				assert.NilError(t, os.WriteFile(path, []byte(*tt.content), 0o600))
+			}
+			var logs bytes.Buffer
+			logger := slog.New(slog.NewTextHandler(&logs, nil))
+
+			warnPrivateCgroupNamespace(logger, path)
+
+			if !tt.wantWarn {
+				assert.Equal(t, logs.String(), "")
+				return
+			}
+			assert.Assert(t, strings.Contains(logs.String(), "level=WARN"), logs.String())
+			assert.Assert(t, strings.Contains(logs.String(), "Sablier appears to run in a private cgroup namespace; activity tracking needs cgroup: host"), logs.String())
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/netip"
+	"os"
 	"strings"
 
 	"github.com/sablierapp/sablier/pkg/activity/bpf"
@@ -43,5 +44,22 @@ func setupActivity(conf config.Activity, providerName string, p sablier.Provider
 	if err != nil {
 		return nil, nil, fmt.Errorf("--activity.enabled: %w", err)
 	}
+	warnPrivateCgroupNamespace(logger, "/proc/self/cgroup")
 	return local.New(tracker, host, ignore, logger), tracker, nil
+}
+
+// warnPrivateCgroupNamespace warns when the cgroup file at path, normally
+// /proc/self/cgroup, shows that Sablier is at the root of its cgroup
+// namespace. Without cgroup: host, the containers' cgroups are then out of
+// sight and every watch fails. It is only a warning: a process can also be at
+// the root of the host's namespace, as one started with docker exec in a
+// Docker-in-Docker container is.
+func warnPrivateCgroupNamespace(logger *slog.Logger, path string) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	if strings.TrimSpace(string(content)) == "0::/" {
+		logger.Warn("Sablier appears to run in a private cgroup namespace; activity tracking needs cgroup: host")
+	}
 }
