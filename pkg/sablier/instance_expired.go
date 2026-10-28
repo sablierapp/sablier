@@ -19,6 +19,7 @@ func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 func (s *Sablier) OnInstanceExpired(ctx context.Context) func(string) {
 	base := onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.verifyEnabledOnExpiration)
 	return func(key string) {
+		s.markStoppedOnPurpose(key)
 		base(key)
 		// The expired session may have been the last one keeping a group active;
 		// restore any instance we forced idle because of an anti-affinity to it.

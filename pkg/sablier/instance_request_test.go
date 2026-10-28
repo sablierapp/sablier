@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -791,4 +793,214 @@ func TestInstanceRequest_ResolvesInstanceNameBeforeSessionLookup(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusReady))
 	assert.Equal(t, info.Name, "web")
+}
+
+// A start that fails while the session is kept (e.g. a Kubernetes update
+// conflict) must not leave the instance stopped for the rest of the session.
+// The failure is surfaced once; once the backoff has elapsed, the next request
+// starts the instance again, reusing the session instead of inspecting it.
+func TestInstanceRequest_StartFailedWithActiveSession_StartsAgainAfterBackoff(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "hub", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "kubernetes",
+		}
+		starting := stoppedInfo
+		starting.Status = sablier.InstanceStatusStarting
+		restarted := make(chan struct{})
+
+		gomock.InOrder(
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(errors.New("the object has been modified")),
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").DoAndReturn(func(context.Context, string) error {
+				close(restarted)
+				return nil
+			}),
+		)
+		// Inspected by the 1st request's start and the 3rd request's status
+		// check. The retry does not inspect.
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(stoppedInfo, nil).Times(2)
+
+		// 1st request: no session, the async start fails.
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		_, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		synctest.Wait()
+
+		// The session is still there for the following requests.
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil).Times(3)
+
+		// 2nd request: the failure is surfaced once.
+		_, err = manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.ErrorContains(t, err, "instance start failed: the object has been modified")
+
+		// 3rd request, within the backoff: only inspected.
+		sessions.EXPECT().Put(ctx, stoppedInfo, time.Minute).Return(nil)
+		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStopped))
+
+		// 4th request, after the backoff: started again.
+		time.Sleep(2 * time.Second)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		info, err = manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+		synctest.Wait()
+		select {
+		case <-restarted:
+		default:
+			t.Fatal("instance was never started again")
+		}
+	})
+}
+
+// In scale mode (sablier.idle.replicas >= 1) a workload whose start failed is
+// reported ready at its idle size. The retry relies on the recorded failure,
+// not on the provider status, so it still happens.
+func TestInstanceRequest_StartFailed_ScaleModeReportedReady_StartsAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		idle := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		starting := idle
+		starting.Status = sablier.InstanceStatusStarting
+
+		gomock.InOrder(
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(errors.New("quota exceeded")),
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(nil),
+		)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(idle, nil)
+
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		_, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		synctest.Wait()
+
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		_, err = manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.ErrorContains(t, err, "quota exceeded")
+
+		// A later status check stored the session as ready, with ReadyAt set.
+		now := time.Now()
+		ready := idle
+		ready.ReadyAt = &now
+		time.Sleep(2 * time.Second)
+		sessions.EXPECT().Get(ctx, "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		assert.Assert(t, info.ReadyAt == nil)
+		synctest.Wait()
+	})
+}
+
+// Consecutive failures double the delay before the next retry: 2s after the
+// first failure, 4s after the second.
+func TestInstanceRequest_StartFailedRepeatedly_BacksOff(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		info := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStopped}
+		var starts atomic.Int32
+		provider.EXPECT().InstanceStart(gomock.Any(), "hub").DoAndReturn(func(context.Context, string) error {
+			starts.Add(1)
+			return errors.New("forbidden")
+		}).AnyTimes()
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(info, nil).AnyTimes()
+		sessions.EXPECT().Put(ctx, gomock.Any(), time.Minute).Return(nil).AnyTimes()
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+
+		request := func() {
+			_, _ = manager.InstanceRequest(ctx, "hub", time.Minute)
+			synctest.Wait()
+		}
+
+		request() // t=0: first start fails
+		sessions.EXPECT().Get(gomock.Any(), "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
+		request() // surfaces the error
+		time.Sleep(2 * time.Second)
+		request() // t=2s: retried, fails again
+		assert.Equal(t, starts.Load(), int32(2))
+		request() // surfaces the error
+
+		time.Sleep(2 * time.Second)
+		request() // t=4s: still backing off
+		assert.Equal(t, starts.Load(), int32(2))
+
+		time.Sleep(2 * time.Second)
+		request() // t=6s: retried
+		assert.Equal(t, starts.Load(), int32(3))
+	})
+}
+
+// Many requests arriving at once (e.g. a page load) dispatch a single retry.
+func TestInstanceRequest_StartFailed_ConcurrentRequestsRetryOnce(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		info := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStopped}
+		var starts atomic.Int32
+		provider.EXPECT().InstanceStart(gomock.Any(), "hub").DoAndReturn(func(context.Context, string) error {
+			if starts.Add(1) == 1 {
+				return errors.New("conflict")
+			}
+			return nil
+		}).AnyTimes()
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(info, nil).AnyTimes()
+		sessions.EXPECT().Put(ctx, gomock.Any(), time.Minute).Return(nil).AnyTimes()
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+
+		_, _ = manager.InstanceRequest(ctx, "hub", time.Minute)
+		synctest.Wait()
+		sessions.EXPECT().Get(gomock.Any(), "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil).AnyTimes()
+		_, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.ErrorContains(t, err, "conflict")
+		time.Sleep(2 * time.Second)
+
+		var wg sync.WaitGroup
+		for range 20 {
+			wg.Go(func() { _, _ = manager.InstanceRequest(ctx, "hub", time.Minute) })
+		}
+		wg.Wait()
+		synctest.Wait()
+		assert.Equal(t, starts.Load(), int32(2), "expected the failed start and exactly one retry")
+	})
+}
+
+// Without a start failure recorded by Sablier, an existing session is only
+// inspected, whatever the provider reports. In particular a stopped instance is
+// not started again: it may have been stopped on purpose (an operator, or an
+// anti-affinity suppression) before the session was removed.
+func TestInstanceRequest_ExistingSession_NoFailedStart_IsNotStartedAgain(t *testing.T) {
+	for _, status := range []sablier.InstanceStatus{
+		sablier.InstanceStatusStopped,
+		sablier.InstanceStatusStarting,
+		sablier.InstanceStatusError,
+		sablier.InstanceStatusCompleted,
+	} {
+		t.Run(string(status), func(t *testing.T) {
+			manager, sessions, provider := setupSablier(t)
+			ctx := t.Context()
+
+			inspected := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: status}
+			sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil)
+			provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(inspected, nil)
+			sessions.EXPECT().Put(ctx, inspected, time.Minute).Return(nil)
+			// No InstanceStart expectation: the strict mock fails the test if it is called.
+
+			info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+			assert.NilError(t, err)
+			assert.Equal(t, info.Status, status)
+		})
+	}
 }

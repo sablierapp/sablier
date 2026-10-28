@@ -35,6 +35,10 @@ type Sablier struct {
 
 	pendingMu     sync.Mutex
 	pendingStarts map[string]*pendingStart
+	// failedStarts holds instances whose last start failed, so a request for
+	// their still-active session starts them again (see retryFailedStart).
+	// Guarded by pendingMu.
+	failedStarts map[string]*failedStart
 	// depStarts single-flights InstanceStart calls issued for depends_on
 	// dependencies, so concurrent requests that share a dependency (e.g. two
 	// group members that both depend on the same database) never start it twice.
@@ -81,6 +85,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		antiAffinity:                  newGroupRegistry(),
 		suppressed:                    map[string]struct{}{},
 		pendingStarts:                 map[string]*pendingStart{},
+		failedStarts:                  map[string]*failedStart{},
 		depStarts:                     map[string]*depStart{},
 		l:                             logger,
 		metrics:                       metrics.Noop{},
@@ -181,5 +186,9 @@ func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
 }
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
+	// The instance was stopped from outside Sablier: do not start it again
+	// because of an earlier failed start, and do not let a start in progress
+	// undo the stop.
+	s.markStoppedOnPurpose(name)
 	return s.sessions.Delete(ctx, name)
 }

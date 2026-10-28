@@ -198,6 +198,10 @@ func (s *Sablier) suppressForAntiAffinity(ctx context.Context, instance string) 
 			slog.String("instance", instance), slog.Any("error", err))
 		return
 	}
+	// Only once the stop succeeded: drop the recorded start failure, so no
+	// request retries it while the instance is suppressed, and make a start
+	// still in progress stop the instance again once it lands.
+	s.markStoppedOnPurpose(instance)
 	// Drop the session so the instance no longer counts as active and does not
 	// get stopped a second time by the normal expiration path.
 	if err := s.sessions.Delete(ctx, instance); err != nil {
