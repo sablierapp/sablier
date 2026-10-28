@@ -68,9 +68,10 @@ func NewDispatcher(endpoints []config.WebhookEndpoint, logger *slog.Logger) *Dis
 	}
 }
 
-// Watch consumes events from stream and delivers webhooks for "started" and
-// "stopped" transitions. It returns when ctx is cancelled, the event channel
-// is closed, or a terminal error is received from the stream.
+// Watch consumes events from stream and delivers webhooks for the "started"
+// and "stopped" transitions of instances labelled sablier.enable=true. It
+// returns when ctx is cancelled, the event channel is closed, or a terminal
+// error is received from the stream.
 //
 // Watch waits for all in-flight HTTP deliveries to complete before returning,
 // so the caller can rely on no goroutines escaping after Watch exits.
@@ -95,6 +96,12 @@ func (d *Dispatcher) Watch(ctx context.Context, stream sablier.InstanceEventStre
 			}
 			// Only dispatch on lifecycle transitions relevant to the feature.
 			if event.Type != provider.InstanceEventStarted && event.Type != provider.InstanceEventStopped {
+				continue
+			}
+			// Some providers report every instance on the host, not only the
+			// ones that opted in with sablier.enable=true.
+			if !event.Info.IsEnabled() {
+				d.l.DebugContext(ctx, "webhook: skipping unmanaged instance", slog.String("event", string(event.Type)), slog.String("instance", event.Info.Name))
 				continue
 			}
 			d.dispatch(ctx, &wg, event)
