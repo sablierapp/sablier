@@ -110,7 +110,7 @@ whoami
 
 The name is the container's hostname, set with `--hostname`.
 
-- **Keep hostnames unique across the cluster.** If two tagged containers share a hostname, every scan fails until you rename one. An untagged container with the same hostname can also be the one Sablier starts.
+- **Keep hostnames unique across the cluster.** If two tagged containers share a hostname, Sablier logs a warning and ignores that hostname until you rename one; request them by ID meanwhile. A tagged container always wins over an untagged one with the same hostname.
 - **The [CT ID](https://pve.proxmox.com/pve-docs/chapter-pct.html#pct_general) works too.** A request for `200` or `pve1/200` resolves to the container's hostname and shares its session.
 
 Prefer groups: a name ties your proxy configuration to one container.

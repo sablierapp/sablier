@@ -202,3 +202,40 @@ func TestProxmoxLXCProvider_InstanceInspect_UnknownNodeVMID(t *testing.T) {
 	_, err = p.InstanceInspect(t.Context(), "pve1/999")
 	assert.ErrorContains(t, err, "999")
 }
+
+// An untagged container with the hostname of a tagged one must not be the
+// container Sablier inspects, starts or stops. See #1179.
+func TestProxmoxLXCProvider_InstanceInspect_TaggedWinsOverUntaggedHostname(t *testing.T) {
+	t.Parallel()
+
+	server := proxmoxlxc.MockServer(t, []string{"pve1"}, []proxmoxlxc.TestContainer{
+		{VMID: 100, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve1"},
+		{VMID: 101, Name: "web", Status: "running", Tags: "", Node: "pve1"},
+	})
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	got, err := p.InstanceInspect(t.Context(), "web")
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStopped)
+}
+
+// A hostname shared by two tagged containers is ambiguous: Sablier refuses it,
+// and each container stays reachable by its ID.
+func TestProxmoxLXCProvider_InstanceInspect_AmbiguousHostname(t *testing.T) {
+	t.Parallel()
+
+	server := proxmoxlxc.MockServer(t, []string{"pve1", "pve2"}, []proxmoxlxc.TestContainer{
+		{VMID: 100, Name: "web", Status: "running", Tags: "sablier", Node: "pve1"},
+		{VMID: 200, Name: "web", Status: "stopped", Tags: "sablier", Node: "pve2"},
+	})
+	p, err := proxmoxlxc.New(t.Context(), proxmoxlxc.NewTestClient(server.URL), slogt.New(t))
+	assert.NilError(t, err)
+
+	_, err = p.InstanceInspect(t.Context(), "web")
+	assert.ErrorContains(t, err, "ambiguous")
+
+	got, err := p.InstanceInspect(t.Context(), "pve2/200")
+	assert.NilError(t, err)
+	assert.Equal(t, got.Status, sablier.InstanceStatusStopped)
+}
