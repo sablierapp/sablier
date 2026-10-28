@@ -37,9 +37,10 @@ func statefulSetIsRunning(ss *v1.StatefulSet) bool {
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
 	config := sablierConfig(ss.Labels, ss.Annotations)
 	enabled := config[sablier.LabelEnable]
-	var groups []string
+	var groups, antiAffinity []string
 	if enabled == "true" {
 		groups = sablier.ParseGroups(config[sablier.LabelGroup])
+		antiAffinity = sablier.ParseAntiAffinity(config[sablier.LabelAntiAffinity])
 	}
 
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
@@ -49,6 +50,7 @@ func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceCon
 		Groups:       groups,
 		Enabled:      enabled,
 		RunningHours: config[sablier.LabelRunningHours],
+		AntiAffinity: antiAffinity,
 	}
 }
 

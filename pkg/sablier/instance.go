@@ -189,6 +189,11 @@ type InstanceConfiguration struct {
 	// window before inspecting them; the validated window comes from
 	// InstanceInspect.
 	RunningHours string
+	// AntiAffinity is the parsed sablier.anti-affinity value of an enabled
+	// instance, nil when the label is absent. It lets the anti-affinity
+	// registry be rebuilt from a single list call instead of inspecting every
+	// instance.
+	AntiAffinity []string
 }
 
 // IsEnabled reports whether the listed instance opted into Sablier management

@@ -7,6 +7,7 @@ import (
 
 	"gotest.tools/v3/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -163,4 +164,50 @@ func TestProvider_InstanceList_EnableKeys(t *testing.T) {
 		sort.Strings(instances)
 	}
 	assert.DeepEqual(t, groups, wantGroups)
+}
+
+func TestProvider_InstanceList_AntiAffinity(t *testing.T) {
+	t.Parallel()
+
+	enabled := map[string]string{"sablier.enable": "true"}
+	p := newFakeCNPGProvider(t,
+		newClusterObj("default", "pg", enabled, map[string]string{"sablierapp.dev/anti-affinity": "streaming"}, 1, 1),
+	)
+	p.Client = k8sfake.NewSimpleClientset(
+		// A label value cannot hold a comma, so multiple groups come from an annotation.
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "nextcloud",
+			Labels:      enabled,
+			Annotations: map[string]string{"sablier.anti-affinity": "streaming,gaming"},
+		}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "plex", Labels: enabled}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "immich",
+			Labels: map[string]string{"sablier.enable": "true", "sablier.anti-affinity": "streaming"},
+		}},
+	)
+
+	opts := ParseOptions{Delimiter: "_"}
+	got, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+
+	byName := make(map[string][]string, len(got))
+	for _, inst := range got {
+		byName[inst.Name] = inst.AntiAffinity
+	}
+	assert.DeepEqual(t, byName, map[string][]string{
+		DeploymentName(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "nextcloud"}}, opts).Original: {"streaming", "gaming"},
+		DeploymentName(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "plex"}}, opts).Original:      nil,
+		StatefulSetName(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "immich"}}, opts).Original:  {"streaming"},
+		ClusterName("default", "pg", opts).Original: {"streaming"},
+	})
+}
+
+func TestToInstance_DisabledHasNoAntiAffinity(t *testing.T) {
+	t.Parallel()
+
+	p := &Provider{delimiter: "_"}
+	labels := map[string]string{"sablier.enable": "false", "sablier.anti-affinity": "streaming"}
+
+	assert.Assert(t, p.deploymentToInstance(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d", Labels: labels}}).AntiAffinity == nil)
+	assert.Assert(t, p.statefulSetToInstance(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "s", Labels: labels}}).AntiAffinity == nil)
+	assert.Assert(t, p.clusterToInstance(newClusterObj("default", "c", labels, nil, 1, 1)).AntiAffinity == nil)
 }

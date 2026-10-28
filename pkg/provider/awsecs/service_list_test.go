@@ -133,3 +133,27 @@ func TestInstanceGroups_Error(t *testing.T) {
 	_, err = p.InstanceGroups(t.Context())
 	assert.ErrorContains(t, err, "cannot list services: throttled")
 }
+
+func TestInstanceList_AntiAffinity(t *testing.T) {
+	t.Parallel()
+
+	f := newFake(
+		newService("nextcloud", 1, 1, enabledTags(map[string]string{
+			sablier.LabelAntiAffinity: "streaming gaming",
+		})),
+		newService("plex", 1, 1, enabledTags(nil)),
+		newService("disabled", 1, 1, map[string]string{
+			sablier.LabelEnable:       "false",
+			sablier.LabelAntiAffinity: "streaming",
+		}),
+	)
+	p, err := awsecs.New(t.Context(), f, testCluster, slogt.New(t))
+	assert.NilError(t, err)
+
+	got, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, got, []sablier.InstanceConfiguration{
+		{Name: "nextcloud", Groups: []string{"default"}, Enabled: "true", AntiAffinity: []string{"streaming", "gaming"}},
+		{Name: "plex", Groups: []string{"default"}, Enabled: "true"},
+	})
+}

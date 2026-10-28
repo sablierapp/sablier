@@ -37,9 +37,10 @@ func deploymentIsRunning(d *v1.Deployment) bool {
 func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfiguration {
 	config := sablierConfig(d.Labels, d.Annotations)
 	enabled := config[sablier.LabelEnable]
-	var groups []string
+	var groups, antiAffinity []string
 	if enabled == "true" {
 		groups = sablier.ParseGroups(config[sablier.LabelGroup])
+		antiAffinity = sablier.ParseAntiAffinity(config[sablier.LabelAntiAffinity])
 	}
 
 	parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
@@ -49,6 +50,7 @@ func (p *Provider) deploymentToInstance(d *v1.Deployment) sablier.InstanceConfig
 		Groups:       groups,
 		Enabled:      enabled,
 		RunningHours: config[sablier.LabelRunningHours],
+		AntiAffinity: antiAffinity,
 	}
 }
 

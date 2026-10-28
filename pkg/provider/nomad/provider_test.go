@@ -188,3 +188,18 @@ func TestNewForTest_Backoff(t *testing.T) {
 	_, err := nomad.NewForTest(t.Context(), m.client(t), "default", slogt.New(t), time.Millisecond)
 	assert.NilError(t, err)
 }
+
+func TestInstanceList_AntiAffinity(t *testing.T) {
+	m := newMockNomad(t)
+	m.addJob(serviceJob("nextcloud", 1, map[string]string{"sablier.enable": "true", "sablier.anti-affinity": "streaming,gaming"}))
+	m.addJob(serviceJob("plex", 1, enabledMeta))
+	p := m.provider(t)
+
+	instances, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+
+	assert.NilError(t, err)
+	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
+		{Name: "nextcloud/web", Groups: []string{"default"}, Enabled: "true", AntiAffinity: []string{"streaming", "gaming"}},
+		{Name: "plex/web", Groups: []string{"default"}, Enabled: "true"},
+	})
+}

@@ -27,9 +27,10 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 
 func unitToInstance(u Unit) sablier.InstanceConfiguration {
 	enabled := u.labels[sablier.LabelEnable]
-	var groups []string
+	var groups, antiAffinity []string
 	if enabled == "true" {
 		groups = sablier.ParseGroups(u.labels[sablier.LabelGroup])
+		antiAffinity = sablier.ParseAntiAffinity(u.labels[sablier.LabelAntiAffinity])
 	}
 
 	return sablier.InstanceConfiguration{
@@ -37,6 +38,7 @@ func unitToInstance(u Unit) sablier.InstanceConfiguration {
 		Groups:       groups,
 		Enabled:      enabled,
 		RunningHours: u.labels[sablier.LabelRunningHours],
+		AntiAffinity: antiAffinity,
 	}
 }
 

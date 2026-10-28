@@ -185,3 +185,35 @@ func TestUnitToInstance(t *testing.T) {
 		})
 	}
 }
+
+func TestSystemdProvider_InstanceList_AntiAffinity(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{
+			name:         "nextcloud.service",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nAntiAffinity=streaming,gaming\n"),
+		},
+		{
+			name:         "plex.service",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+	})
+	p := newProviderForTest(t, m, time.Second, nil)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	all, err := p.InstanceList(ctx, provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, all, []sablier.InstanceConfiguration{
+		{Name: "nextcloud.service", Groups: []string{"default"}, Enabled: "true", AntiAffinity: []string{"streaming", "gaming"}},
+		{Name: "plex.service", Groups: []string{"default"}, Enabled: "true"},
+	})
+}
+
+func TestUnitToInstance_DisabledHasNoAntiAffinity(t *testing.T) {
+	got := unitToInstance(Unit{
+		status: dbus.UnitStatus{Name: "jobs.service"},
+		labels: map[string]string{sablier.LabelEnable: "false", sablier.LabelAntiAffinity: "streaming"},
+	})
+	assert.Assert(t, got.AntiAffinity == nil)
+}

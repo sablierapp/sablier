@@ -44,9 +44,10 @@ func (p *Provider) InstanceList(ctx context.Context, opts provider.InstanceListO
 
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
 	enabled := s.Spec.Labels[sablier.LabelEnable]
-	var groups []string
+	var groups, antiAffinity []string
 	if enabled == "true" {
 		groups = sablier.ParseGroups(s.Spec.Labels[sablier.LabelGroup])
+		antiAffinity = sablier.ParseAntiAffinity(s.Spec.Labels[sablier.LabelAntiAffinity])
 	}
 
 	return sablier.InstanceConfiguration{
@@ -54,6 +55,7 @@ func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfigu
 		Groups:       groups,
 		Enabled:      enabled,
 		RunningHours: s.Spec.Labels[sablier.LabelRunningHours],
+		AntiAffinity: antiAffinity,
 	}
 }
 
