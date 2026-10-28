@@ -90,7 +90,7 @@ The eBPF programs attach to each watched container's cgroup and only count: they
 
 Every `--activity.interval`, Sablier reads how many bytes each watched container exchanged on its ports. A container whose count reaches its `sablier.activity.min-bytes` is active for that interval.
 
-- **Only the watched ports count:** `sablier.activity.ports`, or the container's exposed ports.
+- **Only the watched ports count:** `sablier.activity.ports`, or the container's exposed TCP and UDP ports.
 - **Both directions count,** because a stream is almost all outgoing bytes.
 - **Some sources never count:**
   - loopback, `127.0.0.0/8` and `::1`, because Docker health checks run inside the container and reach the service over loopback;
@@ -132,7 +132,7 @@ Every activity setting is a label on a Docker container:
 | Label | On | Format | Default |
 |-------|----|--------|---------|
 | `sablier.activity.enable` | watched container | Boolean | `false` |
-| `sablier.activity.ports` | watched container | Comma-separated `port[/proto]`: `32400`, `1900/udp` | the container's exposed ports |
+| `sablier.activity.ports` | watched container | Comma-separated `port[/proto]`: `32400`, `1900/udp` | the container's exposed TCP and UDP ports |
 | `sablier.activity.session-duration` | watched container | Duration: `30m` | `--sessions.default-duration` |
 | `sablier.activity.min-bytes` | watched container | Docker units: `1m` | `64k` |
 | `sablier.activity.ignore-source` | any container | Boolean | `false` |

@@ -15,8 +15,9 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-// ErrNoPorts is returned when an instance has neither configured nor exposed ports.
-var ErrNoPorts = errors.New("no ports to watch: set sablier.activity.ports or expose a port")
+// ErrNoPorts is returned when an instance has neither configured nor exposed
+// TCP or UDP ports.
+var ErrNoPorts = errors.New("no ports to watch: set sablier.activity.ports or expose a TCP or UDP port")
 
 // Tracker is the part of the eBPF tracker the Source needs.
 type Tracker interface {
@@ -40,6 +41,8 @@ type Source struct {
 	slots map[string]bpf.Slot
 	last  map[bpf.Slot]uint64
 
+	// ignoreWritten is set once an ignore list was written.
+	ignoreWritten bool
 	// ignoreComplete is set once a full ignore list (every lookup succeeded)
 	// was written; after that a failed lookup keeps the previous list.
 	ignoreComplete bool
@@ -90,12 +93,22 @@ func interfaceAddrs() ([]netip.Addr, error) {
 	return out, nil
 }
 
-func toBPFPorts(ports []sablier.Port) []bpf.Port {
+// toBPFPorts converts the ports to watch, skipping the ones that are neither
+// TCP nor UDP, such as an exposed SCTP port: the eBPF programs only parse TCP
+// and UDP. sablier.ActivityConfig ports are always TCP or UDP.
+func (s *Source) toBPFPorts(ctx context.Context, instance string, ports []sablier.Port) []bpf.Port {
 	out := make([]bpf.Port, 0, len(ports))
 	for _, p := range ports {
-		proto := bpf.ProtoTCP
-		if p.Proto == "udp" {
+		var proto uint8
+		switch p.Proto {
+		case "tcp":
+			proto = bpf.ProtoTCP
+		case "udp":
 			proto = bpf.ProtoUDP
+		default:
+			s.log.DebugContext(ctx, "not watching a port that is neither TCP nor UDP",
+				slog.String("instance", instance), slog.Any("port", p))
+			continue
 		}
 		out = append(out, bpf.Port{Number: p.Number, Proto: proto})
 	}
@@ -112,16 +125,24 @@ func (s *Source) Watch(ctx context.Context, instance string, ports []sablier.Por
 	if len(ports) == 0 {
 		ports = target.Ports
 	}
-	if len(ports) == 0 {
+	bpfPorts := s.toBPFPorts(ctx, instance, ports)
+	if len(bpfPorts) == 0 {
 		return fmt.Errorf("instance %q: %w", instance, ErrNoPorts)
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// The kernel counts from the attach on: write the ignore list before the
+	// first one, or the ignored sources count until the first Drain.
+	if !s.ignoreWritten {
+		if err := s.refreshIgnored(ctx); err != nil {
+			s.log.WarnContext(ctx, "cannot refresh the activity ignore list", slog.Any("error", err))
+		}
+	}
 	if err := s.unwatchLocked(instance); err != nil {
 		return err
 	}
-	slot, err := s.tracker.Watch(target.CgroupPath, toBPFPorts(ports))
+	slot, err := s.tracker.Watch(target.CgroupPath, bpfPorts)
 	if err != nil {
 		return err
 	}
@@ -204,8 +225,9 @@ func (s *Source) refreshIgnored(ctx context.Context) error {
 	}
 	if err := s.tracker.SetIgnored(prefixes); err != nil {
 		errs = append(errs, err)
-	} else if !lookupFailed {
-		s.ignoreComplete = true
+	} else {
+		s.ignoreWritten = true
+		s.ignoreComplete = s.ignoreComplete || !lookupFailed
 	}
 	return errors.Join(errs...)
 }

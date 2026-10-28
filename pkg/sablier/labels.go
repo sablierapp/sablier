@@ -286,10 +286,11 @@ const (
 	// since: NEXT_RELEASE
 	LabelActivityEnable = "sablier.activity.enable"
 
-	// LabelActivityPorts lists the ports watched for traffic.
+	// LabelActivityPorts lists the ports watched for traffic. The protocol is
+	// tcp, the default, or udp.
 	//
 	// type: comma-separated `port[/proto]` list
-	// default: the container's exposed ports
+	// default: the container's exposed TCP and UDP ports
 	// example: "32400, 1900/udp"
 	// feature: /features/activity/
 	// providers: Docker only.

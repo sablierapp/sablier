@@ -85,7 +85,7 @@
             "type": "integer"
           },
           "ports": {
-            "description": "nil: the provider's exposed ports",
+            "description": "nil: the provider's exposed TCP and UDP ports",
             "items": {
               "$ref": "#/components/schemas/sablier.Port"
             },

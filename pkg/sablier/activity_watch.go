@@ -202,7 +202,9 @@ func (w *activityWatcher) refresh(ctx context.Context) {
 	var active []string
 	for name, bytes := range deltas {
 		w.s.metrics.RecordActivityBytes(name, bytes)
-		if cfg, ok := w.watched[name]; ok && bytes >= cfg.minBytes {
+		// Sources leave out instances without traffic, but guard against a
+		// zero delta anyway: with min-bytes 0 it would refresh every tick.
+		if cfg, ok := w.watched[name]; ok && bytes > 0 && bytes >= cfg.minBytes {
 			active = append(active, name)
 		}
 	}

@@ -9,7 +9,8 @@ import (
 )
 
 // DefaultActivityMinBytes is the default for sablier.activity.min-bytes: the
-// number of bytes a flow must carry before it counts as activity.
+// number of bytes an instance must exchange per --activity.interval, both
+// directions together, before it counts as activity.
 const DefaultActivityMinBytes uint64 = 64 * 1024
 
 // Port is a transport port watched for activity.
@@ -21,7 +22,7 @@ type Port struct {
 // ActivityConfig is the parsed sablier.activity.* configuration of an
 // instance that opted into activity tracking.
 type ActivityConfig struct {
-	Ports           []Port        `json:"ports,omitempty"`           // nil: the provider's exposed ports
+	Ports           []Port        `json:"ports,omitempty"`           // nil: the provider's exposed TCP and UDP ports
 	SessionDuration time.Duration `json:"sessionDuration,omitempty"` // 0: --sessions.default-duration
 	MinBytes        uint64        `json:"minBytes"`
 	Groups          []string      `json:"groups,omitempty"` // nil: refresh only this instance
@@ -36,7 +37,8 @@ type ActivitySource interface {
 	// Unwatch stops counting the instance's traffic.
 	Unwatch(ctx context.Context, instance string) error
 	// Drain returns the bytes counted per watched instance since the
-	// previous call.
+	// previous call. It only lists the instances that had traffic: an
+	// instance without traffic is left out, never reported with zero bytes.
 	Drain(ctx context.Context) (map[string]uint64, error)
 }
 

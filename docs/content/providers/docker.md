@@ -318,7 +318,7 @@ If Docker returns warnings for the update, Sablier logs them.
 
 {{< example file="docker/activity.yml" region="sablier" >}}
 
-- `sablier.activity.ports` lists the watched ports. It defaults to the container's exposed ports.
+- `sablier.activity.ports` lists the watched ports. It defaults to the container's exposed TCP and UDP ports.
 - `sablier.activity.session-duration` sets how long traffic keeps the session open. It must be longer than `--activity.interval`.
 - `sablier.activity.min-bytes` sets how many bytes count as activity in one interval.
 - `sablier.activity.ignore-source=true` on any container, managed or not, makes Sablier ignore its traffic. Use it on dashboards that poll your services.

@@ -21,6 +21,8 @@ type fakeTracker struct {
 	calls   []string
 	watched [][]bpf.Port
 	ignored []netip.Prefix
+
+	setIgnoredErrs []error // returned by the next SetIgnored calls, in order
 }
 
 func newFakeTracker() *fakeTracker {
@@ -47,8 +49,13 @@ func (f *fakeTracker) Unwatch(s bpf.Slot) error {
 }
 
 func (f *fakeTracker) SetIgnored(p []netip.Prefix) error {
-	f.ignored = p
 	f.calls = append(f.calls, "setignored")
+	if len(f.setIgnoredErrs) > 0 {
+		err := f.setIgnoredErrs[0]
+		f.setIgnoredErrs = f.setIgnoredErrs[1:]
+		return err
+	}
+	f.ignored = p
 	return nil
 }
 
@@ -69,6 +76,11 @@ func newSource(t *testing.T, ft *fakeTracker, cidrs ...netip.Prefix) (*Source, *
 	return s, host
 }
 
+// expectNoIgnoredSources makes the host report no container to ignore.
+func expectNoIgnoredSources(host *providertest.MockActivityHost) {
+	host.EXPECT().ActivityIgnoredSources(gomock.Any()).Return(nil, nil).AnyTimes()
+}
+
 func expectTarget(host *providertest.MockActivityHost, name string, ports ...sablier.Port) {
 	host.EXPECT().InstanceActivityTarget(gomock.Any(), name).
 		Return(sablier.ActivityTarget{CgroupPath: "/cg/" + name, Ports: ports}, nil).AnyTimes()
@@ -77,6 +89,7 @@ func expectTarget(host *providertest.MockActivityHost, name string, ports ...sab
 func TestSource_WatchUsesLabelPortsOverExposed(t *testing.T) {
 	ft := newFakeTracker()
 	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
 	expectTarget(host, "plex", sablier.Port{Number: 32400, Proto: "tcp"}, sablier.Port{Number: 1900, Proto: "udp"})
 	err := s.Watch(context.Background(), "plex", []sablier.Port{{Number: 32400, Proto: "tcp"}})
 	assert.NilError(t, err)
@@ -86,6 +99,7 @@ func TestSource_WatchUsesLabelPortsOverExposed(t *testing.T) {
 func TestSource_WatchFallsBackToExposedPorts(t *testing.T) {
 	ft := newFakeTracker()
 	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
 	expectTarget(host, "plex", sablier.Port{Number: 32400, Proto: "tcp"}, sablier.Port{Number: 1900, Proto: "udp"})
 	assert.NilError(t, s.Watch(context.Background(), "plex", nil))
 	assert.DeepEqual(t, ft.watched, [][]bpf.Port{{{Number: 32400, Proto: bpf.ProtoTCP}, {Number: 1900, Proto: bpf.ProtoUDP}}})
@@ -94,19 +108,45 @@ func TestSource_WatchFallsBackToExposedPorts(t *testing.T) {
 func TestSource_WatchWithoutPortsFails(t *testing.T) {
 	ft := newFakeTracker()
 	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
 	expectTarget(host, "plex")
 	err := s.Watch(context.Background(), "plex", nil)
 	assert.Assert(t, errors.Is(err, ErrNoPorts))
 	assert.Equal(t, len(ft.watched), 0)
 }
 
+// Docker also exposes SCTP ports. The eBPF programs only parse TCP and UDP.
+func TestSource_WatchSkipsPortsNeitherTCPNorUDP(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
+	expectTarget(host, "pbx", sablier.Port{Number: 5060, Proto: "udp"}, sablier.Port{Number: 2905, Proto: "sctp"}, sablier.Port{Number: 8080, Proto: "tcp"})
+
+	assert.NilError(t, s.Watch(context.Background(), "pbx", nil))
+
+	assert.DeepEqual(t, ft.watched, [][]bpf.Port{{{Number: 5060, Proto: bpf.ProtoUDP}, {Number: 8080, Proto: bpf.ProtoTCP}}})
+}
+
+func TestSource_WatchWithOnlySCTPPortsFails(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
+	expectTarget(host, "sigtran", sablier.Port{Number: 2905, Proto: "sctp"})
+
+	err := s.Watch(context.Background(), "sigtran", nil)
+
+	assert.Assert(t, errors.Is(err, ErrNoPorts), "%v", err)
+	assert.Equal(t, len(ft.watched), 0)
+}
+
 func TestSource_WatchTwiceReplacesSlot(t *testing.T) {
 	ft := newFakeTracker()
 	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
 	expectTarget(host, "plex", sablier.Port{Number: 1, Proto: "tcp"})
 	assert.NilError(t, s.Watch(context.Background(), "plex", nil))
 	assert.NilError(t, s.Watch(context.Background(), "plex", nil))
-	assert.DeepEqual(t, ft.calls, []string{"watch", "unwatch", "watch"})
+	assert.DeepEqual(t, ft.calls, []string{"setignored", "watch", "unwatch", "watch"})
 	assert.Equal(t, len(ft.used), 1)
 }
 
@@ -194,10 +234,8 @@ func TestSource_DrainKeepsIgnoreListWhenLookupFails(t *testing.T) {
 		host.EXPECT().ActivityIgnoredSources(gomock.Any()).Return(nil, errors.New("docker unavailable")),
 	)
 	ctx := context.Background()
+	// The first Watch writes the first, complete list.
 	assert.NilError(t, s.Watch(ctx, "plex", nil))
-
-	_, err := s.Drain(ctx)
-	assert.NilError(t, err)
 	first := len(ft.ignored)
 	assert.Assert(t, first > 0)
 	ft.calls = nil
@@ -209,4 +247,46 @@ func TestSource_DrainKeepsIgnoreListWhenLookupFails(t *testing.T) {
 	assert.DeepEqual(t, ft.calls, []string{"read"})
 	assert.Equal(t, len(ft.ignored), first)
 	assert.Assert(t, slices.Contains(ft.ignored, netip.MustParsePrefix("172.18.0.9/32")))
+}
+
+// The kernel counts from the first attach: the ignore list must be in place
+// before it, not only after the first Drain.
+func TestSource_FirstWatchWritesIgnoreListBeforeAttaching(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft, netip.MustParsePrefix("192.0.2.0/24"))
+	s.ownAddrs = func() ([]netip.Addr, error) { return []netip.Addr{netip.MustParseAddr("172.18.0.5")}, nil }
+	host.EXPECT().ActivityIgnoredSources(gomock.Any()).Return([]netip.Addr{netip.MustParseAddr("172.18.0.9")}, nil).Times(1)
+	expectTarget(host, "a", sablier.Port{Number: 1, Proto: "tcp"})
+	expectTarget(host, "b", sablier.Port{Number: 1, Proto: "tcp"})
+	ctx := context.Background()
+
+	assert.NilError(t, s.Watch(ctx, "a", nil))
+	assert.NilError(t, s.Watch(ctx, "b", nil))
+
+	// Only the first Watch writes it; the next Drains keep it current.
+	assert.DeepEqual(t, ft.calls, []string{"setignored", "watch", "watch"})
+	var got []string
+	for _, p := range ft.ignored {
+		got = append(got, p.String())
+	}
+	slices.Sort(got)
+	assert.DeepEqual(t, got, []string{"127.0.0.0/8", "172.18.0.5/32", "172.18.0.9/32", "192.0.2.0/24", "::1/128"})
+}
+
+func TestSource_WatchRetriesIgnoreListUntilWritten(t *testing.T) {
+	ft := newFakeTracker()
+	ft.setIgnoredErrs = []error{errors.New("map full")}
+	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
+	expectTarget(host, "a", sablier.Port{Number: 1, Proto: "tcp"})
+	expectTarget(host, "b", sablier.Port{Number: 1, Proto: "tcp"})
+	expectTarget(host, "c", sablier.Port{Number: 1, Proto: "tcp"})
+	ctx := context.Background()
+
+	// A failed write doesn't fail the watch, and the next Watch retries it.
+	assert.NilError(t, s.Watch(ctx, "a", nil))
+	assert.NilError(t, s.Watch(ctx, "b", nil))
+	assert.NilError(t, s.Watch(ctx, "c", nil))
+
+	assert.DeepEqual(t, ft.calls, []string{"setignored", "watch", "setignored", "watch", "watch"})
 }

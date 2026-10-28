@@ -332,6 +332,23 @@ func TestWatchActivity_BelowMinBytesDoesNotRefresh(t *testing.T) {
 	})
 }
 
+// A source must leave out instances without traffic, but one that reports a
+// zero delta must not refresh an instance with min-bytes 0.
+func TestWatchActivity_ZeroBytesNeverRefresh(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = time.Hour
+		s.SetGroups(map[string][]string{"plex": {"plex"}})
+		src := newFakeSource(map[string]uint64{"plex": 0})
+		expectListings(p, nil)
+		events := startWatchActivity(t, s, p, src)
+		started(events, activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 0, Groups: []string{"plex"}}))
+
+		// No sessions.Range, Get or Put is expected: the mock fails the test on any call.
+		nextActivityTick()
+	})
+}
+
 func TestWatchActivity_RefreshesEveryGroup(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s, sessions, p, rec := setupSablierWithMetrics(t)

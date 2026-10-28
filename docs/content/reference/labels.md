@@ -480,9 +480,9 @@ Docker only.
 
 ### `sablier.activity.ports` {#label-sablier-activity-ports}
 
-Lists the ports watched for traffic.
+Lists the ports watched for traffic. The protocol is tcp, the default, or udp.
 
-{{< badge "comma-separated `port[/proto]` list" >}} {{< badge content="Default: the container's exposed ports" >}} {{< badge content="Next release" >}}
+{{< badge "comma-separated `port[/proto]` list" >}} {{< badge content="Default: the container's exposed TCP and UDP ports" >}} {{< badge content="Next release" >}}
 
 Example: `"32400, 1900/udp"`
 
