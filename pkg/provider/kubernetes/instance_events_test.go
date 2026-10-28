@@ -31,6 +31,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
+	defer waitStreamClosed(t, cancel, stream)
 
 	t.Run("deployment is scaled to 0 replicas", func(t *testing.T) {
 		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
@@ -154,6 +155,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
+		defer waitStreamClosed(t, testCancel, stream)
 
 		s, err := p.Client.AppsV1().Deployments(d.Namespace).GetScale(testCtx, d.Name, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -196,6 +198,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		stream := p.InstanceEvents(testCtx, provider.InstanceEventsOptions{
 			Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 		})
+		defer waitStreamClosed(t, testCancel, stream)
 
 		s, err := p.Client.AppsV1().StatefulSets(ss.Namespace).GetScale(testCtx, ss.Name, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -243,6 +246,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
+	defer waitStreamClosed(t, cancel, stream)
 
 	t.Run("deployment is created", func(t *testing.T) {
 		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
@@ -287,4 +291,46 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 			}
 		}
 	})
+}
+
+// waitStreamClosed cancels the stream's context and waits until both channels
+// are closed, so no informer goroutine outlives the test and logs through its
+// finished *testing.T.
+func waitStreamClosed(t *testing.T, cancel context.CancelFunc, stream sablier.InstanceEventStream) {
+	t.Helper()
+	cancel()
+	deadline := time.After(10 * time.Second)
+	events, errs := stream.Events, stream.Err
+	for events != nil || errs != nil {
+		select {
+		case _, ok := <-events:
+			if !ok {
+				events = nil
+			}
+		case _, ok := <-errs:
+			if !ok {
+				errs = nil
+			}
+		case <-deadline:
+			t.Fatal("the event stream was not closed after its context was cancelled")
+		}
+	}
+}
+
+// The Provider interface requires both channels to close on context
+// cancellation, after the informers stop.
+func TestKubernetesProvider_InstanceEvents_ClosesOnCancel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	conf := config.NewProviderConfig().Kubernetes
+	p, err := kubernetes.New(ctx, sharedKinD.client, sharedKinD.dynamic, slogt.New(t), conf)
+	assert.NilError(t, err)
+
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	stream := p.InstanceEvents(streamCtx, provider.InstanceEventsOptions{})
+	waitStreamClosed(t, streamCancel, stream)
 }
