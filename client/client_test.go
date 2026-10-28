@@ -264,3 +264,44 @@ func TestNewRejectsInvalidURL(t *testing.T) {
 		}
 	}
 }
+
+// roundTripFunc lets a test stand in for the HTTP transport.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestWithHTTPClient(t *testing.T) {
+	var called bool
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		called = true
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: http.NoBody}, nil
+	})}
+
+	c, err := client.New("http://sablier:10000", client.WithHTTPClient(httpClient))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !called {
+		t.Error("the HTTP client passed to WithHTTPClient was not used")
+	}
+}
+
+func TestMalformedBodies(t *testing.T) {
+	c, _ := sablier(t, http.StatusOK, "application/problem+json", "", `not json`)
+
+	resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := resp.Session(); err == nil {
+		t.Error("Session() on a malformed body returned no error")
+	}
+	if p := resp.Problem(); p != nil {
+		t.Errorf("Problem() on a malformed body = %+v, want nil", p)
+	}
+}
