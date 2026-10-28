@@ -16,7 +16,7 @@ rules:
     verbs: ["get", "list", "watch", "patch"] # patch sets CPU/memory limits in scale mode
   - apiGroups: ["apps"]
     resources: ["deployments/scale", "statefulsets/scale"]
-    verbs: ["get", "update"] # scale up and down
+    verbs: ["patch"] # scale up and down
   # Only to manage CloudNativePG Clusters.
   - apiGroups: ["postgresql.cnpg.io"]
     resources: ["clusters"]
