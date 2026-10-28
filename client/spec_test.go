@@ -12,7 +12,7 @@ import (
 // and checks it reaches the query under its spec name, so a parameter type
 // that encodeQuery does not handle fails here rather than in a plugin.
 func TestEveryParamIsEncoded(t *testing.T) {
-	for _, params := range []any{StartDynamicParams{}, StartBlockingParams{}, StartPokeParams{}} {
+	for _, params := range []any{StartDynamicParams{}, StartBlockingParams{}, StartPokeParams{}, StreamInstanceEventsParams{}} {
 		v := reflect.New(reflect.TypeOf(params)).Elem()
 		for i := 0; i < v.NumField(); i++ {
 			field := v.Field(i)
@@ -57,9 +57,10 @@ func TestPathsMatchSpec(t *testing.T) {
 	}
 
 	for operationID, path := range map[string]string{
-		"startDynamic":  pathStartDynamic,
-		"startBlocking": pathStartBlocking,
-		"startPoke":     pathStartPoke,
+		"startDynamic":         pathStartDynamic,
+		"startBlocking":        pathStartBlocking,
+		"startPoke":            pathStartPoke,
+		"streamInstanceEvents": pathStreamInstanceEvents,
 	} {
 		if pathOf[operationID] != path {
 			t.Errorf("%s: client uses %q, spec says %q", operationID, path, pathOf[operationID])
