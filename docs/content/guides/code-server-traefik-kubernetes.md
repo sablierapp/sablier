@@ -101,18 +101,21 @@ This walkthrough was written against older component versions (k3s 1.23, Traefik
     rules:
       - apiGroups:
           - apps
-          - ""
         resources:
           - deployments
-          - deployments/scale
           - statefulsets
+        verbs:
+          - get     # Retrieve info about specific deployment or statefulset
+          - list    # Events
+          - watch   # Events
+          - patch   # Set CPU/memory limits in scale mode
+      - apiGroups:
+          - apps
+        resources:
+          - deployments/scale
           - statefulsets/scale
         verbs:
           - patch   # Scale up and down
-          - get     # Retrieve info about specific deployment or statefulset
-          - update  # Scale up and down
-          - list    # Events
-          - watch   # Events
     ```
 3. Create Sablier Cluster Role Binding `sablier-crb.yaml` and then `kubectl apply -f sablier-crb.yaml`
     ```yml
