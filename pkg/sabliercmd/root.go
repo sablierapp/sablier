@@ -115,6 +115,10 @@ It provides integrations with multiple reverse proxies and different loading str
 	// Storage flags
 	startCmd.Flags().StringVar(&conf.Storage.File, "storage.file", "", "File path to save the state")
 	_ = viper.BindPFlag("storage.file", startCmd.Flags().Lookup("storage.file"))
+	startCmd.Flags().StringVar(&conf.Storage.Kubernetes.ConfigMap, "storage.kubernetes.configmap", "", "Name of a Kubernetes ConfigMap to save the state in, created when missing")
+	_ = viper.BindPFlag("storage.kubernetes.configmap", startCmd.Flags().Lookup("storage.kubernetes.configmap"))
+	startCmd.Flags().StringVar(&conf.Storage.Kubernetes.Namespace, "storage.kubernetes.namespace", "", "Namespace of the state ConfigMap, Sablier's own namespace when empty")
+	_ = viper.BindPFlag("storage.kubernetes.namespace", startCmd.Flags().Lookup("storage.kubernetes.namespace"))
 	// Sessions flags
 	startCmd.Flags().DurationVar(&conf.Sessions.DefaultDuration, "sessions.default-duration", time.Duration(5)*time.Minute, "The default session duration")
 	_ = viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))

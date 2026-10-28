@@ -241,6 +241,29 @@ A replica is ready when its pod passes its [readiness probe](https://kubernetes.
 
 A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
 
+### Persisting sessions {since="next"}
+
+Sablier keeps its sessions in memory, so a restarted pod forgets them. To keep them across restarts, rescheduling and upgrades without a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), store them in a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/):
+
+| Option | Default | Description |
+|---|---|---|
+| [`--storage.kubernetes.configmap`](/reference/cli/#opt-storage-kubernetes-configmap) | | The ConfigMap name. Sablier creates it when it does not exist. |
+| [`--storage.kubernetes.namespace`](/reference/cli/#opt-storage-kubernetes-namespace) | | The ConfigMap namespace. Defaults to Sablier's own namespace. |
+
+Grant the service account access to ConfigMaps in Sablier's namespace:
+
+{{< example file="kubernetes/configmap-storage.yaml" region="rbac" >}}
+
+Then pass the ConfigMap name:
+
+{{< example file="kubernetes/configmap-storage.yaml" region="args" >}}
+
+Sablier writes a new or removed session immediately, and refreshes of existing sessions at most every 30 seconds; a crash loses at most those refreshes, which only makes the affected sessions end a little early. It writes everything once more when it shuts down. Sablier does not start when it cannot read the ConfigMap, rather than start empty and overwrite the saved sessions.
+
+The sessions are stored gzipped, which takes about 100 bytes per session. A ConfigMap holds up to 1 MiB; if the sessions ever outgrow it, Sablier logs an error and keeps running without saving until the sessions shrink.
+
+`--storage.kubernetes.configmap` replaces [`--storage.file`](/reference/cli/#opt-storage-file); they cannot be combined.
+
 ### Limitations
 
 - Sablier must run as a [pod](https://kubernetes.io/docs/concepts/workloads/pods/) in the cluster it manages: it only uses [in-cluster credentials](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/).

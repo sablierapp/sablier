@@ -22,6 +22,9 @@ server:
   base-path: /configfile/
 storage:
   file: /tmp/configfile.json
+  kubernetes:
+    configmap: configfile-sessions
+    namespace: configfile
 sessions:
   default-duration: 1h
   expiration-interval: 1h

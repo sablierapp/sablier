@@ -4,18 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store/configmap"
 	"github.com/sablierapp/sablier/pkg/store/inmemory"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
-// setupStorage creates the session store, restores any persisted state from disk,
-// and starts a periodic flush goroutine when a storage file is configured.
-// The returned function must be called on shutdown to perform a final flush.
-func setupStorage(ctx context.Context, logger *slog.Logger, conf config.Config) (sablier.Store, func()) {
+const serviceAccountNamespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
+// setupStorage creates the session store and restores any persisted state,
+// from a file or a Kubernetes ConfigMap. The returned function must be called
+// on shutdown to perform a final save.
+func setupStorage(ctx context.Context, logger *slog.Logger, conf config.Config) (sablier.Store, func(), error) {
+	if err := conf.Storage.IsValid(); err != nil {
+		return nil, nil, err
+	}
+	if conf.Storage.Kubernetes.ConfigMap != "" {
+		return setupConfigMapStorage(ctx, logger, conf.Storage.Kubernetes)
+	}
+
 	store := inmemory.NewInMemory()
 
 	if conf.Storage.File != "" {
@@ -28,7 +42,56 @@ func setupStorage(ctx context.Context, logger *slog.Logger, conf config.Config) 
 		}
 	}
 
-	return store, save
+	return store, save, nil
+}
+
+// setupConfigMapStorage restores the sessions from the ConfigMap and starts
+// writing them back as they change. A ConfigMap that cannot be read stops
+// Sablier from starting: starting empty would overwrite the persisted sessions.
+func setupConfigMapStorage(ctx context.Context, logger *slog.Logger, conf config.KubernetesStorage) (sablier.Store, func(), error) {
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, nil, fmt.Errorf("storage.kubernetes.configmap: %w", err)
+	}
+	cli, err := k8s.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("storage.kubernetes.configmap: %w", err)
+	}
+	namespace := conf.Namespace
+	if namespace == "" {
+		if namespace, err = inClusterNamespace(); err != nil {
+			return nil, nil, fmt.Errorf("storage.kubernetes.configmap: %w", err)
+		}
+	}
+
+	store := configmap.New(cli.CoreV1().ConfigMaps(namespace), conf.ConfigMap, logger.With(slog.String("namespace", namespace)))
+	if err := store.Load(ctx); err != nil {
+		return nil, nil, fmt.Errorf("storage.kubernetes.configmap: %w", err)
+	}
+	go store.Run(ctx)
+
+	save := func() {
+		// ctx is already cancelled on shutdown.
+		if err := store.Save(context.WithoutCancel(ctx)); err != nil {
+			logger.ErrorContext(ctx, "cannot persist sessions on shutdown", slog.Any("error", err))
+		}
+	}
+	return store, save, nil
+}
+
+// inClusterNamespace returns $POD_NAMESPACE, then the mounted service account namespace.
+func inClusterNamespace() (string, error) {
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns, nil
+	}
+	b, err := os.ReadFile(serviceAccountNamespaceFile)
+	if err != nil {
+		return "", fmt.Errorf("cannot determine the pod namespace, set POD_NAMESPACE: %w", err)
+	}
+	if ns := strings.TrimSpace(string(b)); ns != "" {
+		return ns, nil
+	}
+	return "", errors.New("service account namespace file is empty")
 }
 
 // loadFromFile restores persisted state into store from the given file path.
