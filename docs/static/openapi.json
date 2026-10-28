@@ -474,7 +474,7 @@
     },
     "/api/events": {
       "get": {
-        "description": "Server-Sent Events stream of instance lifecycle events. Each event is `event: \u003ctype\u003e` followed by `data: \u003cInstanceInfo JSON\u003e`. The stream stays open until the client disconnects.",
+        "description": "Server-Sent Events stream of instance lifecycle events. Each event is `event: \u003ctype\u003e` followed by `data: \u003cInstanceInfo JSON\u003e`. The stream stays open until the client disconnects. Narrow it to some instances with either `names` or `group`, never both.",
         "operationId": "streamInstanceEvents",
         "parameters": [
           {
@@ -486,6 +486,25 @@
                 "type": "string"
               },
               "type": "array"
+            }
+          },
+          {
+            "description": "Only stream events of these instances. Repeat for multiple. An 'optional:' prefix is ignored. Mutually exclusive with group.",
+            "in": "query",
+            "name": "names",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Only stream events of the instances of this group, following instances that join or leave it while the stream is open. Mutually exclusive with names.",
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -499,6 +518,16 @@
               }
             },
             "description": "SSE stream (text/event-stream)"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "Validation error"
           }
         },
         "summary": "Instance events (SSE)",

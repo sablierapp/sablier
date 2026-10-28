@@ -43,6 +43,20 @@ func (m *MockSablier) EXPECT() *MockSablierMockRecorder {
 	return m.recorder
 }
 
+// Groups mocks base method.
+func (m *MockSablier) Groups() map[string][]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Groups")
+	ret0, _ := ret[0].(map[string][]string)
+	return ret0
+}
+
+// Groups indicates an expected call of Groups.
+func (mr *MockSablierMockRecorder) Groups() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Groups", reflect.TypeOf((*MockSablier)(nil).Groups))
+}
+
 // InstanceEvents mocks base method.
 func (m *MockSablier) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	m.ctrl.T.Helper()

@@ -308,6 +308,12 @@ type TimeDuration = int64
 type StreamInstanceEventsParams struct {
 	// Types Event types to include (created, updated, removed, started, stopped). Repeat for multiple.
 	Types *[]string `form:"types,omitempty" json:"types,omitempty"`
+
+	// Names Only stream events of these instances. Repeat for multiple. An 'optional:' prefix is ignored. Mutually exclusive with group.
+	Names *[]string `form:"names,omitempty" json:"names,omitempty"`
+
+	// Group Only stream events of the instances of this group, following instances that join or leave it while the stream is open. Mutually exclusive with names.
+	Group *string `form:"group,omitempty" json:"group,omitempty"`
 }
 
 // StartBlockingParams defines parameters for StartBlocking.

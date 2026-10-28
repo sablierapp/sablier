@@ -19,6 +19,7 @@ type Sablier interface {
 	RequestReadySession(ctx context.Context, names []string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
 	RequestReadySessionGroup(ctx context.Context, group string, duration time.Duration, timeout time.Duration) (*sablier.SessionState, error)
 	InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream
+	Groups() map[string][]string
 }
 
 type ServeStrategy struct {
