@@ -211,6 +211,18 @@ func TestUserAgent(t *testing.T) {
 	}
 }
 
+func TestDefaultUserAgentHasVersion(t *testing.T) {
+	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady, `{"session":{}}`)
+
+	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "sablier-go-client/" + client.Version; got.userAgent != want {
+		t.Errorf("User-Agent = %q, want %q", got.userAgent, want)
+	}
+}
+
 func TestBasePath(t *testing.T) {
 	// Sablier can be served under a path prefix (server.base-path).
 	var path string
