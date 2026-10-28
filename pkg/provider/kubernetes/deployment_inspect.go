@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,6 +17,12 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
+	return p.deploymentInfo(d, config), nil
+}
+
+// deploymentInfo converts d into the InstanceInfo that DeploymentInspect
+// reports for it, without an API call.
+func (p *Provider) deploymentInfo(d *appsv1.Deployment, config ParsedName) sablier.InstanceInfo {
 	cfg := sablierConfig(d.Labels, d.Annotations)
 	desired := desiredReplicas(cfg, config)
 
@@ -68,5 +75,5 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 		Labels:    labels,
 	}
 
-	return info, nil
+	return info
 }

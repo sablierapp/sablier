@@ -200,3 +200,31 @@ func TestPopulateEnabledAndGroup_WireCompat(t *testing.T) {
 	assert.Assert(t, ok, "config must be serialized additively")
 	assert.Equal(t, true, cfg["enabled"])
 }
+
+// The list view must index an instance exactly like the inspect path, or the
+// anti-affinity registry and group index flip between the two.
+func TestInstanceConfigurationFromLabels_MatchesInstanceConfigFromLabels(t *testing.T) {
+	for _, labels := range []map[string]string{
+		{},
+		{LabelEnable: "true"},
+		{LabelEnable: "true", LabelGroup: "media, tools,media", LabelAntiAffinity: "streaming, gaming,streaming"},
+		{LabelEnable: "false", LabelGroup: "media", LabelAntiAffinity: "streaming"},
+		{LabelEnable: "TRUE", LabelAntiAffinity: "streaming"},
+		{LabelAntiAffinity: " , "},
+		{LabelEnable: "true", LabelRunningHours: "02:00-04:00"},
+		{LabelEnable: "true", LabelActivityEnable: "true"},
+		{LabelEnable: "true", LabelActivityEnable: "TRUE"},
+		{LabelEnable: "false", LabelActivityEnable: "true"},
+		{LabelActivityEnable: "true"},
+	} {
+		got := InstanceConfigurationFromLabels("web", labels)
+		want := InstanceConfigFromLabels(labels, nil)
+		assert.DeepEqual(t, got.Groups, want.Groups)
+		assert.DeepEqual(t, got.AntiAffinity, want.AntiAffinity)
+		assert.Equal(t, got.Activity, want.Activity != nil)
+		assert.Equal(t, got.IsEnabled(), want.Enabled)
+		assert.Equal(t, got.Name, "web")
+		assert.Equal(t, got.Enabled, labels[LabelEnable])
+		assert.Equal(t, got.RunningHours, labels[LabelRunningHours])
+	}
+}

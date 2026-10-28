@@ -185,3 +185,37 @@ func TestUnitToInstance(t *testing.T) {
 		})
 	}
 }
+
+func TestSystemdProvider_InstanceList_AntiAffinity(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{
+			name:         "nextcloud.service",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\nAntiAffinity=streaming,gaming\n"),
+		},
+		{
+			name:         "plex.service",
+			fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n"),
+		},
+	})
+	p := newProviderForTest(t, m, time.Second, nil)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	all, err := p.InstanceList(ctx, provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, all, []sablier.InstanceConfiguration{
+		{Name: "nextcloud.service", Groups: []string{"default"}, Enabled: "true", AntiAffinity: []string{"streaming", "gaming"}},
+		{Name: "plex.service", Groups: []string{"default"}, Enabled: "true"},
+	})
+}
+
+// A disabled unit keeps its anti-affinity, as on the inspect path
+// (sablier.InstanceConfigFromLabels), and has no groups.
+func TestUnitToInstance_DisabledMatchesInspect(t *testing.T) {
+	labels := map[string]string{sablier.LabelEnable: "false", sablier.LabelAntiAffinity: "streaming"}
+	got := unitToInstance(Unit{status: dbus.UnitStatus{Name: "jobs.service"}, labels: labels})
+	want := sablier.InstanceConfigFromLabels(labels, nil)
+	assert.DeepEqual(t, got.AntiAffinity, want.AntiAffinity)
+	assert.DeepEqual(t, got.Groups, want.Groups)
+}

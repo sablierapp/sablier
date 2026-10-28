@@ -37,19 +37,8 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 }
 
 func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
-	enabled := c.Labels[sablier.LabelEnable]
-	var groups []string
-	if enabled == "true" {
-		groups = sablier.ParseGroups(c.Labels[sablier.LabelGroup])
-	}
-
-	return sablier.InstanceConfiguration{
-		Name:         strings.TrimPrefix(c.Names[0], "/"), // Containers name are reported with a leading slash
-		Groups:       groups,
-		Enabled:      enabled,
-		RunningHours: c.Labels[sablier.LabelRunningHours],
-		Activity:     c.Labels[sablier.LabelActivityEnable] == "true",
-	}
+	// Containers name are reported with a leading slash
+	return sablier.InstanceConfigurationFromLabels(strings.TrimPrefix(c.Names[0], "/"), c.Labels)
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {

@@ -51,6 +51,10 @@ Reverse proxy plugins reach Sablier at `http://sablier.sablier:10000`.
 
 The CloudNativePG and Redis permissions are optional. Without them, or without their [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/), Sablier skips those integrations.
 
+{{< callout type="warning" >}}
+**`get` and `update` on `deployments/scale` and `statefulsets/scale` are deprecated.** Sablier scales with a `patch` on the scale subresource. If your RBAC only grants `get` and `update` there, as it did for Sablier 1.19 and earlier, Sablier falls back to them and logs a warning once per kind. The fallback can fail when the workload is written concurrently, and it will be removed in the next major release. Grant `patch` on both subresources.
+{{< /callout >}}
+
 ## Usage example
 
 Opt a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) in with the `sablierapp.dev/enable` [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/), and give it a group:
@@ -75,6 +79,8 @@ Sablier scales opted-in workloads to zero when it starts. A workload you deploy 
 | [`--provider.kubernetes.burst`](/reference/cli/#opt-provider-kubernetes-burst) | `10` | Requests allowed above that limit in a burst. |
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/).
+
+The Kubernetes client waits on the client side whenever Sablier sends more than `qps` requests per second for longer than `burst` allows. Sablier discovers and indexes workloads with a few list and watch requests, but some work still costs about one request per opted-in workload: scaling running workloads to zero when Sablier starts, warming workloads that were started outside Sablier, and checking workloads that have running hours. With many opted-in workloads, this can delay requests that arrive at the same time. If you manage more than a few dozen workloads, raise both values, for example `--provider.kubernetes.qps=50 --provider.kubernetes.burst=100`. The API server's own [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) still protects it.
 
 ### Workloads
 

@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -26,6 +27,9 @@ type Provider struct {
 	readyOnFirstReplica bool
 	l                   *slog.Logger
 	tracer              trace.Tracer
+	// scaleFallbackWarned holds the kinds for which scale already warned that it
+	// fell back to the deprecated GET + UPDATE.
+	scaleFallbackWarned sync.Map
 }
 
 func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Interface, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {

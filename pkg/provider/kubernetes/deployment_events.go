@@ -32,13 +32,11 @@ func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- s
 				return
 			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
-			info, err := p.InstanceInspect(ctx, parsed.Original)
-			if err != nil {
-				p.l.WarnContext(ctx, "inspect after add event failed, using bare info", "deployment", parsed.Original, "error", err)
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: parsed.Original, Provider: sablier.ProviderKubernetes}}
-				return
-			}
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
+			// Build the info from the event object, as inspect would, instead of
+			// fetching it again: the informer is not filtered by label, so its
+			// initial sync delivers every deployment in the cluster, and a GET for
+			// each would queue behind the client-side rate limiter.
+			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: p.deploymentInfo(d, parsed)}
 		},
 		UpdateFunc: func(old, new any) {
 			newDeployment, ok := eventObject[*appsv1.Deployment](new)

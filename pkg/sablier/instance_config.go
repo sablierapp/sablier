@@ -60,9 +60,7 @@ func InstanceConfigFromLabels(labels map[string]string, l *slog.Logger) Instance
 
 	var cfg InstanceConfig
 	cfg.Enabled = labels[LabelEnable] == "true"
-	if cfg.Enabled {
-		cfg.Groups = ParseGroups(labels[LabelGroup])
-	}
+	cfg.Groups = groupsFromLabels(labels)
 	if v := labels[LabelReadyAfter]; v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.ReadyAfter = d
@@ -104,9 +102,7 @@ func InstanceConfigFromLabels(labels map[string]string, l *slog.Logger) Instance
 			cfg.ReadyOnStart = b
 		}
 	}
-	if v := labels[LabelAntiAffinity]; v != "" {
-		cfg.AntiAffinity = ParseAntiAffinity(v)
-	}
+	cfg.AntiAffinity = antiAffinityFromLabels(labels)
 	// Only expose Scale when at least one non-default scale label is present,
 	// detected by values that differ from the zero-value defaults
 	// (Idle.Replicas=0, Active.Replicas=1).
@@ -157,4 +153,33 @@ func activityConfigFromLabels(labels map[string]string, l *slog.Logger) *Activit
 		a.Groups = ParseGroups(labels[LabelGroup])
 	}
 	return a
+}
+
+// InstanceConfigurationFromLabels builds the list view of an instance from its
+// sablier.* labels. Groups, AntiAffinity and Activity follow the same rules as
+// InstanceConfigFromLabels, so an instance is indexed the same way whether it
+// was listed or inspected.
+func InstanceConfigurationFromLabels(name string, labels map[string]string) InstanceConfiguration {
+	return InstanceConfiguration{
+		Name:         name,
+		Groups:       groupsFromLabels(labels),
+		Enabled:      labels[LabelEnable],
+		RunningHours: labels[LabelRunningHours],
+		AntiAffinity: antiAffinityFromLabels(labels),
+		Activity:     labels[LabelEnable] == "true" && labels[LabelActivityEnable] == "true",
+	}
+}
+
+// groupsFromLabels returns the groups of an enabled instance, nil otherwise.
+func groupsFromLabels(labels map[string]string) []string {
+	if labels[LabelEnable] != "true" {
+		return nil
+	}
+	return ParseGroups(labels[LabelGroup])
+}
+
+// antiAffinityFromLabels returns the groups the instance backs off from,
+// whether or not it is enabled, nil when the label is absent.
+func antiAffinityFromLabels(labels map[string]string) []string {
+	return ParseAntiAffinity(labels[LabelAntiAffinity])
 }
