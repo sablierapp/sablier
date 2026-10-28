@@ -22,12 +22,12 @@ func makeResult(msgs chan events.Message, errs chan error) client.EventsResult {
 	return client.EventsResult{Messages: msgs, Err: errs}
 }
 
-func buildStopped(_ context.Context, msg events.Message) (sablier.InstanceEvent, bool) {
+func buildStopped(_ context.Context, msg events.Message) ([]sablier.InstanceEvent, bool) {
 	name := strings.TrimPrefix(msg.Actor.Attributes["name"], "/")
 	if name == "" {
-		return sablier.InstanceEvent{}, false
+		return nil, false
 	}
-	return sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped}}, true
+	return []sablier.InstanceEvent{{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: name, Status: sablier.InstanceStatusStopped}}}, true
 }
 
 // TestStream_Reconnect verifies that when the first connection drops
