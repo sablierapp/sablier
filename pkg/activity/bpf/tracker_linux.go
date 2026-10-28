@@ -5,6 +5,7 @@ package bpf
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/netip"
 	"os"
 	"slices"
@@ -33,6 +34,10 @@ type Tracker struct {
 
 // watch is one watched cgroup: its ports and its attached program pair.
 type watch struct {
+	// cgroupPath and cgroup are the watched cgroup directory as it was when
+	// the programs were attached, to tell when it is replaced.
+	cgroupPath      string
+	cgroup          fs.FileInfo
 	ports           []Port
 	ingress, egress *ebpf.Program
 	links           []link.Link
@@ -128,7 +133,8 @@ func portKey(s Slot, p Port) counterPortKey {
 func (t *Tracker) Watch(cgroupPath string, ports []Port) (Slot, error) {
 	// link.AttachCgroup formats a missing path into a plain string: check it
 	// first, so the error names the likely cause and wraps fs.ErrNotExist.
-	if err := checkCgroup(cgroupPath); err != nil {
+	cg, err := checkCgroup(cgroupPath)
+	if err != nil {
 		return 0, err
 	}
 
@@ -144,6 +150,9 @@ func (t *Tracker) Watch(cgroupPath string, ports []Port) (Slot, error) {
 		t.slots.free(s)
 		return 0, err
 	}
+	// Recorded before the attach: if the container restarts in between,
+	// Stale reports the new watch and it is watched once more.
+	w.cgroupPath, w.cgroup = cgroupPath, cg
 	t.watches[s] = w
 	return s, nil
 }
@@ -212,6 +221,30 @@ func (t *Tracker) Unwatch(s Slot) error {
 	err := errors.Join(w.close(), t.deletePorts(s, w.ports))
 	t.slots.free(s)
 	return err
+}
+
+// Stale returns the watched slots whose cgroup is gone or was replaced since
+// they were watched, in order. Their programs count nothing anymore: watch
+// the cgroup again. A slot whose cgroup can't be checked is left out and its
+// error returned.
+func (t *Tracker) Stale() ([]Slot, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	var stale []Slot
+	var errs []error
+	for s, w := range t.watches {
+		replaced, err := cgroupReplaced(w.cgroupPath, w.cgroup)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if replaced {
+			stale = append(stale, s)
+		}
+	}
+	slices.Sort(stale)
+	return stale, errors.Join(errs...)
 }
 
 // SetIgnored replaces the remote address prefixes whose traffic isn't counted.

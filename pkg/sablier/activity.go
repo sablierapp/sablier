@@ -36,6 +36,10 @@ type ActivitySource interface {
 	Watch(ctx context.Context, instance string, ports []Port) error
 	// Unwatch stops counting the instance's traffic.
 	Unwatch(ctx context.Context, instance string) error
+	// Stale returns the watched instances whose watch no longer counts their
+	// traffic, such as an instance that restarted while its events were
+	// missed. It may return instances along with an error.
+	Stale(ctx context.Context) ([]string, error)
 	// Drain returns the bytes counted per watched instance since the
 	// previous call. It only lists the instances that had traffic: an
 	// instance without traffic is left out, never reported with zero bytes.

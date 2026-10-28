@@ -68,15 +68,30 @@ func (e *cgroupNotFoundError) Error() string {
 
 func (e *cgroupNotFoundError) Unwrap() error { return e.err }
 
-// checkCgroup checks that the cgroup directory at path exists.
-func checkCgroup(path string) error {
-	_, err := os.Stat(path)
+// checkCgroup checks that the cgroup directory at path exists and returns it.
+func checkCgroup(path string) (fs.FileInfo, error) {
+	cg, err := os.Stat(path)
 	switch {
 	case err == nil:
-		return nil
+		return cg, nil
 	case errors.Is(err, fs.ErrNotExist):
-		return &cgroupNotFoundError{path: path, err: err}
+		return nil, &cgroupNotFoundError{path: path, err: err}
 	default:
-		return fmt.Errorf("cgroup %s: %w", path, err)
+		return nil, fmt.Errorf("cgroup %s: %w", path, err)
 	}
+}
+
+// cgroupReplaced reports whether the cgroup directory at path is gone or is
+// no longer the directory was. A container restart does both: the runtime
+// removes the container's cgroup and creates a new one at the same path, and
+// programs attached to the old one count nothing.
+func cgroupReplaced(path string, was fs.FileInfo) (bool, error) {
+	now, err := os.Stat(path)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return true, nil
+	case err != nil:
+		return false, fmt.Errorf("cgroup %s: %w", path, err)
+	}
+	return !os.SameFile(was, now), nil
 }

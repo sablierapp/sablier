@@ -31,6 +31,8 @@ type fakeSource struct {
 	ports     map[string][]sablier.Port
 	drains    []map[string]uint64
 	watchErrs []error // returned by the next Watch calls, in order
+	stale     []string
+	staleErr  error
 }
 
 func newFakeSource(drains ...map[string]uint64) *fakeSource {
@@ -55,6 +57,23 @@ func (f *fakeSource) Unwatch(_ context.Context, instance string) error {
 	defer f.mu.Unlock()
 	f.calls = append(f.calls, "unwatch:"+instance)
 	return nil
+}
+
+// Stale hands out the stale instances once: watching them again makes them
+// current.
+func (f *fakeSource) Stale(context.Context) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stale := f.stale
+	f.stale = nil
+	return stale, f.staleErr
+}
+
+// setStale makes the next Stale call report instances.
+func (f *fakeSource) setStale(instances ...string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.stale = instances
 }
 
 func (f *fakeSource) Drain(context.Context) (map[string]uint64, error) {
@@ -313,6 +332,64 @@ func TestWatchActivity_ReconcileRetriesFailedWatch(t *testing.T) {
 		synctest.Wait()
 
 		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex", "watch:plex"})
+	})
+}
+
+// plex restarts and both of its events are lost: the listing still has it,
+// but its watch counts the old cgroup.
+func TestWatchActivity_ReconcileRewatchesStaleWatch(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = 30 * time.Second
+		src := newFakeSource()
+		running := []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}}
+		p.EXPECT().InstanceInspect(gomock.Any(), "plex").
+			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil).Times(2)
+		expectListings(p, running, running, running)
+		startWatchActivity(t, s, p, src)
+
+		src.setStale("plex")
+		// Two more reconciliations: the first watches plex again, the second
+		// leaves the fresh watch alone.
+		time.Sleep(2*s.ActivityReconcileInterval + time.Second)
+		synctest.Wait()
+
+		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex", "unwatch:plex", "watch:plex"})
+	})
+}
+
+// plex stopped and its events are lost: its stale watch is dropped and not
+// watched again, since the listing no longer has it.
+func TestWatchActivity_ReconcileDropsStaleWatchOfStoppedInstance(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = 30 * time.Second
+		src := newFakeSource()
+		p.EXPECT().InstanceInspect(gomock.Any(), "plex").
+			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil)
+		expectListings(p, []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}}, nil)
+		startWatchActivity(t, s, p, src)
+
+		src.setStale("plex")
+		time.Sleep(s.ActivityReconcileInterval + time.Second)
+		synctest.Wait()
+
+		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex", "unwatch:plex"})
+	})
+}
+
+func TestWatchActivity_ReconcileGoesOnWhenStaleCheckFails(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.ActivityReconcileInterval = time.Hour
+		src := newFakeSource()
+		src.staleErr = errors.New("cgroup check failed")
+		p.EXPECT().InstanceInspect(gomock.Any(), "plex").
+			Return(activityInstance("plex", sablier.ActivityConfig{Ports: plexPorts, MinBytes: 1000}), nil)
+		expectListings(p, []sablier.InstanceConfiguration{{Name: "plex", Enabled: "true", Activity: true}})
+		startWatchActivity(t, s, p, src)
+
+		assert.DeepEqual(t, src.snapshot(), []string{"watch:plex"})
 	})
 }
 

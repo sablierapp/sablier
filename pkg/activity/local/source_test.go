@@ -23,6 +23,8 @@ type fakeTracker struct {
 	ignored []netip.Prefix
 
 	setIgnoredErrs []error // returned by the next SetIgnored calls, in order
+	stale          []bpf.Slot
+	staleErr       error
 }
 
 func newFakeTracker() *fakeTracker {
@@ -57,6 +59,10 @@ func (f *fakeTracker) SetIgnored(p []netip.Prefix) error {
 	}
 	f.ignored = p
 	return nil
+}
+
+func (f *fakeTracker) Stale() ([]bpf.Slot, error) {
+	return f.stale, f.staleErr
 }
 
 func (f *fakeTracker) Read() (map[bpf.Slot]uint64, error) {
@@ -148,6 +154,39 @@ func TestSource_WatchTwiceReplacesSlot(t *testing.T) {
 	assert.NilError(t, s.Watch(context.Background(), "plex", nil))
 	assert.DeepEqual(t, ft.calls, []string{"setignored", "watch", "unwatch", "watch"})
 	assert.Equal(t, len(ft.used), 1)
+}
+
+func TestSource_StaleNamesInstancesOfStaleSlots(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
+	for _, name := range []string{"plex", "nginx", "jellyfin"} {
+		expectTarget(host, name, sablier.Port{Number: 80, Proto: "tcp"})
+		assert.NilError(t, s.Watch(context.Background(), name, nil))
+	}
+	// Slots 0 and 2: plex and jellyfin, in watch order.
+	ft.stale = []bpf.Slot{0, 2}
+
+	stale, err := s.Stale(context.Background())
+
+	assert.NilError(t, err)
+	assert.DeepEqual(t, stale, []string{"jellyfin", "plex"})
+}
+
+// A cgroup that can't be checked doesn't hide the stale ones.
+func TestSource_StaleReturnsInstancesWithError(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft)
+	expectNoIgnoredSources(host)
+	expectTarget(host, "plex", sablier.Port{Number: 32400, Proto: "tcp"})
+	assert.NilError(t, s.Watch(context.Background(), "plex", nil))
+	ft.stale = []bpf.Slot{0}
+	ft.staleErr = errors.New("cgroup /cg/nginx: permission denied")
+
+	stale, err := s.Stale(context.Background())
+
+	assert.Error(t, err, "cgroup /cg/nginx: permission denied")
+	assert.DeepEqual(t, stale, []string{"plex"})
 }
 
 func TestSource_DrainReturnsDeltas(t *testing.T) {

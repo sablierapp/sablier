@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"slices"
 	"sync"
 
 	"github.com/sablierapp/sablier/pkg/activity/bpf"
@@ -23,6 +24,7 @@ var ErrNoPorts = errors.New("no ports to watch: set sablier.activity.ports or ex
 type Tracker interface {
 	Watch(cgroupPath string, ports []bpf.Port) (bpf.Slot, error)
 	Unwatch(bpf.Slot) error
+	Stale() ([]bpf.Slot, error)
 	SetIgnored([]netip.Prefix) error
 	Read() (map[bpf.Slot]uint64, error)
 }
@@ -166,6 +168,23 @@ func (s *Source) unwatchLocked(instance string) error {
 	delete(s.slots, instance)
 	delete(s.last, slot)
 	return s.tracker.Unwatch(slot)
+}
+
+// Stale returns the watched instances whose cgroup is gone or was replaced
+// since they were watched, as a container restart does, in order.
+func (s *Source) Stale(context.Context) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	slots, err := s.tracker.Stale()
+	var stale []string
+	for instance, slot := range s.slots {
+		if slices.Contains(slots, slot) {
+			stale = append(stale, instance)
+		}
+	}
+	slices.Sort(stale)
+	return stale, err
 }
 
 // Drain returns the bytes seen per instance since the previous call, omitting

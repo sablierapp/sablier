@@ -102,13 +102,25 @@ func (w *activityWatcher) handleEvent(ctx context.Context, event InstanceEvent) 
 }
 
 // reconcile watches the running activity-enabled instances that are not
-// watched yet, which also retries failed watches, and unwatches the watched
-// instances that are no longer running.
+// watched yet, which also retries failed watches, watches again the instances
+// whose watch went stale, and unwatches the watched instances that are no
+// longer running.
 func (w *activityWatcher) reconcile(ctx context.Context) {
 	instances, err := w.s.provider.InstanceList(ctx, provider.InstanceListOptions{All: false})
 	if err != nil {
 		w.s.l.ErrorContext(ctx, "activity reconciliation failed to list instances", slog.Any("error", err))
 		return
+	}
+
+	// A restart whose events were missed leaves the watch on the instance's
+	// old cgroup: drop it, and the loop below watches the instance again.
+	stale, err := w.src.Stale(ctx)
+	if err != nil {
+		w.s.l.WarnContext(ctx, "activity reconciliation failed to check watches", slog.Any("error", err))
+	}
+	for _, name := range stale {
+		w.s.l.WarnContext(ctx, "activity watch is stale, watching instance again", slog.String("instance", name))
+		w.unwatch(ctx, name)
 	}
 
 	running := make(map[string]struct{}, len(instances))

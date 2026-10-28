@@ -272,6 +272,44 @@ func TestTracker_UnwatchThenWatchStartsAtZero(t *testing.T) {
 	assert.DeepEqual(t, totals, map[Slot]uint64{s: 0})
 }
 
+// A restarted container gets a new cgroup at the same path; the programs stay
+// on the old one. cgroupfs never reuses a cgroup's inode, so removing and
+// creating the directory again is a restart.
+func TestTracker_StaleWhenCgroupRecreated(t *testing.T) {
+	needsRoot(t)
+	cgroup, err := os.MkdirTemp("/sys/fs/cgroup", "sablier-test-")
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = os.Remove(cgroup) })
+	tr, err := New()
+	assert.NilError(t, err)
+	t.Cleanup(func() { assert.NilError(t, tr.Close()) })
+	ports := []Port{{Number: 8080, Proto: ProtoTCP}}
+	s, err := tr.Watch(cgroup, ports)
+	assert.NilError(t, err)
+
+	stale, err := tr.Stale()
+	assert.NilError(t, err)
+	assert.Equal(t, len(stale), 0)
+
+	assert.NilError(t, os.Remove(cgroup))
+	stale, err = tr.Stale()
+	assert.NilError(t, err)
+	assert.DeepEqual(t, stale, []Slot{s})
+
+	assert.NilError(t, os.Mkdir(cgroup, 0o755))
+	stale, err = tr.Stale()
+	assert.NilError(t, err)
+	assert.DeepEqual(t, stale, []Slot{s})
+
+	// Watching the new cgroup is current again.
+	assert.NilError(t, tr.Unwatch(s))
+	_, err = tr.Watch(cgroup, ports)
+	assert.NilError(t, err)
+	stale, err = tr.Stale()
+	assert.NilError(t, err)
+	assert.Equal(t, len(stale), 0)
+}
+
 // Without cgroup: host, Sablier sees its own cgroup namespace and the
 // containers' cgroups are missing. Needs no privileges: Watch fails before it
 // touches the kernel.

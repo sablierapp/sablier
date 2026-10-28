@@ -84,7 +84,7 @@ services:
 
 - **With `--activity.enabled=false`, the default,** Sablier loads nothing and needs no extra privileges.
 
-The eBPF programs attach to each watched container's cgroup and only count: they never drop or change a packet. They live as long as Sablier's process. When Sablier restarts, it attaches them again to the running watched containers, and their counts start again from zero. [`--provider.auto-stop-on-startup`](/reference/cli/#opt-provider-auto-stop-on-startup), `true` by default, still applies: at startup, Sablier stops the running containers it didn't start, traffic or not.
+The eBPF programs attach to each watched container's cgroup and only count: they never drop or change a packet. They live as long as Sablier's process. When Sablier restarts, it attaches them again to the running watched containers, and their counts start again from zero. When a watched container restarts, Docker gives it a new cgroup: Sablier attaches the programs to it on the container's start event or, if it missed the event, within 30 seconds. [`--provider.auto-stop-on-startup`](/reference/cli/#opt-provider-auto-stop-on-startup), `true` by default, still applies: at startup, Sablier stops the running containers it didn't start, traffic or not.
 
 ## What counts
 
