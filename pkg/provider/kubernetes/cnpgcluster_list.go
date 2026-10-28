@@ -61,21 +61,8 @@ func clusterIsRunning(u *unstructured.Unstructured) bool {
 }
 
 func (p *Provider) clusterToInstance(u *unstructured.Unstructured) sablier.InstanceConfiguration {
-	config := sablierConfig(u.GetLabels(), u.GetAnnotations())
-	enabled := config[sablier.LabelEnable]
-	var groups []string
-	if enabled == "true" {
-		groups = sablier.ParseGroups(config[sablier.LabelGroup])
-	}
-
 	parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
-
-	return sablier.InstanceConfiguration{
-		Name:         parsed.Original,
-		Groups:       groups,
-		Enabled:      enabled,
-		RunningHours: config[sablier.LabelRunningHours],
-	}
+	return sablier.InstanceConfigurationFromLabels(parsed.Original, sablierConfig(u.GetLabels(), u.GetAnnotations()))
 }
 
 func (p *Provider) ClusterGroups(ctx context.Context) (map[string][]string, error) {

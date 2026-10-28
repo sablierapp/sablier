@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sablierapp/sablier/pkg/sablier"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -13,6 +14,12 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		return sablier.InstanceInfo{}, err
 	}
 
+	return p.statefulSetInfo(ss, config), nil
+}
+
+// statefulSetInfo converts ss into the InstanceInfo that StatefulSetInspect
+// reports for it, without an API call.
+func (p *Provider) statefulSetInfo(ss *appsv1.StatefulSet, config ParsedName) sablier.InstanceInfo {
 	cfg := sablierConfig(ss.Labels, ss.Annotations)
 	desired := desiredReplicas(cfg, config)
 
@@ -65,5 +72,5 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		Labels:    labels,
 	}
 
-	return info, nil
+	return info
 }

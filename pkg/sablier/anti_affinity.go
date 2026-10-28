@@ -61,10 +61,13 @@ func (s *Sablier) SeedAntiAffinity(ctx context.Context) {
 
 // reconcileAntiAffinityRegistry rebuilds the anti-affinity reverse index by
 // listing every Sablier-enabled instance and reading its
-// sablier.anti-affinity label. It is the authoritative source used at
-// startup (to pick up pre-existing instances that never emit a "created" event)
-// and, once at least one anti-affinity exists, as a periodic safety net against
-// missed events. GroupWatch keeps the index fresh incrementally in between.
+// sablier.anti-affinity label from the list result. It deliberately does not
+// inspect each instance: that is one API call per instance, which dominates
+// startup on large fleets behind a client-side rate limiter. It is the
+// authoritative source used at startup (to pick up pre-existing instances that
+// never emit a "created" event) and, once at least one anti-affinity exists, as
+// a periodic safety net against missed events. GroupWatch keeps the index fresh
+// incrementally in between.
 func (s *Sablier) reconcileAntiAffinityRegistry(ctx context.Context) {
 	instances, err := s.provider.InstanceList(ctx, provider.InstanceListOptions{All: true})
 	if err != nil {
@@ -75,13 +78,7 @@ func (s *Sablier) reconcileAntiAffinityRegistry(ctx context.Context) {
 	present := make(map[string]bool, len(instances))
 	for _, inst := range instances {
 		present[inst.Name] = true
-		info, inspectErr := s.provider.InstanceInspect(ctx, inst.Name)
-		if inspectErr != nil {
-			s.l.WarnContext(ctx, "anti-affinity: cannot inspect instance while rebuilding registry",
-				slog.String("instance", inst.Name), slog.Any("error", inspectErr))
-			continue
-		}
-		s.SyncInstanceAntiAffinity(inst.Name, info.AntiAffinity)
+		s.SyncInstanceAntiAffinity(inst.Name, inst.AntiAffinity)
 	}
 
 	// Drop instances that are no longer present.

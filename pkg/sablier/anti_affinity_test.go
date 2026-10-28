@@ -92,6 +92,8 @@ type fakeAAProvider struct {
 	listErr    error
 	inspect    map[string]InstanceInfo
 	inspectErr map[string]error
+	// inspected records every InstanceInspect call, in order.
+	inspected []string
 }
 
 func (f *fakeAAProvider) InstanceStart(_ context.Context, name string) error {
@@ -111,6 +113,7 @@ func (f *fakeAAProvider) InstanceStop(_ context.Context, name string) error {
 func (f *fakeAAProvider) InstanceInspect(_ context.Context, name string) (InstanceInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.inspected = append(f.inspected, name)
 	if err := f.inspectErr[name]; err != nil {
 		return InstanceInfo{}, err
 	}
@@ -142,6 +145,12 @@ func (f *fakeAAProvider) snapshotStopped() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return slices.Clone(f.stopped)
+}
+
+func (f *fakeAAProvider) snapshotInspected() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.inspected)
 }
 
 func (f *fakeAAProvider) snapshotStarted() []string {
@@ -307,11 +316,7 @@ func TestReconcileAntiAffinityRegistry_BuildsAndPrunes(t *testing.T) {
 	s, _, p := setupAntiAffinity(t)
 	ctx := context.Background()
 
-	p.list = []InstanceConfiguration{{Name: "nextcloud"}, {Name: "plex"}}
-	p.inspect = map[string]InstanceInfo{
-		"nextcloud": {Name: "nextcloud", AntiAffinity: []string{"streaming"}},
-		"plex":      {Name: "plex"},
-	}
+	p.list = []InstanceConfiguration{{Name: "nextcloud", AntiAffinity: []string{"streaming"}}, {Name: "plex"}}
 
 	s.SeedAntiAffinity(ctx)
 
@@ -325,6 +330,32 @@ func TestReconcileAntiAffinityRegistry_BuildsAndPrunes(t *testing.T) {
 	assert.Assert(t, !s.hasAntiAffinity(), "index should be empty after the only dependent is removed")
 }
 
+// An instance that is still listed but no longer declares an anti-affinity
+// (its label was removed) must lose its registry entry, not keep a stale one.
+func TestReconcileAntiAffinityRegistry_ClearsRemovedLabel(t *testing.T) {
+	s, _, p := setupAntiAffinity(t)
+	ctx := context.Background()
+
+	p.list = []InstanceConfiguration{
+		{Name: "nextcloud", AntiAffinity: []string{"streaming"}},
+		{Name: "immich", AntiAffinity: []string{"streaming", "gaming"}},
+	}
+	s.reconcileAntiAffinityRegistry(ctx)
+
+	p.list = []InstanceConfiguration{
+		{Name: "nextcloud"},
+		{Name: "immich", AntiAffinity: []string{"gaming"}},
+	}
+	s.reconcileAntiAffinityRegistry(ctx)
+
+	_, ok := s.antiAffinity.Get("streaming")
+	assert.Assert(t, !ok, "streaming should have no dependents left")
+	deps, ok := s.antiAffinity.Get("gaming")
+	assert.Assert(t, ok)
+	assert.DeepEqual(t, deps, []string{"immich"})
+	assert.Equal(t, len(s.antiAffinity.GroupsOf("nextcloud")), 0)
+}
+
 func TestReconcileAntiAffinityRegistry_ListError(t *testing.T) {
 	s, _, p := setupAntiAffinity(t)
 	p.listErr = errors.New("boom")
@@ -334,17 +365,30 @@ func TestReconcileAntiAffinityRegistry_ListError(t *testing.T) {
 	assert.Assert(t, !s.hasAntiAffinity(), "a list error must leave the index untouched")
 }
 
-func TestReconcileAntiAffinityRegistry_InspectErrorSkipsInstance(t *testing.T) {
+func TestReconcileAntiAffinityRegistry_UsesListWithoutInspect(t *testing.T) {
 	s, _, p := setupAntiAffinity(t)
-	p.list = []InstanceConfiguration{{Name: "broken"}, {Name: "ok"}}
-	p.inspectErr = map[string]error{"broken": errors.New("cannot inspect")}
-	p.inspect = map[string]InstanceInfo{"ok": {Name: "ok", AntiAffinity: []string{"g"}}}
+	p.list = []InstanceConfiguration{
+		{Name: "nextcloud", AntiAffinity: []string{"streaming", "gaming"}},
+		{Name: "immich", AntiAffinity: []string{"streaming"}},
+		{Name: "plex"},
+	}
+	// Inspect results that disagree with the list must not be used.
+	p.inspect = map[string]InstanceInfo{"plex": {Name: "plex", AntiAffinity: []string{"other"}}}
 
+	// Only the rebuild is covered: enforcing the registry afterwards may
+	// legitimately inspect instances.
 	s.reconcileAntiAffinityRegistry(context.Background())
 
-	deps, ok := s.antiAffinity.Get("g")
+	assert.Assert(t, len(p.snapshotInspected()) == 0, "the registry rebuild must not inspect instances, got %v", p.snapshotInspected())
+	deps, ok := s.antiAffinity.Get("streaming")
 	assert.Assert(t, ok)
-	assert.DeepEqual(t, deps, []string{"ok"})
+	slices.Sort(deps)
+	assert.DeepEqual(t, deps, []string{"immich", "nextcloud"})
+	deps, ok = s.antiAffinity.Get("gaming")
+	assert.Assert(t, ok)
+	assert.DeepEqual(t, deps, []string{"nextcloud"})
+	_, ok = s.antiAffinity.Get("other")
+	assert.Assert(t, !ok, "inspect data leaked into the registry")
 }
 
 func TestHandleAntiAffinityEvent(t *testing.T) {
@@ -477,11 +521,7 @@ func TestSeedAntiAffinity_EnforcesImmediately(t *testing.T) {
 	s, st, p := setupAntiAffinity(t)
 	ctx := context.Background()
 
-	p.list = []InstanceConfiguration{{Name: "plex"}, {Name: "nextcloud"}}
-	p.inspect = map[string]InstanceInfo{
-		"nextcloud": {Name: "nextcloud", AntiAffinity: []string{"streaming"}},
-		"plex":      {Name: "plex"},
-	}
+	p.list = []InstanceConfiguration{{Name: "plex"}, {Name: "nextcloud", AntiAffinity: []string{"streaming"}}}
 	// plex (the streaming group) is active via a persisted session, and nextcloud
 	// is already running — exactly the startup conflict seeding must resolve.
 	s.SetGroups(map[string][]string{"streaming": {"plex"}})

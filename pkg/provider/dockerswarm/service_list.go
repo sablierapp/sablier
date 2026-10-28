@@ -43,18 +43,7 @@ func (p *Provider) InstanceList(ctx context.Context, opts provider.InstanceListO
 }
 
 func (p *Provider) serviceToInstance(s swarm.Service) (i sablier.InstanceConfiguration) {
-	enabled := s.Spec.Labels[sablier.LabelEnable]
-	var groups []string
-	if enabled == "true" {
-		groups = sablier.ParseGroups(s.Spec.Labels[sablier.LabelGroup])
-	}
-
-	return sablier.InstanceConfiguration{
-		Name:         s.Spec.Name,
-		Groups:       groups,
-		Enabled:      enabled,
-		RunningHours: s.Spec.Labels[sablier.LabelRunningHours],
-	}
+	return sablier.InstanceConfigurationFromLabels(s.Spec.Name, s.Spec.Labels)
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {

@@ -80,6 +80,8 @@ Sablier scales opted-in workloads to zero when it starts. A workload you deploy 
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/).
 
+The Kubernetes client waits on the client side whenever Sablier sends more than `qps` requests per second for longer than `burst` allows. Sablier discovers and indexes workloads with a few list and watch requests, but some work still costs about one request per opted-in workload: scaling running workloads to zero when Sablier starts, warming workloads that were started outside Sablier, and checking workloads that have running hours. With many opted-in workloads, this can delay requests that arrive at the same time. If you manage more than a few dozen workloads, raise both values, for example `--provider.kubernetes.qps=50 --provider.kubernetes.burst=100`. The API server's own [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) still protects it.
+
 ### Workloads
 
 #### Deployments and StatefulSets
