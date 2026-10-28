@@ -647,7 +647,7 @@ func TestSuppressForAntiAffinity_ForgetsFailedStart(t *testing.T) {
 
 	// The racing request re-puts the session after the suppression deleted it.
 	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
-	_, ok := s.retryFailedStart(ctx, "nextcloud", InstanceInfo{Name: "nextcloud"})
+	_, ok := s.retryFailedStart(ctx, "nextcloud", InstanceInfo{Name: "nextcloud"}, false)
 	assert.Assert(t, !ok, "a suppressed instance must not be started again")
 	assert.Equal(t, len(p.snapshotStarted()), 0)
 }
@@ -740,6 +740,198 @@ func TestOnInstanceExpired_ForgetsFailedStart(t *testing.T) {
 		synctest.Wait()
 		assert.Assert(t, !s.hasFailedStart("nextcloud"))
 	})
+}
+
+// Review on #1240: request R retries and stores Starting, while request C,
+// which read the session as Ready (scale mode at its idle size) before R's
+// Put, writes Ready back. R's retry fails. Its finished pending entry must not
+// block the next retry, or the instance stays idle for the rest of the session.
+func TestRetryFailedStart_FinishedFailedRetryDoesNotBlockNextRetry(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		ready := InstanceInfo{Name: "hub", Status: InstanceStatusReady, CurrentReplicas: 1, DesiredReplicas: 2}
+		_ = st.Put(ctx, ready, time.Minute)
+		s.recordFailedStart("hub")
+		p.startErr = errors.New("quota exceeded")
+
+		// R: retries, and its start fails.
+		_, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		synctest.Wait()
+		// C: puts the Ready it read before R's Put back over R's Starting.
+		_ = st.Put(ctx, ready, time.Minute)
+		assert.Equal(t, len(p.snapshotStarted()), 1)
+
+		// After the backoff (4s after a second failure) the next request retries.
+		time.Sleep(4 * time.Second)
+		p.mu.Lock()
+		p.startErr = nil
+		p.mu.Unlock()
+		info, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, InstanceStatusStarting)
+		synctest.Wait()
+		assert.DeepEqual(t, p.snapshotStarted(), []string{"hub", "hub"})
+		assert.Assert(t, !s.hasFailedStart("hub"))
+	})
+}
+
+// A retry that fails, but may still bring the workload up later (e.g. after
+// InstanceStartTimeout), is undone when the instance was stopped on purpose in
+// the meantime, and its failure is not recorded again.
+func TestRetryFailedStart_StoppedDuringFailedRetry_StopsAndRecordsNoFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		_ = st.Put(ctx, InstanceInfo{Name: "hub", Status: InstanceStatusStarting}, time.Minute)
+		s.recordFailedStart("hub")
+		p.startErr = errors.New("timed out waiting for dependencies")
+		// A stop event arrives while the retry is in flight.
+		p.onStart = func(name string) { _ = s.RemoveInstance(ctx, name) }
+
+		_, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		synctest.Wait()
+
+		assert.DeepEqual(t, p.snapshotStopped(), []string{"hub"})
+		assert.Assert(t, !s.hasFailedStart("hub"), "a start stopped on purpose must not be retried")
+	})
+}
+
+// The same undo applies to a first start, not only to retries.
+func TestFirstStart_StoppedDuringStart_StopsAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		started := make(chan struct{})
+		release := make(chan struct{})
+		p.onStart = func(string) {
+			close(started)
+			<-release
+		}
+
+		_, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		<-started
+		assert.NilError(t, s.RemoveInstance(ctx, "hub"))
+		close(release)
+		synctest.Wait()
+
+		assert.DeepEqual(t, p.snapshotStopped(), []string{"hub"})
+	})
+}
+
+// Review on #1240: a first start (not only a retry) can land after a
+// suppression already stopped the instance. The suppression does not look at
+// it again, so the start stops it again once it lands.
+func TestFirstStart_SuppressedWhileStarting_StopsAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		started := make(chan struct{})
+		land := make(chan struct{})
+		p.onStart = func(string) {
+			close(started)
+			<-land
+		}
+
+		_, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+		assert.NilError(t, err)
+		<-started
+		// The antagonist becomes active and the suppression runs before the
+		// start has landed.
+		st.session("plex")
+		s.reconcileAntiAffinity(ctx)
+		assert.Assert(t, s.isSuppressed("nextcloud"))
+		assert.Equal(t, len(p.snapshotStopped()), 1)
+
+		close(land)
+		synctest.Wait()
+		assert.Equal(t, len(p.snapshotStopped()), 2, "the start must stop the instance again once it lands")
+	})
+}
+
+// A suppression whose stop fails keeps the session, so it must keep the
+// recorded failure too, or the failed start is never retried.
+func TestSuppressForAntiAffinity_StopFails_KeepsFailedStart(t *testing.T) {
+	s, st, p := setupAntiAffinity(t)
+	ctx := context.Background()
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+	s.recordFailedStart("nextcloud")
+	p.stopErr = errors.New("forbidden")
+	st.session("plex")
+
+	s.reconcileAntiAffinity(ctx)
+
+	assert.Assert(t, !s.isSuppressed("nextcloud"))
+	assert.Assert(t, s.hasFailedStart("nextcloud"))
+}
+
+// A start reported failed that came up after all (e.g. it hit
+// InstanceStartTimeout just before becoming ready) is not retried once an
+// inspect shows it fully started. In scale mode only the active replica count
+// counts as started, since the idle profile also reports ready.
+func TestInstanceRequest_FullyStartedClearsFailedStart(t *testing.T) {
+	scale := &ScaleConfig{Idle: ResourceProfile{Replicas: 1}, Active: ResourceProfile{Replicas: 2}}
+	for _, tc := range []struct {
+		name    string
+		info    InstanceInfo
+		cleared bool
+	}{
+		{"ready", InstanceInfo{Status: InstanceStatusReady, CurrentReplicas: 1, DesiredReplicas: 1}, true},
+		{"starting", InstanceInfo{Status: InstanceStatusStarting, DesiredReplicas: 1}, false},
+		{"scale mode at idle size", InstanceInfo{Status: InstanceStatusReady, CurrentReplicas: 1, DesiredReplicas: 2, ScaleConfig: scale}, false},
+		{"scale mode at active size", InstanceInfo{Status: InstanceStatusReady, CurrentReplicas: 2, DesiredReplicas: 2, ScaleConfig: scale}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, st, p := setupAntiAffinity(t)
+			ctx := context.Background()
+			_ = st.Put(ctx, InstanceInfo{Name: "hub", Status: InstanceStatusStarting}, time.Minute)
+			s.pendingMu.Lock()
+			s.failedStarts["hub"] = &failedStart{failures: 1, retryAt: time.Now().Add(time.Hour)}
+			s.pendingMu.Unlock()
+			info := tc.info
+			info.Name = "hub"
+			p.inspect = map[string]InstanceInfo{"hub": info}
+
+			_, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+			assert.NilError(t, err)
+			assert.Equal(t, !s.hasFailedStart("hub"), tc.cleared)
+		})
+	}
+}
+
+// With unlabeled requests rejected, a retry first checks that the instance
+// still opts in: one whose sablier.enable was removed during the session is
+// not started again.
+func TestRetryFailedStart_RejectUnlabeled(t *testing.T) {
+	for _, tc := range []struct {
+		enabled string
+		starts  int
+	}{{"true", 1}, {"", 0}} {
+		t.Run("enable="+tc.enabled, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				s, st, p := setupAntiAffinity(t)
+				ctx := context.Background()
+				_ = st.Put(ctx, InstanceInfo{Name: "hub", Status: InstanceStatusStarting, Enabled: "true"}, time.Minute)
+				s.recordFailedStart("hub")
+				p.inspect = map[string]InstanceInfo{"hub": {Name: "hub", Status: InstanceStatusStopped, Enabled: tc.enabled}}
+
+				_, err := s.instanceRequest(ctx, "hub", time.Minute, true)
+				assert.NilError(t, err)
+				synctest.Wait()
+				assert.Equal(t, len(p.snapshotStarted()), tc.starts)
+				if tc.starts == 0 {
+					assert.Assert(t, !s.hasFailedStart("hub"))
+				}
+			})
+		})
+	}
 }
 
 func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {

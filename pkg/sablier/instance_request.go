@@ -19,6 +19,11 @@ type pendingStart struct {
 	err     error
 	info    InstanceInfo      // set at creation time; used to return consistent data while starting
 	spanCtx trace.SpanContext // OTel context of the triggering request; used to propagate the trace into the goroutine
+	// stopRequested is set, under pendingMu, when the instance is stopped on
+	// purpose while this start is in progress (see markStoppedOnPurpose). The
+	// start then records no failure and stops the instance again once it
+	// lands, whether it succeeded or not.
+	stopRequested bool
 }
 
 // Delay before a request may start an instance again after its start failed,
@@ -46,44 +51,124 @@ func startRetryDelay(failures int) time.Duration {
 	return min(delay, startRetryMaxDelay)
 }
 
-// forgetFailedStart drops any recorded start failure for name, so no request
-// starts it again. Call it whenever the instance is stopped on purpose.
-func (s *Sablier) forgetFailedStart(name string) {
+// clearFailedStart drops any recorded start failure for name, so no request
+// starts it again.
+func (s *Sablier) clearFailedStart(name string) {
 	s.pendingMu.Lock()
 	defer s.pendingMu.Unlock()
 	delete(s.failedStarts, name)
 }
 
-// retryFailedStart starts name again when its last start failed, the backoff
-// has elapsed and no start is in progress. The check and the registration of
-// the new pending start happen under one lock, so concurrent requests dispatch
-// at most one retry. session is the stored session state; it is reused as the
-// pre-start info instead of inspecting the instance again.
-func (s *Sablier) retryFailedStart(ctx context.Context, name string, session InstanceInfo) (InstanceInfo, bool) {
+// markStoppedOnPurpose records that name was stopped on purpose (an
+// anti-affinity suppression, a stop event or an expiration): its recorded
+// start failure is dropped, and a start still in progress stops the instance
+// again once it lands instead of leaving it running.
+func (s *Sablier) markStoppedOnPurpose(name string) {
 	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	delete(s.failedStarts, name)
+	if ps, ok := s.pendingStarts[name]; ok && !startDone(ps) {
+		ps.stopRequested = true
+	}
+}
+
+func startDone(ps *pendingStart) bool {
+	select {
+	case <-ps.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// registerPendingStartLocked registers a new pending start of name with info,
+// unless a start is still in progress, which it returns instead with
+// joined=true. A finished entry is replaced: its outcome is already recorded
+// (a failure in failedStarts), so it must not block a new start. Must be
+// called with pendingMu held.
+func (s *Sablier) registerPendingStartLocked(ctx context.Context, name string, info InstanceInfo) (ps *pendingStart, joined bool) {
+	if existing, ok := s.pendingStarts[name]; ok && !startDone(existing) {
+		return existing, true
+	}
+	// Capture the OTel span context so the goroutine can be parented to the
+	// triggering request's trace.
+	ps = &pendingStart{done: make(chan struct{}), info: info, spanCtx: trace.SpanContextFromContext(ctx)}
+	s.pendingStarts[name] = ps
+	return ps, false
+}
+
+// retryDueLocked reports whether name has a recorded start failure whose
+// backoff has elapsed, with no start in progress. Must be called with
+// pendingMu held.
+func (s *Sablier) retryDueLocked(name string) bool {
 	fs, ok := s.failedStarts[name]
 	if !ok || time.Now().Before(fs.retryAt) {
-		s.pendingMu.Unlock()
+		return false
+	}
+	ps, ok := s.pendingStarts[name]
+	return !ok || startDone(ps)
+}
+
+// fullyStarted reports whether an inspect shows the instance fully started, so
+// a recorded start failure is stale (e.g. the start timed out but the instance
+// came up later). In scale mode the idle profile also reports ready, so only a
+// replica count above the idle one shows the active profile was applied.
+func fullyStarted(info InstanceInfo) bool {
+	if info.Status != InstanceStatusReady {
+		return false
+	}
+	sc := info.ScaleConfig
+	if sc == nil || sc.Idle.Replicas == 0 {
+		return true
+	}
+	return sc.Active.Replicas > sc.Idle.Replicas && info.CurrentReplicas >= sc.Active.Replicas
+}
+
+// retryFailedStart starts name again when its last start failed, the backoff
+// has elapsed and no start is in progress. The final check and the
+// registration of the new pending start happen under one lock, so concurrent
+// requests dispatch at most one retry. session is the stored session state; it
+// is reused as the pre-start info instead of inspecting the instance again,
+// except when unlabeled instances are rejected: then the instance is inspected
+// to check it still opts in.
+func (s *Sablier) retryFailedStart(ctx context.Context, name string, session InstanceInfo, rejectUnlabeled bool) (InstanceInfo, bool) {
+	s.pendingMu.Lock()
+	due := s.retryDueLocked(name)
+	s.pendingMu.Unlock()
+	if !due {
 		return InstanceInfo{}, false
 	}
-	// A start is in progress, or a finished one still holds an error no
-	// request has reported yet (consumePendingError surfaces it first).
-	if _, pending := s.pendingStarts[name]; pending {
-		s.pendingMu.Unlock()
-		return InstanceInfo{}, false
-	}
-	failures := fs.failures
 
 	info := session
+	if rejectUnlabeled {
+		inspected, err := s.provider.InstanceInspect(ctx, name)
+		if err != nil {
+			return InstanceInfo{}, false
+		}
+		if !inspected.IsEnabled() {
+			// sablier.enable was removed during the session: do not start it
+			// again, and keep extending the session as before.
+			s.clearFailedStart(name)
+			return InstanceInfo{}, false
+		}
+		info = inspected
+	}
 	info.Status = InstanceStatusStarting
 	info.ReadyAt = nil
-	ps := &pendingStart{done: make(chan struct{}), info: info, spanCtx: trace.SpanContextFromContext(ctx)}
-	s.pendingStarts[name] = ps
+
+	s.pendingMu.Lock()
+	if !s.retryDueLocked(name) {
+		// Another request claimed the retry in the meantime.
+		s.pendingMu.Unlock()
+		return InstanceInfo{}, false
+	}
+	ps, _ := s.registerPendingStartLocked(ctx, name, info)
+	failures := s.failedStarts[name].failures
 	s.pendingMu.Unlock()
 
 	s.l.WarnContext(ctx, "starting instance again after a failed start",
 		slog.String("instance", name), slog.Int("failures", failures))
-	s.dispatchStart(ctx, name, ps, true)
+	s.dispatchStart(ctx, name, ps)
 	return info, true
 }
 
@@ -202,44 +287,32 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	// Second critical section: register the pending entry. Re-check in case
 	// another goroutine raced past the first unlock and registered first.
 	s.pendingMu.Lock()
-	if existing, exists := s.pendingStarts[name]; exists {
-		select {
-		case <-existing.done:
-			// The racing goroutine already finished; proceed with our own entry.
-			delete(s.pendingStarts, name)
-		default:
-			// A concurrent goroutine won the race; return its cached info.
-			s.l.DebugContext(ctx, "instance start already in progress (post-inspect race)", slog.String("instance", name))
-			trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
-				trace.WithAttributes(
-					attribute.String("instance", name),
-					attribute.String("pending_trace_id", existing.spanCtx.TraceID().String()),
-					attribute.String("pending_span_id", existing.spanCtx.SpanID().String()),
-				),
-			)
-			existingInfo := existing.info
-			s.pendingMu.Unlock()
-			return existingInfo, nil
-		}
-	}
-	// Capture the OTel span context before releasing the lock so the goroutine
-	// can be parented to the triggering request's trace.
-	spanCtx := trace.SpanContextFromContext(ctx)
-	ps := &pendingStart{done: make(chan struct{}), info: info, spanCtx: spanCtx}
-	s.pendingStarts[name] = ps
+	ps, joined := s.registerPendingStartLocked(ctx, name, info)
 	s.pendingMu.Unlock()
+	if joined {
+		// A concurrent goroutine won the race; return its cached info.
+		s.l.DebugContext(ctx, "instance start already in progress (post-inspect race)", slog.String("instance", name))
+		trace.SpanFromContext(ctx).AddEvent("sablier.instance.join_pending_start",
+			trace.WithAttributes(
+				attribute.String("instance", name),
+				attribute.String("pending_trace_id", ps.spanCtx.TraceID().String()),
+				attribute.String("pending_span_id", ps.spanCtx.SpanID().String()),
+			),
+		)
+		return ps.info, nil
+	}
 
-	s.dispatchStart(ctx, name, ps, false)
+	s.dispatchStart(ctx, name, ps)
 	return info, nil
 }
 
 // dispatchStart starts name and its dependencies in the background for the
 // already-registered pending start ps. A failure is recorded in failedStarts
-// so a later request retries it; a success clears it. For a retry, the
-// instance is forced idle again if an anti-affinity hold became active while
-// it was starting: a suppression that ran in the meantime may have stopped it
-// before this start landed, and would not look at it again.
-func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingStart, retry bool) {
+// so a later request retries it; a success clears it. Either way, the instance
+// is stopped again if it was meant to stop while it was starting (see
+// undoIfStoppedMeanwhile): a failed start may still bring the workload up
+// later, for example after InstanceStartTimeout.
+func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingStart) {
 	// Begin metrics tracking BEFORE dispatching the goroutine.
 	// Idempotent — if a previous Begin was already recorded, it is preserved.
 	s.metrics.RecordReadyWaitBegin(name)
@@ -267,14 +340,19 @@ func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingSta
 			s.metrics.RecordInstanceStartFailure(name)
 			s.l.ErrorContext(startCtx, "async instance start failed", slog.String("instance", name), slog.Any("error", err))
 			s.pendingMu.Lock()
-			fs, ok := s.failedStarts[name]
-			if !ok {
-				fs = &failedStart{}
-				s.failedStarts[name] = fs
+			stopRequested := ps.stopRequested
+			// A start the instance was stopped during is not retried.
+			if !stopRequested {
+				fs, ok := s.failedStarts[name]
+				if !ok {
+					fs = &failedStart{}
+					s.failedStarts[name] = fs
+				}
+				fs.failures++
+				fs.retryAt = time.Now().Add(startRetryDelay(fs.failures))
 			}
-			fs.failures++
-			fs.retryAt = time.Now().Add(startRetryDelay(fs.failures))
 			s.pendingMu.Unlock()
+			s.undoIfStoppedMeanwhile(startCtx, name, stopRequested)
 		} else {
 			startSpan.End()
 			s.metrics.RecordInstanceStartEnd(name, time.Since(startedAt))
@@ -286,33 +364,32 @@ func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingSta
 				delete(s.pendingStarts, name)
 			}
 			delete(s.failedStarts, name)
+			stopRequested := ps.stopRequested
 			s.pendingMu.Unlock()
-			if retry {
-				s.undoRetryIfStoppedMeanwhile(startCtx, name)
-			}
+			s.undoIfStoppedMeanwhile(startCtx, name, stopRequested)
 		}
 	}()
 }
 
-// undoRetryIfStoppedMeanwhile stops name again after a retried start when the
-// instance was meant to stop while it was starting: an anti-affinity hold
-// became active (a suppression may have stopped it before this start landed,
-// and will not look at it again), or its session was removed by a stop event,
-// an expiration or a suppression (nothing would ever stop it otherwise).
-func (s *Sablier) undoRetryIfStoppedMeanwhile(ctx context.Context, name string) {
+// undoIfStoppedMeanwhile stops name again after a start when the instance was
+// meant to stop while it was starting: it was stopped on purpose (a
+// suppression, a stop event or an expiration, see markStoppedOnPurpose), or an
+// anti-affinity hold became active. Either stop may have landed before this
+// start, and nothing would look at the instance again.
+func (s *Sablier) undoIfStoppedMeanwhile(ctx context.Context, name string, stopRequested bool) {
 	reason := ""
-	if group := s.antiAffinityHold(ctx, name); group != "" {
+	if stopRequested {
+		reason = "it was stopped on purpose while starting"
+	} else if group := s.antiAffinityHold(ctx, name); group != "" {
 		reason = fmt.Sprintf("anti-affinity group %q became active", group)
-	} else if _, err := s.sessions.Get(ctx, name); errors.Is(err, store.ErrKeyNotFound) {
-		reason = "session was removed"
 	}
 	if reason == "" {
 		return
 	}
-	s.l.InfoContext(ctx, "instance was stopped while starting again, stopping it",
+	s.l.InfoContext(ctx, "stopping instance again after its start",
 		slog.String("instance", name), slog.String("reason", reason))
 	if err := s.provider.InstanceStop(ctx, name); err != nil {
-		s.l.ErrorContext(ctx, "cannot stop instance after its retried start",
+		s.l.ErrorContext(ctx, "cannot stop instance after its start",
 			slog.String("instance", name), slog.Any("error", err))
 	}
 }
@@ -373,7 +450,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 	} else if err != nil {
 		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
 		return InstanceInfo{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
-	} else if retried, ok := s.retryFailedStart(ctx, name, state); ok {
+	} else if retried, ok := s.retryFailedStart(ctx, name, state, rejectUnlabeled); ok {
 		// The last start failed while the session stayed active. Without this,
 		// later requests would only inspect the instance and extend the session
 		// until it expires. The recorded failure is used rather than the
@@ -402,6 +479,10 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			inspectSpan.End()
 			if err != nil {
 				return InstanceInfo{}, err
+			}
+			if fullyStarted(state) {
+				// A start that was reported failed came up after all.
+				s.clearFailedStart(name)
 			}
 			if state.Status == InstanceStatusReady {
 				s.metrics.RecordReadyWaitEnd(name)

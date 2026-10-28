@@ -843,11 +843,9 @@ func TestInstanceRequest_StartFailedWithActiveSession_StartsAgainAfterBackoff(t 
 		assert.NilError(t, err)
 		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStopped))
 
-		// 4th request, after the backoff: started again. Once started, the
-		// retry checks that the session is still there.
+		// 4th request, after the backoff: started again.
 		time.Sleep(2 * time.Second)
 		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
-		sessions.EXPECT().Get(gomock.Not(ctx), "hub").Return(starting, nil)
 		info, err = manager.InstanceRequest(ctx, "hub", time.Minute)
 		assert.NilError(t, err)
 		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
@@ -896,7 +894,6 @@ func TestInstanceRequest_StartFailed_ScaleModeReportedReady_StartsAgain(t *testi
 		time.Sleep(2 * time.Second)
 		sessions.EXPECT().Get(ctx, "hub").Return(ready, nil)
 		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
-		sessions.EXPECT().Get(gomock.Not(ctx), "hub").Return(starting, nil)
 		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
 		assert.NilError(t, err)
 		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))

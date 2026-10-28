@@ -187,7 +187,8 @@ func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
 	// The instance was stopped from outside Sablier: do not start it again
-	// because of an earlier failed start.
-	s.forgetFailedStart(name)
+	// because of an earlier failed start, and do not let a start in progress
+	// undo the stop.
+	s.markStoppedOnPurpose(name)
 	return s.sessions.Delete(ctx, name)
 }
