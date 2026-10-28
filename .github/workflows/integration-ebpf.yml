@@ -1,0 +1,30 @@
+name: Integration (eBPF)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-ebpf:
+    name: Integration (eBPF)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: |
+            go.sum
+            tools.mod
+
+      - name: Run eBPF kernel tests
+        run: go test -tags=nomsgpack -exec sudo -run 'TestCounter|TestTracker' ./pkg/activity/bpf/

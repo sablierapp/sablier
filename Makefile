@@ -1,4 +1,4 @@
-.PHONY: run gen generate check-generate build test lint fmt docker docs schema check-schema cli-docs check-cli-docs labels-docs check-labels-docs openapi check-openapi client check-client test-client metrics-docs check-metrics-docs
+.PHONY: run gen bpf generate check-generate build test lint fmt docker docs schema check-schema cli-docs check-cli-docs labels-docs check-labels-docs openapi check-openapi client check-client test-client metrics-docs check-metrics-docs
 
 .DEFAULT_GOAL := build
 
@@ -9,6 +9,11 @@ run:
 
 gen:
 	go generate -v ./...
+
+# Regenerate the eBPF counter (pkg/activity/bpf) with clang and libbpf headers
+# inside a container, so no local toolchain is needed.
+bpf:
+	docker run --rm -v $(CURDIR):/src -w /src golang:1.27.1-bookworm sh -c 'apt-get update -qq && apt-get install -y -qq clang llvm libbpf-dev >/dev/null && go generate -tags bpfgen ./pkg/activity/bpf'
 
 schema:
 	go run ./cmd/schemagen -out docs/static/theme.schema.json
