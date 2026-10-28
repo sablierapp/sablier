@@ -16,7 +16,7 @@ rules:
     verbs: ["get", "list", "watch", "patch"] # patch sets CPU/memory limits in scale mode
   - apiGroups: ["apps"]
     resources: ["deployments/scale", "statefulsets/scale"]
-    verbs: ["patch"] # scale up and down
+    verbs: ["patch", "get", "update"] # patch scales up and down; get/update are deprecated (used by Sablier <= 1.19 and as a fallback)
   # Only to manage CloudNativePG Clusters.
   - apiGroups: ["postgresql.cnpg.io"]
     resources: ["clusters"]

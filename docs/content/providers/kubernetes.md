@@ -51,6 +51,10 @@ Reverse proxy plugins reach Sablier at `http://sablier.sablier:10000`.
 
 The CloudNativePG and Redis permissions are optional. Without them, or without their [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/), Sablier skips those integrations.
 
+{{< callout type="warning" >}}
+**`get` and `update` on `deployments/scale` and `statefulsets/scale` are deprecated.** Sablier scales with a `patch` on the scale subresource. If your RBAC only grants `get` and `update` there, as it did for Sablier 1.19 and earlier, Sablier falls back to them and logs a warning once per kind. The fallback can fail when the workload is written concurrently, and it will be removed in the next major release. Grant `patch` on both subresources.
+{{< /callout >}}
+
 ## Usage example
 
 Opt a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) in with the `sablierapp.dev/enable` [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/), and give it a group:

@@ -116,6 +116,8 @@ This walkthrough was written against older component versions (k3s 1.23, Traefik
           - statefulsets/scale
         verbs:
           - patch   # Scale up and down
+          - get     # Deprecated: used by Sablier <= 1.19 and as a fallback
+          - update  # Deprecated: used by Sablier <= 1.19 and as a fallback
     ```
 3. Create Sablier Cluster Role Binding `sablier-crb.yaml` and then `kubectl apply -f sablier-crb.yaml`
     ```yml
