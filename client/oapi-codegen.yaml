@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+# Types only: the generated HTTP client needs oapi-codegen/runtime, and the
+# client must stay standard library only. client.go is the HTTP layer.
+package: client
+generate:
+  models: true

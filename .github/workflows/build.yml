@@ -66,6 +66,12 @@ jobs:
           --post-run-command .github/scripts/test-summary.sh \
           -- -tags="nomsgpack" -race -covermode=atomic -cover -args -test.gocoverdir=/tmp/gocov
 
+    - name: Test the Go client
+      # client/ is a separate module, so the root ./... above skips it. Its
+      # coverage joins the root module's in the report below.
+      working-directory: client
+      run: go test -race -covermode=atomic -cover ./... -args -test.gocoverdir=/tmp/gocov
+
     - name: Generate coverage report
       if: ${{ !cancelled() }}
       run: go tool covdata textfmt -i=/tmp/gocov -o=coverage.out
