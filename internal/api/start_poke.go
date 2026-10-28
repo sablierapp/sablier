@@ -76,6 +76,6 @@ func StartPoke(router *gin.RouterGroup, s *ServeStrategy) {
 
 		AddSablierHeader(c, sessionState)
 
-		c.JSON(http.StatusOK, map[string]any{"session": sessionState})
+		c.JSON(http.StatusOK, NewSessionResponse(sessionState))
 	})
 }

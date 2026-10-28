@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -63,6 +64,23 @@ func TestStartPoke(t *testing.T) {
 		r := PerformRequest(app, "GET", "/api/strategies/poke?group=test")
 		assert.Equal(t, http.StatusOK, r.Code)
 		assert.Equal(t, SablierStatusNotReady, r.Header().Get(SablierStatusHeader))
+	})
+	t.Run("StartPokeReturnsSessionResponse", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		StartPoke(router, strategy)
+		session := &sablier.SessionState{
+			Instances: map[string]sablier.InstanceInfoWithError{
+				"web": {Instance: sablier.InstanceInfo{Name: "web", Status: sablier.InstanceStatusReady, CurrentReplicas: 1, DesiredReplicas: 1}},
+				"db":  {Instance: sablier.InstanceInfo{Name: "db"}, Error: errors.New("provider unavailable")},
+			},
+		}
+		m.EXPECT().RequestSessionGroup(gomock.Any(), "test", gomock.Any()).Return(session, nil)
+		r := PerformRequest(app, "GET", "/api/strategies/poke?group=test")
+		assert.Equal(t, http.StatusOK, r.Code)
+
+		var body SessionResponse
+		assert.NilError(t, json.Unmarshal(r.Body.Bytes(), &body))
+		assert.DeepEqual(t, NewSessionResponse(session), body)
 	})
 	t.Run("StartPokeErrGroupNotFound", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)
