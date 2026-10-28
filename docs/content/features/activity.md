@@ -84,7 +84,7 @@ services:
 
 - **With `--activity.enabled=false`, the default,** Sablier loads nothing and needs no extra privileges.
 
-The eBPF programs attach to each watched container's cgroup and only count: they never drop or change a packet. They live as long as Sablier's process, and when Sablier restarts, it attaches them again to the running watched containers.
+The eBPF programs attach to each watched container's cgroup and only count: they never drop or change a packet. They live as long as Sablier's process. When Sablier restarts, it attaches them again to the running watched containers, and their counts start again from zero. [`--provider.auto-stop-on-startup`](/reference/cli/#opt-provider-auto-stop-on-startup), `true` by default, still applies: at startup, Sablier stops the running containers it didn't start, traffic or not.
 
 ## What counts
 
@@ -94,10 +94,11 @@ Every `--activity.interval`, Sablier reads how many bytes each watched container
 - **Both directions count,** because a stream is almost all outgoing bytes.
 - **Some sources never count:**
   - loopback, `127.0.0.0/8` and `::1`, because Docker health checks run inside the container and reach the service over loopback;
-  - Sablier's own addresses, so its readiness checks don't keep anything running;
+  - Sablier's own addresses, so Sablier's own traffic never counts;
   - every container labeled `sablier.activity.ignore-source=true`, managed by Sablier or not, at its current IPs;
   - the address ranges in `--activity.ignore-cidrs`.
-- **Traffic never starts a stopped container.** Proxy plugins still do the starting.
+- **Traffic can't wake a stopped container.** A stopped container has no cgroup to count on, so proxy plugins still start it. But when a watched container is active, its refresh starts the stopped members of its groups, like a proxy request for the group would.
+- **Run Sablier in a container on a bridge network.** With `network_mode: host`, or with Sablier as a binary on the host, its own addresses include the host's IPs and the Docker bridge gateways. Traffic through published ports, which Docker's proxy forwards from the bridge gateway, and traffic from proxies on the host network would then be ignored.
 
 ### Pollers on the host network
 
@@ -168,21 +169,22 @@ Players buffer in bursts, so some intervals during playback stay under `min-byte
 
 ## Try it
 
-[`examples/activity`](https://github.com/sablierapp/sablier/tree/main/examples/activity) runs an nginx labeled for activity with a 30s `session-duration`, a poller labeled `sablier.activity.ignore-source=true` that fetches 1 MiB from it every 2s, and `--activity.interval=5s`. `make demo` downloads from nginx at 200 KB/s for 90s, then stops. On the Raspberry Pi 4:
+[`examples/activity`](https://github.com/sablierapp/sablier/tree/main/examples/activity) runs an nginx labeled for activity with a 30s `session-duration`, a poller labeled `sablier.activity.ignore-source=true` that fetches 1 MiB from it every 2s, and `--activity.interval=5s`. `make demo` downloads from nginx at 200 KB/s for 90s, then stops. On the Raspberry Pi 4, inside a privileged Docker-in-Docker container:
 
 - **During the download,** each interval carried about 1 MB, and the session never dropped below 28s left.
 - **After the download,** the session expired 31s after it stopped, 30s after the last interval that counted traffic.
 - **The poller never extended it:** it fetched 15.7 MB from nginx in that time, and the bytes counted stayed at 20.3 MB.
 
-Through a published port from the host, the same download arrived in bursts: Docker's proxy read the response ahead of the client, so Sablier counted 19.1 MB in the first 10s and the remaining time dipped to 18s between bursts, without expiring. The [example's README](https://github.com/sablierapp/sablier/tree/main/examples/activity) has both outputs.
+Through a published port from the host, the same download arrived in bursts: Sablier counted 19.1 MB in the first 10s, and the remaining time dipped to 18s between bursts, without expiring. Most likely, Docker's proxy reads the response ahead of the client. The [example's README](https://github.com/sablierapp/sablier/tree/main/examples/activity) has both outputs.
 
 ## Limitations
 
 - **Docker only.** The other providers don't support it yet, and Sablier refuses to start with `--activity.enabled` and another provider.
 - **One node.** Sablier must run on the same host as the containers it watches, against that host's kernel. Docker Swarm isn't supported.
+- **The Docker daemon's own host, and its cgroup tree.** Sablier must run on the same host as the Docker daemon, with the host's cgroup tree in sight. A remote `DOCKER_HOST`, a daemon-level `cgroup-parent` and rootless Docker aren't supported.
 - **Linux on amd64 or arm64.** The `linux/arm/v7` image refuses to start with `--activity.enabled`.
 - **cgroup v2.** Sablier refuses to start on a cgroup v1 host.
 - **Linux 5.8 or newer,** for `CAP_BPF`.
 - **Up to 256 watched containers at once.**
-- **When Sablier can't watch a container,** for example when its cgroup can't be found with rootless Docker, it logs a warning, keeps today's behavior for that container, and retries every 30s.
+- **When Sablier can't watch a container,** for example when its cgroup can't be found, it logs a warning, keeps today's behavior for that container, and retries every 30s.
 - **IPv6 packets with extension headers aren't counted.**

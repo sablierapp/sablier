@@ -53,7 +53,7 @@ The poller runs the whole time.
 
 ## What You'll See
 
-Output from a Raspberry Pi 4 (Docker 29.9.2, kernel 6.8.0-1065-raspi). Times are UTC.
+Output from a Raspberry Pi 4 with kernel 6.8.0-1065-raspi. The example ran inside a privileged Docker-in-Docker container (Docker 29.9.2) on the Pi's own Docker 29.7.1. Times are UTC.
 
 ```text
 ==> Opening a 30s session for the stream group...
@@ -109,7 +109,7 @@ stream: exited
     Meanwhile the poller fetched 14.7 MB from stream in 14 requests.
 ```
 
-The client still reads 200 KB/s, but `stream` sends in bursts. From the host, a published port goes through Docker's proxy, which reads the response ahead of the client: Sablier counted 19.1 MB in the first 10s, then the counter stood still for 10s or more at a time. Sablier counts what crosses the container's cgroup, so the intervals without traffic don't refresh the session, and the remaining time dips to 18s. The session still never expires, because the gaps between bursts are shorter than the 30s session duration.
+The client still reads 200 KB/s, but `stream` sends in bursts: Sablier counted 19.1 MB in the first 10s, then the counter stood still for 10s or more at a time. From the host, a published port goes through Docker's proxy, most likely reading the response ahead of the client. Sablier counts what crosses the container's cgroup, so the intervals without traffic don't refresh the session, and the remaining time dips to 18s. The session still never expires, because the gaps between bursts are shorter than the 30s session duration.
 
 Media players buffer the same way, so give `sablier.activity.session-duration` a margin over the longest gap between bursts. The [feature page](https://sablierapp.dev/features/activity/) has the numbers measured on Plex.
 
@@ -133,7 +133,7 @@ docker compose logs -f poller
 
 ## Notes
 
-- **Activity never starts a stopped container.** Once the session expires, Sablier stops `stream`, and the next proxy or API request starts it again.
+- **Traffic can't wake a stopped container.** A stopped container has no cgroup to count on: once the session expires, Sablier stops `stream`, and the next proxy or API request starts it again. When a watched container is active, though, its refresh starts the stopped members of its groups, like a proxy request for the group would.
 - **Sablier always ignores its own addresses and loopback.** Docker health checks run inside the container and reach the service over loopback, so they never count. In this example Sablier has its own container, so traffic from the host or from other containers counts.
 - **Label the entry point, not its dependencies.** Traffic on `stream` extends every member of its groups.
 - **Pick `sablier.activity.min-bytes` from `rate(sablier_activity_bytes_total[5m])`:** above what the container carries while idle, below what it carries in use.
