@@ -92,6 +92,30 @@ func Start(ctx context.Context, conf config.Config) error {
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 	s.DefaultSessionDuration = conf.Sessions.DefaultDuration
 
+	if conf.Activity.Enabled {
+		src, closer, err := setupActivity(conf.Activity, conf.Provider.Name, provider, logger)
+		if err != nil {
+			return err
+		}
+		watching := make(chan struct{})
+		go func() {
+			defer close(watching)
+			s.WatchActivity(ctx, src, conf.Activity.Interval)
+		}()
+		// Stop the loop before unloading the eBPF programs it reads.
+		defer func() {
+			stop()
+			<-watching
+			if err := closer.Close(); err != nil {
+				logger.ErrorContext(ctx, "cannot unload the activity eBPF programs", slog.Any("error", err))
+			}
+		}()
+		logger.InfoContext(ctx, "activity tracking enabled",
+			slog.Duration("interval", conf.Activity.Interval),
+			slog.Any("ignore_cidrs", conf.Activity.IgnoreCIDRs),
+		)
+	}
+
 	groups, err := provider.InstanceGroups(ctx)
 	if err != nil {
 		logger.WarnContext(ctx, "initial group scan failed", slog.Any("reason", err))

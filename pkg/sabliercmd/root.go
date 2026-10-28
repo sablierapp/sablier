@@ -119,6 +119,13 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("sessions.default-duration", startCmd.Flags().Lookup("sessions.default-duration"))
 	startCmd.Flags().DurationVar(&conf.Sessions.ExpirationInterval, "sessions.expiration-interval", time.Duration(20)*time.Second, "The expiration checking interval. Higher duration gives less stress on CPU. If you only use sessions of 1h, setting this to 5m is a good trade-off.")
 	_ = viper.BindPFlag("sessions.expiration-interval", startCmd.Flags().Lookup("sessions.expiration-interval"))
+	// Activity flags
+	startCmd.Flags().BoolVar(&conf.Activity.Enabled, "activity.enabled", false, "Count instance traffic with eBPF: traffic to instances labeled sablier.activity.enable=true opens or extends their sessions. Needs Linux (amd64 or arm64), cgroup v2, CAP_BPF, CAP_NET_ADMIN and the host cgroup namespace, and the Docker provider")
+	_ = viper.BindPFlag("activity.enabled", startCmd.Flags().Lookup("activity.enabled"))
+	startCmd.Flags().DurationVar(&conf.Activity.Interval, "activity.interval", 20*time.Second, "How often the activity counters are read. Must be greater than 0, and shorter than the activity session durations")
+	_ = viper.BindPFlag("activity.interval", startCmd.Flags().Lookup("activity.interval"))
+	startCmd.Flags().StringSliceVar(&conf.Activity.IgnoreCIDRs, "activity.ignore-cidrs", nil, "Source address ranges whose traffic never counts as activity, for clients that are not containers (e.g. 192.168.1.10/32 for a poller on the host network)")
+	_ = viper.BindPFlag("activity.ignore-cidrs", startCmd.Flags().Lookup("activity.ignore-cidrs"))
 
 	// logging level
 	rootCmd.PersistentFlags().StringVar(&conf.Logging.Level, "logging.level", strings.ToLower(slog.LevelInfo.String()), "The logging level. Can be one of [error, warn, info, debug]")
@@ -203,10 +210,18 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			if f.Value.Type() == "stringSlice" {
-				// A slice must be re-encoded as CSV (with quoting when
-				// needed); fmt.Sprintf("%v", ...) would produce Go slice
-				// syntax like "[a b c]" that the flag cannot parse back.
-				_ = cmd.Flags().Set(f.Name, stringSliceToString(v.GetStringSlice(f.Name)))
+				if s, ok := v.Get(f.Name).(string); ok {
+					// An environment variable holds the flag's own
+					// comma-separated syntax: GetStringSlice would split it
+					// on whitespace instead.
+					_ = cmd.Flags().Set(f.Name, s)
+				} else {
+					// A configuration file list must be re-encoded as CSV
+					// (with quoting when needed); fmt.Sprintf("%v", ...)
+					// would produce Go slice syntax like "[a b c]" that the
+					// flag cannot parse back.
+					_ = cmd.Flags().Set(f.Name, stringSliceToString(v.GetStringSlice(f.Name)))
+				}
 			} else {
 				val := v.Get(f.Name)
 				_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))

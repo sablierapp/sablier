@@ -172,6 +172,9 @@ func TestPrecedence(t *testing.T) {
 			"--strategy.dynamic.default-refresh-frequency", "3h",
 			"--strategy.blocking.default-timeout", "3h",
 			"--strategy.blocking.default-refresh-frequency", "3h",
+			"--activity.enabled=true",
+			"--activity.interval", "3h",
+			"--activity.ignore-cidrs", "10.3.0.0/16,192.168.3.0/24",
 		})
 		_ = cmd.Execute()
 

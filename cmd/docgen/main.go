@@ -42,7 +42,7 @@ type option struct {
 }
 
 // categoryOrder is the fixed section order for the configuration options.
-var categoryOrder = []string{"General", "Logging", "Provider", "Server", "Sessions", "Storage", "Strategy", "Tracing"}
+var categoryOrder = []string{"General", "Activity", "Logging", "Provider", "Server", "Sessions", "Storage", "Strategy", "Tracing"}
 
 // enumValues lists the accepted values for the options that take a fixed set,
 // sourced from the code where possible so the list never drifts.
@@ -251,6 +251,8 @@ func categoryOf(name string) string {
 		seg = before
 	}
 	switch seg {
+	case "activity":
+		return "Activity"
 	case "logging":
 		return "Logging"
 	case "provider":

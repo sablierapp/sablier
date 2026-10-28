@@ -26,5 +26,5 @@ jobs:
             go.sum
             tools.mod
 
-      - name: Run eBPF kernel tests
-        run: go test -tags=nomsgpack -exec sudo -run 'TestCounter|TestTracker' ./pkg/activity/bpf/
+      - name: Run eBPF kernel and activity integration tests
+        run: go test -tags=nomsgpack -exec sudo -run 'TestCounter|TestTracker|TestActivity' ./pkg/activity/bpf/ ./pkg/activity/
