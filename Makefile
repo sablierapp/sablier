@@ -34,13 +34,15 @@ openapi:
 check-openapi:
 	@go run ./cmd/openapigen | diff - docs/static/openapi.json || (echo "docs/static/openapi.json is out of date. Run 'make openapi' to regenerate."; exit 1)
 
-# The Go client in client/ is generated from the OpenAPI spec, so regenerate
-# it after `make openapi`.
+# The Go client's types in client/ are generated from the OpenAPI spec, so
+# regenerate them after `make openapi`.
 client:
 	cd client && go generate ./...
 
+# Also fails if the client gains a dependency: it must stay standard library only.
 check-client:
-	@go tool -modfile=tools.mod oapi-codegen -config client/oapi-codegen.yaml docs/static/openapi.json | diff - client/client.gen.go || (echo "client/client.gen.go is out of date. Run 'make client' to regenerate."; exit 1)
+	@go tool -modfile=tools.mod oapi-codegen -config client/oapi-codegen.yaml docs/static/openapi.json | diff - client/types.gen.go || (echo "client/types.gen.go is out of date. Run 'make client' to regenerate."; exit 1)
+	@! grep -q '^require' client/go.mod || (echo "client/go.mod must not require anything: the client is standard library only."; exit 1)
 
 metrics-docs:
 	go run ./cmd/metricsgen -out docs/content/features/metrics.md

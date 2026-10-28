@@ -35,7 +35,6 @@ jobs:
         cache-dependency-path: |
           go.sum
           tools.mod
-          client/go.sum
 
     - name: Verify generated docs are up to date
       run: make check-generate
