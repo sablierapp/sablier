@@ -3,6 +3,7 @@ updates:
   - package-ecosystem: "gomod"
     directories:
       - "/"
+      - "/client"
     schedule:
       interval: "daily"
     groups:
