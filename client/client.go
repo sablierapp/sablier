@@ -49,7 +49,8 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) { c.httpClient = httpClient }
 }
 
-// WithUserAgent sets the User-Agent header sent to Sablier.
+// WithUserAgent sets the User-Agent header sent to Sablier. It defaults to
+// "sablier-go-client/" followed by Version.
 func WithUserAgent(userAgent string) Option {
 	return func(c *Client) { c.userAgent = userAgent }
 }
@@ -69,7 +70,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c := &Client{
 		baseURL:    u,
 		httpClient: http.DefaultClient,
-		userAgent:  "sablier-go-client",
+		userAgent:  "sablier-go-client/" + Version,
 	}
 	for _, opt := range opts {
 		opt(c)
