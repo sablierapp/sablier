@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/config"
+	"github.com/sablierapp/sablier/pkg/provider/podman"
 	"github.com/sablierapp/sablier/pkg/provider/providertest"
+	"github.com/sablierapp/sablier/pkg/sablier"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
@@ -43,6 +45,21 @@ func TestSetupActivity_ProviderWithoutActivityHost(t *testing.T) {
 	src, closer, err := setupActivity(conf, "kubernetes", p, slog.New(slog.DiscardHandler))
 
 	assertActivityError(t, err, "does not support activity tracking", `"kubernetes"`)
+	assert.Assert(t, src == nil)
+	assert.Assert(t, closer == nil)
+}
+
+// Podman embeds the Docker provider, so it implements sablier.ActivityHost, but
+// its containers' cgroups aren't where the Docker provider computes them.
+func TestSetupActivity_PodmanIsRejected(t *testing.T) {
+	var p sablier.Provider = &podman.Provider{}
+	_, isHost := p.(sablier.ActivityHost)
+	assert.Assert(t, isHost, "the test needs a provider that implements sablier.ActivityHost")
+	conf := config.Activity{Enabled: true, Interval: 20 * time.Second}
+
+	src, closer, err := setupActivity(conf, "podman", p, slog.New(slog.DiscardHandler))
+
+	assertActivityError(t, err, `provider "podman"`, "activity tracking is Docker-only")
 	assert.Assert(t, src == nil)
 	assert.Assert(t, closer == nil)
 }
