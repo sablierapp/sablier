@@ -1,6 +1,6 @@
 .PHONY: download install add uninstall start status logs
 
-SABLIER_VERSION := 1.19.0 # x-release-please-version
+SABLIER_VERSION := 1.19.1 # x-release-please-version
 VERSION := $(strip $(SABLIER_VERSION))
 ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/' -e 's/armv7l/armv7/')
 
