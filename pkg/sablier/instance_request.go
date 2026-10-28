@@ -285,6 +285,17 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			if err != nil {
 				return InstanceInfo{}, err
 			}
+			// A stopped instance with an active session and no start in progress
+			// means its start failed (or was lost): intentional stops (expiration,
+			// anti-affinity, stop events) drop the session first. Start it again
+			// rather than extending a session that would only ever inspect.
+			if state.Status == InstanceStatusStopped {
+				s.l.WarnContext(ctx, "instance is stopped while its session is active, starting it again", slog.String("instance", name))
+				state, err = s.requestStart(ctx, name, rejectUnlabeled)
+				if err != nil {
+					return InstanceInfo{}, err
+				}
+			}
 			if state.Status == InstanceStatusReady {
 				s.metrics.RecordReadyWaitEnd(name)
 				// First transition to ready — stamp the time so ReadyAfter can be enforced.

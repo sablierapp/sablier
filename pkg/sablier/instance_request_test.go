@@ -792,3 +792,84 @@ func TestInstanceRequest_ResolvesInstanceNameBeforeSessionLookup(t *testing.T) {
 	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusReady))
 	assert.Equal(t, info.Name, "web")
 }
+
+// A start that fails while the session is kept (e.g. a Kubernetes update
+// conflict) must not leave the instance stopped for the rest of the session:
+// once the error has been surfaced, the next request sees the instance stopped
+// with no start in progress and starts it again.
+func TestInstanceRequest_StartFailedWithActiveSession_StartsAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "hub", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "kubernetes",
+		}
+		starting := stoppedInfo
+		starting.Status = sablier.InstanceStatusStarting
+		restarted := make(chan struct{})
+
+		gomock.InOrder(
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(errors.New("the object has been modified")),
+			provider.EXPECT().InstanceStart(gomock.Any(), "hub").DoAndReturn(func(_ any, _ string) error {
+				close(restarted)
+				return nil
+			}),
+		)
+		// Inspected by the 1st request's start, the 3rd request's status check,
+		// and the 3rd request's start.
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(stoppedInfo, nil).Times(3)
+
+		// 1st request: no session, the async start fails.
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil).Times(2)
+		_, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		synctest.Wait()
+
+		// The session is still there for the following requests.
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil).Times(2)
+
+		// 2nd request: the failure is surfaced once.
+		_, err = manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.ErrorContains(t, err, "instance start failed: the object has been modified")
+
+		// 3rd request: stopped, no start pending -> started again.
+		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+		select {
+		case <-restarted:
+		case <-time.After(5 * time.Second):
+			t.Fatal("instance was never started again")
+		}
+		synctest.Wait()
+	})
+}
+
+// Only a stopped instance is started again: an instance that is starting,
+// errored or completed keeps the existing inspect-only behaviour.
+func TestInstanceRequest_ExistingSession_NotStoppedIsNotStartedAgain(t *testing.T) {
+	for _, status := range []sablier.InstanceStatus{
+		sablier.InstanceStatusStarting,
+		sablier.InstanceStatusError,
+		sablier.InstanceStatusCompleted,
+	} {
+		t.Run(string(status), func(t *testing.T) {
+			manager, sessions, provider := setupSablier(t)
+			ctx := t.Context()
+
+			inspected := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: status}
+			sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil)
+			provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(inspected, nil)
+			sessions.EXPECT().Put(ctx, inspected, time.Minute).Return(nil)
+			// No InstanceStart expectation: the strict mock fails the test if it is called.
+
+			info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+			assert.NilError(t, err)
+			assert.Equal(t, info.Status, status)
+		})
+	}
+}
