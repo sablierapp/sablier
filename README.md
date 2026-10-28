@@ -9,7 +9,7 @@ Free and open-source software that starts workloads on demand and stops them aft
 
 It integrates with [reverse proxy plugins](#usage-with-reverse-proxies) (Traefik, Caddy, Nginx, Envoy, etc.) to intercept incoming requests, wake up sleeping workloads, and display a waiting page until they're ready.
 
-![Demo](./docs/assets/img/demo.gif)
+![Demo](./docs/static/assets/img/demo.gif)
 
 Whether you're running on a resource-constrained device like a **Raspberry Pi**, managing a **QA environment** used only once a week, or reducing cloud costs by scaling idle workloads to zero — Sablier is built for you.
 
@@ -75,7 +75,7 @@ You can install Sablier using one of the following methods:
 
 ### Use the Docker image
 
-<img src="./docs/assets/img/docker.svg" alt="Helm" width="100" align="right" />
+<img src="./docs/static/assets/img/docker.svg" alt="Helm" width="100" align="right" />
 
 <!-- x-release-please-start-version -->
 ![Docker Pulls](https://img.shields.io/docker/pulls/sablierapp/sablier)
@@ -117,7 +117,7 @@ docker run -p 10000:10000 -v /var/run/docker.sock:/var/run/docker.sock sablierap
 
 ### Use the binary distribution
 
-<img src="./docs/assets/img/github.svg" alt="Helm" width="100" align="right" />
+<img src="./docs/static/assets/img/github.svg" alt="Helm" width="100" align="right" />
 
 Grab the latest binary from the [releases](https://github.com/sablierapp/sablier/releases) page and run it:
 
@@ -143,7 +143,7 @@ make
 
 ### Use the Helm Chart
 
-<img src="./docs/assets/img/helm.png" alt="Helm" width="100" align="right" />
+<img src="./docs/static/assets/img/helm.png" alt="Helm" width="100" align="right" />
 
 Deploy Sablier to your Kubernetes cluster using the official Helm chart for production-ready deployments.
 
@@ -406,7 +406,7 @@ TODO: Add link to full auto-generated reference
 
 ### Docker
 
-<img src="./docs/assets/img/docker.svg" alt="Docker" width="100" align="right" />
+<img src="./docs/static/assets/img/docker.svg" alt="Docker" width="100" align="right" />
 
 Sablier integrates seamlessly with Docker Engine to manage container lifecycle based on demand.
 
@@ -421,7 +421,7 @@ Sablier integrates seamlessly with Docker Engine to manage container lifecycle b
 
 ### Docker Swarm
 
-<img src="./docs/assets/img/docker_swarm.png" alt="Docker Swarm" width="100" align="right" />
+<img src="./docs/static/assets/img/docker_swarm.png" alt="Docker Swarm" width="100" align="right" />
 
 Sablier supports Docker Swarm mode for managing services across a cluster of Docker engines.
 
@@ -436,7 +436,7 @@ Sablier supports Docker Swarm mode for managing services across a cluster of Doc
 
 ### Podman
 
-<img src="./docs/assets/img/podman.png" alt="Podman" width="100" align="right" />
+<img src="./docs/static/assets/img/podman.png" alt="Podman" width="100" align="right" />
 
 Sablier works with Podman, the daemonless container engine, providing the same dynamic scaling capabilities as Docker.
 
@@ -451,7 +451,7 @@ Sablier works with Podman, the daemonless container engine, providing the same d
 
 ### Kubernetes
 
-<img src="./docs/assets/img/kubernetes.png" alt="Kubernetes" width="100" align="right" />
+<img src="./docs/static/assets/img/kubernetes.png" alt="Kubernetes" width="100" align="right" />
 
 Sablier provides native Kubernetes support for managing deployments, scaling workloads dynamically.
 
@@ -466,7 +466,7 @@ Sablier provides native Kubernetes support for managing deployments, scaling wor
 
 ### Proxmox LXC
 
-<img src="./docs/assets/img/proxmox.png" alt="Proxmox" width="100" align="right" />
+<img src="./docs/static/assets/img/proxmox.png" alt="Proxmox" width="100" align="right" />
 
 Sablier supports Proxmox VE for managing LXC containers on demand via the Proxmox API.
 
@@ -639,7 +639,7 @@ These plugins intercept incoming requests, call the Sablier API to start sleepin
 
 ### Apache APISIX
 
-<img src="./docs/assets/img/apacheapisix.png" alt="Apache APISIX" width="100" align="right" />
+<img src="./docs/static/assets/img/apacheapisix.png" alt="Apache APISIX" width="100" align="right" />
 
 Sablier integrates with Apache APISIX through a Proxy-WASM plugin, enabling dynamic scaling for your services.
 
@@ -654,7 +654,7 @@ Sablier integrates with Apache APISIX through a Proxy-WASM plugin, enabling dyna
 
 ### Caddy
 
-<img src="./docs/assets/img/caddy.png" alt="Caddy" width="100" align="right" />
+<img src="./docs/static/assets/img/caddy.png" alt="Caddy" width="100" align="right" />
 
 Sablier provides a native Caddy module for seamless integration with Caddy v2.
 
@@ -669,7 +669,7 @@ Sablier provides a native Caddy module for seamless integration with Caddy v2.
 
 ### Envoy
 
-<img src="./docs/assets/img/envoy.png" alt="Envoy" width="100" align="right" />
+<img src="./docs/static/assets/img/envoy.png" alt="Envoy" width="100" align="right" />
 
 Sablier integrates with Envoy Proxy through a Proxy-WASM plugin for high-performance dynamic scaling.
 
@@ -684,7 +684,7 @@ Sablier integrates with Envoy Proxy through a Proxy-WASM plugin for high-perform
 
 ### Istio
 
-<img src="./docs/assets/img/istio.png" alt="Istio" width="100" align="right" />
+<img src="./docs/static/assets/img/istio.png" alt="Istio" width="100" align="right" />
 
 Sablier works with Istio service mesh using the Proxy-WASM plugin for intelligent traffic management.
 
@@ -699,7 +699,7 @@ Sablier works with Istio service mesh using the Proxy-WASM plugin for intelligen
 
 ### Nginx
 
-<img src="./docs/assets/img/nginx.svg" alt="Nginx" width="100" align="right" />
+<img src="./docs/static/assets/img/nginx.svg" alt="Nginx" width="100" align="right" />
 
 Sablier integrates with Nginx through a WASM module, bringing dynamic scaling to your Nginx deployments.
 
@@ -714,7 +714,7 @@ Sablier integrates with Nginx through a WASM module, bringing dynamic scaling to
 
 ### Traefik
 
-<img src="./docs/assets/img/traefik.png" alt="Traefik" width="100" align="right" />
+<img src="./docs/static/assets/img/traefik.png" alt="Traefik" width="100" align="right" />
 
 Sablier provides a powerful middleware plugin for Traefik, the cloud-native application proxy.
 
