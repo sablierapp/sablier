@@ -45,7 +45,7 @@ func New() (*Tracker, error) {
 		return nil, errors.New("cgroup v2 required")
 	}
 	if err := rlimit.RemoveMemlock(); err != nil {
-		return nil, fmt.Errorf("remove the memlock limit: %w", err)
+		return nil, fmt.Errorf("remove the memlock limit (%s; before Linux 5.11 also CAP_SYS_RESOURCE): %w", privilegesHint, err)
 	}
 	spec, err := loadCounter()
 	if err != nil {

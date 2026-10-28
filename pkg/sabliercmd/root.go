@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/sablierapp/sablier/pkg/config"
 	"github.com/spf13/cobra"
@@ -210,18 +211,18 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			if f.Value.Type() == "stringSlice" {
+				values := v.GetStringSlice(f.Name)
 				if s, ok := v.Get(f.Name).(string); ok {
-					// An environment variable holds the flag's own
-					// comma-separated syntax: GetStringSlice would split it
-					// on whitespace instead.
-					_ = cmd.Flags().Set(f.Name, s)
-				} else {
-					// A configuration file list must be re-encoded as CSV
-					// (with quoting when needed); fmt.Sprintf("%v", ...)
-					// would produce Go slice syntax like "[a b c]" that the
-					// flag cannot parse back.
-					_ = cmd.Flags().Set(f.Name, stringSliceToString(v.GetStringSlice(f.Name)))
+					// A string (an environment variable) is split on
+					// commas, like the flag, and on whitespace, which
+					// GetStringSlice alone did and older configurations
+					// rely on. No stringSlice value contains either.
+					values = strings.FieldsFunc(s, func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
 				}
+				// A slice must be re-encoded as CSV (with quoting when
+				// needed); fmt.Sprintf("%v", ...) would produce Go slice
+				// syntax like "[a b c]" that the flag cannot parse back.
+				_ = cmd.Flags().Set(f.Name, stringSliceToString(values))
 			} else {
 				val := v.Get(f.Name)
 				_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
