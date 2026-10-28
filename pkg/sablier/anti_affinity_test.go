@@ -591,6 +591,23 @@ func TestInstanceRequest_HeldByAntiAffinity(t *testing.T) {
 	assert.ErrorIs(t, getErr, store.ErrKeyNotFound, "held instance must not get a session")
 }
 
+// A held instance whose session outlived a stop must not be started again by
+// the request path's stopped-instance recovery.
+func TestInstanceRequest_HeldByAntiAffinity_WithStoppedSession(t *testing.T) {
+	s, st, p := setupAntiAffinity(t)
+	ctx := context.Background()
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+	st.session("plex") // antagonist active
+	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+	p.inspect = map[string]InstanceInfo{"nextcloud": {Name: "nextcloud", Status: InstanceStatusStopped}}
+
+	info, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Status, InstanceStatusNotReady)
+	assert.Equal(t, len(p.snapshotStarted()), 0, "held instance must not be started")
+}
+
 func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s, st, _ := setupAntiAffinity(t)
