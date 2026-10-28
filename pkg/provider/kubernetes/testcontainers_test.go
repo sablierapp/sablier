@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/k3s"
 	v1 "k8s.io/api/apps/v1"
@@ -150,7 +151,15 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 
-	kind, err := k3s.Run(ctx, "rancher/k3s:v1.36.0-k3s1")
+	// The kubelet opens /dev/kmsg only to watch for OOM kills, and refuses to
+	// start when it cannot. Some CI hosts deny it even to privileged containers
+	// ("open /dev/kmsg: operation not permitted"), so hand it /dev/null instead:
+	// the tests never rely on OOM events.
+	kind, err := k3s.Run(ctx, "rancher/k3s:v1.36.0-k3s1",
+		testcontainers.WithHostConfigModifier(func(hc *container.HostConfig) {
+			hc.Binds = append(hc.Binds, "/dev/null:/dev/kmsg")
+		}),
+	)
 	if err != nil {
 		log.Fatalf("failed to start k3s: %v", err)
 	}
