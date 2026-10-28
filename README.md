@@ -343,9 +343,11 @@ tracing:
   enabled: false
   # exporterType selects the trace backend: "otlphttp" (default) or "stdout".
   exporterType: otlphttp
-  # endpoint is the OTLP collector base URL (scheme + host + optional port).
+  # endpoint is the OTLP collector URL. Without a path, traces are sent to /v1/traces;
+  # a path is used as is.
   # For Jaeger: http://jaeger:4318
   # For Grafana Tempo: http://tempo:4318
+  # For VictoriaTraces: http://victoriatraces:10428/insert/opentelemetry/v1/traces
   endpoint: http://localhost:4318
   # serviceName is the logical name that appears in the tracing backend.
   serviceName: sablier

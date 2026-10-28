@@ -110,6 +110,11 @@ func buildExporter(ctx context.Context, cfg config.Tracing) (sdktrace.SpanExport
 // buildOTLPHTTPExporter parses the endpoint URL and creates the OTLP HTTP
 // exporter. The endpoint may include a scheme ("http://" or "https://"); if
 // the scheme is "http" the exporter is configured without TLS.
+//
+// A base URL without a path ("http://collector:4318") posts to the default
+// "/v1/traces" path. Any other path is used as is, so backends that serve
+// OTLP under a prefix can be targeted directly
+// ("http://victoriatraces:10428/insert/opentelemetry/v1/traces").
 func buildOTLPHTTPExporter(ctx context.Context, endpoint string) (sdktrace.SpanExporter, error) {
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
@@ -118,6 +123,9 @@ func buildOTLPHTTPExporter(ctx context.Context, endpoint string) (sdktrace.SpanE
 
 	opts := []otlptracehttp.Option{
 		otlptracehttp.WithEndpoint(parsed.Host),
+	}
+	if parsed.Path != "" && parsed.Path != "/" {
+		opts = append(opts, otlptracehttp.WithURLPath(parsed.Path))
 	}
 	if parsed.Scheme == "http" {
 		opts = append(opts, otlptracehttp.WithInsecure())

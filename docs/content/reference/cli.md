@@ -973,7 +973,7 @@ SABLIER_STRATEGY_DYNAMIC_SHOW_DETAILS_BY_DEFAULT=true
 | Option | Description |
 |--------|-------------|
 | [`--tracing.enabled`](#opt-tracing-enabled) | Enable OpenTelemetry distributed tracing |
-| [`--tracing.endpoint`](#opt-tracing-endpoint) | OTLP collector base URL (used when tracing.exporter-type=otlphttp) |
+| [`--tracing.endpoint`](#opt-tracing-endpoint) | OTLP collector URL; /v1/traces is appended when it has no path (used when tracing.exporter-type=otlphttp) |
 | [`--tracing.exporter-type`](#opt-tracing-exporter-type) | Trace exporter backend: otlphttp or stdout |
 | [`--tracing.sampling-rate`](#opt-tracing-sampling-rate) | Fraction of traces to sample (0.0-1.0) |
 | [`--tracing.service-name`](#opt-tracing-service-name) | Service name reported to the tracing backend |
@@ -1000,7 +1000,7 @@ SABLIER_TRACING_ENABLED=false
 
 ### `--tracing.endpoint` {#opt-tracing-endpoint}
 
-OTLP collector base URL (used when tracing.exporter-type=otlphttp)
+OTLP collector URL; /v1/traces is appended when it has no path (used when tracing.exporter-type=otlphttp)
 
 {{< badge "string" >}} {{< badge content="Default: http://localhost:4318" >}} {{< badge content="Since v1.13.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.13.0" >}}
 

@@ -13,7 +13,7 @@ Sablier supports distributed tracing via [OpenTelemetry](https://opentelemetry.i
 tracing:
   enabled: true
   exporter-type: otlphttp        # otlphttp (default) or stdout
-  endpoint: http://localhost:4318   # OTLP collector base URL
+  endpoint: http://localhost:4318   # OTLP collector URL
   service-name: sablier          # appears in the tracing UI
   sampling-rate: 1.0             # 0.0 = nothing, 1.0 = everything
 ```
@@ -56,7 +56,7 @@ for the canonical list of options.
 |----------|---------|-------------|
 | `SABLIER_TRACING_ENABLED` | `false` | Enable tracing |
 | `SABLIER_TRACING_EXPORTER_TYPE` | `otlphttp` | `otlphttp` or `stdout` |
-| `SABLIER_TRACING_ENDPOINT` | `http://localhost:4318` | OTLP collector base URL |
+| `SABLIER_TRACING_ENDPOINT` | `http://localhost:4318` | OTLP collector URL (`/v1/traces` is appended when it has no path) |
 | `SABLIER_TRACING_SERVICE_NAME` | `sablier` | Service name in the tracing backend |
 | `SABLIER_TRACING_SAMPLING_RATE` | `1.0` | Fraction of traces to sample (0.0-1.0) |
 
@@ -81,8 +81,8 @@ Exports traces using the OTLP/HTTP protocol. Compatible with:
 - **OpenTelemetry Collector** (configure an `otlp` receiver)
 - **Datadog Agent**, **New Relic**, **Honeycomb**, and most modern APM tools
 
-The `endpoint` must be the **base URL of the collector** (scheme + host + port).
-Sablier appends `/v1/traces` automatically:
+When the `endpoint` is a **base URL** (scheme + host + port, no path),
+Sablier appends `/v1/traces`:
 
 ```yaml
 tracing:
@@ -99,6 +99,20 @@ tracing:
   exporter-type: otlphttp
   endpoint: https://otel-collector.example.com:4318
 ```
+
+Some backends serve OTLP under a prefix. When the `endpoint` has a path, Sablier
+uses it **as is** and appends nothing, so give the full path including
+`/v1/traces`:
+
+```yaml
+tracing:
+  enabled: true
+  exporter-type: otlphttp
+  # VictoriaTraces
+  endpoint: http://victoriatraces:10428/insert/opentelemetry/v1/traces
+```
+
+A trailing slash alone (`http://otel-collector:4318/`) counts as no path.
 
 ### `stdout`
 
