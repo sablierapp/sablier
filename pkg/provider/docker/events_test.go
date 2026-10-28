@@ -24,7 +24,7 @@ func TestDockerClassicProvider_InstanceEvents(t *testing.T) {
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
@@ -65,7 +65,7 @@ func TestDockerClassicProvider_InstanceEvents_Started(t *testing.T) {
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
@@ -106,7 +106,7 @@ func TestDockerClassicProvider_InstanceEvents_Created(t *testing.T) {
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
@@ -135,7 +135,7 @@ func TestDockerClassicProvider_InstanceEvents_Removed(t *testing.T) {
 	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
 	assert.NilError(t, err)
 
-	c, err := dind.CreateMimic(ctx, MimicOptions{})
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "true"}})
 	assert.NilError(t, err)
 
 	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
@@ -157,5 +157,49 @@ func TestDockerClassicProvider_InstanceEvents_Removed(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	case <-ctx.Done():
 		t.Fatalf("timed out waiting for container removed event: %v", ctx.Err())
+	}
+}
+
+func TestDockerClassicProvider_InstanceEvents_IgnoresUnmanaged(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{})
+
+	// Run an unmanaged container through its whole lifecycle first. Events
+	// arrive in order, so the managed container's created event can only be
+	// the first one received if every unmanaged event was filtered out.
+	unmanaged, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "false"}})
+	assert.NilError(t, err)
+	_, err = dind.client.ContainerStart(ctx, unmanaged.ID, client.ContainerStartOptions{})
+	assert.NilError(t, err)
+	err = WaitForContainerRunning(ctx, dind.client, unmanaged.ID)
+	assert.NilError(t, err)
+	_, err = dind.client.ContainerStop(ctx, unmanaged.ID, client.ContainerStopOptions{})
+	assert.NilError(t, err)
+	_, err = dind.client.ContainerRemove(ctx, unmanaged.ID, client.ContainerRemoveOptions{})
+	assert.NilError(t, err)
+
+	managed, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{sablier.LabelEnable: "true"}})
+	assert.NilError(t, err)
+	inspected, err := dind.client.ContainerInspect(ctx, managed.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+
+	select {
+	case info := <-stream.Events:
+		assert.Equal(t, info.Type, provider.InstanceEventCreated)
+		assert.Equal(t, "/"+info.Info.Name, inspected.Container.Name)
+		assert.Assert(t, info.Info.IsEnabled())
+	case err := <-stream.Err:
+		t.Fatalf("unexpected error: %v", err)
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for managed container created event: %v", ctx.Err())
 	}
 }
