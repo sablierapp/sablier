@@ -203,3 +203,20 @@ func TestInstanceList_AntiAffinity(t *testing.T) {
 		{Name: "plex/web", Groups: []string{"default"}, Enabled: "true"},
 	})
 }
+
+// The running-hours watch skips listed instances without RunningHours before
+// inspecting them, so the list has to report it.
+func TestInstanceList_RunningHours(t *testing.T) {
+	m := newMockNomad(t)
+	m.addJob(serviceJob("backup", 1, map[string]string{"sablier.enable": "true", "sablier.running-hours": "02:00-04:00"}))
+	m.addJob(serviceJob("plex", 1, enabledMeta))
+	p := m.provider(t)
+
+	instances, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+
+	assert.NilError(t, err)
+	assert.DeepEqual(t, instances, []sablier.InstanceConfiguration{
+		{Name: "backup/web", Groups: []string{"default"}, Enabled: "true", RunningHours: "02:00-04:00"},
+		{Name: "plex/web", Groups: []string{"default"}, Enabled: "true"},
+	})
+}

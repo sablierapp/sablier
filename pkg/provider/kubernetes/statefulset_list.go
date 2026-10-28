@@ -35,23 +35,8 @@ func statefulSetIsRunning(ss *v1.StatefulSet) bool {
 }
 
 func (p *Provider) statefulSetToInstance(ss *v1.StatefulSet) sablier.InstanceConfiguration {
-	config := sablierConfig(ss.Labels, ss.Annotations)
-	enabled := config[sablier.LabelEnable]
-	var groups, antiAffinity []string
-	if enabled == "true" {
-		groups = sablier.ParseGroups(config[sablier.LabelGroup])
-		antiAffinity = sablier.ParseAntiAffinity(config[sablier.LabelAntiAffinity])
-	}
-
 	parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
-
-	return sablier.InstanceConfiguration{
-		Name:         parsed.Original,
-		Groups:       groups,
-		Enabled:      enabled,
-		RunningHours: config[sablier.LabelRunningHours],
-		AntiAffinity: antiAffinity,
-	}
+	return sablier.InstanceConfigurationFromLabels(parsed.Original, sablierConfig(ss.Labels, ss.Annotations))
 }
 
 func (p *Provider) StatefulSetGroups(ctx context.Context) (map[string][]string, error) {

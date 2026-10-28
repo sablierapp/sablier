@@ -26,20 +26,7 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 }
 
 func unitToInstance(u Unit) sablier.InstanceConfiguration {
-	enabled := u.labels[sablier.LabelEnable]
-	var groups, antiAffinity []string
-	if enabled == "true" {
-		groups = sablier.ParseGroups(u.labels[sablier.LabelGroup])
-		antiAffinity = sablier.ParseAntiAffinity(u.labels[sablier.LabelAntiAffinity])
-	}
-
-	return sablier.InstanceConfiguration{
-		Name:         u.status.Name,
-		Groups:       groups,
-		Enabled:      enabled,
-		RunningHours: u.labels[sablier.LabelRunningHours],
-		AntiAffinity: antiAffinity,
-	}
+	return sablier.InstanceConfigurationFromLabels(u.status.Name, u.labels)
 }
 
 func (p *Provider) InstanceGroups(ctx context.Context) (map[string][]string, error) {

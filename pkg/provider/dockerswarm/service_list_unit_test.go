@@ -24,8 +24,10 @@ func TestServiceToInstance_AntiAffinity(t *testing.T) {
 			labels: map[string]string{sablier.LabelEnable: "true"},
 		},
 		{
+			// Same as the inspect path (sablier.InstanceConfigFromLabels).
 			name:   "disabled with anti-affinity",
 			labels: map[string]string{sablier.LabelEnable: "false", sablier.LabelAntiAffinity: "streaming"},
+			want:   []string{"streaming"},
 		},
 	}
 	p := &Provider{}

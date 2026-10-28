@@ -32,13 +32,11 @@ func (p *Provider) statefulSetEventHandler(ctx context.Context, instance chan<- 
 				return
 			}
 			parsed := StatefulSetName(ss, ParseOptions{Delimiter: p.delimiter})
-			info, err := p.InstanceInspect(ctx, parsed.Original)
-			if err != nil {
-				p.l.WarnContext(ctx, "inspect after add event failed, using bare info", "statefulset", parsed.Original, "error", err)
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: parsed.Original, Provider: sablier.ProviderKubernetes}}
-				return
-			}
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
+			// Build the info from the event object, as inspect would, instead of
+			// fetching it again: the informer is not filtered by label, so its
+			// initial sync delivers every statefulset in the cluster, and a GET for
+			// each would queue behind the client-side rate limiter.
+			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: p.statefulSetInfo(ss, parsed)}
 		},
 		UpdateFunc: func(old, new any) {
 			newStatefulSet, ok := eventObject[*appsv1.StatefulSet](new)

@@ -55,7 +55,16 @@ func clusterFromObject(obj any) (*unstructured.Unstructured, bool) {
 }
 
 func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.SharedIndexInformer {
-	handler := cache.ResourceEventHandlerFuncs{
+	handler := p.clusterEventHandler(ctx, instance, wantStopped, wantStarted, wantCreated, wantRemoved)
+	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(p.dynamic, informerResync, metav1.NamespaceAll, nil)
+	informer := factory.ForResource(cnpgClusterGVR).Informer()
+
+	_, _ = informer.AddEventHandler(handler)
+	return informer
+}
+
+func (p *Provider) clusterEventHandler(ctx context.Context, instance chan<- sablier.InstanceEvent, wantStopped, wantStarted, wantCreated, wantRemoved bool) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			if !wantCreated {
 				return
@@ -65,13 +74,11 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 				return
 			}
 			parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
-			info, err := p.InstanceInspect(ctx, parsed.Original)
-			if err != nil {
-				p.l.WarnContext(ctx, "inspect after add event failed, using bare info", "cnpgcluster", parsed.Original, "error", err)
-				instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: parsed.Original, Provider: sablier.ProviderKubernetes}}
-				return
-			}
-			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: info}
+			// Build the info from the event object, as inspect would, instead of
+			// fetching it again: the informer is not filtered by label, so its
+			// initial sync delivers every cnpgcluster in the cluster, and a GET for
+			// each would queue behind the client-side rate limiter.
+			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: p.clusterInfo(u, parsed)}
 		},
 		UpdateFunc: func(old, new any) {
 			newCluster, ok := clusterFromObject(new)
@@ -143,10 +150,4 @@ func (p *Provider) watchClusters(ctx context.Context, instance chan<- sablier.In
 			}
 		},
 	}
-
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(p.dynamic, informerResync, metav1.NamespaceAll, nil)
-	informer := factory.ForResource(cnpgClusterGVR).Informer()
-
-	_, _ = informer.AddEventHandler(handler)
-	return informer
 }

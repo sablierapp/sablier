@@ -201,13 +201,37 @@ func TestProvider_InstanceList_AntiAffinity(t *testing.T) {
 	})
 }
 
-func TestToInstance_DisabledHasNoAntiAffinity(t *testing.T) {
+// A workload listed through its sablier.enable=true label but disabled by an
+// annotation (annotations win) must be indexed the same way by the list and
+// the inspect paths. Otherwise the informer's Add event and the periodic
+// registry rebuild would keep overwriting each other.
+func TestInstanceList_AntiAffinityMatchesInspect(t *testing.T) {
 	t.Parallel()
 
-	p := &Provider{delimiter: "_"}
-	labels := map[string]string{"sablier.enable": "false", "sablier.anti-affinity": "streaming"}
+	labels := map[string]string{"sablier.enable": "true"}
+	annotations := map[string]string{"sablier.enable": "false", "sablier.anti-affinity": "streaming"}
+	p := newFakeCNPGProvider(t, newClusterObj("default", "pg", labels, annotations, 1, 1))
+	zero := int32(0)
+	p.Client = k8sfake.NewSimpleClientset(
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "nextcloud", Labels: labels, Annotations: annotations},
+			Spec:       appsv1.DeploymentSpec{Replicas: &zero},
+		},
+		&appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "immich", Labels: labels, Annotations: annotations},
+			Spec:       appsv1.StatefulSetSpec{Replicas: &zero},
+		},
+	)
 
-	assert.Assert(t, p.deploymentToInstance(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "d", Labels: labels}}).AntiAffinity == nil)
-	assert.Assert(t, p.statefulSetToInstance(&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "s", Labels: labels}}).AntiAffinity == nil)
-	assert.Assert(t, p.clusterToInstance(newClusterObj("default", "c", labels, nil, 1, 1)).AntiAffinity == nil)
+	listed, err := p.InstanceList(t.Context(), provider.InstanceListOptions{All: true})
+	assert.NilError(t, err)
+	assert.Equal(t, len(listed), 3)
+	for _, inst := range listed {
+		inspected, err := p.InstanceInspect(t.Context(), inst.Name)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, inst.AntiAffinity, inspected.AntiAffinity)
+		assert.DeepEqual(t, inst.Groups, inspected.Groups)
+		assert.DeepEqual(t, inst.AntiAffinity, []string{"streaming"})
+		assert.Assert(t, !inst.IsEnabled())
+	}
 }

@@ -330,6 +330,32 @@ func TestReconcileAntiAffinityRegistry_BuildsAndPrunes(t *testing.T) {
 	assert.Assert(t, !s.hasAntiAffinity(), "index should be empty after the only dependent is removed")
 }
 
+// An instance that is still listed but no longer declares an anti-affinity
+// (its label was removed) must lose its registry entry, not keep a stale one.
+func TestReconcileAntiAffinityRegistry_ClearsRemovedLabel(t *testing.T) {
+	s, _, p := setupAntiAffinity(t)
+	ctx := context.Background()
+
+	p.list = []InstanceConfiguration{
+		{Name: "nextcloud", AntiAffinity: []string{"streaming"}},
+		{Name: "immich", AntiAffinity: []string{"streaming", "gaming"}},
+	}
+	s.reconcileAntiAffinityRegistry(ctx)
+
+	p.list = []InstanceConfiguration{
+		{Name: "nextcloud"},
+		{Name: "immich", AntiAffinity: []string{"gaming"}},
+	}
+	s.reconcileAntiAffinityRegistry(ctx)
+
+	_, ok := s.antiAffinity.Get("streaming")
+	assert.Assert(t, !ok, "streaming should have no dependents left")
+	deps, ok := s.antiAffinity.Get("gaming")
+	assert.Assert(t, ok)
+	assert.DeepEqual(t, deps, []string{"immich"})
+	assert.Equal(t, len(s.antiAffinity.GroupsOf("nextcloud")), 0)
+}
+
 func TestReconcileAntiAffinityRegistry_ListError(t *testing.T) {
 	s, _, p := setupAntiAffinity(t)
 	p.listErr = errors.New("boom")
@@ -339,7 +365,7 @@ func TestReconcileAntiAffinityRegistry_ListError(t *testing.T) {
 	assert.Assert(t, !s.hasAntiAffinity(), "a list error must leave the index untouched")
 }
 
-func TestSeedAntiAffinity_UsesListWithoutInspect(t *testing.T) {
+func TestReconcileAntiAffinityRegistry_UsesListWithoutInspect(t *testing.T) {
 	s, _, p := setupAntiAffinity(t)
 	p.list = []InstanceConfiguration{
 		{Name: "nextcloud", AntiAffinity: []string{"streaming", "gaming"}},
@@ -349,9 +375,11 @@ func TestSeedAntiAffinity_UsesListWithoutInspect(t *testing.T) {
 	// Inspect results that disagree with the list must not be used.
 	p.inspect = map[string]InstanceInfo{"plex": {Name: "plex", AntiAffinity: []string{"other"}}}
 
-	s.SeedAntiAffinity(context.Background())
+	// Only the rebuild is covered: enforcing the registry afterwards may
+	// legitimately inspect instances.
+	s.reconcileAntiAffinityRegistry(context.Background())
 
-	assert.Assert(t, len(p.snapshotInspected()) == 0, "seeding must not inspect instances, got %v", p.snapshotInspected())
+	assert.Assert(t, len(p.snapshotInspected()) == 0, "the registry rebuild must not inspect instances, got %v", p.snapshotInspected())
 	deps, ok := s.antiAffinity.Get("streaming")
 	assert.Assert(t, ok)
 	slices.Sort(deps)

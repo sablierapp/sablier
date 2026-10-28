@@ -25,6 +25,18 @@ func (p *Provider) ClusterInspect(ctx context.Context, config ParsedName) (sabli
 		return sablier.InstanceInfo{}, fmt.Errorf("error getting cnpg cluster: %w", err)
 	}
 
+	info := p.clusterInfo(u, config)
+	p.l.DebugContext(ctx, "cnpg cluster inspected",
+		"cluster", config.Name, "namespace", config.Namespace,
+		"readyInstances", info.CurrentReplicas, "status", info.Status,
+		"hibernation", u.GetAnnotations()[cnpgHibernationAnnotation],
+	)
+	return info, nil
+}
+
+// clusterInfo converts u into the InstanceInfo that ClusterInspect reports
+// for it, without an API call.
+func (p *Provider) clusterInfo(u *unstructured.Unstructured, config ParsedName) sablier.InstanceInfo {
 	instances, _, _ := unstructured.NestedInt64(u.Object, "spec", "instances")
 	if instances == 0 {
 		instances = 1 // CloudNativePG defaults spec.instances to 1 when unset
@@ -43,11 +55,6 @@ func (p *Provider) ClusterInspect(ctx context.Context, config ParsedName) (sabli
 	default:
 		status = sablier.InstanceStatusStarting
 	}
-
-	p.l.DebugContext(ctx, "cnpg cluster inspected",
-		"cluster", config.Name, "namespace", config.Namespace,
-		"instances", instances, "readyInstances", readyInstances, "hibernation", hibernation,
-	)
 
 	info := sablier.InstanceInfo{
 		Name:            config.Original,
@@ -70,5 +77,5 @@ func (p *Provider) ClusterInspect(ctx context.Context, config ParsedName) (sabli
 		Labels:    labels,
 	}
 
-	return info, nil
+	return info
 }

@@ -210,10 +210,12 @@ func TestSystemdProvider_InstanceList_AntiAffinity(t *testing.T) {
 	})
 }
 
-func TestUnitToInstance_DisabledHasNoAntiAffinity(t *testing.T) {
-	got := unitToInstance(Unit{
-		status: dbus.UnitStatus{Name: "jobs.service"},
-		labels: map[string]string{sablier.LabelEnable: "false", sablier.LabelAntiAffinity: "streaming"},
-	})
-	assert.Assert(t, got.AntiAffinity == nil)
+// A disabled unit keeps its anti-affinity, as on the inspect path
+// (sablier.InstanceConfigFromLabels), and has no groups.
+func TestUnitToInstance_DisabledMatchesInspect(t *testing.T) {
+	labels := map[string]string{sablier.LabelEnable: "false", sablier.LabelAntiAffinity: "streaming"}
+	got := unitToInstance(Unit{status: dbus.UnitStatus{Name: "jobs.service"}, labels: labels})
+	want := sablier.InstanceConfigFromLabels(labels, nil)
+	assert.DeepEqual(t, got.AntiAffinity, want.AntiAffinity)
+	assert.DeepEqual(t, got.Groups, want.Groups)
 }

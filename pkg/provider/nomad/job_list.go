@@ -55,15 +55,7 @@ func (p *Provider) InstanceList(ctx context.Context, options provider.InstanceLi
 		if !options.All && !g.running {
 			continue
 		}
-		instance := sablier.InstanceConfiguration{
-			Name:    g.name,
-			Groups:  sablier.ParseGroups(g.meta[sablier.LabelGroup]),
-			Enabled: g.meta[sablier.LabelEnable],
-		}
-		if instance.IsEnabled() {
-			instance.AntiAffinity = sablier.ParseAntiAffinity(g.meta[sablier.LabelAntiAffinity])
-		}
-		instances = append(instances, instance)
+		instances = append(instances, sablier.InstanceConfigurationFromLabels(g.name, g.meta))
 	}
 	return instances, nil
 }
