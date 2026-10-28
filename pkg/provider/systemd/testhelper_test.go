@@ -239,6 +239,14 @@ func (m *mockSystemd) RemoveUnit(name string) {
 	delete(m.files, name)
 }
 
+// DeleteUnitFile removes a unit's file from disk while the unit stays listed,
+// so reading its labels fails.
+func (m *mockSystemd) DeleteUnitFile(name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	assert.NilError(m.t, os.Remove(m.files[name]))
+}
+
 // UnloadUnit removes a unit from the listing while its file stays on disk.
 func (m *mockSystemd) UnloadUnit(name string) {
 	m.mu.Lock()
