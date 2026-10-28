@@ -20,7 +20,15 @@
       "QPS": 5,
       "Burst": 10,
       "Delimiter": "_",
-      "ReadyOnFirstReplica": false
+      "ReadyOnFirstReplica": false,
+      "LeaderElection": {
+        "Enabled": false,
+        "LeaseName": "sablier",
+        "LeaseNamespace": "",
+        "LeaseDuration": 15000000000,
+        "RenewDeadline": 10000000000,
+        "RetryPeriod": 2000000000
+      }
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock"

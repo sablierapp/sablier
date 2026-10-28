@@ -578,6 +578,16 @@
               }
             },
             "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "This replica is not the leader"
           }
         },
         "summary": "Instance events (SSE)",
@@ -684,7 +694,7 @@
                 }
               }
             },
-            "description": "Request cancelled before the session was ready"
+            "description": "Request cancelled before the session was ready, or this replica is not the leader"
           },
           "504": {
             "content": {
@@ -816,6 +826,16 @@
               }
             },
             "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "This replica is not the leader"
           }
         },
         "summary": "Dynamic strategy",
@@ -905,6 +925,16 @@
               }
             },
             "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rfc7807.Problem"
+                }
+              }
+            },
+            "description": "This replica is not the leader"
           }
         },
         "summary": "Poke strategy",

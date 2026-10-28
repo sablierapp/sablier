@@ -63,6 +63,54 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "kubernetes provider with leader election",
+			provider: Provider{
+				Name:       "kubernetes",
+				Kubernetes: Kubernetes{LeaderElection: leaderElection(true)},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "leader election requires the kubernetes provider",
+			provider: Provider{
+				Name:       "swarm",
+				Kubernetes: Kubernetes{LeaderElection: leaderElection(true)},
+			},
+			wantErr: fmt.Errorf("provider.kubernetes.leader-election.enabled requires the kubernetes provider"),
+		},
+		{
+			name: "leader election requires renew deadline below lease duration",
+			provider: Provider{
+				Name: "kubernetes",
+				Kubernetes: Kubernetes{LeaderElection: func() LeaderElection {
+					l := leaderElection(true)
+					l.RenewDeadline = l.LeaseDuration
+					return l
+				}()},
+			},
+			wantErr: fmt.Errorf("provider.kubernetes.leader-election requires 0 < retry-period < renew-deadline < lease-duration"),
+		},
+		{
+			name: "leader election requires a lease name",
+			provider: Provider{
+				Name: "kubernetes",
+				Kubernetes: Kubernetes{LeaderElection: func() LeaderElection {
+					l := leaderElection(true)
+					l.LeaseName = ""
+					return l
+				}()},
+			},
+			wantErr: fmt.Errorf("provider.kubernetes.leader-election.lease-name must not be empty"),
+		},
+		{
+			name: "disabled leader election is not validated",
+			provider: Provider{
+				Name:       "swarm",
+				Kubernetes: Kubernetes{LeaderElection: LeaderElection{}},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "valid swarm provider",
 			provider: Provider{
 				Name: "swarm",
@@ -234,4 +282,10 @@ func TestNewProviderConfig_Defaults(t *testing.T) {
 	assert.Equal(t, c.ECS.Cluster, "default")
 	assert.Equal(t, c.ECS.Region, "")
 	assert.Equal(t, c.ECS.Endpoint, "")
+}
+
+func leaderElection(enabled bool) LeaderElection {
+	l := NewProviderConfig().Kubernetes.LeaderElection
+	l.Enabled = enabled
+	return l
 }
