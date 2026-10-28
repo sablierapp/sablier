@@ -260,7 +260,7 @@ Then pass the ConfigMap name:
 
 Sablier writes a new or removed session immediately, and refreshes of existing sessions at most every 30 seconds; a crash loses at most those refreshes, which only makes the affected sessions end a little early. It writes everything once more when it shuts down. Sablier does not start when it cannot read the ConfigMap, rather than start empty and overwrite the saved sessions.
 
-The sessions are stored gzipped, which takes about 100 bytes per session. A ConfigMap holds up to 1 MiB; if the sessions ever outgrow it, Sablier logs an error and keeps running without saving until the sessions shrink.
+The sessions are stored gzipped, which takes roughly 60 to 300 bytes per session, depending on the workload's labels (annotations are not stored). A ConfigMap holds up to 1 MiB, enough for several thousand active sessions; if the sessions ever outgrow it, Sablier logs an error and keeps running without saving until the sessions shrink.
 
 `--storage.kubernetes.configmap` replaces [`--storage.file`](/reference/cli/#opt-storage-file); they cannot be combined.
 
