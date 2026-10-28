@@ -21,6 +21,72 @@ type pendingStart struct {
 	spanCtx trace.SpanContext // OTel context of the triggering request; used to propagate the trace into the goroutine
 }
 
+// Delay before a request may start an instance again after its start failed,
+// doubled after every consecutive failure up to startRetryMaxDelay.
+const (
+	startRetryBaseDelay = 2 * time.Second
+	startRetryMaxDelay  = 2 * time.Minute
+)
+
+// failedStart records that the last start of an instance failed, so a later
+// request for its still-active session starts it again instead of only
+// inspecting it. Entries are dropped when a start succeeds and whenever the
+// instance is stopped on purpose (expiration, anti-affinity suppression, stop
+// events), so only a failure Sablier observed itself ever triggers a retry.
+type failedStart struct {
+	failures int       // consecutive failed starts, drives the backoff
+	retryAt  time.Time // earliest time a request may start the instance again
+}
+
+func startRetryDelay(failures int) time.Duration {
+	delay := startRetryBaseDelay
+	for i := 1; i < failures && delay < startRetryMaxDelay; i++ {
+		delay *= 2
+	}
+	return min(delay, startRetryMaxDelay)
+}
+
+// forgetFailedStart drops any recorded start failure for name, so no request
+// starts it again. Call it whenever the instance is stopped on purpose.
+func (s *Sablier) forgetFailedStart(name string) {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	delete(s.failedStarts, name)
+}
+
+// retryFailedStart starts name again when its last start failed, the backoff
+// has elapsed and no start is in progress. The check and the registration of
+// the new pending start happen under one lock, so concurrent requests dispatch
+// at most one retry. session is the stored session state; it is reused as the
+// pre-start info instead of inspecting the instance again.
+func (s *Sablier) retryFailedStart(ctx context.Context, name string, session InstanceInfo) (InstanceInfo, bool) {
+	s.pendingMu.Lock()
+	fs, ok := s.failedStarts[name]
+	if !ok || time.Now().Before(fs.retryAt) {
+		s.pendingMu.Unlock()
+		return InstanceInfo{}, false
+	}
+	// A start is in progress, or a finished one still holds an error no
+	// request has reported yet (consumePendingError surfaces it first).
+	if _, pending := s.pendingStarts[name]; pending {
+		s.pendingMu.Unlock()
+		return InstanceInfo{}, false
+	}
+	failures := fs.failures
+
+	info := session
+	info.Status = InstanceStatusStarting
+	info.ReadyAt = nil
+	ps := &pendingStart{done: make(chan struct{}), info: info, spanCtx: trace.SpanContextFromContext(ctx)}
+	s.pendingStarts[name] = ps
+	s.pendingMu.Unlock()
+
+	s.l.WarnContext(ctx, "starting instance again after a failed start",
+		slog.String("instance", name), slog.Int("failures", failures))
+	s.dispatchStart(ctx, name, ps, true)
+	return info, true
+}
+
 // consumePendingError checks whether a pending start exists for the given
 // instance. It returns (pending, error):
 //   - pending=true, err=nil  -> start still in progress, caller should skip inspect
@@ -163,6 +229,17 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	s.pendingStarts[name] = ps
 	s.pendingMu.Unlock()
 
+	s.dispatchStart(ctx, name, ps, false)
+	return info, nil
+}
+
+// dispatchStart starts name and its dependencies in the background for the
+// already-registered pending start ps. A failure is recorded in failedStarts
+// so a later request retries it; a success clears it. For a retry, the
+// instance is forced idle again if an anti-affinity hold became active while
+// it was starting: a suppression that ran in the meantime may have stopped it
+// before this start landed, and would not look at it again.
+func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingStart, retry bool) {
 	// Begin metrics tracking BEFORE dispatching the goroutine.
 	// Idempotent — if a previous Begin was already recorded, it is preserved.
 	s.metrics.RecordReadyWaitBegin(name)
@@ -172,7 +249,7 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	// triggering HTTP request so the async InstanceStart call appears as a child
 	// of that request's trace, without being bound by its cancellation or deadline.
 	startCtx, cancel := context.WithTimeout(
-		trace.ContextWithSpanContext(context.Background(), spanCtx),
+		trace.ContextWithSpanContext(context.Background(), ps.spanCtx),
 		s.InstanceStartTimeout,
 	)
 
@@ -189,6 +266,15 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 			ps.err = err
 			s.metrics.RecordInstanceStartFailure(name)
 			s.l.ErrorContext(startCtx, "async instance start failed", slog.String("instance", name), slog.Any("error", err))
+			s.pendingMu.Lock()
+			fs, ok := s.failedStarts[name]
+			if !ok {
+				fs = &failedStart{}
+				s.failedStarts[name] = fs
+			}
+			fs.failures++
+			fs.retryAt = time.Now().Add(startRetryDelay(fs.failures))
+			s.pendingMu.Unlock()
 		} else {
 			startSpan.End()
 			s.metrics.RecordInstanceStartEnd(name, time.Since(startedAt))
@@ -199,11 +285,36 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 			if current, ok := s.pendingStarts[name]; ok && current == ps {
 				delete(s.pendingStarts, name)
 			}
+			delete(s.failedStarts, name)
 			s.pendingMu.Unlock()
+			if retry {
+				s.undoRetryIfStoppedMeanwhile(startCtx, name)
+			}
 		}
 	}()
+}
 
-	return info, nil
+// undoRetryIfStoppedMeanwhile stops name again after a retried start when the
+// instance was meant to stop while it was starting: an anti-affinity hold
+// became active (a suppression may have stopped it before this start landed,
+// and will not look at it again), or its session was removed by a stop event,
+// an expiration or a suppression (nothing would ever stop it otherwise).
+func (s *Sablier) undoRetryIfStoppedMeanwhile(ctx context.Context, name string) {
+	reason := ""
+	if group := s.antiAffinityHold(ctx, name); group != "" {
+		reason = fmt.Sprintf("anti-affinity group %q became active", group)
+	} else if _, err := s.sessions.Get(ctx, name); errors.Is(err, store.ErrKeyNotFound) {
+		reason = "session was removed"
+	}
+	if reason == "" {
+		return
+	}
+	s.l.InfoContext(ctx, "instance was stopped while starting again, stopping it",
+		slog.String("instance", name), slog.String("reason", reason))
+	if err := s.provider.InstanceStop(ctx, name); err != nil {
+		s.l.ErrorContext(ctx, "cannot stop instance after its retried start",
+			slog.String("instance", name), slog.Any("error", err))
+	}
 }
 
 // instanceName resolves name to the name the provider reports for the
@@ -262,6 +373,13 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 	} else if err != nil {
 		s.l.ErrorContext(ctx, "request to start instance failed", slog.String("instance", name), slog.Any("error", err))
 		return InstanceInfo{}, fmt.Errorf("cannot retrieve instance from store: %w", err)
+	} else if retried, ok := s.retryFailedStart(ctx, name, state); ok {
+		// The last start failed while the session stayed active. Without this,
+		// later requests would only inspect the instance and extend the session
+		// until it expires. The recorded failure is used rather than the
+		// provider status, which in scale mode reports the idle replicas as
+		// ready.
+		state = retried
 	} else if state.Status != InstanceStatusReady {
 		// Check for a completed (possibly failed) async start before inspecting
 		pending, pendingErr := s.consumePendingError(name)
@@ -284,17 +402,6 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			inspectSpan.End()
 			if err != nil {
 				return InstanceInfo{}, err
-			}
-			// A stopped instance with an active session and no start in progress
-			// means its start failed (or was lost): intentional stops (expiration,
-			// anti-affinity, stop events) drop the session first. Start it again
-			// rather than extending a session that would only ever inspect.
-			if state.Status == InstanceStatusStopped {
-				s.l.WarnContext(ctx, "instance is stopped while its session is active, starting it again", slog.String("instance", name))
-				state, err = s.requestStart(ctx, name, rejectUnlabeled)
-				if err != nil {
-					return InstanceInfo{}, err
-				}
 			}
 			if state.Status == InstanceStatusReady {
 				s.metrics.RecordReadyWaitEnd(name)

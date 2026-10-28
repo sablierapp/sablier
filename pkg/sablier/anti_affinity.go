@@ -196,6 +196,10 @@ func (s *Sablier) suppressForAntiAffinity(ctx context.Context, instance string) 
 	}
 
 	s.l.InfoContext(ctx, "anti-affinity: forcing instance idle", slog.String("instance", instance))
+	// Stop requests from retrying a failed start of this instance while it is
+	// suppressed. A retry that was already dispatched re-checks the hold once
+	// its start completes (see dispatchStart).
+	s.forgetFailedStart(instance)
 	if err := s.provider.InstanceStop(ctx, instance); err != nil {
 		s.l.ErrorContext(ctx, "anti-affinity: cannot force instance idle",
 			slog.String("instance", instance), slog.Any("error", err))

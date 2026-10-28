@@ -85,6 +85,8 @@ type fakeAAProvider struct {
 	stopped  []string
 	startErr error
 	stopErr  error
+	// onStart, when set, runs at the end of InstanceStart (outside mu).
+	onStart func(name string)
 	// list/listErr back InstanceList; inspect/inspectErr back InstanceInspect
 	// (keyed by instance name). Unset inspect entries fall back to a bare
 	// InstanceInfo{Name: name}.
@@ -96,9 +98,13 @@ type fakeAAProvider struct {
 
 func (f *fakeAAProvider) InstanceStart(_ context.Context, name string) error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.started = append(f.started, name)
-	return f.startErr
+	err, onStart := f.startErr, f.onStart
+	f.mu.Unlock()
+	if onStart != nil {
+		onStart(name)
+	}
+	return err
 }
 
 func (f *fakeAAProvider) InstanceStop(_ context.Context, name string) error {
@@ -592,7 +598,7 @@ func TestInstanceRequest_HeldByAntiAffinity(t *testing.T) {
 }
 
 // A held instance whose session outlived a stop must not be started again by
-// the request path's stopped-instance recovery.
+// a retry of its failed start.
 func TestInstanceRequest_HeldByAntiAffinity_WithStoppedSession(t *testing.T) {
 	s, st, p := setupAntiAffinity(t)
 	ctx := context.Background()
@@ -600,12 +606,140 @@ func TestInstanceRequest_HeldByAntiAffinity_WithStoppedSession(t *testing.T) {
 	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
 	st.session("plex") // antagonist active
 	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+	s.recordFailedStart("nextcloud")
 	p.inspect = map[string]InstanceInfo{"nextcloud": {Name: "nextcloud", Status: InstanceStatusStopped}}
 
 	info, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
 	assert.NilError(t, err)
 	assert.Equal(t, info.Status, InstanceStatusNotReady)
 	assert.Equal(t, len(p.snapshotStarted()), 0, "held instance must not be started")
+}
+
+// recordFailedStart marks name as having a failed start whose retry is due.
+func (s *Sablier) recordFailedStart(name string) {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	s.failedStarts[name] = &failedStart{failures: 1}
+}
+
+func (s *Sablier) hasFailedStart(name string) bool {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	_, ok := s.failedStarts[name]
+	return ok
+}
+
+// Suppression forgets a failed start, so a request racing with it (one that
+// passed antiAffinityHold before the antagonist became active) does not start
+// the instance again behind the suppression's back.
+func TestSuppressForAntiAffinity_ForgetsFailedStart(t *testing.T) {
+	s, st, p := setupAntiAffinity(t)
+	ctx := context.Background()
+	s.SetGroups(map[string][]string{"streaming": {"plex"}})
+	s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+	s.recordFailedStart("nextcloud")
+	st.session("plex")
+
+	s.reconcileAntiAffinity(ctx)
+	assert.Assert(t, s.isSuppressed("nextcloud"))
+	assert.Assert(t, !s.hasFailedStart("nextcloud"))
+
+	// The racing request re-puts the session after the suppression deleted it.
+	_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+	_, ok := s.retryFailedStart(ctx, "nextcloud", InstanceInfo{Name: "nextcloud"})
+	assert.Assert(t, !ok, "a suppressed instance must not be started again")
+	assert.Equal(t, len(p.snapshotStarted()), 0)
+}
+
+// A retry dispatched just before an antagonist became active forces the
+// instance idle again once its start lands, since the suppression may already
+// have run and will not look at it again.
+func TestRetryFailedStart_ForcedIdleWhenAntiAffinityBecameActive(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		s.SetGroups(map[string][]string{"streaming": {"plex"}})
+		s.SyncInstanceAntiAffinity("nextcloud", []string{"streaming"})
+		_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+		s.recordFailedStart("nextcloud")
+		// The antagonist becomes active while nextcloud is starting.
+		p.onStart = func(string) { st.session("plex") }
+
+		info, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, InstanceStatusStarting)
+		synctest.Wait()
+
+		assert.DeepEqual(t, p.snapshotStarted(), []string{"nextcloud"})
+		assert.DeepEqual(t, p.snapshotStopped(), []string{"nextcloud"})
+	})
+}
+
+// A retry whose session is removed while it is starting (a stop event, an
+// expiration or a suppression) stops the instance again, so it is not left
+// running with no session to ever stop it.
+func TestRetryFailedStart_StoppedWhenSessionRemovedMeanwhile(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+		s.recordFailedStart("nextcloud")
+		// The request re-puts the session right after dispatching the retry,
+		// so the removal is simulated once the start has begun.
+		started := make(chan struct{})
+		removed := make(chan struct{})
+		p.onStart = func(string) {
+			close(started)
+			<-removed
+		}
+
+		_, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+		assert.NilError(t, err)
+		<-started
+		assert.NilError(t, s.RemoveInstance(ctx, "nextcloud"))
+		close(removed)
+		synctest.Wait()
+
+		assert.DeepEqual(t, p.snapshotStopped(), []string{"nextcloud"})
+	})
+}
+
+// A successful retry with its session in place leaves the instance running.
+func TestRetryFailedStart_KeepsRunningWithSession(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		_ = st.Put(ctx, InstanceInfo{Name: "nextcloud", Status: InstanceStatusStarting}, time.Minute)
+		s.recordFailedStart("nextcloud")
+
+		_, err := s.instanceRequest(ctx, "nextcloud", time.Minute, false)
+		assert.NilError(t, err)
+		synctest.Wait()
+
+		assert.DeepEqual(t, p.snapshotStarted(), []string{"nextcloud"})
+		assert.Equal(t, len(p.snapshotStopped()), 0)
+		assert.Assert(t, !s.hasFailedStart("nextcloud"))
+	})
+}
+
+// A stop from outside Sablier (an InstanceStopped event) forgets a failed
+// start, so a request arriving before the session is gone does not undo it.
+func TestRemoveInstance_ForgetsFailedStart(t *testing.T) {
+	s, _, _ := setupAntiAffinity(t)
+	s.recordFailedStart("nextcloud")
+	assert.NilError(t, s.RemoveInstance(context.Background(), "nextcloud"))
+	assert.Assert(t, !s.hasFailedStart("nextcloud"))
+}
+
+func TestOnInstanceExpired_ForgetsFailedStart(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, _ := setupAntiAffinity(t)
+		s.recordFailedStart("nextcloud")
+		s.OnInstanceExpired(context.Background())("nextcloud")
+		synctest.Wait()
+		assert.Assert(t, !s.hasFailedStart("nextcloud"))
+	})
 }
 
 func TestRequestReadySession_TimeoutReportsAntiAffinityHold(t *testing.T) {
