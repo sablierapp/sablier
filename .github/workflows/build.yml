@@ -53,6 +53,9 @@ jobs:
         # rerun-only profile. We write binary coverage with -test.gocoverdir
         # and merge it afterwards to keep stable aggregate coverage across reruns.
         # See: https://github.com/gotestyourself/gotestsum/issues/274
+        # Packages go through --packages only: gotestsum replaces them with the
+        # failing package on a rerun, but a package list in the go test args
+        # stays, so every rerun would test (and start containers for) them all.
         mkdir -p /tmp/gocov
         go tool -modfile=tools.mod gotestsum \
           --jsonfile test-report.json \
@@ -61,7 +64,7 @@ jobs:
           --rerun-fails-max-failures=10 \
           --packages="./..." \
           --post-run-command .github/scripts/test-summary.sh \
-          -- -tags="nomsgpack" -race -covermode=atomic -cover ./... -args -test.gocoverdir=/tmp/gocov
+          -- -tags="nomsgpack" -race -covermode=atomic -cover -args -test.gocoverdir=/tmp/gocov
 
     - name: Generate coverage report
       if: ${{ !cancelled() }}
