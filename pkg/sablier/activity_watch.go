@@ -1,9 +1,9 @@
 package sablier
 
 import (
+	"cmp"
 	"context"
 	"log/slog"
-	"maps"
 	"slices"
 	"time"
 
@@ -229,37 +229,76 @@ func (w *activityWatcher) refresh(ctx context.Context) {
 		return 0
 	}
 
-	// Several active instances can share a group: refresh it once, for the
-	// longest of their durations.
+	for _, target := range w.targets(active) {
+		d := target.duration
+		for _, m := range target.members {
+			d = max(d, remaining(m))
+		}
+		w.s.metrics.RecordSessionRequest("activity", target.name)
+		var state *SessionState
+		if target.group {
+			state, err = w.s.RequestSessionGroup(ctx, target.name, d)
+			w.logRefresh(ctx, "group", target.name, d, state, err)
+		} else {
+			state, err = w.s.RequestSession(ctx, []string{target.name}, d)
+			w.logRefresh(ctx, "instance", target.name, d, state, err)
+		}
+		// The refresh replaced its members' remaining time: a later target
+		// that shares a member must not replace it with less.
+		for _, m := range target.members {
+			if expiresAt := now.Add(d); expiresAt.After(expiry[m]) {
+				expiry[m] = expiresAt
+			}
+		}
+	}
+}
+
+// refreshTarget is one session request of a tick: a group, or an instance
+// without activity groups.
+type refreshTarget struct {
+	group bool
+	name  string
+	// duration is the longest activity duration among the active instances
+	// that refresh this target.
+	duration time.Duration
+	members  []string
+}
+
+// targets returns the session requests the active instances make. Several
+// active instances can share a group: it is refreshed once, for the longest of
+// their durations. The longest targets come first, so a member shared by
+// several targets gets its longest refresh first and the later ones, which see
+// its raised expiry, never write less.
+func (w *activityWatcher) targets(active []string) []refreshTarget {
 	groups := map[string]time.Duration{}
-	singles := map[string]time.Duration{}
+	var targets []refreshTarget
 	for _, name := range active {
 		cfg := w.watched[name]
 		if cfg.groups == nil {
-			singles[name] = cfg.duration
+			targets = append(targets, refreshTarget{name: name, duration: cfg.duration, members: []string{name}})
 			continue
 		}
 		for _, g := range cfg.groups {
 			groups[g] = max(groups[g], cfg.duration)
 		}
 	}
-
-	for _, g := range slices.Sorted(maps.Keys(groups)) {
-		d := groups[g]
+	for g, d := range groups {
 		members, _ := w.s.groups.Get(g)
-		for _, m := range members {
-			d = max(d, remaining(m))
+		targets = append(targets, refreshTarget{group: true, name: g, duration: d, members: members})
+	}
+	slices.SortFunc(targets, func(a, b refreshTarget) int {
+		if c := cmp.Compare(b.duration, a.duration); c != 0 {
+			return c
 		}
-		w.s.metrics.RecordSessionRequest("activity", g)
-		state, err := w.s.RequestSessionGroup(ctx, g, d)
-		w.logRefresh(ctx, "group", g, d, state, err)
-	}
-	for _, name := range slices.Sorted(maps.Keys(singles)) {
-		d := max(singles[name], remaining(name))
-		w.s.metrics.RecordSessionRequest("activity", name)
-		state, err := w.s.RequestSession(ctx, []string{name}, d)
-		w.logRefresh(ctx, "instance", name, d, state, err)
-	}
+		if a.group != b.group {
+			if a.group {
+				return -1
+			}
+			return 1
+		}
+		return cmp.Compare(a.name, b.name)
+	})
+	return targets
 }
 
 // logRefresh logs the outcome of one refresh. A failed refresh is retried on

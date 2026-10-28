@@ -3,6 +3,7 @@ package sablier_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
@@ -459,5 +461,143 @@ func TestWatchActivity_RecordsBytes(t *testing.T) {
 		nextActivityTick()
 
 		assert.Assert(t, slices.Contains(rec.snapshot(), "activity_bytes:plex/10"), "recorded: %v", rec.snapshot())
+	})
+}
+
+// recordPuts accepts every session read and records the duration of each
+// session write, per instance.
+func recordPuts(sessions *storetest.MockStore) func() map[string][]time.Duration {
+	var mu sync.Mutex
+	puts := map[string][]time.Duration{}
+	sessions.EXPECT().Get(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, name string) (sablier.InstanceInfo, error) {
+		return readyInfo(name), nil
+	}).AnyTimes()
+	sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, info sablier.InstanceInfo, d time.Duration) error {
+		mu.Lock()
+		defer mu.Unlock()
+		puts[info.Name] = append(puts[info.Name], d)
+		return nil
+	}).AnyTimes()
+	return func() map[string][]time.Duration {
+		mu.Lock()
+		defer mu.Unlock()
+		return maps.Clone(puts)
+	}
+}
+
+// A member refreshed by several targets in one tick keeps the longest refresh:
+// a later, shorter refresh must not replace it.
+func TestWatchActivity_SharedMemberNeverShortened(t *testing.T) {
+	long := sablier.ActivityConfig{Ports: plexPorts, SessionDuration: 30 * time.Minute, MinBytes: 1000}
+	short := sablier.ActivityConfig{Ports: plexPorts, SessionDuration: 5 * time.Minute, MinBytes: 1000}
+	withGroups := func(c sablier.ActivityConfig, groups ...string) sablier.ActivityConfig {
+		c.Groups = groups
+		return c
+	}
+	tests := []struct {
+		name      string
+		groups    map[string][]string
+		instances []sablier.InstanceInfo
+	}{
+		{
+			name:   "longer group sorts first",
+			groups: map[string][]string{"g1": {"a", "m"}, "g2": {"b", "m"}},
+			instances: []sablier.InstanceInfo{
+				activityInstance("a", withGroups(long, "g1")),
+				activityInstance("b", withGroups(short, "g2")),
+			},
+		},
+		{
+			name:   "shorter group sorts first",
+			groups: map[string][]string{"g1": {"b", "m"}, "g2": {"a", "m"}},
+			instances: []sablier.InstanceInfo{
+				activityInstance("a", withGroups(long, "g2")),
+				activityInstance("b", withGroups(short, "g1")),
+			},
+		},
+		{
+			name:   "instance without groups and a group",
+			groups: map[string][]string{"default": {"m"}, "g": {"b", "m"}},
+			instances: []sablier.InstanceInfo{
+				activityInstance("m", long),
+				activityInstance("b", withGroups(short, "g")),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				s, sessions, p := setupSablier(t)
+				s.ActivityReconcileInterval = time.Hour
+				s.SetGroups(tt.groups)
+				sessions.EXPECT().Range(gomock.Any(), gomock.Any()).Return(nil)
+				puts := recordPuts(sessions)
+				deltas := map[string]uint64{}
+				for _, info := range tt.instances {
+					deltas[info.Name] = 1000
+				}
+				src := newFakeSource(deltas)
+				expectListings(p, nil)
+				events := startWatchActivity(t, s, p, src)
+				started(events, tt.instances...)
+
+				nextActivityTick()
+
+				got := puts()["m"]
+				assert.Assert(t, len(got) > 0, "m was not refreshed")
+				for _, d := range got {
+					assert.Assert(t, d >= 30*time.Minute, "m was refreshed with %v, shorter than 30m: %v", d, got)
+				}
+			})
+		})
+	}
+}
+
+// A group refresh lasts as long as the longest remaining session among all of
+// its members, active or not.
+func TestWatchActivity_GroupRefreshKeepsLongestMemberSession(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ActivityReconcileInterval = time.Hour
+		s.SetGroups(map[string][]string{"media": {"plex", "db"}})
+		// db has 25m left from a proxy session; plex has none.
+		sessions.EXPECT().Range(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, f func(sablier.InstanceInfo, time.Time)) error {
+			f(readyInfo("db"), time.Now().Add(25*time.Minute))
+			return nil
+		})
+		puts := recordPuts(sessions)
+		src := newFakeSource(map[string]uint64{"plex": 1000})
+		expectListings(p, nil)
+		events := startWatchActivity(t, s, p, src)
+		started(events, activityInstance("plex", sablier.ActivityConfig{
+			Ports: plexPorts, SessionDuration: 10 * time.Minute, MinBytes: 1000, Groups: []string{"media"},
+		}))
+
+		nextActivityTick()
+
+		assert.DeepEqual(t, puts(), map[string][]time.Duration{"plex": {25 * time.Minute}, "db": {25 * time.Minute}})
+	})
+}
+
+// Active members of one group with different activity durations refresh it
+// once, for the longest of them.
+func TestWatchActivity_GroupRefreshUsesLongestActiveDuration(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		s.ActivityReconcileInterval = time.Hour
+		s.SetGroups(map[string][]string{"web": {"web1", "web2"}})
+		sessions.EXPECT().Range(gomock.Any(), gomock.Any()).Return(nil)
+		puts := recordPuts(sessions)
+		src := newFakeSource(map[string]uint64{"web1": 1000, "web2": 1000})
+		expectListings(p, nil)
+		events := startWatchActivity(t, s, p, src)
+		started(events,
+			activityInstance("web1", sablier.ActivityConfig{Ports: plexPorts, SessionDuration: 10 * time.Minute, MinBytes: 1000, Groups: []string{"web"}}),
+			activityInstance("web2", sablier.ActivityConfig{Ports: plexPorts, SessionDuration: 30 * time.Minute, MinBytes: 1000, Groups: []string{"web"}}),
+		)
+
+		nextActivityTick()
+
+		assert.DeepEqual(t, puts(), map[string][]time.Duration{"web1": {30 * time.Minute}, "web2": {30 * time.Minute}})
 	})
 }
