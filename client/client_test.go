@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/sablierapp/sablier/client"
@@ -257,8 +258,39 @@ func TestTransportError(t *testing.T) {
 	}
 }
 
+func TestNewWithoutScheme(t *testing.T) {
+	// host:port, as the proxy-wasm plugin configures Sablier, means http.
+	var path string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+	}))
+	t.Cleanup(srv.Close)
+	hostPort := strings.TrimPrefix(srv.URL, "http://")
+	_, port, _ := strings.Cut(hostPort, ":")
+
+	for raw, wantPath := range map[string]string{
+		hostPort:              "/api/strategies/poke",
+		"localhost:" + port:   "/api/strategies/poke",
+		hostPort + "/sablier": "/sablier/api/strategies/poke",
+	} {
+		c, err := client.New(raw)
+		if err != nil {
+			t.Errorf("New(%q): %v", raw, err)
+			continue
+		}
+		path = ""
+		if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+			t.Errorf("New(%q): request failed: %v", raw, err)
+			continue
+		}
+		if path != wantPath {
+			t.Errorf("New(%q): path = %q, want %q", raw, path, wantPath)
+		}
+	}
+}
+
 func TestNewRejectsInvalidURL(t *testing.T) {
-	for _, raw := range []string{"", "sablier:10000", "://bad"} {
+	for _, raw := range []string{"", "://bad", "ftp://sablier:10000", "http://"} {
 		if _, err := client.New(raw); err == nil {
 			t.Errorf("New(%q) returned no error", raw)
 		}

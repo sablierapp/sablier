@@ -57,14 +57,20 @@ func WithUserAgent(userAgent string) Option {
 
 // New returns a client for the Sablier server at baseURL, such as
 // "http://sablier:10000". baseURL may include the path prefix Sablier is
-// served under.
+// served under. Without a scheme ("sablier:10000"), http is used.
 func New(baseURL string, opts ...Option) (*Client, error) {
-	u, err := url.Parse(baseURL)
+	raw := baseURL
+	if !strings.Contains(raw, "://") {
+		// url.Parse would read "sablier:10000" as scheme "sablier", and
+		// reject "10.0.0.1:10000" outright.
+		raw = "http://" + raw
+	}
+	u, err := url.Parse(raw)
 	if err != nil {
 		return nil, fmt.Errorf("invalid Sablier URL %q: %w", baseURL, err)
 	}
 	if (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, fmt.Errorf("invalid Sablier URL %q: want http(s)://host[:port][/path]", baseURL)
+		return nil, fmt.Errorf("invalid Sablier URL %q: want [http(s)://]host[:port][/path]", baseURL)
 	}
 
 	c := &Client{
