@@ -1,42 +1,47 @@
 {
     "$schema": "https://raw.githubusercontent.com/googleapis/release-please/refs/heads/main/schemas/config.json",
+    "release-type": "go",
+    "bump-minor-pre-major": true,
+    "separate-pull-requests": true,
+    "changelog-sections": [
+        {
+            "type": "feat",
+            "section": "Features"
+        },
+        {
+            "type": "fix",
+            "section": "Bug Fixes"
+        },
+        {
+            "type": "perf",
+            "section": "Performance Improvements"
+        },
+        {
+            "type": "docs",
+            "section": "Documentation"
+        },
+        {
+            "type": "style",
+            "section": "Styles"
+        },
+        {
+            "type": "refactor",
+            "section": "Code Refactoring"
+        },
+        {
+            "type": "test",
+            "section": "Tests"
+        },
+        {
+            "type": "chore",
+            "section": "Chores"
+        }
+    ],
     "packages": {
         ".": {
-            "release-type": "go",
-            "bump-minor-pre-major": true,
-            "changelog-sections": [
-                {
-                    "type": "feat",
-                    "section": "Features"
-                },
-                {
-                    "type": "fix",
-                    "section": "Bug Fixes"
-                },
-                {
-                    "type": "perf",
-                    "section": "Performance Improvements"
-                },
-                {
-                    "type": "docs",
-                    "section": "Documentation"
-                },
-                {
-                    "type": "style",
-                    "section": "Styles"
-                },
-                {
-                    "type": "refactor",
-                    "section": "Code Refactoring"
-                },
-                {
-                    "type": "test",
-                    "section": "Tests"
-                },
-                {
-                    "type": "chore",
-                    "section": "Chores"
-                }
+            "include-component-in-tag": false,
+            "exclude-paths": [
+                "client"
             ],
             "extra-files": [
                 {
@@ -96,6 +101,13 @@
                     "path": "examples/ecs/sablier.yaml"
                 }
             ]
+        },
+        "client": {
+            "component": "client",
+            "include-component-in-tag": true,
+            "tag-separator": "/",
+            "version-file": "version.go",
+            "initial-version": "0.1.0"
         }
     }
 }
