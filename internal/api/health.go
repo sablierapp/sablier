@@ -36,6 +36,7 @@ func (h *Health) ServeHTTP(c *gin.Context) {
 //
 // @Summary      Health check
 // @Description  Liveness endpoint. Returns 200 while serving and 503 while the server is terminating.
+// @ID           getHealth
 // @Tags         system
 // @Produce      plain
 // @Success      200  {string}  string  "OK"

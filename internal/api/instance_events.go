@@ -29,6 +29,7 @@ type InstanceEventsRequest struct {
 //
 // @Summary      Instance events (SSE)
 // @Description  Server-Sent Events stream of instance lifecycle events. Each event is `event: <type>` followed by `data: <InstanceInfo JSON>`. The stream stays open until the client disconnects.
+// @ID           streamInstanceEvents
 // @Tags         events
 // @Produce      text/event-stream
 // @Param        types  query  []string  false  "Event types to include (created, updated, removed, started, stopped). Repeat for multiple."

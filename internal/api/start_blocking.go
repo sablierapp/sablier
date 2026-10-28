@@ -21,6 +21,7 @@ type BlockingRequest struct {
 //
 // @Summary      Blocking strategy
 // @Description  Holds the request until the requested instances are ready, or until the timeout elapses. Provide either `names` (one or more) or `group`, never both.
+// @ID           startBlocking
 // @Tags         strategies
 // @Produce      json
 // @Param        names             query  []string  false  "Instance name(s); repeat for multiple. Mutually exclusive with group. Prefix a name with 'optional:' to mark it best-effort: it is started with the session but its readiness and errors never gate it."

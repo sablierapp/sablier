@@ -19,6 +19,7 @@ type PokeRequest struct {
 //
 // @Summary      Poke strategy
 // @Description  Starts the requested instances and immediately returns the session status without waiting for readiness. Provide either `names` or `group`, never both.
+// @ID           startPoke
 // @Tags         strategies
 // @Produce      json
 // @Param        names             query  []string  false  "Instance name(s); repeat for multiple. Mutually exclusive with group."
