@@ -184,3 +184,29 @@ func TestSource_DrainRefreshesIgnoreList(t *testing.T) {
 	assert.DeepEqual(t, got, want)
 	assert.DeepEqual(t, ft.calls, []string{"setignored", "read"})
 }
+
+func TestSource_DrainKeepsIgnoreListWhenLookupFails(t *testing.T) {
+	ft := newFakeTracker()
+	s, host := newSource(t, ft)
+	expectTarget(host, "plex", sablier.Port{Number: 1, Proto: "tcp"})
+	gomock.InOrder(
+		host.EXPECT().ActivityIgnoredSources(gomock.Any()).Return([]netip.Addr{netip.MustParseAddr("172.18.0.9")}, nil),
+		host.EXPECT().ActivityIgnoredSources(gomock.Any()).Return(nil, errors.New("docker unavailable")),
+	)
+	ctx := context.Background()
+	assert.NilError(t, s.Watch(ctx, "plex", nil))
+
+	_, err := s.Drain(ctx)
+	assert.NilError(t, err)
+	first := len(ft.ignored)
+	assert.Assert(t, first > 0)
+	ft.calls = nil
+
+	ft.totals[0] = 7
+	got, err := s.Drain(ctx)
+	assert.NilError(t, err)
+	assert.DeepEqual(t, got, map[string]uint64{"plex": 7})
+	assert.DeepEqual(t, ft.calls, []string{"read"})
+	assert.Equal(t, len(ft.ignored), first)
+	assert.Assert(t, slices.Contains(ft.ignored, netip.MustParsePrefix("172.18.0.9/32")))
+}

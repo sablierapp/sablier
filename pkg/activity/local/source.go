@@ -39,6 +39,10 @@ type Source struct {
 	mu    sync.Mutex
 	slots map[string]bpf.Slot
 	last  map[bpf.Slot]uint64
+
+	// ignoreComplete is set once a full ignore list (every lookup succeeded)
+	// was written; after that a failed lookup keeps the previous list.
+	ignoreComplete bool
 }
 
 var _ sablier.ActivitySource = (*Source)(nil)
@@ -179,20 +183,29 @@ func (s *Source) refreshIgnored(ctx context.Context) error {
 	prefixes := append([]netip.Prefix{}, loopback...)
 	prefixes = append(prefixes, s.ignoreCIDRs...)
 	var errs []error
+	var lookupFailed bool
 
 	own, err := s.ownAddrs()
 	if err != nil {
 		errs = append(errs, err)
+		lookupFailed = true
 	}
 	hostAddrs, err := s.host.ActivityIgnoredSources(ctx)
 	if err != nil {
 		errs = append(errs, err)
+		lookupFailed = true
+	}
+	if lookupFailed && s.ignoreComplete {
+		// Keep the last complete list rather than dropping ignored addresses.
+		return errors.Join(errs...)
 	}
 	for _, a := range append(own, hostAddrs...) {
 		prefixes = append(prefixes, netip.PrefixFrom(a, a.BitLen()))
 	}
 	if err := s.tracker.SetIgnored(prefixes); err != nil {
 		errs = append(errs, err)
+	} else if !lookupFailed {
+		s.ignoreComplete = true
 	}
 	return errors.Join(errs...)
 }
