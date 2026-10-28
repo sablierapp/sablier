@@ -19,7 +19,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
 	defer cancel()
 	kind := sharedKinD
 	conf := config.NewProviderConfig().Kubernetes
@@ -33,8 +33,40 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 	})
 	defer waitStreamClosed(t, cancel, stream)
 
+	t.Run("unmanaged deployment is ignored", func(t *testing.T) {
+		unmanaged, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		assert.NilError(t, err)
+		managed, err := kind.CreateMimicDeployment(ctx, managedMimic())
+		assert.NilError(t, err)
+		assert.NilError(t, WaitForDeploymentReady(ctx, kind.client, unmanaged.Namespace, unmanaged.Name))
+		assert.NilError(t, WaitForDeploymentReady(ctx, kind.client, managed.Namespace, managed.Name))
+
+		// Stop and delete the unmanaged deployment first: the first event must
+		// still be the managed one's.
+		s, err := p.Client.AppsV1().Deployments(unmanaged.Namespace).GetScale(ctx, unmanaged.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().Deployments(unmanaged.Namespace).UpdateScale(ctx, unmanaged.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+		assert.NilError(t, p.Client.AppsV1().Deployments(unmanaged.Namespace).Delete(ctx, unmanaged.Name, metav1.DeleteOptions{}))
+
+		s, err = p.Client.AppsV1().Deployments(managed.Namespace).GetScale(ctx, managed.Name, metav1.GetOptions{})
+		assert.NilError(t, err)
+		s.Spec.Replicas = 0
+		_, err = p.Client.AppsV1().Deployments(managed.Namespace).UpdateScale(ctx, managed.Name, s, metav1.UpdateOptions{})
+		assert.NilError(t, err)
+
+		select {
+		case info := <-stream.Events:
+			assert.Equal(t, info.Info.Name, kubernetes.DeploymentName(managed, kubernetes.ParseOptions{Delimiter: "_"}).Original)
+		case err := <-stream.Err:
+			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for deployment stopped event: %v", ctx.Err())
+		}
+	})
 	t.Run("deployment is scaled to 0 replicas", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
@@ -59,7 +91,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		}
 	})
 	t.Run("deployment is removed", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForDeploymentReady(ctx, kind.client, d.Namespace, d.Name)
@@ -80,7 +112,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 		}
 	})
 	t.Run("statefulSet is scaled to 0 replicas", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
@@ -106,7 +138,7 @@ func TestKubernetesProvider_InstanceEvents(t *testing.T) {
 	})
 
 	t.Run("statefulSet is removed", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForStatefulSetReady(ctx, kind.client, ss.Namespace, ss.Name)
@@ -146,7 +178,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		testCtx, testCancel := context.WithTimeout(ctx, 20*time.Second)
 		defer testCancel()
 
-		d, err := kind.CreateMimicDeployment(testCtx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(testCtx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForDeploymentReady(testCtx, kind.client, d.Namespace, d.Name)
@@ -189,7 +221,7 @@ func TestKubernetesProvider_InstanceEvents_Started(t *testing.T) {
 		testCtx, testCancel := context.WithTimeout(ctx, 20*time.Second)
 		defer testCancel()
 
-		ss, err := kind.CreateMimicStatefulSet(testCtx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(testCtx, managedMimic())
 		assert.NilError(t, err)
 
 		err = WaitForStatefulSetReady(testCtx, kind.client, ss.Namespace, ss.Name)
@@ -249,7 +281,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 	defer waitStreamClosed(t, cancel, stream)
 
 	t.Run("deployment is created", func(t *testing.T) {
-		d, err := kind.CreateMimicDeployment(ctx, MimicOptions{})
+		d, err := kind.CreateMimicDeployment(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		expectedName := kubernetes.DeploymentName(d, kubernetes.ParseOptions{Delimiter: "_"}).Original
@@ -271,7 +303,7 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 	})
 
 	t.Run("statefulSet is created", func(t *testing.T) {
-		ss, err := kind.CreateMimicStatefulSet(ctx, MimicOptions{})
+		ss, err := kind.CreateMimicStatefulSet(ctx, managedMimic())
 		assert.NilError(t, err)
 
 		expectedName := kubernetes.StatefulSetName(ss, kubernetes.ParseOptions{Delimiter: "_"}).Original
@@ -291,6 +323,12 @@ func TestKubernetesProvider_InstanceEvents_Created(t *testing.T) {
 			}
 		}
 	})
+}
+
+// managedMimic returns the options of a workload that opted in to Sablier: the
+// event stream ignores the others.
+func managedMimic() MimicOptions {
+	return MimicOptions{Labels: map[string]string{"sablier.enable": "true"}}
 }
 
 // waitStreamClosed cancels the stream's context and waits until both channels

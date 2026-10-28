@@ -30,7 +30,7 @@ func TestDeploymentDeleteHandlesTombstone(t *testing.T) {
 	handler := p.deploymentEventHandler(t.Context(), events, true, true, true, true)
 
 	deleted := &appsv1.Deployment{
-		Name: "myapp", Namespace: "demo",
+		Name: "myapp", Namespace: "demo", Labels: map[string]string{"sablier.enable": "true"},
 	}
 	handler.OnDelete(cache.DeletedFinalStateUnknown{Key: "demo/myapp", Obj: deleted})
 
@@ -49,7 +49,7 @@ func TestStatefulSetDeleteHandlesTombstone(t *testing.T) {
 	handler := p.statefulSetEventHandler(t.Context(), events, true, true, true, true)
 
 	deleted := &appsv1.StatefulSet{
-		Name: "mydb", Namespace: "demo",
+		Name: "mydb", Namespace: "demo", Labels: map[string]string{"sablier.enable": "true"},
 	}
 	handler.OnDelete(cache.DeletedFinalStateUnknown{Key: "demo/mydb", Obj: deleted})
 
@@ -70,7 +70,8 @@ func TestUpdateHandlesNilReplicas(t *testing.T) {
 	events := make(chan sablier.InstanceEvent, 4)
 	handler := p.deploymentEventHandler(t.Context(), events, false, false, false, false)
 
-	oldD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "1"}
-	newD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "2"}
+	enabled := map[string]string{"sablier.enable": "true"}
+	oldD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "1", Labels: enabled}
+	newD := &appsv1.Deployment{Name: "myapp", Namespace: "demo", ResourceVersion: "2", Labels: enabled}
 	handler.OnUpdate(oldD, newD) // Spec.Replicas nil on both: must not panic
 }
