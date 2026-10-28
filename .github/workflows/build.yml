@@ -66,6 +66,12 @@ jobs:
           --post-run-command .github/scripts/test-summary.sh \
           -- -tags="nomsgpack" -race -covermode=atomic -cover -args -test.gocoverdir=/tmp/gocov
 
+    - name: Test the eBPF tracker as root
+      # The eBPF kernel tests need root, so the run above skips them. Run them
+      # again with sudo for their coverage; the Integration (eBPF) workflow
+      # runs them with the activity integration tests.
+      run: go test -tags=nomsgpack -race -covermode=atomic -cover -exec sudo -run 'TestCounter|TestTracker' ./pkg/activity/bpf/ -args -test.gocoverdir=/tmp/gocov
+
     - name: Test the Go client
       # client/ is a separate module, so the root ./... above skips it. Its
       # coverage joins the root module's in the report below.
