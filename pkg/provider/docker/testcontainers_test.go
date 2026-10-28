@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/dind"
@@ -29,6 +30,7 @@ type MimicOptions struct {
 	Healthcheck   *container.HealthConfig
 	RestartPolicy container.RestartPolicy
 	Labels        map[string]string
+	ExposedPorts  network.PortSet
 }
 
 func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (client.ContainerCreateResult, error) {
@@ -38,10 +40,11 @@ func (d *dindContainer) CreateMimic(ctx context.Context, opts MimicOptions) (cli
 
 	return d.client.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Config: &container.Config{
-			Entrypoint:  opts.Cmd,
-			Image:       "sablierapp/mimic:v0.3.3",
-			Labels:      opts.Labels,
-			Healthcheck: opts.Healthcheck,
+			Entrypoint:   opts.Cmd,
+			Image:        "sablierapp/mimic:v0.3.3",
+			Labels:       opts.Labels,
+			Healthcheck:  opts.Healthcheck,
+			ExposedPorts: opts.ExposedPorts,
 		},
 		HostConfig: &container.HostConfig{RestartPolicy: opts.RestartPolicy},
 	})

@@ -48,6 +48,7 @@ func containerToInstance(c container.Summary) sablier.InstanceConfiguration {
 		Groups:       groups,
 		Enabled:      enabled,
 		RunningHours: c.Labels[sablier.LabelRunningHours],
+		Activity:     c.Labels[sablier.LabelActivityEnable] == "true",
 	}
 }
 
