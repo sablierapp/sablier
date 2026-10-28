@@ -106,7 +106,8 @@
             "component": "client",
             "include-component-in-tag": true,
             "tag-separator": "/",
-            "version-file": "version.go"
+            "version-file": "version.go",
+            "initial-version": "0.1.0"
         }
     }
 }
