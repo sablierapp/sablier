@@ -28,38 +28,43 @@ func TestInstanceRequest_EmptyName(t *testing.T) {
 }
 
 func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	startCalled := make(chan struct{})
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		return nil
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			return nil
+		})
+
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		assert.Equal(t, info.Name, "nginx")
+
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called asynchronously")
+		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
-
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-	assert.Equal(t, info.Name, "nginx")
-
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called asynchronously")
-	}
 }
 
 func TestRequestSession_NewUnlabeledRejectedWhenRejectUnlabeledRequestsEnabled(t *testing.T) {
@@ -91,131 +96,146 @@ func TestRequestSession_NewUnlabeledRejectedWhenRejectUnlabeledRequestsEnabled(t
 }
 
 func TestRequestSession_NewLabeledInstanceStartsWhenRejectUnlabeledRequestsEnabled(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	manager.WithRejectUnlabeledRequests(true)
-	ctx := t.Context()
-	startCalled := make(chan struct{})
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		manager.WithRejectUnlabeledRequests(true)
+		ctx := t.Context()
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name:            "nginx",
-		CurrentReplicas: 0,
-		DesiredReplicas: 1,
-		Status:          sablier.InstanceStatusStopped,
-		Enabled:         "true",
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name:            "nginx",
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
+			Enabled:         "true",
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		return nil
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			return nil
+		})
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+		session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, session.Instances["nginx"].Instance.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		assert.NilError(t, session.Instances["nginx"].Error)
+
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called asynchronously")
+		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-
-	session, err := manager.RequestSession(ctx, []string{"nginx"}, time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, session.Instances["nginx"].Instance.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-	assert.NilError(t, session.Instances["nginx"].Error)
-
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called asynchronously")
-	}
 }
 
 func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	startBlocking := make(chan struct{})
-	startCalled := make(chan struct{})
+		startBlocking := make(chan struct{})
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
 
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		<-startBlocking
-		return nil
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			<-startBlocking
+			return nil
+		})
+
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+		info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called")
+		}
+
+		close(startBlocking)
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
-
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-
-	info, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called")
-	}
-
-	close(startBlocking)
 }
 
 func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
 
-	startBlocking := make(chan struct{})
-	startCalled := make(chan struct{})
+		startBlocking := make(chan struct{})
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
-		Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStopped,
+			Provider: "docker", Docker: &sablier.DockerContainerInfo{ID: "nginx", Image: "nginx:latest"},
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	// First call: store miss -> triggers requestStart
-	// Second call: store returns the not-ready state written by Put -> hits status != ready path
-	gomock.InOrder(
-		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound),
-		sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil),
-	)
+		// First call: store miss -> triggers requestStart
+		// Second call: store returns the not-ready state written by Put -> hits status != ready path
+		gomock.InOrder(
+			sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound),
+			sessions.EXPECT().Get(ctx, "nginx").Return(notReady, nil),
+		)
 
-	// InstanceInspect: exactly once during requestStart (second call must not trigger another)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).Times(1)
+		// InstanceInspect: exactly once during requestStart (second call must not trigger another)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).Times(1)
 
-	// InstanceStart: exactly once (second call must not trigger another)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		<-startBlocking
-		return nil
-	}).Times(1)
+		// InstanceStart: exactly once (second call must not trigger another)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			<-startBlocking
+			return nil
+		}).Times(1)
 
-	// Second call: start is still pending -> skips InstanceInspect, returns not-ready
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).Times(2)
+		// Second call: start is still pending -> skips InstanceInspect, returns not-ready
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil).Times(2)
 
-	// First call — starts the goroutine
-	info1, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		// First call — starts the goroutine
+		info1, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
-	// Wait for the goroutine to enter InstanceStart
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called")
-	}
+		// Wait for the goroutine to enter InstanceStart
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called")
+		}
 
-	// Second call — start still pending, skips inspect, no duplicate InstanceStart
-	info2, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
-	assert.NilError(t, err)
-	assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		// Second call — start still pending, skips inspect, no duplicate InstanceStart
+		info2, err := manager.InstanceRequest(ctx, "nginx", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
 
-	close(startBlocking)
+		close(startBlocking)
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
+	})
 }
 
 // TestInstanceRequest_SecondCallJoinsInFlightPendingStart verifies that when a
@@ -228,96 +248,101 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 //   - A "sablier.instance.join_pending_start" OTel event is recorded on the
 //     second request's span so the two requests can be correlated in the backend.
 func TestInstanceRequest_SecondCallJoinsInFlightPendingStart(t *testing.T) {
-	// Wire up an in-memory OTel exporter so we can assert the join span event.
-	exporter := tracetest.NewInMemoryExporter()
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(exporter),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-	)
-	otel.SetTracerProvider(tp)
-	t.Cleanup(func() {
-		_ = tp.Shutdown(context.Background())
-		otel.SetTracerProvider(otel.GetTracerProvider())
-	})
+	synctest.Test(t, func(t *testing.T) {
+		// Wire up an in-memory OTel exporter so we can assert the join span event.
+		exporter := tracetest.NewInMemoryExporter()
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSyncer(exporter),
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		)
+		otel.SetTracerProvider(tp)
+		t.Cleanup(func() {
+			_ = tp.Shutdown(context.Background())
+			otel.SetTracerProvider(otel.GetTracerProvider())
+		})
 
-	manager, sessions, provider := setupSablier(t)
-	tracer := tp.Tracer("test")
+		manager, sessions, provider := setupSablier(t)
+		tracer := tp.Tracer("test")
 
-	startBlocking := make(chan struct{})
-	startCalled := make(chan struct{})
+		startBlocking := make(chan struct{})
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1,
-		Status: sablier.InstanceStatusStopped,
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
-
-	// Both calls return ErrKeyNotFound so requestStart is entered twice.
-	// The second must coalesce onto the in-flight goroutine without retrying.
-	sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(2)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).Times(1)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		<-startBlocking
-		return nil
-	}).Times(1)
-	sessions.EXPECT().Put(gomock.Any(), notReady, time.Minute).Return(nil).Times(2)
-
-	// First request — creates the pending entry and dispatches the goroutine.
-	firstCtx, firstSpan := tracer.Start(t.Context(), "first-request")
-	info1, err := manager.InstanceRequest(firstCtx, "nginx", time.Minute)
-	firstSpan.End()
-	assert.NilError(t, err)
-	assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-
-	// Ensure the goroutine has entered InstanceStart before the second request.
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart goroutine never started")
-	}
-
-	// Second request — goroutine still blocked: must take the "default" branch in
-	// requestStart's first critical section, returning the cached info without
-	// calling InstanceInspect or InstanceStart again.
-	secondCtx, secondSpan := tracer.Start(t.Context(), "second-request")
-	info2, err := manager.InstanceRequest(secondCtx, "nginx", time.Minute)
-	secondSpan.End()
-	assert.NilError(t, err)
-	assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
-	assert.Equal(t, info2.Name, info1.Name)
-
-	// Verify the join event was recorded on the second request's span, and that
-	// it references the first request's trace/span IDs.
-	var foundEvent bool
-	for _, s := range exporter.GetSpans() {
-		if s.Name != "second-request" {
-			continue
+		stoppedInfo := sablier.InstanceInfo{
+			Name: "nginx", CurrentReplicas: 0, DesiredReplicas: 1,
+			Status: sablier.InstanceStatusStopped,
 		}
-		for _, e := range s.Events {
-			if e.Name == "sablier.instance.join_pending_start" {
-				foundEvent = true
-				// The event must reference the first request's trace context.
-				var gotTraceID, gotSpanID string
-				for _, attr := range e.Attributes {
-					switch string(attr.Key) {
-					case "pending_trace_id":
-						gotTraceID = attr.Value.AsString()
-					case "pending_span_id":
-						gotSpanID = attr.Value.AsString()
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
+
+		// Both calls return ErrKeyNotFound so requestStart is entered twice.
+		// The second must coalesce onto the in-flight goroutine without retrying.
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(2)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil).Times(1)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			<-startBlocking
+			return nil
+		}).Times(1)
+		sessions.EXPECT().Put(gomock.Any(), notReady, time.Minute).Return(nil).Times(2)
+
+		// First request — creates the pending entry and dispatches the goroutine.
+		firstCtx, firstSpan := tracer.Start(t.Context(), "first-request")
+		info1, err := manager.InstanceRequest(firstCtx, "nginx", time.Minute)
+		firstSpan.End()
+		assert.NilError(t, err)
+		assert.Equal(t, info1.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+
+		// Ensure the goroutine has entered InstanceStart before the second request.
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart goroutine never started")
+		}
+
+		// Second request — goroutine still blocked: must take the "default" branch in
+		// requestStart's first critical section, returning the cached info without
+		// calling InstanceInspect or InstanceStart again.
+		secondCtx, secondSpan := tracer.Start(t.Context(), "second-request")
+		info2, err := manager.InstanceRequest(secondCtx, "nginx", time.Minute)
+		secondSpan.End()
+		assert.NilError(t, err)
+		assert.Equal(t, info2.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+		assert.Equal(t, info2.Name, info1.Name)
+
+		// Verify the join event was recorded on the second request's span, and that
+		// it references the first request's trace/span IDs.
+		var foundEvent bool
+		for _, s := range exporter.GetSpans() {
+			if s.Name != "second-request" {
+				continue
+			}
+			for _, e := range s.Events {
+				if e.Name == "sablier.instance.join_pending_start" {
+					foundEvent = true
+					// The event must reference the first request's trace context.
+					var gotTraceID, gotSpanID string
+					for _, attr := range e.Attributes {
+						switch string(attr.Key) {
+						case "pending_trace_id":
+							gotTraceID = attr.Value.AsString()
+						case "pending_span_id":
+							gotSpanID = attr.Value.AsString()
+						}
 					}
+					assert.Equal(t, gotTraceID, firstSpan.SpanContext().TraceID().String(),
+						"join event must reference the first request's trace ID")
+					assert.Equal(t, gotSpanID, firstSpan.SpanContext().SpanID().String(),
+						"join event must reference the first request's span ID")
 				}
-				assert.Equal(t, gotTraceID, firstSpan.SpanContext().TraceID().String(),
-					"join event must reference the first request's trace ID")
-				assert.Equal(t, gotSpanID, firstSpan.SpanContext().SpanID().String(),
-					"join event must reference the first request's span ID")
 			}
 		}
-	}
-	assert.Assert(t, foundEvent, "expected sablier.instance.join_pending_start event on second-request span")
+		assert.Assert(t, foundEvent, "expected sablier.instance.join_pending_start event on second-request span")
 
-	close(startBlocking)
+		close(startBlocking)
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
+	})
 }
 
 func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
@@ -403,6 +428,9 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 		case <-time.After(5 * time.Second):
 			t.Fatal("Retry goroutine was never started")
 		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
 }
 
