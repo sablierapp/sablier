@@ -161,150 +161,165 @@ func TestRequestSession_RejectsUnlabeledInstances(t *testing.T) {
 // the provider, the session entry is keyed by the clean name, and the entry
 // carries the Optional flag so it never gates readiness.
 func TestRequestSession_OptionalPrefix(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	ctx := t.Context()
-	startCalled := make(chan struct{})
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name:            "nginx",
-		CurrentReplicas: 0,
-		DesiredReplicas: 1,
-		Status:          sablier.InstanceStatusStopped,
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name:            "nginx",
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		return nil
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			return nil
+		})
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+		session, err := manager.RequestSession(ctx, []string{sablier.OptionalPrefix + "nginx"}, time.Minute)
+		assert.NilError(t, err)
+
+		entry, ok := session.Instances["nginx"]
+		assert.Assert(t, ok, "session entry must be keyed by the clean name")
+		assert.Assert(t, entry.Optional)
+		// The instance is only starting, but as the sole (optional) member it
+		// cannot gate the session.
+		assert.Assert(t, session.IsReady())
+
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called asynchronously")
+		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-
-	session, err := manager.RequestSession(ctx, []string{sablier.OptionalPrefix + "nginx"}, time.Minute)
-	assert.NilError(t, err)
-
-	entry, ok := session.Instances["nginx"]
-	assert.Assert(t, ok, "session entry must be keyed by the clean name")
-	assert.Assert(t, entry.Optional)
-	// The instance is only starting, but as the sole (optional) member it
-	// cannot gate the session.
-	assert.Assert(t, session.IsReady())
-
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called asynchronously")
-	}
 }
 
 func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	manager.WithRejectUnlabeledRequests(true)
-	manager.SetGroups(map[string][]string{"default": {"nginx"}})
-	ctx := t.Context()
-	startCalled := make(chan struct{})
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		manager.WithRejectUnlabeledRequests(true)
+		manager.SetGroups(map[string][]string{"default": {"nginx"}})
+		ctx := t.Context()
+		startCalled := make(chan struct{})
 
-	stoppedInfo := sablier.InstanceInfo{
-		Name:            "nginx",
-		CurrentReplicas: 0,
-		DesiredReplicas: 1,
-		Status:          sablier.InstanceStatusStopped,
-	}
-	notReady := stoppedInfo
-	notReady.Status = sablier.InstanceStatusStarting
+		stoppedInfo := sablier.InstanceInfo{
+			Name:            "nginx",
+			CurrentReplicas: 0,
+			DesiredReplicas: 1,
+			Status:          sablier.InstanceStatusStopped,
+		}
+		notReady := stoppedInfo
+		notReady.Status = sablier.InstanceStatusStarting
 
-	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
-	provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
-		close(startCalled)
-		return nil
+		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
+		provider.EXPECT().InstanceStart(gomock.Any(), "nginx").DoAndReturn(func(_ any, _ string) error {
+			close(startCalled)
+			return nil
+		})
+		sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
+
+		session, err := manager.RequestSessionGroup(ctx, "default", time.Minute)
+		assert.NilError(t, err)
+		assert.NilError(t, session.Instances["nginx"].Error)
+
+		select {
+		case <-startCalled:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart was never called asynchronously")
+		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
 	})
-	sessions.EXPECT().Put(ctx, notReady, time.Minute).Return(nil)
-
-	session, err := manager.RequestSessionGroup(ctx, "default", time.Minute)
-	assert.NilError(t, err)
-	assert.NilError(t, session.Instances["nginx"].Error)
-
-	select {
-	case <-startCalled:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart was never called asynchronously")
-	}
 }
 
 // TestRequestSessionGroup_MultipleGroupsFiltering verifies that requesting a session
 // for one group does NOT start instances from other groups, even when instances belong
 // to multiple groups.
 func TestRequestSessionGroup_MultipleGroupsFiltering(t *testing.T) {
-	manager, sessions, provider := setupSablier(t)
-	// Setup: team-a has [frontend, shared-api], team-b has [backend, shared-api]
-	manager.SetGroups(map[string][]string{
-		"team-a": {"frontend", "shared-api"},
-		"team-b": {"backend", "shared-api"},
-	})
-	ctx := t.Context()
-
-	stoppedInfo := func(name string) sablier.InstanceInfo {
-		return sablier.InstanceInfo{
-			Name:            name,
-			CurrentReplicas: 0,
-			DesiredReplicas: 1,
-			Status:          sablier.InstanceStatusStopped,
-		}
-	}
-
-	startingInfo := func(name string) sablier.InstanceInfo {
-		return sablier.InstanceInfo{
-			Name:            name,
-			CurrentReplicas: 0,
-			DesiredReplicas: 1,
-			Status:          sablier.InstanceStatusStarting,
-		}
-	}
-
-	// Expect only frontend and shared-api to be started (from team-a), NOT backend.
-	// InstanceStart is called asynchronously in a goroutine; use a WaitGroup so
-	// we don't exit the test before both calls have been observed.
-	var startWg sync.WaitGroup
-	startWg.Add(2)
-	for _, name := range []string{"frontend", "shared-api"} {
-		sessions.EXPECT().Get(ctx, name).Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
-		provider.EXPECT().InstanceInspect(gomock.Any(), name).Return(stoppedInfo(name), nil)
-		provider.EXPECT().InstanceStart(gomock.Any(), name).DoAndReturn(func(_ any, _ string) error {
-			startWg.Done()
-			return nil
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		// Setup: team-a has [frontend, shared-api], team-b has [backend, shared-api]
+		manager.SetGroups(map[string][]string{
+			"team-a": {"frontend", "shared-api"},
+			"team-b": {"backend", "shared-api"},
 		})
-		sessions.EXPECT().Put(ctx, startingInfo(name), time.Minute).Return(nil)
-	}
+		ctx := t.Context()
 
-	// backend should NOT be called at all
-	sessions.EXPECT().Get(ctx, "backend").Times(0)
-	provider.EXPECT().InstanceInspect(gomock.Any(), "backend").Times(0)
-	provider.EXPECT().InstanceStart(gomock.Any(), "backend").Times(0)
+		stoppedInfo := func(name string) sablier.InstanceInfo {
+			return sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStopped,
+			}
+		}
 
-	session, err := manager.RequestSessionGroup(ctx, "team-a", time.Minute)
-	assert.NilError(t, err)
+		startingInfo := func(name string) sablier.InstanceInfo {
+			return sablier.InstanceInfo{
+				Name:            name,
+				CurrentReplicas: 0,
+				DesiredReplicas: 1,
+				Status:          sablier.InstanceStatusStarting,
+			}
+		}
 
-	// Verify only team-a instances are in the session
-	_, hasFrontend := session.Instances["frontend"]
-	_, hasSharedAPI := session.Instances["shared-api"]
-	_, hasBackend := session.Instances["backend"]
+		// Expect only frontend and shared-api to be started (from team-a), NOT backend.
+		// InstanceStart is called asynchronously in a goroutine; use a WaitGroup so
+		// we don't exit the test before both calls have been observed.
+		var startWg sync.WaitGroup
+		startWg.Add(2)
+		for _, name := range []string{"frontend", "shared-api"} {
+			sessions.EXPECT().Get(ctx, name).Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+			provider.EXPECT().InstanceInspect(gomock.Any(), name).Return(stoppedInfo(name), nil)
+			provider.EXPECT().InstanceStart(gomock.Any(), name).DoAndReturn(func(_ any, _ string) error {
+				startWg.Done()
+				return nil
+			})
+			sessions.EXPECT().Put(ctx, startingInfo(name), time.Minute).Return(nil)
+		}
 
-	assert.Assert(t, hasFrontend, "frontend should be in session")
-	assert.Assert(t, hasSharedAPI, "shared-api should be in session")
-	assert.Assert(t, !hasBackend, "backend should NOT be in session")
+		// backend should NOT be called at all
+		sessions.EXPECT().Get(ctx, "backend").Times(0)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "backend").Times(0)
+		provider.EXPECT().InstanceStart(gomock.Any(), "backend").Times(0)
 
-	// Wait for both async InstanceStart goroutines to complete so gomock can
-	// verify all expected calls were made before the test exits.
-	done := make(chan struct{})
-	go func() { startWg.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("InstanceStart goroutines did not complete in time")
-	}
+		session, err := manager.RequestSessionGroup(ctx, "team-a", time.Minute)
+		assert.NilError(t, err)
+
+		// Verify only team-a instances are in the session
+		_, hasFrontend := session.Instances["frontend"]
+		_, hasSharedAPI := session.Instances["shared-api"]
+		_, hasBackend := session.Instances["backend"]
+
+		assert.Assert(t, hasFrontend, "frontend should be in session")
+		assert.Assert(t, hasSharedAPI, "shared-api should be in session")
+		assert.Assert(t, !hasBackend, "backend should NOT be in session")
+
+		// Wait for both async InstanceStart goroutines to complete so gomock can
+		// verify all expected calls were made before the test exits.
+		done := make(chan struct{})
+		go func() { startWg.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("InstanceStart goroutines did not complete in time")
+		}
+
+		// The start goroutine logs through t: let it finish before the test ends.
+		synctest.Wait()
+	})
 }
 
 func TestSessionsManager_RequestReadySessionCancelledByUser(t *testing.T) {
