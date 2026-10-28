@@ -53,6 +53,7 @@ func main() {
 	rec.RecordInstanceStartEnd("instance", time.Second)
 	rec.RecordReadyWaitBegin("instance")
 	rec.RecordReadyWaitEnd("instance")
+	rec.RecordActivityBytes("instance", 1)
 	// RecordInactiveInstance only records sablier_instance_active_seconds_total
 	// when a non-zero active duration has elapsed; sleep so the sample (and thus
 	// the metric's metadata) is emitted deterministically, even on coarse clocks.

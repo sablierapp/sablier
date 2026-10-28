@@ -1,6 +1,7 @@
 package sablier_test
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -63,6 +64,12 @@ func (f *fakeRecorder) RecordActiveInstance(instance string)   { f.record("activ
 func (f *fakeRecorder) RecordInactiveInstance(instance string) { f.record("active-:" + instance) }
 func (f *fakeRecorder) RecordInstanceStop(instance, reason string) {
 	f.record("stop:" + instance + "/" + reason)
+}
+func (f *fakeRecorder) RecordActivityBytes(instance string, bytes uint64) {
+	f.record("activity_bytes:" + instance + "/" + strconv.FormatUint(bytes, 10))
+}
+func (f *fakeRecorder) SetActivityWatched(count int) {
+	f.record("activity_watched:" + strconv.Itoa(count))
 }
 
 // setupSablierWithMetrics is like setupSablier but installs a fakeRecorder.

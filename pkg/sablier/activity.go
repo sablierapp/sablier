@@ -1,6 +1,7 @@
 package sablier
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,6 +25,19 @@ type ActivityConfig struct {
 	SessionDuration time.Duration `json:"sessionDuration,omitempty"` // 0: --sessions.default-duration
 	MinBytes        uint64        `json:"minBytes"`
 	Groups          []string      `json:"groups,omitempty"` // nil: refresh only this instance
+}
+
+// ActivitySource counts the traffic of watched instances. It is the core's
+// only dependency on activity tracking; WatchActivity drives it.
+type ActivitySource interface {
+	// Watch starts counting the traffic on the instance's ports. Watching an
+	// instance that is already watched replaces its previous watch.
+	Watch(ctx context.Context, instance string, ports []Port) error
+	// Unwatch stops counting the instance's traffic.
+	Unwatch(ctx context.Context, instance string) error
+	// Drain returns the bytes counted per watched instance since the
+	// previous call.
+	Drain(ctx context.Context) (map[string]uint64, error)
 }
 
 // ParseActivityPorts parses a comma-separated list of "port[/proto]" entries.

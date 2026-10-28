@@ -19,6 +19,8 @@ func TestNoopRecorderImplementsAllMethods(t *testing.T) {
 	r.RecordActiveInstance("nginx")
 	r.RecordInactiveInstance("nginx")
 	r.RecordInstanceStop("nginx", "expired")
+	r.RecordActivityBytes("nginx", 1024)
+	r.SetActivityWatched(1)
 
 	_ = errors.Is(nil, nil)
 }

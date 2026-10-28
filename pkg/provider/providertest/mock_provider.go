@@ -11,6 +11,7 @@ package providertest
 
 import (
 	context "context"
+	netip "net/netip"
 	reflect "reflect"
 
 	provider "github.com/sablierapp/sablier/pkg/provider"
@@ -180,4 +181,58 @@ func (m *MockInstanceNameResolver) InstanceName(ctx context.Context, name string
 func (mr *MockInstanceNameResolverMockRecorder) InstanceName(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceName", reflect.TypeOf((*MockInstanceNameResolver)(nil).InstanceName), ctx, name)
+}
+
+// MockActivityHost is a mock of ActivityHost interface.
+type MockActivityHost struct {
+	ctrl     *gomock.Controller
+	recorder *MockActivityHostMockRecorder
+	isgomock struct{}
+}
+
+// MockActivityHostMockRecorder is the mock recorder for MockActivityHost.
+type MockActivityHostMockRecorder struct {
+	mock *MockActivityHost
+}
+
+// NewMockActivityHost creates a new mock instance.
+func NewMockActivityHost(ctrl *gomock.Controller) *MockActivityHost {
+	mock := &MockActivityHost{ctrl: ctrl}
+	mock.recorder = &MockActivityHostMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockActivityHost) EXPECT() *MockActivityHostMockRecorder {
+	return m.recorder
+}
+
+// ActivityIgnoredSources mocks base method.
+func (m *MockActivityHost) ActivityIgnoredSources(ctx context.Context) ([]netip.Addr, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ActivityIgnoredSources", ctx)
+	ret0, _ := ret[0].([]netip.Addr)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ActivityIgnoredSources indicates an expected call of ActivityIgnoredSources.
+func (mr *MockActivityHostMockRecorder) ActivityIgnoredSources(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivityIgnoredSources", reflect.TypeOf((*MockActivityHost)(nil).ActivityIgnoredSources), ctx)
+}
+
+// InstanceActivityTarget mocks base method.
+func (m *MockActivityHost) InstanceActivityTarget(ctx context.Context, name string) (sablier.ActivityTarget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceActivityTarget", ctx, name)
+	ret0, _ := ret[0].(sablier.ActivityTarget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstanceActivityTarget indicates an expected call of InstanceActivityTarget.
+func (mr *MockActivityHostMockRecorder) InstanceActivityTarget(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceActivityTarget", reflect.TypeOf((*MockActivityHost)(nil).InstanceActivityTarget), ctx, name)
 }
