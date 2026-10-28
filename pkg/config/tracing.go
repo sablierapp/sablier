@@ -17,8 +17,9 @@ type Tracing struct {
 	// Since: v1.13.0
 	ExporterType string
 
-	// Endpoint is the OTLP collector base URL (scheme + host + optional port).
-	// Examples: "http://jaeger:4318", "http://tempo:4318".
+	// Endpoint is the OTLP collector URL (scheme + host + optional port + optional path).
+	// Without a path, traces are sent to "/v1/traces"; a path is used as is.
+	// Examples: "http://jaeger:4318", "http://victoriatraces:10428/insert/opentelemetry/v1/traces".
 	// Only used when ExporterType is "otlphttp".
 	// Env: SABLIER_TRACING_ENDPOINT
 	// CLI: --tracing.endpoint

@@ -105,7 +105,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("tracing.enabled", startCmd.Flags().Lookup("tracing.enabled"))
 	startCmd.Flags().StringVar(&conf.Tracing.ExporterType, "tracing.exporter-type", "otlphttp", "Trace exporter backend: otlphttp or stdout")
 	_ = viper.BindPFlag("tracing.exporter-type", startCmd.Flags().Lookup("tracing.exporter-type"))
-	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "http://localhost:4318", "OTLP collector base URL (used when tracing.exporter-type=otlphttp)")
+	startCmd.Flags().StringVar(&conf.Tracing.Endpoint, "tracing.endpoint", "http://localhost:4318", "OTLP collector URL; /v1/traces is appended when it has no path (used when tracing.exporter-type=otlphttp)")
 	_ = viper.BindPFlag("tracing.endpoint", startCmd.Flags().Lookup("tracing.endpoint"))
 	startCmd.Flags().StringVar(&conf.Tracing.ServiceName, "tracing.service-name", "sablier", "Service name reported to the tracing backend")
 	_ = viper.BindPFlag("tracing.service-name", startCmd.Flags().Lookup("tracing.service-name"))
