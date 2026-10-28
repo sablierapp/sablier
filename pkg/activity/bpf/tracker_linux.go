@@ -12,11 +12,11 @@ import (
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/rlimit"
+	"golang.org/x/sys/unix"
 )
 
 // privilegesHint names what loading and attaching the programs needs.
-const privilegesHint = "needs CAP_BPF and CAP_NET_ADMIN, and cgroup: host"
+const privilegesHint = "needs CAP_BPF and CAP_NET_ADMIN, and cgroup: host; before Linux 5.11 also CAP_SYS_RESOURCE"
 
 // Tracker counts the bytes each watched cgroup exchanges on its watched ports.
 // It is safe for concurrent use.
@@ -44,8 +44,14 @@ func New() (*Tracker, error) {
 	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); err != nil {
 		return nil, errors.New("cgroup v2 required")
 	}
-	if err := rlimit.RemoveMemlock(); err != nil {
-		return nil, fmt.Errorf("remove the memlock limit (%s; before Linux 5.11 also CAP_SYS_RESOURCE): %w", privilegesHint, err)
+	// Before Linux 5.11, eBPF maps count against RLIMIT_MEMLOCK. Raising it
+	// needs CAP_SYS_RESOURCE; without it the limit stays, which is harmless
+	// from 5.11 on, and before 5.11 the map load below fails and names it.
+	// This replaces github.com/cilium/ebpf/rlimit, whose init function calls
+	// bpf() in every process that links it, even with activity disabled.
+	infinity := unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY}
+	if err := unix.Setrlimit(unix.RLIMIT_MEMLOCK, &infinity); err != nil && !errors.Is(err, unix.EPERM) {
+		return nil, fmt.Errorf("raise the memlock limit: %w", err)
 	}
 	spec, err := loadCounter()
 	if err != nil {
