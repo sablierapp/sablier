@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -21,6 +22,9 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	dial := func(ctx context.Context) client.EventsResult {
 		filters := client.Filters{}
 		filters.Add("type", string(events.ContainerEventType))
+		// Only report managed containers. Container events carry the container
+		// labels, so the daemon can filter destroy events too.
+		filters.Add("label", fmt.Sprintf("%s=true", sablier.LabelEnable))
 		if wantStopped {
 			filters.Add("event", string(events.ActionDie))
 		}
