@@ -28,6 +28,7 @@ type DynamicRequest struct {
 //
 // @Summary      Dynamic strategy
 // @Description  Returns a themed HTML waiting page reflecting the session status; the page self-refreshes until the instances are ready. Provide either `names` or `group`.
+// @ID           startDynamic
 // @Tags         strategies
 // @Produce      html
 // @Param        names              query  []string  false  "Instance name(s). Mutually exclusive with group. Prefix a name with 'optional:' to mark it best-effort: it is started with the session but its readiness and errors never gate it."

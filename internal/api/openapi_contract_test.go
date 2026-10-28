@@ -25,6 +25,32 @@ func init() {
 	openapi3filter.RegisterBodyDecoder("text/html", openapi3filter.PlainBodyDecoder)
 }
 
+// TestOpenAPIOperationIDs pins the operationId of every operation. Client
+// generators derive method names from them, so renaming one is a breaking
+// change for every generated client.
+func TestOpenAPIOperationIDs(t *testing.T) {
+	doc, err := openapi3.NewLoader().LoadFromFile("../../docs/static/openapi.json")
+	assert.NilError(t, err)
+
+	got := map[string]string{}
+	for path, item := range doc.Paths.Map() {
+		for method, op := range item.Operations() {
+			got[method+" "+path] = op.OperationID
+		}
+	}
+
+	assert.DeepEqual(t, map[string]string{
+		"GET /health":                  "getHealth",
+		"GET /api/events":              "streamInstanceEvents",
+		"GET /api/themes":              "listThemes",
+		"GET /api/dynamic/themes":      "listThemesLegacy",
+		"GET /api/strategies/dynamic":  "startDynamic",
+		"GET /api/strategies/blocking": "startBlocking",
+		"GET /api/strategies/poke":     "startPoke",
+	}, got)
+	assert.Assert(t, doc.Paths.Find("/api/dynamic/themes").Get.Deprecated, "the legacy themes path must be marked deprecated")
+}
+
 // TestOpenAPIContract replays every documented response of the strategy
 // endpoints and validates status, headers, media type and body against the
 // published spec (docs/static/openapi.json). Generated clients are built from
