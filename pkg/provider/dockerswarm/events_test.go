@@ -27,7 +27,7 @@ func TestDockerSwarmProvider_InstanceEvents(t *testing.T) {
 	c, err := dind.CreateMimic(ctx, MimicOptions{})
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStopped},
 	})
 
@@ -93,7 +93,7 @@ func TestDockerSwarmProvider_InstanceEvents_Started(t *testing.T) {
 	_, err = p.Client.ServiceUpdate(ctx, service.ID, client.ServiceUpdateOptions{Version: service.Version, Spec: service.Spec})
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
@@ -131,7 +131,7 @@ func TestDockerSwarmProvider_InstanceEvents_Created(t *testing.T) {
 	p, err := dockerswarm.New(ctx, dind.client, slogt.New(t))
 	assert.NilError(t, err)
 
-	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
 		Types: []provider.InstanceEventType{provider.InstanceEventCreated},
 	})
 
@@ -155,4 +155,19 @@ func TestDockerSwarmProvider_InstanceEvents_Created(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatalf("timed out waiting for service created event: %v", ctx.Err())
 	}
+}
+
+// subscribe opens an event stream bound to ctx and closes it before the test
+// ends, so the provider never logs to a finished test (the race detector
+// reports that).
+func subscribe(ctx context.Context, t *testing.T, p *dockerswarm.Provider, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	stream := p.InstanceEvents(ctx, opts)
+	t.Cleanup(func() {
+		cancel()
+		for range stream.Events {
+		}
+	})
+	return stream
 }
