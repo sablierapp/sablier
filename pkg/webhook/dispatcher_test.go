@@ -109,7 +109,7 @@ func TestDispatcher_FiresOnStartedEvent(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventStarted,
-		Info: sablier.InstanceInfo{Name: "nginx"},
+		Info: sablier.InstanceInfo{Enabled: "true", Name: "nginx"},
 	}
 
 	p := c.first(t, time.Second)
@@ -133,7 +133,7 @@ func TestDispatcher_FiresOnStoppedEvent(t *testing.T) {
 
 	eventsC <- sablier.InstanceEvent{
 		Type: provider.InstanceEventStopped,
-		Info: sablier.InstanceInfo{Name: "myapp"},
+		Info: sablier.InstanceInfo{Enabled: "true", Name: "myapp"},
 	}
 
 	p := c.first(t, time.Second)
@@ -155,14 +155,39 @@ func TestDispatcher_IgnoresNonLifecycleEvents(t *testing.T) {
 	startWatch(t, d, ctx, cancel, stream)
 
 	// Send events that are not started/stopped.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: "nginx"}}
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventUpdated, Info: sablier.InstanceInfo{Name: "nginx"}}
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Name: "nginx"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Enabled: "true", Name: "nginx"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventUpdated, Info: sablier.InstanceInfo{Enabled: "true", Name: "nginx"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Enabled: "true", Name: "nginx"}}
 	// Then a started event as a sentinel to confirm the Watch loop is processing.
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "sentinel"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Enabled: "true", Name: "sentinel"}}
 
 	c.first(t, time.Second) // wait for sentinel
 	// Only the started sentinel should have been delivered.
+	assert.Equal(t, 1, c.count())
+}
+
+func TestDispatcher_IgnoresUnmanagedInstances(t *testing.T) {
+	c := &capture{}
+	srv := startServer(t, c.handler)
+
+	d := webhook.NewDispatcher(
+		[]config.WebhookEndpoint{{URL: srv.URL}},
+		slogt.New(t),
+	)
+
+	eventsC, _, stream := makeStream()
+	ctx, cancel := context.WithCancel(t.Context())
+	startWatch(t, d, ctx, cancel, stream)
+
+	// Instances without sablier.enable=true, or whose labels are unknown.
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "unlabeled"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Enabled: "false", Name: "disabled"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "parsed", Config: &sablier.InstanceConfig{Enabled: false}}}
+	// Then a managed instance as a sentinel to confirm the Watch loop is processing.
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "sentinel", Config: &sablier.InstanceConfig{Enabled: true}}}
+
+	p := c.first(t, time.Second)
+	assert.Equal(t, "sentinel", p.Instance.Name)
 	assert.Equal(t, 1, c.count())
 }
 
@@ -182,8 +207,8 @@ func TestDispatcher_FiltersEventsByEndpointConfig(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	startWatch(t, d, ctx, cancel, stream)
 
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Enabled: "true", Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStopped, Info: sablier.InstanceInfo{Enabled: "true", Name: "app"}}
 
 	// Wait until each server received exactly one event.
 	deadline := time.Now().Add(time.Second)
@@ -213,7 +238,7 @@ func TestDispatcher_ForwardsCustomHeaders(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	startWatch(t, d, ctx, cancel, stream)
 
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Enabled: "true", Name: "app"}}
 
 	select {
 	case auth := <-gotAuth:
@@ -240,7 +265,7 @@ func TestDispatcher_HandlesHTTPError(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	startWatch(t, d, ctx, cancel, stream)
 
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Enabled: "true", Name: "app"}}
 	select {
 	case <-delivered:
 		// endpoint was reached — dispatcher handled the 500 without crashing
@@ -319,7 +344,7 @@ func TestDispatcher_MultipleEndpoints(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	startWatch(t, d, ctx, cancel, stream)
 
-	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Name: "app"}}
+	eventsC <- sablier.InstanceEvent{Type: provider.InstanceEventStarted, Info: sablier.InstanceInfo{Enabled: "true", Name: "app"}}
 
 	deadline := time.Now().Add(time.Second)
 	for time.Now().Before(deadline) {

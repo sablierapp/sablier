@@ -9,6 +9,8 @@ aliases:
 
 Sablier can POST a normalized JSON notification to one or more HTTP endpoints whenever a managed instance **starts** or **stops**.
 
+Only instances that opt in with `sablier.enable=true` trigger webhooks. An unlabeled instance does not, even when Sablier starts it for a request that names it.
+
 ```yaml
 # sablier.yaml
 webhooks:
