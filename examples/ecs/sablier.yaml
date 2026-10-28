@@ -88,7 +88,7 @@ Resources:
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       ContainerDefinitions:
         - Name: sablier
-          Image: sablierapp/sablier:1.19.0 # x-release-please-version
+          Image: sablierapp/sablier:1.19.1 # x-release-please-version
           Essential: true
           # region config
           Command:

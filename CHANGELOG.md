@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.1](https://github.com/sablierapp/sablier/compare/v1.19.0...v1.19.1) (2026-10-28)
+
+
+### Documentation
+
+* fix the README image paths broken by the Hugo docs move ([#1233](https://github.com/sablierapp/sablier/issues/1233)) ([d134fe1](https://github.com/sablierapp/sablier/commit/d134fe153342f052b636549c64785012050b321b))
+
 ## [1.19.0](https://github.com/sablierapp/sablier/compare/v1.18.0...v1.19.0) (2026-10-28)
 
 

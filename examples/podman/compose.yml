@@ -11,7 +11,7 @@
 services:
   # region sablier
   sablier:
-    image: docker.io/sablierapp/sablier:1.19.0 # x-release-please-version
+    image: docker.io/sablierapp/sablier:1.19.1 # x-release-please-version
     command:
       - start
       - --provider.name=podman
