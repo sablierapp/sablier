@@ -1,8 +1,7 @@
 package docker
 
-// Unit tests for the events-API builder, in particular the one lifecycle change
-// whose single message means two events. These run without a real Docker daemon
-// (the daemon-backed event tests are in events_test.go).
+// Daemon-free tests for the rename handling; events_test.go covers the rest
+// against a real daemon.
 
 import (
 	"context"
@@ -21,11 +20,8 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// stubEventsClient implements just enough of client.APIClient for InstanceEvents:
-// the events stream to feed, and an inspect that fails. A failing inspect is the
-// state a rename leaves the stream in — the container answers to its new name, so
-// the old one it was asked about is gone — and it is also what the comment in
-// `renamed` says the bare-info fallback is for.
+// stubEventsClient feeds the events stream and records each dial's filters.
+// Its inspect always fails, so events fall back to bare info.
 type stubEventsClient struct {
 	client.APIClient
 	messages chan events.Message
@@ -51,13 +47,9 @@ func (s *stubEventsClient) dialed() []client.Filters {
 	return slices.Clone(s.dial)
 }
 
-// TestInstanceEvents_RenameMovesTheGroupFromTheTemporaryNameToTheFinalOne covers
-// `docker compose up -d` recreating a container: compose creates the replacement
-// as `<short-id>_<name>`, removes the container holding `<name>`, and only then
-// renames the replacement to `<name>`. The stream has to report both halves, the
-// removal first, or the group keeps a name no container has and every wake fails
-// until the 30-second reconciliation.
-func TestInstanceEvents_RenameMovesTheGroupFromTheTemporaryNameToTheFinalOne(t *testing.T) {
+// TestInstanceEvents_Rename covers the rename at the end of a Compose recreate
+// (see #1136): the temporary name is removed, then the final name is updated.
+func TestInstanceEvents_Rename(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
@@ -87,19 +79,15 @@ func TestInstanceEvents_RenameMovesTheGroupFromTheTemporaryNameToTheFinalOne(t *
 	assert.Equal(t, second.Type, provider.InstanceEventUpdated)
 	assert.Equal(t, second.Info.Name, "demo")
 
-	// The daemon has to have been asked for renames at all: without the filter the
-	// two events above are messages the stream never receives, and the group keeps
-	// the temporary name.
 	dialed := c.dialed()
 	assert.Equal(t, len(dialed), 1)
 	assert.Assert(t, dialed[0]["event"][string(events.ActionRename)])
 	assert.Assert(t, dialed[0]["event"][string(events.ActionDestroy)])
 }
 
-// TestInstanceEvents_RenameIsNotDialedForSubscribersThatCannotUseIt pins the other
-// half of the filter: a subscriber that wants neither removals nor updates is not
-// sent renames, which are only ever those two events.
-func TestInstanceEvents_RenameIsNotDialedForSubscribersThatCannotUseIt(t *testing.T) {
+// TestInstanceEvents_RenameNotDialed checks that a subscriber wanting neither
+// removals nor updates does not receive renames.
+func TestInstanceEvents_RenameNotDialed(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
@@ -110,8 +98,7 @@ func TestInstanceEvents_RenameIsNotDialedForSubscribersThatCannotUseIt(t *testin
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
-	// The dial happens on the stream's own goroutine; the message queue is empty and
-	// unbuffered, so wait for the connection rather than assume it.
+	// The dial happens on the stream's goroutine.
 	deadline := time.Now().Add(5 * time.Second)
 	for len(c.dialed()) == 0 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)

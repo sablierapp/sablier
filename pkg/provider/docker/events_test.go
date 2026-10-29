@@ -2,6 +2,7 @@ package docker_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -158,6 +159,58 @@ func TestDockerClassicProvider_InstanceEvents_Removed(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatalf("timed out waiting for container removed event: %v", ctx.Err())
 	}
+}
+
+// TestDockerClassicProvider_InstanceEvents_Renamed checks the rename events
+// against a real daemon, so the "oldName" attribute format is not assumed.
+func TestDockerClassicProvider_InstanceEvents_Renamed(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	dind := sharedDinD
+	p, err := docker.New(ctx, dind.client, slogt.New(t), "stop")
+	assert.NilError(t, err)
+
+	c, err := dind.CreateMimic(ctx, MimicOptions{Labels: map[string]string{
+		sablier.LabelEnable: "true",
+		sablier.LabelGroup:  "renamed",
+	}})
+	assert.NilError(t, err)
+
+	inspected, err := dind.client.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
+	assert.NilError(t, err)
+	oldName := strings.TrimPrefix(inspected.Container.Name, "/")
+	newName := "renamed-" + c.ID[:12]
+
+	stream := subscribe(ctx, t, p, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+	})
+
+	_, err = dind.client.ContainerRename(ctx, c.ID, client.ContainerRenameOptions{NewName: newName})
+	assert.NilError(t, err)
+
+	var got []sablier.InstanceEvent
+	for len(got) < 2 {
+		select {
+		case event := <-stream.Events:
+			if event.Info.Name == oldName || event.Info.Name == newName {
+				got = append(got, event)
+			}
+		case err := <-stream.Err:
+			t.Fatalf("unexpected error: %v", err)
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for container rename events: %v", ctx.Err())
+		}
+	}
+
+	assert.Equal(t, got[0].Type, provider.InstanceEventRemoved)
+	assert.Equal(t, got[0].Info.Name, oldName)
+	assert.Equal(t, got[1].Type, provider.InstanceEventUpdated)
+	assert.Equal(t, got[1].Info.Name, newName)
+	assert.DeepEqual(t, got[1].Info.Groups, []string{"renamed"})
 }
 
 // subscribe opens an event stream bound to ctx and closes it before the test
