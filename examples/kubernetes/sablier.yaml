@@ -57,7 +57,7 @@ spec:
       serviceAccountName: sablier
       containers:
         - name: sablier
-          image: sablierapp/sablier:1.19.1 # x-release-please-version
+          image: sablierapp/sablier:1.20.0 # x-release-please-version
           # region args
           args:
             - start

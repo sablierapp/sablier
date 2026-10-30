@@ -7,7 +7,7 @@
 set -eu
 
 # region run
-SABLIER_IMAGE=docker.io/sablierapp/sablier:1.19.1 # x-release-please-version
+SABLIER_IMAGE=docker.io/sablierapp/sablier:1.20.0 # x-release-please-version
 
 podman run --detach --name sablier \
   --volume "${PODMAN_SOCKET:-/run/podman/podman.sock}:/run/podman/podman.sock" \

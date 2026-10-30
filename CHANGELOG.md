@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.20.0](https://github.com/sablierapp/sablier/compare/v1.19.1...v1.20.0) (2026-10-30)
+
+
+### Features
+
+* **activity:** refresh sessions from container traffic with eBPF ([#1237](https://github.com/sablierapp/sablier/issues/1237)) ([ba3aa90](https://github.com/sablierapp/sablier/commit/ba3aa90a1d219a45284472456bcc38923e1fe0b0))
+* **tracing:** honour a path in the OTLP/HTTP endpoint ([#1248](https://github.com/sablierapp/sablier/issues/1248)) ([828b21d](https://github.com/sablierapp/sablier/commit/828b21d422eaa3e93c3f775520382a114deb0ed3)), closes [#1247](https://github.com/sablierapp/sablier/issues/1247)
+
+
+### Bug Fixes
+
+* **docker:** handle rename events so a group follows a recreated container ([#1142](https://github.com/sablierapp/sablier/issues/1142)) ([5612a93](https://github.com/sablierapp/sablier/commit/5612a9379f6a3a9526cf47276f8359db3b537aa5))
+* **kubernetes:** scale with a merge patch to avoid update conflicts ([#1239](https://github.com/sablierapp/sablier/issues/1239)) ([849f9de](https://github.com/sablierapp/sablier/commit/849f9ded7bc11856b86e0b13c02637ba51159b94))
+* **sablier:** restart instance whose start failed while its session is active ([#1240](https://github.com/sablierapp/sablier/issues/1240)) ([a246122](https://github.com/sablierapp/sablier/commit/a24612223edd77cc5a77f853e78706ddcde3117e))
+* **theme:** load custom themes from a Kubernetes ConfigMap volume ([#1242](https://github.com/sablierapp/sablier/issues/1242)) ([3b20676](https://github.com/sablierapp/sablier/commit/3b20676345c221ec512b7c44127ec536211f2b13))
+* **webhook:** only fire for instances labelled sablier.enable=true ([#1254](https://github.com/sablierapp/sablier/issues/1254)) ([f0e8d8c](https://github.com/sablierapp/sablier/commit/f0e8d8c0284299b6efae0710ecd88ddb69868fe1)), closes [#1246](https://github.com/sablierapp/sablier/issues/1246)
+
+
+### Performance Improvements
+
+* **sablier:** seed anti-affinity registry from instance list ([#1236](https://github.com/sablierapp/sablier/issues/1236)) ([946a694](https://github.com/sablierapp/sablier/commit/946a694efc0907c14b3d492313f096b1e2f646f4))
+
+
+### Code Refactoring
+
+* **docker:** tidy rename handling and test it against a real daemon ([#1258](https://github.com/sablierapp/sablier/issues/1258)) ([8605831](https://github.com/sablierapp/sablier/commit/8605831d4b31548824b95c12ca250523ff9e1688))
+
+
+### Tests
+
+* **kubernetes:** give the k3s kubelet /dev/null as /dev/kmsg ([#1243](https://github.com/sablierapp/sablier/issues/1243)) ([e6b1399](https://github.com/sablierapp/sablier/commit/e6b1399b81ee66b7d360f2eadad9cad99bfff8f2))
+* **provider:** stop moby event streams before the test ends ([#1244](https://github.com/sablierapp/sablier/issues/1244)) ([8e7dc90](https://github.com/sablierapp/sablier/commit/8e7dc9062747e86d6ab4657546ba5646c852bec5))
+
 ## [1.19.1](https://github.com/sablierapp/sablier/compare/v1.19.0...v1.19.1) (2026-10-28)
 
 
