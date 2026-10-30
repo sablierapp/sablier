@@ -27,7 +27,7 @@ job "sablier" {
       driver = "docker"
 
       config {
-        image = "sablierapp/sablier:1.19.1" # x-release-please-version
+        image = "sablierapp/sablier:1.20.0" # x-release-please-version
         args  = ["start", "--provider.name=nomad"]
         ports = ["http"]
       }
