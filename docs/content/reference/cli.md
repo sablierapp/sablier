@@ -183,6 +183,12 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.ecs.region`](#opt-provider-ecs-region) | AWS region of the ECS cluster (defaults to the AWS SDK resolution) |
 | [`--provider.kubernetes.burst`](#opt-provider-kubernetes-burst) | Maximum burst for K8S API access client-side throttling |
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
+| [`--provider.kubernetes.leader-election.enabled`](#opt-provider-kubernetes-leader-election-enabled) | Run several replicas in active/passive mode: only the holder of a Kubernetes Lease manages workloads, and it labels its pod sablierapp.dev/leader=true |
+| [`--provider.kubernetes.leader-election.lease-duration`](#opt-provider-kubernetes-leader-election-lease-duration) | How long followers wait after the last renewal before taking over |
+| [`--provider.kubernetes.leader-election.lease-name`](#opt-provider-kubernetes-leader-election-lease-name) | Name of the Lease used for leader election |
+| [`--provider.kubernetes.leader-election.lease-namespace`](#opt-provider-kubernetes-leader-election-lease-namespace) | Namespace of the Lease used for leader election. |
+| [`--provider.kubernetes.leader-election.renew-deadline`](#opt-provider-kubernetes-leader-election-renew-deadline) | How long the leader retries renewing before it gives up leadership |
+| [`--provider.kubernetes.leader-election.retry-period`](#opt-provider-kubernetes-leader-election-retry-period) | Interval between attempts to acquire or renew the Lease |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
 | [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad ecs] |
@@ -410,6 +416,138 @@ SABLIER_PROVIDER_KUBERNETES_DELIMITER=_
 
 # Command-line flag
 --provider.kubernetes.delimiter=_
+```
+
+### `--provider.kubernetes.leader-election.enabled` {#opt-provider-kubernetes-leader-election-enabled}
+
+Run several replicas in active/passive mode: only the holder of a Kubernetes Lease manages workloads, and it labels its pod sablierapp.dev/leader=true
+
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      enabled: false
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_ENABLED=false
+
+# Command-line flag
+--provider.kubernetes.leader-election.enabled=false
+```
+
+### `--provider.kubernetes.leader-election.lease-duration` {#opt-provider-kubernetes-leader-election-lease-duration}
+
+How long followers wait after the last renewal before taking over
+
+{{< badge "duration" >}} {{< badge content="Default: 15s" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      lease-duration: 15s
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_DURATION=15s
+
+# Command-line flag
+--provider.kubernetes.leader-election.lease-duration=15s
+```
+
+### `--provider.kubernetes.leader-election.lease-name` {#opt-provider-kubernetes-leader-election-lease-name}
+
+Name of the Lease used for leader election
+
+{{< badge "string" >}} {{< badge content="Default: sablier" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      lease-name: sablier
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_NAME=sablier
+
+# Command-line flag
+--provider.kubernetes.leader-election.lease-name=sablier
+```
+
+### `--provider.kubernetes.leader-election.lease-namespace` {#opt-provider-kubernetes-leader-election-lease-namespace}
+
+Namespace of the Lease used for leader election. Defaults to Sablier's own namespace
+
+{{< badge "string" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      lease-namespace: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_NAMESPACE=<string>
+
+# Command-line flag
+--provider.kubernetes.leader-election.lease-namespace=<string>
+```
+
+### `--provider.kubernetes.leader-election.renew-deadline` {#opt-provider-kubernetes-leader-election-renew-deadline}
+
+How long the leader retries renewing before it gives up leadership
+
+{{< badge "duration" >}} {{< badge content="Default: 10s" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      renew-deadline: 10s
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_RENEW_DEADLINE=10s
+
+# Command-line flag
+--provider.kubernetes.leader-election.renew-deadline=10s
+```
+
+### `--provider.kubernetes.leader-election.retry-period` {#opt-provider-kubernetes-leader-election-retry-period}
+
+Interval between attempts to acquire or renew the Lease
+
+{{< badge "duration" >}} {{< badge content="Default: 2s" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    leader-election:
+      retry-period: 2s
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_RETRY_PERIOD=2s
+
+# Command-line flag
+--provider.kubernetes.leader-election.retry-period=2s
 ```
 
 ### `--provider.kubernetes.qps` {#opt-provider-kubernetes-qps}

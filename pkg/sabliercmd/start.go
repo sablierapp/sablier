@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -79,10 +80,6 @@ func Start(ctx context.Context, conf config.Config) error {
 	s.WithMetrics(rec)
 	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
 	s.WithVerifyEnabledOnExpiration(conf.Provider.VerifyEnabledOnExpiration)
-	err = store.OnExpire(ctx, s.OnInstanceExpired(ctx))
-	if err != nil {
-		return err
-	}
 	// Register the GroupLockCollector on the same registry so the gauges show
 	// up alongside everything else when /metrics is scraped.
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
@@ -114,6 +111,133 @@ func Start(ctx context.Context, conf config.Config) error {
 			slog.Duration("interval", conf.Activity.Interval),
 			slog.Any("ignore_cidrs", conf.Activity.IgnoreCIDRs),
 		)
+	}
+
+	t, err := setupTheme(ctx, conf, logger)
+	if err != nil {
+		return fmt.Errorf("cannot setup theme: %w", err)
+	}
+
+	strategy := &api.ServeStrategy{
+		Theme:          t,
+		Sablier:        s,
+		Metrics:        rec,
+		StrategyConfig: conf.Strategy,
+		SessionsConfig: conf.Sessions,
+	}
+
+	electionConf := conf.Provider.Kubernetes.LeaderElection
+	// leading is only consulted when leader election is enabled.
+	var leading, everLed atomic.Bool
+	// lost is closed when leadership is lost, electionErr receives a failure
+	// to set up the election or to activate after winning it.
+	lost := make(chan struct{})
+	electionErr := make(chan error, 1)
+	// Only the first election failure matters; never block on reporting one.
+	electionFailed := func(err error) {
+		select {
+		case electionErr <- err:
+		default:
+		}
+	}
+	var election *leaderElection
+	if electionConf.Enabled {
+		strategy.Leading = leading.Load
+		election, err = newLeaderElection(ctx, logger, electionConf)
+		if err != nil {
+			return err
+		}
+	} else if err := activate(ctx, logger, conf, s, store, provider, false); err != nil {
+		return err
+	}
+
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)
+	}()
+
+	// electionDone is closed once the elector has returned, after releasing
+	// the Lease on shutdown.
+	electionDone := make(chan struct{})
+	if election == nil {
+		close(electionDone)
+	} else {
+		go func() {
+			defer close(electionDone)
+			err := election.run(ctx, func(leaderCtx context.Context) {
+				if err := activate(leaderCtx, logger, conf, s, store, provider, true); err != nil {
+					electionFailed(fmt.Errorf("cannot activate leader: %w", err))
+					return
+				}
+				leading.Store(true)
+				everLed.Store(true)
+				go func() {
+					<-leaderCtx.Done()
+					leading.Store(false)
+				}()
+				// Only now route the Service to this pod.
+				if err := election.setLeaderLabel(leaderCtx, true); err != nil {
+					electionFailed(err)
+				}
+			}, lost)
+			if err != nil {
+				electionFailed(err)
+			}
+		}()
+	}
+
+	// Block until the process is signalled or the HTTP server dies. A serve
+	// failure (e.g. the port is already in use) must terminate the process:
+	// otherwise the watchers keep running with no listener and the instance
+	// looks healthy while serving nothing.
+	select {
+	case <-ctx.Done():
+		stop()
+		logger.Info("shutting down gracefully, press Ctrl+C again to force")
+		// Wait for the server to finish draining in-flight requests before
+		// persisting state and exiting.
+		err = <-serverErr
+	case err = <-serverErr:
+		stop()
+	case <-lost:
+		stop()
+		<-serverErr
+		err = errLeadershipLost
+	case err = <-electionErr:
+		stop()
+		<-serverErr
+	}
+
+	// Wait for the Lease release, otherwise the process may exit first and
+	// the next leader has to wait for the Lease to expire.
+	<-electionDone
+
+	// A follower's store is empty: saving it would overwrite the state file
+	// the leader persisted.
+	if !electionConf.Enabled || everLed.Load() {
+		save()
+	}
+
+	logger.Info("Server exiting")
+
+	return err
+}
+
+func buildRecorder(enabled bool) metrics.Recorder {
+	if enabled {
+		return metrics.NewPromRecorder()
+	}
+	return metrics.Noop{}
+}
+
+// activate starts everything that acts on workloads: session expiration, the
+// group and instance watchers, auto-stop/auto-warm and webhooks. All of it
+// stops when ctx is cancelled. With leader election it runs on the leader
+// only, and takeover is true.
+func activate(ctx context.Context, logger *slog.Logger, conf config.Config, s *sablier.Sablier, store sablier.Store, provider sablier.Provider, takeover bool) error {
+	err := store.OnExpire(ctx, s.OnInstanceExpired(ctx))
+	if err != nil {
+		return err
 	}
 
 	groups, err := provider.InstanceGroups(ctx)
@@ -150,7 +274,18 @@ func Start(ctx context.Context, conf config.Config) error {
 		}
 	}()
 
-	if conf.Provider.AutoStopOnStartup {
+	switch {
+	case takeover:
+		// A new leader cannot tell a fresh start from a failover, and its
+		// store is empty either way. Stopping unregistered instances would
+		// stop workloads that still have sessions on the previous leader, so
+		// give them a default-duration session instead and let them expire.
+		go func() {
+			if err := s.WarmAllUnregisteredInstances(ctx); err != nil {
+				logger.ErrorContext(ctx, "unable to warm running instances on takeover", slog.Any("reason", err))
+			}
+		}()
+	case conf.Provider.AutoStopOnStartup:
 		err := s.StopAllUnregisteredInstances(ctx)
 		if err != nil {
 			logger.ErrorContext(ctx, "unable to stop unregistered instances", slog.Any("reason", err))
@@ -197,49 +332,5 @@ func Start(ctx context.Context, conf config.Config) error {
 		logger.InfoContext(ctx, "no webhook endpoints configured")
 	}
 
-	t, err := setupTheme(ctx, conf, logger)
-	if err != nil {
-		return fmt.Errorf("cannot setup theme: %w", err)
-	}
-
-	strategy := &api.ServeStrategy{
-		Theme:          t,
-		Sablier:        s,
-		Metrics:        rec,
-		StrategyConfig: conf.Strategy,
-		SessionsConfig: conf.Sessions,
-	}
-
-	serverErr := make(chan error, 1)
-	go func() {
-		serverErr <- server.Start(ctx, logger, conf.Server, conf.Tracing, strategy)
-	}()
-
-	// Block until the process is signalled or the HTTP server dies. A serve
-	// failure (e.g. the port is already in use) must terminate the process:
-	// otherwise the watchers keep running with no listener and the instance
-	// looks healthy while serving nothing.
-	select {
-	case <-ctx.Done():
-		stop()
-		logger.Info("shutting down gracefully, press Ctrl+C again to force")
-		// Wait for the server to finish draining in-flight requests before
-		// persisting state and exiting.
-		err = <-serverErr
-	case err = <-serverErr:
-		stop()
-	}
-
-	save()
-
-	logger.Info("Server exiting")
-
-	return err
-}
-
-func buildRecorder(enabled bool) metrics.Recorder {
-	if enabled {
-		return metrics.NewPromRecorder()
-	}
-	return metrics.Noop{}
+	return nil
 }

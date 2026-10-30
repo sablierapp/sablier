@@ -6,6 +6,11 @@ provider:
     burst: 128
     delimiter: .
     ready-on-first-replica: true
+    leader-election:
+      enabled: true
+      lease-name: yml
+      lease-namespace: yml
+      lease-duration: 30s
   podman:
     uri: unix:///run/podman/podman.sock.yml
   systemd:
