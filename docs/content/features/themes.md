@@ -53,8 +53,10 @@ Symbolic links are followed as long as they are relative and stay inside the fol
 link is ignored, both for themes and for their assets. Sablier does not descend into a linked
 directory.
 
-The folder can be a Kubernetes ConfigMap or Secret volume. Sablier ignores the volume's hidden
-`..<timestamp>` directory, so each theme is named after its key, such as `brand` for `brand.html`.
+The folder can be a Kubernetes ConfigMap or Secret volume. Sablier reads the volume's files
+through its hidden `..data` directory and ignores the `..<timestamp>` directory, so each theme is
+named after its key, such as `brand` for `brand.html`, or after the path that `items[].path` maps
+the key to, such as `special/secret` for `special/secret.html`.
 
 Themes are read once, at startup: restart Sablier to pick up a new theme or a change to an
 existing one.
