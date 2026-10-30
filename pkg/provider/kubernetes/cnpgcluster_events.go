@@ -70,14 +70,14 @@ func (p *Provider) clusterEventHandler(ctx context.Context, instance chan<- sabl
 				return
 			}
 			u, ok := clusterFromObject(obj)
-			if !ok {
+			if !ok || !managed(u.GetLabels(), u.GetAnnotations()) {
 				return
 			}
 			parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})
 			// Build the info from the event object, as inspect would, instead of
-			// fetching it again: the informer is not filtered by label, so its
-			// initial sync delivers every cnpgcluster in the cluster, and a GET for
-			// each would queue behind the client-side rate limiter.
+			// fetching it again: the informer's initial sync delivers every
+			// managed cnpgcluster, and a GET for each would queue behind the
+			// client-side rate limiter.
 			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: p.clusterInfo(u, parsed)}
 		},
 		UpdateFunc: func(old, new any) {
@@ -90,6 +90,12 @@ func (p *Provider) clusterEventHandler(ctx context.Context, instance chan<- sabl
 				return
 			}
 			if newCluster.GetResourceVersion() == oldCluster.GetResourceVersion() {
+				return
+			}
+			// Managed on either side is enough: an update that removes the
+			// enable label while hibernating still stops a managed instance,
+			// and one that adds it while resuming starts one.
+			if !managed(oldCluster.GetLabels(), oldCluster.GetAnnotations()) && !managed(newCluster.GetLabels(), newCluster.GetAnnotations()) {
 				return
 			}
 
@@ -121,8 +127,10 @@ func (p *Provider) clusterEventHandler(ctx context.Context, instance chan<- sabl
 			if !wantRemoved && !wantStopped {
 				return
 			}
+			// The deleted object, or the tombstone's last known state, still
+			// carries the labels and annotations that made it managed.
 			u, ok := clusterFromObject(obj)
-			if !ok {
+			if !ok || !managed(u.GetLabels(), u.GetAnnotations()) {
 				return
 			}
 			parsed := ClusterName(u.GetNamespace(), u.GetName(), ParseOptions{Delimiter: p.delimiter})

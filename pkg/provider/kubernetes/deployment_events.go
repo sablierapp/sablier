@@ -28,14 +28,14 @@ func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- s
 				return
 			}
 			d, ok := eventObject[*appsv1.Deployment](obj)
-			if !ok {
+			if !ok || !managed(d.Labels, d.Annotations) {
 				return
 			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})
 			// Build the info from the event object, as inspect would, instead of
-			// fetching it again: the informer is not filtered by label, so its
-			// initial sync delivers every deployment in the cluster, and a GET for
-			// each would queue behind the client-side rate limiter.
+			// fetching it again: the informer's initial sync delivers every
+			// managed deployment, and a GET for each would queue behind the
+			// client-side rate limiter.
 			instance <- sablier.InstanceEvent{Type: provider.InstanceEventCreated, Info: p.deploymentInfo(d, parsed)}
 		},
 		UpdateFunc: func(old, new any) {
@@ -49,6 +49,12 @@ func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- s
 			}
 
 			if newDeployment.ResourceVersion == oldDeployment.ResourceVersion {
+				return
+			}
+			// Managed on either side is enough: an update that removes the
+			// enable label while scaling to 0 still stops a managed instance,
+			// and one that adds it while scaling from 0 starts one.
+			if !managed(oldDeployment.Labels, oldDeployment.Annotations) && !managed(newDeployment.Labels, newDeployment.Annotations) {
 				return
 			}
 
@@ -80,8 +86,10 @@ func (p *Provider) deploymentEventHandler(ctx context.Context, instance chan<- s
 			if !wantRemoved && !wantStopped {
 				return
 			}
+			// The deleted object, or the tombstone's last known state, still
+			// carries the labels and annotations that made it managed.
 			d, ok := eventObject[*appsv1.Deployment](obj)
-			if !ok {
+			if !ok || !managed(d.Labels, d.Annotations) {
 				return
 			}
 			parsed := DeploymentName(d, ParseOptions{Delimiter: p.delimiter})

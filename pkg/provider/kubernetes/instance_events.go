@@ -17,6 +17,9 @@ import (
 // an event, which happens whenever the stream reader is busy.
 const informerResync = 0
 
+// InstanceEvents reports the lifecycle events of the deployments, statefulsets
+// and CloudNativePG clusters that opted in to Sablier. Other workloads are
+// ignored (see managed).
 func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEventsOptions) sablier.InstanceEventStream {
 	wantStopped := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStopped)
 	wantStarted := len(opts.Types) == 0 || slices.Contains(opts.Types, provider.InstanceEventStarted)

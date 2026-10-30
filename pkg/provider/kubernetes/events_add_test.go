@@ -14,9 +14,9 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-// The informers are not filtered by label, so their initial sync delivers an
-// Add event for every workload in the cluster. The Created event must be built
-// from the event object, without a GET, and match what InstanceInspect reports.
+// The informers' initial sync delivers an Add event for every managed workload
+// in the cluster. The Created event must be built from the event object,
+// without a GET, and match what InstanceInspect reports.
 func TestAddEvent_BuildsInfoFromObjectWithoutGet(t *testing.T) {
 	t.Parallel()
 
