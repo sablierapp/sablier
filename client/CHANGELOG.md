@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/sablierapp/sablier/compare/client/v0.1.0...client/v0.2.0) (2026-10-30)
+
+
+### Features
+
+* **activity:** refresh sessions from container traffic with eBPF ([#1237](https://github.com/sablierapp/sablier/issues/1237)) ([ba3aa90](https://github.com/sablierapp/sablier/commit/ba3aa90a1d219a45284472456bcc38923e1fe0b0))
+
 ## 0.1.0 (2026-10-28)
 
 
