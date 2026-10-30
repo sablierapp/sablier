@@ -30,6 +30,8 @@ type Provider struct {
 	// scaleFallbackWarned holds the kinds for which scale already warned that it
 	// fell back to the deprecated GET + UPDATE.
 	scaleFallbackWarned sync.Map
+	// clusterListForbiddenWarned ensures the CNPG list Forbidden skip warns only once.
+	clusterListForbiddenWarned sync.Once
 }
 
 func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Interface, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
@@ -55,4 +57,14 @@ func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Inter
 		tracer:              otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil
 
+}
+
+// warnClusterListForbidden logs once that CloudNativePG Clusters are skipped
+// because the CRD is installed but listing it is not granted.
+func (p *Provider) warnClusterListForbidden(ctx context.Context, err error) {
+	p.clusterListForbiddenWarned.Do(func() {
+		p.l.WarnContext(ctx, "listing cloudnativepg clusters is forbidden, skipping cnpg cluster discovery. "+
+			"Grant get, list and watch on clusters.postgresql.cnpg.io in Sablier's ClusterRole to manage CloudNativePG Clusters.",
+			slog.Any("error", err))
+	})
 }

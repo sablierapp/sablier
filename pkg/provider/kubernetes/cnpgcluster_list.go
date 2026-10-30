@@ -12,9 +12,10 @@ import (
 )
 
 // listClusters returns the CloudNativePG Clusters labelled sablierapp.dev/enable=true
-// or sablier.enable=true across all namespaces. When the dynamic client is unset or the
-// CloudNativePG CRD is not installed, it returns no clusters rather than an error, so the
-// provider keeps working on clusters that don't run CloudNativePG.
+// or sablier.enable=true across all namespaces. When the dynamic client is unset, the
+// CloudNativePG CRD is not installed, or the RBAC denies the list, it returns no
+// clusters rather than an error, so the provider keeps working on clusters that don't
+// run CloudNativePG.
 func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructured, error) {
 	if p.dynamic == nil {
 		return nil, nil
@@ -30,6 +31,17 @@ func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructure
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			p.l.DebugContext(ctx, "cloudnativepg CRD not installed, skipping cnpg cluster discovery")
+			return nil, nil
+		}
+		if apierrors.IsForbidden(err) {
+			// The permissions are optional per the docs. Discovery needs no RBAC on the
+			// resource, so it separates a missing CRD (the documented, silent skip) from
+			// an installed CRD whose rule was left out (worth one warning).
+			if p.clusterCRDInstalled(ctx) {
+				p.warnClusterListForbidden(ctx, err)
+			} else {
+				p.l.DebugContext(ctx, "cloudnativepg CRD not installed, skipping cnpg cluster discovery")
+			}
 			return nil, nil
 		}
 		return nil, err
