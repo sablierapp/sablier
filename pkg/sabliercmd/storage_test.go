@@ -135,7 +135,8 @@ func TestSetupStorage_LoadOnStartup(t *testing.T) {
 	conf.Storage.File = path
 	conf.Sessions.ExpirationInterval = time.Hour // slow periodic save, irrelevant here
 
-	store, _ := setupStorage(ctx, slog.Default(), conf)
+	store, _, err := setupStorage(ctx, slog.Default(), conf)
+	assert.NilError(t, err)
 
 	info, err := store.Get(ctx, "startup-service")
 	assert.NilError(t, err)
@@ -151,7 +152,8 @@ func TestSetupStorage_SaveOnShutdown(t *testing.T) {
 	conf.Storage.File = path
 	conf.Sessions.ExpirationInterval = time.Hour // slow periodic save, irrelevant here
 
-	store, save := setupStorage(ctx, slog.Default(), conf)
+	store, save, err := setupStorage(ctx, slog.Default(), conf)
+	assert.NilError(t, err)
 
 	require.NoError(t, store.Put(ctx, sablier.InstanceInfo{
 		Name: "shutdown-service", Status: sablier.InstanceStatusReady,
@@ -167,4 +169,20 @@ func TestSetupStorage_SaveOnShutdown(t *testing.T) {
 	info, err := fresh.Get(ctx, "shutdown-service")
 	assert.NilError(t, err)
 	assert.Equal(t, info.Name, "shutdown-service")
+}
+
+func TestSetupStorage_FileAndConfigMap(t *testing.T) {
+	conf := config.NewConfig()
+	conf.Storage.File = filepath.Join(t.TempDir(), "state.json")
+	conf.Storage.Kubernetes.ConfigMap = "sablier-sessions"
+
+	_, _, err := setupStorage(t.Context(), slog.Default(), conf)
+	assert.ErrorContains(t, err, "cannot be combined")
+}
+
+func TestInClusterNamespace_Env(t *testing.T) {
+	t.Setenv("POD_NAMESPACE", "sablier")
+	ns, err := inClusterNamespace()
+	assert.NilError(t, err)
+	assert.Equal(t, ns, "sablier")
 }
