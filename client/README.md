@@ -1,9 +1,6 @@
 # Sablier Go client
 
-A Go client for the [Sablier](https://sablierapp.dev) HTTP API, made for
-reverse-proxy plugins. It uses only the standard library and runs under
-[Yaegi](https://github.com/traefik/yaegi), the interpreter Traefik runs
-plugins with.
+A Go client for the [Sablier](https://sablierapp.dev) HTTP API, made for reverse-proxy plugins. It uses only the standard library and runs under [Yaegi](https://github.com/traefik/yaegi), the interpreter Traefik runs plugins with.
 
 ```sh
 go get github.com/sablierapp/sablier/client
@@ -11,11 +8,7 @@ go get github.com/sablierapp/sablier/client
 
 ## Usage
 
-Each call returns its typed result, the `*Response`, and an error. The
-`Response` is nil only when Sablier could not be reached. When Sablier
-answers with a status other than 2xx, the error is an `*ErrorResponse` and the
-`Response` is still returned, with its body readable, so a proxy can forward
-it as is.
+Each call returns its typed result, the `*Response`, and an error. The `Response` is nil only when Sablier could not be reached. When Sablier answers with a status other than 2xx, the error is an `*ErrorResponse` and the `Response` is still returned, with its body readable, so a proxy can forward it as is.
 
 ```go
 c, err := client.New("http://sablier:10000",
@@ -69,9 +62,7 @@ Some parameters and fields need a later release:
 | `Names` and `Group` of `Events` | 1.19.0 |
 | The session returned by `StartPoke` | 1.19.0 |
 
-An older server ignores parameters it does not know, looks an `optional:`
-name up as written, and answers errors without a problem detail, so
-`Problem` is nil.
+An older server ignores parameters it does not know, looks an `optional:` name up as written, and answers errors without a problem detail, so `Problem` is nil.
 
 ### Traefik
 
@@ -83,20 +74,13 @@ name up as written, and answers errors without a problem detail, so
 
 ### Supported versions
 
-- **Sablier**: every release at or above the versions in the tables above.
-  A client release that needs a newer server for a call says so in its
-  changelog and in these tables.
-- **Traefik**: the release lines [Traefik supports](https://doc.traefik.io/traefik/deprecation/releases/).
-  CI runs the client under the Yaegi version of the latest Traefik release
-  (see [`yaegitest`](yaegitest)). Older lines that ship the same Yaegi are
-  expected to work, but they are not supported.
-- **Go**: the client builds with Go 1.21 and later, the `go` directive in
-  `go.mod`.
+- **Sablier**: every release at or above the versions in the tables above. A client release that needs a newer server for a call says so in its changelog and in these tables.
+- **Traefik**: the release lines [Traefik supports](https://doc.traefik.io/traefik/deprecation/releases/). CI runs the client under the Yaegi version of the latest Traefik release (see [`yaegitest`](yaegitest)). Older lines that ship the same Yaegi are expected to work, but they are not supported.
+- **Go**: the client builds with Go 1.21 and later, the `go` directive in `go.mod`.
 
 ## Yaegi
 
-Yaegi v0.16.1 runs less Go than the compiler. These rules keep the client
-inside what it supports:
+Yaegi v0.16.1 runs less Go than the compiler. These rules keep the client inside what it supports:
 
 | Not supported by Yaegi | Forbidden by |
 |---|---|
@@ -107,7 +91,4 @@ inside what it supports:
 | `range` over an int or a func | The `go 1.21` directive: they do not compile |
 | `switch v := x(); v.Kind() {`: no case matches, silently | [`TestNoSwitchInitWithCallTag`](yaegi_test.go) |
 
-Code that uses the client under Yaegi has the same limits. In particular,
-check for an `*ErrorResponse` with a type assertion, not `errors.As`. The
-client never wraps it. Yaegi also rejects method values of standard library
-types, such as `dialer.DialContext`; wrap them in a closure.
+Code that uses the client under Yaegi has the same limits. In particular, check for an `*ErrorResponse` with a type assertion, not `errors.As`. The client never wraps it. Yaegi also rejects method values of standard library types, such as `dialer.DialContext`; wrap them in a closure.
