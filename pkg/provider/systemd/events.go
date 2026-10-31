@@ -33,6 +33,12 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 	go func() {
 		defer close(eventsC)
 		defer close(errC)
+
+		// managed records whether each unit was last seen with Enable=true.
+		// A removed unit has no unit file left to read, so this is how its
+		// removal is reported for managed units only. The first poll reports
+		// every unit, which seeds it. Only this goroutine touches it.
+		managed := make(map[string]bool)
 		for {
 			select {
 			case changed, ok := <-changes:
@@ -40,7 +46,7 @@ func (p *Provider) InstanceEvents(ctx context.Context, opts provider.InstanceEve
 					return
 				}
 				for name, status := range changed {
-					event, ok := p.buildEvent(ctx, name, status, wantStopped, wantStarted, wantRemoved)
+					event, ok := p.buildEvent(ctx, managed, name, status, wantStopped, wantStarted, wantRemoved)
 					if !ok {
 						continue
 					}
@@ -77,43 +83,55 @@ func isFinalState(state string) bool {
 	return true
 }
 
-func (p *Provider) buildEvent(ctx context.Context, name string, status *dbus.UnitStatus, wantStopped, wantStarted, wantRemoved bool) (sablier.InstanceEvent, bool) {
-	var kind provider.InstanceEventType
-	switch {
-	case status == nil:
-		if !wantRemoved {
+// buildEvent turns a unit change into an event. Only units that opted in with
+// Enable=true are reported; managed is updated from the labels read here.
+func (p *Provider) buildEvent(ctx context.Context, managed map[string]bool, name string, status *dbus.UnitStatus, wantStopped, wantStarted, wantRemoved bool) (sablier.InstanceEvent, bool) {
+	if status == nil {
+		wasManaged := managed[name]
+		delete(managed, name)
+		if !wasManaged || !wantRemoved {
 			return sablier.InstanceEvent{}, false
 		}
 		return sablier.InstanceEvent{
 			Type: provider.InstanceEventRemoved,
 			Info: sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSystemd},
 		}, true
+	}
+
+	var kind provider.InstanceEventType
+	switch {
 	case status.LoadState == "not-found":
 		return sablier.InstanceEvent{}, false
-	case status.ActiveState == "active":
-		if !wantStarted {
-			return sablier.InstanceEvent{}, false
-		}
+	case status.ActiveState == "active" && wantStarted:
 		kind = provider.InstanceEventStarted
-	case status.ActiveState == "inactive", status.ActiveState == "failed", status.ActiveState == "maintenance":
-		if !wantStopped {
-			return sablier.InstanceEvent{}, false
-		}
+	case slices.Contains([]string{"inactive", "failed", "maintenance"}, status.ActiveState) && wantStopped:
 		kind = provider.InstanceEventStopped
-	default:
+	case !wantRemoved:
+		// Nothing to report and no removal to track.
 		return sablier.InstanceEvent{}, false
 	}
 
-	info, err := p.InstanceInspect(ctx, name)
-	if err != nil {
-		p.l.WarnContext(ctx, "inspect after unit change failed, using bare info", slog.String("unit", name), slog.Any("error", err))
-		info = sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSystemd}
-		switch kind {
-		case provider.InstanceEventStarted:
-			info.Status = sablier.InstanceStatusStarting
-		case provider.InstanceEventStopped:
-			info.Status = sablier.InstanceStatusStopped
-		}
+	labels, err := p.getLabels(ctx, name)
+	if err == nil {
+		managed[name] = labels[sablier.LabelEnable] == "true"
+	} else if !managed[name] {
+		// Whether the unit opted in is unknown. Skip it rather than report a
+		// unit that may not be managed.
+		p.l.DebugContext(ctx, "cannot read unit file, skipping unit change", slog.String("unit", name), slog.Any("error", err))
+		return sablier.InstanceEvent{}, false
 	}
-	return sablier.InstanceEvent{Type: kind, Info: info}, true
+	if kind == "" || !managed[name] {
+		return sablier.InstanceEvent{}, false
+	}
+
+	if err != nil {
+		// The unit was managed when last seen; keep reporting it.
+		p.l.WarnContext(ctx, "cannot read unit file after unit change, using bare info", slog.String("unit", name), slog.Any("error", err))
+		info := sablier.InstanceInfo{Name: name, Provider: sablier.ProviderSystemd, Status: sablier.InstanceStatusStopped}
+		if kind == provider.InstanceEventStarted {
+			info.Status = sablier.InstanceStatusStarting
+		}
+		return sablier.InstanceEvent{Type: kind, Info: info}, true
+	}
+	return sablier.InstanceEvent{Type: kind, Info: p.infoFromUnit(Unit{status: *status, labels: labels})}, true
 }

@@ -142,8 +142,15 @@ func expectStarted(t *testing.T, stream sablier.InstanceEventStream, name string
 	assert.Equal(t, event.Info.Name, name)
 }
 
+// managedUnit gives c a unit file that opts into Sablier.
+func managedUnit(t *testing.T, c mockUnitConfig) mockUnitConfig {
+	t.Helper()
+	c.fragmentPath = writeUnitFile(t, "[X-Sablier]\nEnable=true\nGroup=team-a\n")
+	return c
+}
+
 func TestSystemdProvider_InstanceEvents_BaselineStarted(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -156,10 +163,13 @@ func TestSystemdProvider_InstanceEvents_BaselineStarted(t *testing.T) {
 	assert.Equal(t, event.Type, provider.InstanceEventStarted)
 	assert.Equal(t, event.Info.Name, "web.service")
 	assert.Equal(t, event.Info.Provider, sablier.ProviderSystemd)
+	assert.Equal(t, event.Info.Status, sablier.InstanceStatusReady)
+	assert.Assert(t, event.Info.IsEnabled())
+	assert.DeepEqual(t, event.Info.Groups, []string{"team-a"})
 }
 
 func TestSystemdProvider_InstanceEvents_Started(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: false}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: false})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -178,7 +188,7 @@ func TestSystemdProvider_InstanceEvents_Started(t *testing.T) {
 }
 
 func TestSystemdProvider_InstanceEvents_Stopped(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -205,13 +215,13 @@ func TestSystemdProvider_InstanceEvents_NewUnit(t *testing.T) {
 		Types: []provider.InstanceEventType{provider.InstanceEventStarted},
 	})
 
-	m.AddUnit(mockUnitConfig{name: "web.service", active: true})
+	m.AddUnit(managedUnit(t, mockUnitConfig{name: "web.service", active: true}))
 
 	expectStarted(t, stream, "web.service")
 }
 
 func TestSystemdProvider_InstanceEvents_DeactivatingEmitsOneStopped(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -231,7 +241,7 @@ func TestSystemdProvider_InstanceEvents_DeactivatingEmitsOneStopped(t *testing.T
 }
 
 func TestSystemdProvider_InstanceEvents_ReloadSettlesEmitsStarted(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -252,8 +262,8 @@ func TestSystemdProvider_InstanceEvents_ReloadSettlesEmitsStarted(t *testing.T) 
 
 func TestSystemdProvider_InstanceEvents_BaselineReloadingEmitsStartedWhenActive(t *testing.T) {
 	m := newMockSystemd(t, []mockUnitConfig{
-		{name: "decoy.service", active: true},
-		{name: "web.service", status: "reloading"},
+		managedUnit(t, mockUnitConfig{name: "decoy.service", active: true}),
+		managedUnit(t, mockUnitConfig{name: "web.service", status: "reloading"}),
 	})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
@@ -270,8 +280,8 @@ func TestSystemdProvider_InstanceEvents_BaselineReloadingEmitsStartedWhenActive(
 
 func TestSystemdProvider_InstanceEvents_BaselineDeactivatingEmitsStopped(t *testing.T) {
 	m := newMockSystemd(t, []mockUnitConfig{
-		{name: "decoy.service", active: true},
-		{name: "web.service", status: "deactivating"},
+		managedUnit(t, mockUnitConfig{name: "decoy.service", active: true}),
+		managedUnit(t, mockUnitConfig{name: "web.service", status: "deactivating"}),
 	})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
@@ -289,7 +299,7 @@ func TestSystemdProvider_InstanceEvents_BaselineDeactivatingEmitsStopped(t *test
 }
 
 func TestSystemdProvider_InstanceEvents_UnloadEmitsRemoved(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -309,7 +319,7 @@ func TestSystemdProvider_InstanceEvents_UnloadEmitsRemoved(t *testing.T) {
 }
 
 func TestSystemdProvider_InstanceEvents_Removed(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -328,8 +338,8 @@ func TestSystemdProvider_InstanceEvents_Removed(t *testing.T) {
 
 func TestSystemdProvider_InstanceEvents_SkipsNotFoundUnits(t *testing.T) {
 	m := newMockSystemd(t, []mockUnitConfig{
-		{name: "ghost.service", loadState: "not-found"},
-		{name: "web.service", active: true},
+		managedUnit(t, mockUnitConfig{name: "ghost.service", loadState: "not-found"}),
+		managedUnit(t, mockUnitConfig{name: "web.service", active: true}),
 	})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
@@ -340,14 +350,105 @@ func TestSystemdProvider_InstanceEvents_SkipsNotFoundUnits(t *testing.T) {
 	})
 
 	// The baseline reports both units; the not-found ghost must be silently
-	// skipped (no bogus stopped event, no failed inspect warning) while the
-	// real unit still produces its started event.
+	// skipped (no bogus stopped event, no failed label read) while the real
+	// unit still produces its started event.
 	expectStarted(t, stream, "web.service")
 	expectNoEvent(t, stream)
 }
 
+func TestSystemdProvider_InstanceEvents_SkipsUnmanagedUnits(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{name: "plain.service", active: true, fragmentPath: writeUnitFile(t, "[Service]\nExecStart=/bin/true\n")},
+		{name: "disabled.service", active: true, fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=false\n")},
+		managedUnit(t, mockUnitConfig{name: "web.service", active: true}),
+	})
+	p := newProviderForTest(t, m, eventInterval, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{})
+
+	expectStarted(t, stream, "web.service")
+	expectNoEvent(t, stream)
+
+	m.SetActive("plain.service", false)
+	m.SetActive("disabled.service", false)
+	expectNoEvent(t, stream)
+	m.SetActive("plain.service", true)
+	m.SetActive("disabled.service", true)
+	expectNoEvent(t, stream)
+	m.RemoveUnit("plain.service")
+	m.RemoveUnit("disabled.service")
+	expectNoEvent(t, stream)
+
+	// The managed unit is still reported.
+	m.SetActive("web.service", false)
+	ev := expectEvent(t, stream)
+	assert.Equal(t, ev.Type, provider.InstanceEventStopped)
+	assert.Equal(t, ev.Info.Name, "web.service")
+	m.RemoveUnit("web.service")
+	ev = expectEvent(t, stream)
+	assert.Equal(t, ev.Type, provider.InstanceEventRemoved)
+	assert.Equal(t, ev.Info.Name, "web.service")
+}
+
+func TestSystemdProvider_InstanceEvents_RemovedOnlyReportsManagedUnits(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		{name: "plain.service", active: true, fragmentPath: writeUnitFile(t, "[Service]\nExecStart=/bin/true\n")},
+		managedUnit(t, mockUnitConfig{name: "web.service", active: false}),
+	})
+	p := newProviderForTest(t, m, eventInterval, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventRemoved},
+	})
+
+	// The baseline emits nothing but records which units are managed, even
+	// though no started or stopped event is wanted.
+	expectNoEvent(t, stream)
+	m.RemoveUnit("plain.service")
+	m.RemoveUnit("web.service")
+
+	ev := expectEvent(t, stream)
+	assert.Equal(t, ev.Type, provider.InstanceEventRemoved)
+	assert.Equal(t, ev.Info.Name, "web.service")
+	expectNoEvent(t, stream)
+}
+
+func TestSystemdProvider_InstanceEvents_UnreadableUnitFile(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{
+		managedUnit(t, mockUnitConfig{name: "web.service", active: true}),
+		managedUnit(t, mockUnitConfig{name: "unknown.service", active: true}),
+	})
+	m.DeleteUnitFile("unknown.service")
+	p := newProviderForTest(t, m, eventInterval, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	stream := p.InstanceEvents(ctx, provider.InstanceEventsOptions{
+		Types: []provider.InstanceEventType{provider.InstanceEventStarted, provider.InstanceEventStopped},
+	})
+
+	// unknown.service was never read as managed, so it is skipped.
+	expectStarted(t, stream, "web.service")
+	expectNoEvent(t, stream)
+
+	// web.service was managed when last read, so it is still reported.
+	m.DeleteUnitFile("web.service")
+	m.SetActive("web.service", false)
+	m.SetActive("unknown.service", false)
+
+	ev := expectEvent(t, stream)
+	assert.Equal(t, ev.Type, provider.InstanceEventStopped)
+	assert.Equal(t, ev.Info.Name, "web.service")
+	assert.Equal(t, ev.Info.Status, sablier.InstanceStatusStopped)
+	expectNoEvent(t, stream)
+}
+
 func TestSystemdProvider_InstanceEvents_ContextCancel(t *testing.T) {
-	m := newMockSystemd(t, []mockUnitConfig{{name: "web.service", active: true}})
+	m := newMockSystemd(t, []mockUnitConfig{managedUnit(t, mockUnitConfig{name: "web.service", active: true})})
 	p := newProviderForTest(t, m, eventInterval, nil)
 
 	ctx, cancel := context.WithCancel(t.Context())
