@@ -2,7 +2,6 @@ package client_test
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -159,8 +158,9 @@ func TestErrorResponse(t *testing.T) {
 
 	session, resp, err := c.StartBlocking(context.Background(), client.StartBlockingParams{Group: ptr("nope")})
 
-	var errResp *client.ErrorResponse
-	if !errors.As(err, &errResp) {
+	// A type assertion, as plugins under Yaegi do: the error is never wrapped.
+	errResp, ok := err.(*client.ErrorResponse)
+	if !ok {
 		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
 	if session != nil {
@@ -201,8 +201,9 @@ func TestErrorResponseWithoutProblem(t *testing.T) {
 
 	_, resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
 
-	var errResp *client.ErrorResponse
-	if !errors.As(err, &errResp) {
+	// A type assertion, as plugins under Yaegi do: the error is never wrapped.
+	errResp, ok := err.(*client.ErrorResponse)
+	if !ok {
 		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
 	if errResp.Problem != nil {
@@ -316,8 +317,7 @@ func TestMalformedBodies(t *testing.T) {
 
 		session, resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
 
-		var errResp *client.ErrorResponse
-		if err == nil || errors.As(err, &errResp) {
+		if _, ok := err.(*client.ErrorResponse); err == nil || ok {
 			t.Errorf("err = %v, want a decode error", err)
 		}
 		if session != nil || resp == nil {
@@ -330,8 +330,9 @@ func TestMalformedBodies(t *testing.T) {
 
 		_, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
 
-		var errResp *client.ErrorResponse
-		if !errors.As(err, &errResp) {
+		// A type assertion, as plugins under Yaegi do: the error is never wrapped.
+		errResp, ok := err.(*client.ErrorResponse)
+		if !ok {
 			t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 		}
 		if errResp.Problem != nil {

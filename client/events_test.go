@@ -99,8 +99,9 @@ func TestEventsErrorResponse(t *testing.T) {
 
 	stream, resp, err := c.Events(context.Background(), client.StreamInstanceEventsParams{Names: &[]string{"web"}, Group: ptr("demo")})
 
-	var errResp *client.ErrorResponse
-	if !errors.As(err, &errResp) {
+	// A type assertion, as plugins under Yaegi do: the error is never wrapped.
+	errResp, ok := err.(*client.ErrorResponse)
+	if !ok {
 		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
 	if stream != nil {

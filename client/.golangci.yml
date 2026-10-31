@@ -1,0 +1,30 @@
+# Lint config of the client module. Besides the default linters, it forbids
+# Go that Yaegi cannot run: Traefik runs plugins, and the client they vendor,
+# with Yaegi v0.16.1, which supports less than the Go version in go.mod.
+# See "Yaegi" in README.md; yaegitest checks the client really runs there.
+version: "2"
+
+linters:
+  enable:
+    - depguard
+    - forbidigo
+  settings:
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^errors\.As$
+          msg: errors.As panics under Yaegi when its target is an interpreted type. Use a type assertion.
+        - pattern: ^(min|max|clear)$
+          msg: the Go 1.21 builtins min, max and clear are undefined under Yaegi.
+    depguard:
+      rules:
+        yaegi:
+          deny:
+            - pkg: unsafe
+              desc: Traefik only lets plugins import unsafe when the user enables useUnsafe.
+            - pkg: syscall
+              desc: Traefik only lets plugins import syscall when the user enables useUnsafe.
+    govet:
+      enable:
+        # Reports standard library API newer than the go directive in go.mod.
+        - stdversion
