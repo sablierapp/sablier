@@ -18,7 +18,9 @@
 //	}
 //
 // The client is tested under Yaegi, the interpreter Traefik runs plugins
-// with (see yaegitest).
+// with (see yaegitest), and its lint config forbids the Go that Yaegi cannot
+// run. README.md lists those limits and the supported Sablier and Traefik
+// versions.
 package client
 
 //go:generate go tool -modfile=../tools.mod oapi-codegen -config oapi-codegen.yaml -o types.gen.go ../docs/static/openapi.json

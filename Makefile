@@ -76,8 +76,11 @@ test-client:
 	cd client && go test ./...
 	cd client/yaegitest && go test ./...
 
+# client/ is a separate module with its own .golangci.yml, which forbids Go
+# that Yaegi cannot run.
 lint:
 	golangci-lint run
+	cd client && golangci-lint run
 
 fix:
 	golangci-lint run --fix

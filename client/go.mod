@@ -1,3 +1,3 @@
 module github.com/sablierapp/sablier/client
 
-go 1.22
+go 1.21
