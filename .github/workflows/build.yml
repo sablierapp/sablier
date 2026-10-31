@@ -78,6 +78,12 @@ jobs:
       working-directory: client
       run: go test -race -covermode=atomic -cover ./... -args -test.gocoverdir=/tmp/gocov
 
+    - name: Test the Go client under Yaegi
+      # Traefik runs plugins with the Yaegi interpreter, which does not support
+      # all of Go: this checks the client still loads and works there.
+      working-directory: client/yaegitest
+      run: go test ./...
+
     - name: Generate coverage report
       if: ${{ !cancelled() }}
       run: go tool covdata textfmt -i=/tmp/gocov -o=coverage.out

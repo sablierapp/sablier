@@ -36,7 +36,7 @@ func TestEvents(t *testing.T) {
 	c, got := eventServer(t, "event:created\ndata:{\"name\":\"web\",\"status\":\"starting\"}\n\n"+
 		"event:removed\ndata:{\"name\":\"db\"}\n\n")
 
-	stream, err := c.Events(context.Background(), client.StreamInstanceEventsParams{
+	stream, _, err := c.Events(context.Background(), client.StreamInstanceEventsParams{
 		Group: ptr("demo"),
 		Types: &[]string{"created", "removed"},
 	})
@@ -78,7 +78,7 @@ func TestEventsParsing(t *testing.T) {
 	c, _ := eventServer(t, ": keep-alive\n\n"+
 		"id: 1\r\nevent: started\r\ndata: {\"name\":\r\ndata: \"web\"}\r\n\r\n")
 
-	stream, err := c.Events(context.Background(), client.StreamInstanceEventsParams{})
+	stream, _, err := c.Events(context.Background(), client.StreamInstanceEventsParams{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,16 +97,19 @@ func TestEventsErrorResponse(t *testing.T) {
 	c, _ := sablier(t, http.StatusBadRequest, "application/problem+json", "",
 		`{"title":"Validation Failed","status":400,"detail":"'names' and 'group' query parameters are both set"}`)
 
-	_, err := c.Events(context.Background(), client.StreamInstanceEventsParams{Names: &[]string{"web"}, Group: ptr("demo")})
+	stream, resp, err := c.Events(context.Background(), client.StreamInstanceEventsParams{Names: &[]string{"web"}, Group: ptr("demo")})
 
-	var statusErr *client.StatusError
-	if !errors.As(err, &statusErr) {
-		t.Fatalf("err = %v, want a *client.StatusError", err)
+	var errResp *client.ErrorResponse
+	if !errors.As(err, &errResp) {
+		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
-	if statusErr.Response.StatusCode != http.StatusBadRequest {
-		t.Errorf("status = %d, want 400", statusErr.Response.StatusCode)
+	if stream != nil {
+		t.Error("stream must be nil for an error response")
 	}
-	if p := statusErr.Response.Problem(); p == nil || *p.Title != "Validation Failed" {
+	if resp == nil || resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("resp = %v, want the 400 response", resp)
+	}
+	if p := errResp.Problem; p == nil || p.Title != "Validation Failed" {
 		t.Errorf("problem = %+v, want Validation Failed", p)
 	}
 }
@@ -124,7 +127,7 @@ func TestEventsStopsOnCancel(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream, err := c.Events(ctx, client.StreamInstanceEventsParams{})
+	stream, _, err := c.Events(ctx, client.StreamInstanceEventsParams{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +154,7 @@ func TestEventsCutMidEvent(t *testing.T) {
 	// An event is only complete once its blank line arrives.
 	for _, body := range []string{"event:created\ndata:{}", "event:created\ndata:{}\n"} {
 		c, _ := eventServer(t, body)
-		stream, err := c.Events(context.Background(), client.StreamInstanceEventsParams{})
+		stream, _, err := c.Events(context.Background(), client.StreamInstanceEventsParams{})
 		if err != nil {
 			t.Fatal(err)
 		}
