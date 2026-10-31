@@ -13,9 +13,19 @@ import (
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
-// clusterCRDInstalled reports whether the CloudNativePG Cluster CRD is served by the
-// API server. It lets InstanceEvents avoid starting a dynamic informer (which would
-// otherwise log continuous list/watch errors) on clusters that don't run CloudNativePG.
+// cnpgCRDState is whether the CloudNativePG Cluster CRD is served by the API server.
+type cnpgCRDState int32
+
+const (
+	// cnpgCRDUnknown means discovery failed; it is not cached, so the next caller retries.
+	cnpgCRDUnknown cnpgCRDState = iota
+	cnpgCRDAbsent
+	cnpgCRDInstalled
+)
+
+// clusterCRDState reports whether the CloudNativePG Cluster CRD is served, asking the
+// discovery API only until it has an answer, which is then cached for the life of the
+// provider. It is shared by InstanceEvents and listClusters, so both agree on it.
 //
 // The check goes through the discovery API rather than listing the resource:
 // discovery requires no RBAC on the resource itself, so a ClusterRole scoped to
@@ -24,28 +34,43 @@ import (
 // error and used to start the informer against a CRD that does not exist - leaving
 // the reflector in a permanent list/watch error loop.
 //
-// ctx only scopes logging: ServerResourcesForGroupVersion has no context-aware
-// variant, so the underlying GET is bounded by the REST client timeout instead.
-func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
-	if p.dynamic == nil || p.Client == nil {
-		return false
+// The cached answer does not follow the CRD being installed or removed while Sablier
+// runs; that takes a restart, as starting the CloudNativePG informer already does.
+func (p *Provider) clusterCRDState(ctx context.Context) (cnpgCRDState, error) {
+	if state := cnpgCRDState(p.cnpgCRD.Load()); state != cnpgCRDUnknown {
+		return state, nil
 	}
-	resources, err := p.Client.Discovery().ServerResourcesForGroupVersion(cnpgClusterGVR.GroupVersion().String())
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false
+	if p.dynamic == nil || p.Client == nil {
+		return cnpgCRDAbsent, nil
+	}
+	resources, err := p.Client.Discovery().ServerResourcesForGroupVersionWithContext(ctx, cnpgClusterGVR.GroupVersion().String())
+	if err != nil && !apierrors.IsNotFound(err) {
+		return cnpgCRDUnknown, err
+	}
+	state := cnpgCRDAbsent
+	if err == nil {
+		for _, r := range resources.APIResources {
+			if r.Name == cnpgClusterGVR.Resource {
+				state = cnpgCRDInstalled
+				break
+			}
 		}
-		// Any other error (transient, permission, authn, ...): assume the CRD
-		// exists and let the informer surface the underlying problem.
+	}
+	p.cnpgCRD.Store(int32(state))
+	return state, nil
+}
+
+// clusterCRDInstalled reports whether InstanceEvents should start the CloudNativePG
+// informer. When discovery fails for another reason than NotFound (transient,
+// permission, authn, ...), it assumes the CRD exists and lets the informer surface
+// the underlying problem.
+func (p *Provider) clusterCRDInstalled(ctx context.Context) bool {
+	state, err := p.clusterCRDState(ctx)
+	if state == cnpgCRDUnknown {
 		p.l.WarnContext(ctx, "could not verify cloudnativepg CRD presence, enabling cnpg watcher anyway", "error", err)
 		return true
 	}
-	for _, r := range resources.APIResources {
-		if r.Name == cnpgClusterGVR.Resource {
-			return true
-		}
-	}
-	return false
+	return state == cnpgCRDInstalled
 }
 
 // clusterFromObject extracts the *unstructured.Unstructured from an informer event,

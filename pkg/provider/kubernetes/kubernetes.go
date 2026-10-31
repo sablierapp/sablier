@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -30,6 +31,8 @@ type Provider struct {
 	// scaleFallbackWarned holds the kinds for which scale already warned that it
 	// fell back to the deprecated GET + UPDATE.
 	scaleFallbackWarned sync.Map
+	// cnpgCRD caches the cnpgCRDState that discovery returned, once it is known.
+	cnpgCRD atomic.Int32
 }
 
 func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Interface, logger *slog.Logger, config providerConfig.Kubernetes) (*Provider, error) {
