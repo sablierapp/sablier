@@ -17,7 +17,11 @@ func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sa
 
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
-	return p.deploymentInfo(d, config), nil
+	info := p.deploymentInfo(d, config)
+	if p.reportPodProblems && info.Status == sablier.InstanceStatusStarting {
+		info.Message = p.podProblem(ctx, config.Namespace, d.Spec.Selector)
+	}
+	return info, nil
 }
 
 // deploymentInfo converts d into the InstanceInfo that DeploymentInspect

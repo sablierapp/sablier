@@ -14,7 +14,11 @@ func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (s
 		return sablier.InstanceInfo{}, err
 	}
 
-	return p.statefulSetInfo(ss, config), nil
+	info := p.statefulSetInfo(ss, config)
+	if p.reportPodProblems && info.Status == sablier.InstanceStatusStarting {
+		info.Message = p.podProblem(ctx, config.Namespace, ss.Spec.Selector)
+	}
+	return info, nil
 }
 
 // statefulSetInfo converts ss into the InstanceInfo that StatefulSetInspect

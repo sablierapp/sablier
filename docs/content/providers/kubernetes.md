@@ -75,6 +75,7 @@ Sablier scales opted-in workloads to zero when it starts. A workload you deploy 
 |---|---|---|
 | [`--provider.kubernetes.delimiter`](/reference/cli/#opt-provider-kubernetes-delimiter) | `_` | The separator in [instance names](#instance-names). Prefer `.` or `/`; `_` is kept for backward compatibility. |
 | [`--provider.kubernetes.ready-on-first-replica`](/reference/cli/#opt-provider-kubernetes-ready-on-first-replica) | `false` | Report a workload ready as soon as one replica is ready, instead of all of them. Since v1.16.0. |
+| [`--provider.kubernetes.report-pod-problems`](/reference/cli/#opt-provider-kubernetes-report-pod-problems) | `false` | Explain why a starting workload does not become ready when one of its pods is stuck. Needs `list` on `pods`. See [Readiness](#readiness). |
 | [`--provider.kubernetes.qps`](/reference/cli/#opt-provider-kubernetes-qps) | `5` | Client-side limit of Kubernetes API requests per second. |
 | [`--provider.kubernetes.burst`](/reference/cli/#opt-provider-kubernetes-burst) | `10` | Requests allowed above that limit in a burst. |
 
@@ -238,6 +239,13 @@ Sablier reports a [Deployment](https://kubernetes.io/docs/concepts/workloads/con
 - **starting** otherwise.
 
 A replica is ready when its pod passes its [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes), so give your containers one.
+
+With `--provider.kubernetes.report-pod-problems`, Sablier lists the pods of a **starting** Deployment or StatefulSet and reports the first one stuck in a state that waiting will not resolve as the instance error, which the waiting page shows:
+
+- a pod that cannot be [scheduled](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/) (`Unschedulable`, with the scheduler's message);
+- a container that waits with `CrashLoopBackOff` (with how it last ended, such as `OOMKilled`), `ImagePullBackOff`, `ErrImagePull`, `InvalidImageName`, `CreateContainerConfigError`, `CreateContainerError` or `RunContainerError`.
+
+The instance stays **starting**, so blocking requests keep waiting: such a pod may still recover, for example once its database is up. Grant Sablier `list` on `pods`; without it, the workload is reported without an explanation. The option costs one pod list per inspection of a starting workload.
 
 A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
 
