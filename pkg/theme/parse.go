@@ -29,15 +29,24 @@ func isKubeletDir(root, filePath string, d fs.DirEntry) bool {
 	return d.IsDir() && filePath != root && strings.HasPrefix(d.Name(), "..")
 }
 
-// kubeletVolumeData returns the "..data" directory of dir, and whether there is
-// one, which makes dir the root of a Kubernetes ConfigMap, Secret or projected
-// volume. Such a volume links every top-level entry through "..data", so a key
-// mapped into a sub-directory with items[].path is reached only through a link
-// to a directory, which fs.WalkDir does not follow. "..data" holds every key at
-// its path.
+// kubeletVolumeData returns the "..data" directory of dir, and whether dir is
+// the root of a Kubernetes ConfigMap, Secret or projected volume. Such a volume
+// links every top-level entry through "..data", so a key mapped into a
+// sub-directory with items[].path is reached only through a link to a
+// directory, which fs.WalkDir does not follow. "..data" holds every key at its
+// path.
+//
+// The walk follows "..data", so it has to be the link the kubelet makes: one to
+// a sibling "..<timestamp>" directory that is not a link itself. Any other
+// "..data", such as a link to ".." or the plain directory of a volume copied
+// with "cp -rL", would make the walk loop or read the same theme twice.
 func kubeletVolumeData(f fs.FS, dir string) (string, bool) {
 	data := path.Join(dir, "..data")
-	info, err := fs.Stat(f, data)
+	target, err := fs.ReadLink(f, data)
+	if err != nil || target == ".." || !strings.HasPrefix(target, "..") || strings.ContainsAny(target, `/\`) {
+		return data, false
+	}
+	info, err := fs.Lstat(f, path.Join(dir, target))
 	return data, err == nil && info.IsDir()
 }
 

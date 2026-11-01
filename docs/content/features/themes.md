@@ -51,7 +51,7 @@ Sablier will recursively search for themes with the `.html` extension.
 
 Symbolic links are followed as long as they are relative and stay inside the folder. Any other
 link is ignored, both for themes and for their assets. Sablier does not descend into a linked
-directory.
+directory, except the `..data` directory of a Kubernetes volume (see below).
 
 The folder can be a Kubernetes ConfigMap or Secret volume. Sablier reads the volume's files
 through its hidden `..data` directory and ignores the `..<timestamp>` directory, so each theme is

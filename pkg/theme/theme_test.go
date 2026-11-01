@@ -99,6 +99,33 @@ func TestNewWithCustomThemesFromPath_ConfigMapVolumeSubDirectory(t *testing.T) {
 	assert.Equal(t, `team`, render(t, themes, "team/special/brand"))
 }
 
+// TestNewWithCustomThemesFromPath_DataNotFromKubelet: only the "..data" link
+// the kubelet makes is followed. A link back up the tree made the walk loop and
+// register thousands of themes, and the plain "..data" directory of a copied
+// volume registered every theme twice.
+func TestNewWithCustomThemesFromPath_DataNotFromKubelet(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.html"), []byte(`x`), 0o644))
+	for _, sub := range []string{"a", "b"} {
+		require.NoError(t, os.Mkdir(filepath.Join(dir, sub), 0o755))
+		symlink(t, "..", filepath.Join(dir, sub, "..data"))
+	}
+	// A link to ".." in two steps, through a sibling that looks like a
+	// timestamped directory.
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "c"), 0o755))
+	symlink(t, "..", filepath.Join(dir, "c", "..up"))
+	symlink(t, "..up", filepath.Join(dir, "c", "..data"))
+	// The layout "cp -rL" leaves of a volume.
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "copy", "..data"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "copy", "..data", "brand.html"), []byte(`copy`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "copy", "brand.html"), []byte(`copy`), 0o644))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"copy/brand", "ghost", "hacker-terminal", "matrix", "retro", "shuffle", "x"}, themes.List())
+}
+
 // TestNewWithCustomThemesFromPath_RefusesLinksOutside pins the reason symlinks
 // used to be refused altogether: a link out of the themes directory must not
 // let a theme inline a file from elsewhere on the host.
