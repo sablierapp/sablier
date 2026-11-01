@@ -126,6 +126,23 @@ func TestNewWithCustomThemesFromPath_DataNotFromKubelet(t *testing.T) {
 	assert.Equal(t, []string{"copy/brand", "ghost", "hacker-terminal", "matrix", "retro", "shuffle", "x"}, themes.List())
 }
 
+// TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume: only the
+// links into "..data" are skipped as read already, not every theme link of a
+// volume directory.
+func TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume(t *testing.T) {
+	dir := t.TempDir()
+	kubeletVolume(t, dir, map[string]string{
+		"shared/brand.html": `shared`,
+	})
+	symlink(t, filepath.Join("shared", "brand.html"), filepath.Join(dir, "brand.html"))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"brand", "ghost", "hacker-terminal", "matrix", "retro", "shared/brand", "shuffle"}, themes.List())
+	assert.Equal(t, `shared`, render(t, themes, "brand"))
+}
+
 // TestNewWithCustomThemesFromPath_RefusesLinksOutside pins the reason symlinks
 // used to be refused altogether: a link out of the themes directory must not
 // let a theme inline a file from elsewhere on the host.

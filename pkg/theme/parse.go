@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -48,6 +49,17 @@ func kubeletVolumeData(f fs.FS, dir string) (string, bool) {
 	}
 	info, err := fs.Lstat(f, path.Join(dir, target))
 	return data, err == nil && info.IsDir()
+}
+
+// isLinkIntoKubeletData reports whether the link at filePath is one of the
+// top-level links of a Kubernetes volume, whose theme is read through "..data"
+// already (see kubeletVolumeData).
+func isLinkIntoKubeletData(f fs.FS, filePath string) bool {
+	if _, ok := kubeletVolumeData(f, path.Dir(filePath)); !ok {
+		return false
+	}
+	target, err := fs.ReadLink(f, filePath)
+	return err == nil && strings.HasPrefix(filepath.ToSlash(target), "..data/")
 }
 
 // relativePath returns filePath, as fs.WalkDir reports it for a walk from root,
@@ -132,11 +144,7 @@ func (t *Themes) parseAndBundleDir(f fs.FS, root, prefix string) error {
 			return nil
 		}
 		if d.Type()&fs.ModeSymlink != 0 {
-			// The top-level keys of a volume are read through "..data" already.
-			if _, ok := kubeletVolumeData(f, path.Dir(filePath)); ok {
-				return nil
-			}
-			if !t.isLinkToFile(f, filePath) {
+			if isLinkIntoKubeletData(f, filePath) || !t.isLinkToFile(f, filePath) {
 				return nil
 			}
 		}
