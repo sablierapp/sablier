@@ -31,6 +31,7 @@ func symlink(t *testing.T, target, link string) {
 func kubeletVolume(t *testing.T, dir string, files map[string]string) {
 	t.Helper()
 	const timestamped = "..2026_10_28_12_00_00.123456789"
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, timestamped), 0o755))
 	top := map[string]bool{}
 	for name, content := range files {
 		file := filepath.Join(dir, timestamped, filepath.FromSlash(name))
