@@ -2,9 +2,11 @@ package theme_test
 
 import (
 	"bytes"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/theme"
@@ -104,4 +106,36 @@ func TestNewWithCustomThemesFromPath_SkipsLinkToDirectory(t *testing.T) {
 
 	assert.True(t, themes.Exists("mine"))
 	assert.False(t, themes.Exists("partials"))
+}
+
+// vanishingFS makes the file named gone look removed after its directory was
+// read.
+type vanishingFS struct {
+	fs.FS
+	gone string
+}
+
+func (v vanishingFS) Open(name string) (fs.File, error) {
+	if name == v.gone {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+	return v.FS.Open(name)
+}
+
+// TestNewWithCustomThemes_SkipsVanishedTheme: the kubelet removes the files of
+// a ConfigMap volume when it updates it. A theme removed while Sablier walked
+// the directory used to fail every custom theme, so Sablier started with the
+// embedded themes only.
+func TestNewWithCustomThemes_SkipsVanishedTheme(t *testing.T) {
+	themes, err := theme.NewWithCustomThemes(vanishingFS{
+		FS: fstest.MapFS{
+			"gone.html": &fstest.MapFile{Data: []byte(`gone`)},
+			"kept.html": &fstest.MapFile{Data: []byte(`kept`)},
+		},
+		gone: "gone.html",
+	}, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.False(t, themes.Exists("gone"))
+	assert.Equal(t, `kept`, render(t, themes, "kept"))
 }
