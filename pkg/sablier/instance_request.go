@@ -152,6 +152,8 @@ func (s *Sablier) retryFailedStart(ctx context.Context, name string, session Ins
 			return InstanceInfo{}, false
 		}
 		info = inspected
+		// A retry belongs to the same wake: keep when it began.
+		info.StartedAt = session.StartedAt
 	}
 	info.Status = InstanceStatusStarting
 	info.ReadyAt = nil
@@ -281,6 +283,12 @@ func (s *Sablier) requestStart(ctx context.Context, name string, rejectUnlabeled
 	}
 	if rejectUnlabeled && !info.IsEnabled() {
 		return InstanceInfo{}, ErrInstanceNotManaged{Name: name}
+	}
+	// Stamp when the wake began, unless the instance is already up: its
+	// startup would then only measure the interval between two requests.
+	if info.Status != InstanceStatusReady {
+		now := time.Now()
+		info.StartedAt = &now
 	}
 	info.Status = InstanceStatusStarting
 
@@ -469,6 +477,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			s.l.DebugContext(ctx, "instance start still in progress, skipping inspect", slog.String("instance", name))
 		} else {
 			s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", string(state.Status)))
+			startedAt := state.StartedAt
 			inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
 				trace.WithAttributes(attribute.String("instance", name)))
 			state, err = s.provider.InstanceInspect(inspectCtx, name)
@@ -480,6 +489,16 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			if err != nil {
 				return InstanceInfo{}, err
 			}
+			// The provider knows nothing of the session.
+			state.StartedAt = startedAt
+			if startedAt == nil && state.Status != InstanceStatusReady && state.Status != InstanceStatusCompleted {
+				// A session recorded before Sablier kept start times, or one
+				// that began with the instance running: count the wait from
+				// now, so that a stuck instance still shows how long it has
+				// been waiting. Its startup is not learned (startedAt is nil).
+				now := time.Now()
+				state.StartedAt = &now
+			}
 			if fullyStarted(state) {
 				// A start that was reported failed came up after all.
 				s.clearFailedStart(name)
@@ -489,6 +508,9 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 				// First transition to ready — stamp the time so ReadyAfter can be enforced.
 				now := time.Now()
 				state.ReadyAt = &now
+				if startedAt != nil {
+					s.startups.observe(name, now.Sub(*startedAt), now)
+				}
 			}
 			s.l.DebugContext(ctx, "request to check instance status completed", slog.String("instance", name), slog.String("new_status", string(state.Status)))
 		}

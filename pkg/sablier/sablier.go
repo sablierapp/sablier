@@ -44,6 +44,10 @@ type Sablier struct {
 	// group members that both depend on the same database) never start it twice.
 	depStarts map[string]*depStart
 
+	// startups learns how long each instance takes to become ready after a
+	// start, for the waiting page and the metrics.
+	startups *startupStats
+
 	// BlockingRefreshFrequency is the maximum interval between two readiness
 	// checks of a blocking request. Defaults to 5 seconds.
 	BlockingRefreshFrequency time.Duration
@@ -92,6 +96,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		pendingStarts:                 map[string]*pendingStart{},
 		failedStarts:                  map[string]*failedStart{},
 		depStarts:                     map[string]*depStart{},
+		startups:                      newStartupStats(),
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
@@ -145,11 +150,17 @@ func (s *Sablier) SessionsSnapshot() []metrics.SessionEntry {
 		if len(info.Groups) > 0 {
 			group = info.Groups[0]
 		}
-		out = append(out, metrics.SessionEntry{
+		entry := metrics.SessionEntry{
 			Instance:  info.Name,
 			Group:     group,
 			ExpiresAt: expiresAt,
-		})
+		}
+		// A completed one-shot instance is not waited for anymore.
+		if info.StartedAt != nil && info.Status != InstanceStatusReady && info.Status != InstanceStatusCompleted {
+			entry.StartingSince = *info.StartedAt
+			entry.TypicalStartup = s.startups.typical(info.Name)
+		}
+		out = append(out, entry)
 	})
 	if err != nil {
 		// Enumeration failed partway through, so out only holds a subset of the

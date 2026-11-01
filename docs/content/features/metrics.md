@@ -42,8 +42,10 @@ When `server.metrics.enabled` is `true`, Sablier registers a `GET <base-path>/me
 | `sablier_instance_start_duration_seconds` | histogram | `instance` | Duration of provider.InstanceStart calls (seconds), only successful starts. |
 | `sablier_instance_start_failures_total` | counter | `instance` | Total number of provider InstanceStart failures, by instance. |
 | `sablier_instance_stops_total` | counter | `instance`, `reason` | Total number of instance stops, by instance and reason. |
+| `sablier_instance_typical_startup_seconds` | gauge | `group`, `instance` | Median time (seconds) the instance took to become ready over its last observed starts, learned in memory since Sablier started. Emitted alongside sablier_session_starting_since_timestamp_seconds, once one start of the instance has been observed. |
 | `sablier_session_expires_at_timestamp_seconds` | gauge | `group`, `instance` | Unix timestamp (seconds) at which the instance's session expires and the instance is stopped. One series per active session. The value tracks the latest access and is pushed back on every session renewal. Derive the remaining time in Grafana with the expression: value - time(). |
 | `sablier_session_requests_total` | counter | `strategy`, `target` | Total number of session requests received, by strategy and target. |
+| `sablier_session_starting_since_timestamp_seconds` | gauge | `group`, `instance` | Unix timestamp (seconds) at which Sablier started the instance for its current session. One series per session whose instance is not ready yet; it disappears once a request sees the instance ready. Derive how long the start has lasted with the expression: time() - value. |
 | Go runtime + process collectors | (default) | (default) | Standard `go_*` and `process_*` metrics from the Prometheus Go client. |
 
 ## Security note

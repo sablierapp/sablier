@@ -157,7 +157,9 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 			})
 			continue
 		}
-		instances = append(instances, instanceStateToRenderOptionsRequestState(v.Instance))
+		instance := instanceStateToRenderOptionsRequestState(v.Instance)
+		instance.TypicalStartup = v.TypicalStartup
+		instances = append(instances, instance)
 	}
 
 	sort.SliceStable(instances, func(i, j int) bool {
@@ -176,11 +178,17 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		err = errors.New(instanceState.Message)
 	}
 
+	var startedAt time.Time
+	if instanceState.StartedAt != nil {
+		startedAt = *instanceState.StartedAt
+	}
+
 	return theme.Instance{
 		Name:            instanceState.Name,
 		Status:          string(instanceState.Status),
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
+		StartedAt:       startedAt,
 		Error:           err,
 		Provider:        instanceState.Provider,
 		Docker:          instanceState.Docker,

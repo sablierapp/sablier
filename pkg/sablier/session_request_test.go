@@ -174,6 +174,9 @@ func TestRequestSession_OptionalPrefix(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -220,6 +223,9 @@ func TestRequestSessionGroup_DoesNotRejectUnlabeledInstances(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -266,12 +272,15 @@ func TestRequestSessionGroup_MultipleGroupsFiltering(t *testing.T) {
 			}
 		}
 
+		// The bubble's clock does not move before the starts are dispatched.
+		startedAt := time.Now()
 		startingInfo := func(name string) sablier.InstanceInfo {
 			return sablier.InstanceInfo{
 				Name:            name,
 				CurrentReplicas: 0,
 				DesiredReplicas: 1,
 				Status:          sablier.InstanceStatusStarting,
+				StartedAt:       &startedAt,
 			}
 		}
 

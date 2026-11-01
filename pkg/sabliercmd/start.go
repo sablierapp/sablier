@@ -88,6 +88,7 @@ func Start(ctx context.Context, conf config.Config) error {
 	if pr, ok := rec.(*metrics.PromRecorder); ok {
 		pr.Registry().MustRegister(metrics.NewGroupLockCollector(s, pr))
 		pr.Registry().MustRegister(metrics.NewSessionExpiryCollector(s))
+		pr.Registry().MustRegister(metrics.NewSessionStartupCollector(s))
 	}
 	s.BlockingRefreshFrequency = conf.Strategy.Blocking.DefaultRefreshFrequency
 	s.DefaultSessionDuration = conf.Sessions.DefaultDuration

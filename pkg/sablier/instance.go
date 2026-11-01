@@ -62,6 +62,13 @@ type InstanceInfo struct {
 	// ReadyAt records when the instance first transitioned to InstanceStatusReady.
 	// It is set internally by Sablier and is never populated by a provider.
 	ReadyAt *time.Time `json:"readyAt,omitempty"`
+	// StartedAt records when Sablier dispatched the start of the instance for
+	// its current session. It is kept across inspections, so that the time the
+	// instance takes to become ready can be measured and shown on the waiting
+	// page. It is nil when the instance was already ready when the session
+	// began, until an inspection finds it not ready. It is set internally by
+	// Sablier and is never populated by a provider.
+	StartedAt *time.Time `json:"startedAt,omitempty"`
 
 	// RunningHours is a daily keep-warm window in local time, parsed from
 	// the sablier.running-hours label (format: HH:MM-HH:MM).

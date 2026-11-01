@@ -25,6 +25,9 @@ type InstanceInfoWithError struct {
 	// Optional marks a best-effort instance, requested with the "optional:"
 	// name prefix. Its readiness and errors are ignored by SessionState.
 	Optional bool `json:"optional,omitempty"`
+	// TypicalStartup is the median time the instance took to become ready
+	// over its last observed starts. Zero until one start has been observed.
+	TypicalStartup time.Duration `json:"typicalStartup,omitempty"`
 }
 
 func (s *Sablier) RequestSession(ctx context.Context, names []string, duration time.Duration) (sessionState *SessionState, err error) {
@@ -51,12 +54,18 @@ func (s *Sablier) requestSession(ctx context.Context, names []string, duration t
 		go func(name string, optional bool) {
 			defer wg.Done()
 			state, err := s.instanceRequest(ctx, name, duration, rejectUnlabeled)
+			learned := name
+			if state.Name != "" {
+				learned = state.Name
+			}
+			typical := s.startups.typical(learned)
 			mx.Lock()
 			defer mx.Unlock()
 			sessionState.Instances[name] = InstanceInfoWithError{
-				Instance: state,
-				Error:    err,
-				Optional: optional,
+				Instance:       state,
+				Error:          err,
+				Optional:       optional,
+				TypicalStartup: typical,
 			}
 		}(name, optional)
 	}

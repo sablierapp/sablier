@@ -66,6 +66,15 @@
             1
           ]
         },
+        "StartedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When Sablier started the instance for the current session. Zero when the instance was already running or the time is unknown. {{ ($.RenderedAt.Sub .StartedAt).Seconds }} gives how long the start has lasted so far."
+        },
+        "TypicalStartup": {
+          "type": "integer",
+          "description": "Median time the instance took to become ready over its last observed starts as learned in memory since Sablier started. Zero until one start of the instance has been observed. {{ .TypicalStartup.Seconds }} gives it in seconds."
+        },
         "Provider": {
           "type": "string",
           "description": "Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd|nomad|ecs)",
@@ -288,6 +297,11 @@
       "examples": [
         "1.8.0"
       ]
+    },
+    "RenderedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server time at which the page was rendered. Measure elapsed times against it rather than against the visitor's clock (e.g. {{ ($.RenderedAt.Sub .StartedAt).Seconds }} within InstanceStates)."
     }
   },
   "additionalProperties": false,
@@ -297,6 +311,7 @@
     "InstanceStates",
     "SessionDuration",
     "RefreshFrequency",
-    "Version"
+    "Version",
+    "RenderedAt"
   ]
 }

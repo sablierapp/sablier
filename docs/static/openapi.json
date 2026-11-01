@@ -286,6 +286,10 @@
             ],
             "description": "ScaleConfig configures resource-based scale mode for this instance.\nWhen present, Sablier throttles CPU/memory instead of stopping the container."
           },
+          "startedAt": {
+            "description": "StartedAt records when Sablier dispatched the start of the instance for\nits current session. It is kept across inspections, so that the time the\ninstance takes to become ready can be measured and shown on the waiting\npage. It is nil when the instance was already ready when the session\nbegan, until an inspection finds it not ready. It is set internally by\nSablier and is never populated by a provider.",
+            "type": "string"
+          },
           "status": {
             "$ref": "#/components/schemas/sablier.InstanceStatus"
           },
