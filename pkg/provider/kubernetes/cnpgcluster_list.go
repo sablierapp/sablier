@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,11 @@ import (
 // or sablier.enable=true across all namespaces. When the dynamic client is unset or the
 // CloudNativePG CRD is not installed, it returns no clusters rather than an error, so the
 // provider keeps working on clusters that don't run CloudNativePG.
+//
+// Without the RBAC rule the API server answers Forbidden even when the CRD is absent, so
+// a Forbidden list is resolved through discovery: an absent CRD is skipped like NotFound,
+// while an installed CRD returns the error, so callers keep their previous state instead
+// of dropping every CloudNativePG Cluster.
 func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructured, error) {
 	if p.dynamic == nil {
 		return nil, nil
@@ -28,11 +34,21 @@ func (p *Provider) listClusters(ctx context.Context) ([]unstructured.Unstructure
 		return list.Items, nil
 	})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		state := cnpgCRDUnknown
+		if apierrors.IsForbidden(err) {
+			state, _ = p.clusterCRDState(ctx)
+		}
+		switch {
+		case apierrors.IsNotFound(err), state == cnpgCRDAbsent:
 			p.l.DebugContext(ctx, "cloudnativepg CRD not installed, skipping cnpg cluster discovery")
 			return nil, nil
+		case state == cnpgCRDInstalled:
+			return nil, fmt.Errorf("cloudnativepg CRD is installed but listing clusters is forbidden: "+
+				"grant get, list, watch and patch on clusters.postgresql.cnpg.io in Sablier's ClusterRole "+
+				"(clusters are listed in all namespaces, so namespaced Roles are not enough): %w", err)
+		default:
+			return nil, err
 		}
-		return nil, err
 	}
 
 	return items, nil

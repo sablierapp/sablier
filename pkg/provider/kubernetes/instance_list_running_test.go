@@ -4,18 +4,25 @@ package kubernetes
 // https://github.com/sablierapp/sablier/issues/1095
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log/slog"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/neilotoole/slogt"
 	"go.opentelemetry.io/otel"
 	"gotest.tools/v3/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -176,5 +183,110 @@ func TestProvider_InstanceList_All(t *testing.T) {
 		"cnpgcluster_default_pg-running_1",
 		"deployment_default_d-running_1",
 		"statefulset_default_s-running_1",
+	})
+}
+
+func TestProvider_ClusterListForbidden(t *testing.T) {
+	t.Parallel()
+
+	denyList := func(p *Provider, err error) {
+		p.dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("list", cnpgClusterGVR.Resource,
+			func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, err
+			})
+	}
+	forbidden := apierrors.NewForbidden(cnpgClusterGVR.GroupResource(), "", errors.New("rbac denied"))
+	serveCRD := func(p *Provider) {
+		p.Client.(*k8sfake.Clientset).Resources = []*metav1.APIResourceList{{
+			GroupVersion: cnpgClusterGVR.GroupVersion().String(),
+			APIResources: []metav1.APIResource{{Name: cnpgClusterGVR.Resource}},
+		}}
+	}
+	// discoveryCalls counts the discovery requests: the fake records them as a "get"
+	// on the pseudo-resource "resource".
+	discoveryCalls := func(p *Provider) int {
+		n := 0
+		for _, a := range p.Client.(*k8sfake.Clientset).Actions() {
+			if a.GetVerb() == "get" && a.GetResource().Resource == "resource" {
+				n++
+			}
+		}
+		return n
+	}
+	withLogs := func(p *Provider) *bytes.Buffer {
+		var logs bytes.Buffer
+		p.l = slog.New(slog.NewTextHandler(&logs, nil))
+		return &logs
+	}
+
+	t.Run("CRD absent: silent skip, discovery asked once", func(t *testing.T) {
+		t.Parallel()
+		p := newListTestProvider(t, nil, nil)
+		logs := withLogs(p)
+		denyList(p, forbidden)
+
+		for range 3 {
+			groups, err := p.ClusterGroups(context.Background())
+			assert.NilError(t, err)
+			assert.Equal(t, len(groups), 0)
+		}
+		assert.Equal(t, discoveryCalls(p), 1)
+		assert.Equal(t, strings.Count(logs.String(), "level=WARN"), 0, logs.String())
+	})
+
+	t.Run("CRD absent: workload groups survive", func(t *testing.T) {
+		t.Parallel()
+		replicas := int32(1)
+		ss := newListTestStatefulSet("db", &replicas)
+		ss.Labels[sablier.LabelGroup] = "g"
+		p := newListTestProvider(t, []runtime.Object{ss}, nil)
+		denyList(p, forbidden)
+
+		groups, err := p.InstanceGroups(context.Background())
+		assert.NilError(t, err)
+		assert.Equal(t, len(groups["g"]), 1)
+	})
+
+	t.Run("CRD installed: the error is returned and names the full rule", func(t *testing.T) {
+		t.Parallel()
+		p := newListTestProvider(t, nil, nil)
+		serveCRD(p)
+		denyList(p, forbidden)
+
+		_, err := p.ClusterGroups(context.Background())
+		assert.Assert(t, apierrors.IsForbidden(err), err)
+		assert.ErrorContains(t, err, "get, list, watch and patch")
+
+		// InstanceGroups fails as a whole, so the group reconcile keeps its previous
+		// membership (pinned by TestGroupWatch_ProviderErrorDoesNotUpdateGroups).
+		_, err = p.InstanceGroups(context.Background())
+		assert.Assert(t, apierrors.IsForbidden(err), err)
+	})
+
+	t.Run("discovery fails: the list error is returned, no warning, retried next time", func(t *testing.T) {
+		t.Parallel()
+		p := newListTestProvider(t, nil, nil)
+		logs := withLogs(p)
+		p.Client.(*k8sfake.Clientset).PrependReactor("get", "resource", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apierrors.NewServiceUnavailable("discovery unavailable")
+		})
+		denyList(p, forbidden)
+
+		for range 2 {
+			_, err := p.ClusterList(context.Background(), provider.InstanceListOptions{All: true})
+			assert.Assert(t, apierrors.IsForbidden(err), err)
+		}
+		assert.Equal(t, discoveryCalls(p), 2)
+		assert.Equal(t, strings.Count(logs.String(), "level=WARN"), 0, logs.String())
+	})
+
+	t.Run("other list errors are returned without asking discovery", func(t *testing.T) {
+		t.Parallel()
+		p := newListTestProvider(t, nil, nil)
+		denyList(p, apierrors.NewInternalError(errors.New("boom")))
+
+		_, err := p.ClusterGroups(context.Background())
+		assert.Assert(t, apierrors.IsInternalError(err), err)
+		assert.Equal(t, discoveryCalls(p), 0)
 	})
 }
