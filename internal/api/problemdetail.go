@@ -35,7 +35,6 @@ func ProblemGroupNotFound(e sablier.ErrGroupNotFound) rfc7807.Problem {
 		Status: http.StatusNotFound,
 		Detail: "The group you requested does not exist. It is possible that the group has not been scanned yet.",
 	}
-	_ = pb.Extend("availableGroups", e.AvailableGroups)
 	_ = pb.Extend("requestGroup", e.Group)
 	_ = pb.Extend("error", e.Error())
 	return pb
