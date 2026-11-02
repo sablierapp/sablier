@@ -1,6 +1,7 @@
 package theme
 
 import (
+	"errors"
 	"io/fs"
 	"log/slog"
 	"path"
@@ -88,6 +89,13 @@ func (t *Themes) ParseAndBundleTemplatesFS(f fs.FS) error {
 		}
 		t.l.Info("theme found", slog.String("path", filePath))
 		content, err := bundleHTML(f, filePath)
+		if errors.Is(err, fs.ErrNotExist) {
+			// The kubelet removes the files of a volume it updates, so a theme
+			// can go between reading its directory and reading the theme.
+			// Failing here would cost every other custom theme.
+			t.l.Warn("skipping theme", slog.String("path", filePath), slog.Any("reason", err))
+			return nil
+		}
 		if err != nil {
 			t.l.Info("cannot bundle theme", slog.String("path", filePath), slog.Any("reason", err))
 			return err
