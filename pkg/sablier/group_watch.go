@@ -3,6 +3,7 @@ package sablier
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -29,11 +30,23 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 	eventsC := stream.Events
 	errC := stream.Err
 
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
 	// Initial reconciliation so current state matches provider labels.
 	s.reconcileGroups(ctx, "startup")
+
+	var scans sync.WaitGroup
+	defer scans.Wait()
+	scans.Go(func() {
+		s.scanPeriodically(ctx, 30*time.Second, func(ctx context.Context) error {
+			s.reconcileGroups(ctx, "reconciliation")
+			// Once anti-affinity is in use, keep its index fresh (a safety net for
+			// missed events) and re-enforce so a missed suppress/restore self-heals.
+			if s.hasAntiAffinity() {
+				s.reconcileAntiAffinityRegistry(ctx)
+				s.reconcileAntiAffinity(ctx)
+			}
+			return nil
+		}, "group reconciliation failed")
+	})
 
 	for {
 		select {
@@ -57,15 +70,6 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 			s.l.ErrorContext(ctx, "group event stream permanently lost; relying on reconciliation ticker", slog.Any("error", err))
 			errC = nil
 			eventsC = nil
-
-		case <-ticker.C:
-			s.reconcileGroups(ctx, "reconciliation")
-			// Once anti-affinity is in use, keep its index fresh (a safety net for
-			// missed events) and re-enforce so a missed suppress/restore self-heals.
-			if s.hasAntiAffinity() {
-				s.reconcileAntiAffinityRegistry(ctx)
-				s.reconcileAntiAffinity(ctx)
-			}
 		}
 	}
 }

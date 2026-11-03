@@ -477,6 +477,49 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 	})
 }
 
+// TestGroupWatch_ReadsEventsDuringReconciliation verifies that a periodic
+// reconciliation in progress does not stop the event stream from being read.
+// Providers send events from their watchers, which stay blocked until the
+// event is read.
+func TestGroupWatch_ReadsEventsDuringReconciliation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+
+		ctx, cancel := context.WithCancel(t.Context())
+
+		eventsC := make(chan sablier.InstanceEvent) // unbuffered, like the providers
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: make(chan error, 1)})
+
+		// The startup reconciliation returns; the periodic one stays in
+		// InstanceGroups until the watcher stops.
+		p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil)
+		p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(ctx context.Context) (map[string][]string, error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}).AnyTimes()
+
+		startGroupWatch(t, s, ctx, cancel)
+
+		// Let the periodic reconciliation start and block.
+		time.Sleep(31 * time.Second)
+		synctest.Wait()
+
+		select {
+		case eventsC <- sablier.InstanceEvent{
+			Type: provider.InstanceEventCreated,
+			Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
+		}:
+		case <-time.After(5 * time.Second):
+			t.Fatal("created event not read while a reconciliation is in progress")
+		}
+		synctest.Wait()
+
+		assert.Assert(t, containsInstance(s.Groups(), "web", "nginx"), "nginx should be in group web after created event")
+	})
+}
+
 // startGroupWatch launches s.GroupWatch in a goroutine and registers a
 // t.Cleanup that cancels the context and waits for GroupWatch to exit.
 // This prevents "Log called after test finished" panics from the slogt logger.
