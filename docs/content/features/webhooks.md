@@ -43,15 +43,7 @@ Common uses:
 
 Multiple endpoints are supported. Each endpoint is evaluated independently so you can send different event types to different targets.
 
-### CLI / environment variables
-
-Webhook endpoints can also be set via command-line flags or environment variables using Viper's standard dotted-path mapping:
-
-| YAML key | CLI flag | Environment variable |
-|----------|----------|---------------------|
-| `webhooks.endpoints[0].url` | `--webhooks.endpoints[0].url` | `SABLIER_WEBHOOKS_ENDPOINTS_0_URL` |
-
-For multiple endpoints it is easiest to use the YAML configuration file.
+Webhooks can only be set in the configuration file. There is no command-line flag or environment variable for them.
 
 ## Payload format
 
