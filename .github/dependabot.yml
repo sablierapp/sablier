@@ -22,6 +22,10 @@ updates:
           - "k8s.io/cli-runtime"
           - "k8s.io/client-go"
           - "k8s.io/kubectl"
+      aws-sdk-go-v2:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2"
+          - "github.com/aws/aws-sdk-go-v2/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
