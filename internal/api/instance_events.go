@@ -46,6 +46,7 @@ type InstanceEventsRequest struct {
 // @Param        group  query  string    false  "Only stream events of the instances of this group, following instances that join or leave it while the stream is open. Mutually exclusive with names."
 // @Success      200  {string}  string  "SSE stream (text/event-stream)"
 // @Failure      400  {object}  rfc7807.Problem  "Validation error"
+// @Failure      503  {object}  rfc7807.Problem  "This replica is not the leader"
 // @Router       /api/events [get]
 func InstanceEvents(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/events", func(c *gin.Context) {

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 // Provider holds the provider configurations.
@@ -106,6 +107,79 @@ type Kubernetes struct {
 	// Default: false
 	// Since: v1.16.0
 	ReadyOnFirstReplica bool
+
+	LeaderElection LeaderElection
+}
+
+// LeaderElection runs several Sablier replicas in active/passive mode: the
+// replicas compete for a Kubernetes Lease and only the holder manages
+// workloads and serves the API. The leader labels its pod
+// sablierapp.dev/leader=true, so a Service selecting that label only routes
+// to the leader.
+type LeaderElection struct {
+	// Enabled turns on leader election through a coordination.k8s.io Lease.
+	// Requires the kubernetes provider, get/create/update on leases in the
+	// lease namespace and patch on pods in Sablier's namespace, to set the
+	// sablierapp.dev/leader=true label on the leader's pod. On takeover the new leader gives every running
+	// instance a default-duration session instead of applying
+	// provider.auto-stop-on-startup, so a failover never stops workloads in use.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_ENABLED
+	// CLI: --provider.kubernetes.leader-election.enabled
+	// Default: false
+	// Since: v1.20.0
+	Enabled bool
+
+	// LeaseName is the name of the Lease object the replicas compete for.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_NAME
+	// CLI: --provider.kubernetes.leader-election.lease-name
+	// Default: "sablier"
+	// Since: v1.20.0
+	LeaseName string
+
+	// LeaseNamespace is the namespace of the Lease. When empty, Sablier's own
+	// namespace: the POD_NAMESPACE environment variable, then the service
+	// account namespace file mounted in the pod.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_NAMESPACE
+	// CLI: --provider.kubernetes.leader-election.lease-namespace
+	// Default: ""
+	// Since: v1.20.0
+	LeaseNamespace string
+
+	// LeaseDuration is how long followers wait after the last renewal before
+	// taking over. It bounds the failover time after a leader crash.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_LEASE_DURATION
+	// CLI: --provider.kubernetes.leader-election.lease-duration
+	// Default: 15s
+	// Since: v1.20.0
+	LeaseDuration time.Duration
+
+	// RenewDeadline is how long the leader keeps retrying to renew before it
+	// gives up leadership and exits. Must be lower than LeaseDuration.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_RENEW_DEADLINE
+	// CLI: --provider.kubernetes.leader-election.renew-deadline
+	// Default: 10s
+	// Since: v1.20.0
+	RenewDeadline time.Duration
+
+	// RetryPeriod is the interval between attempts to acquire or renew the Lease.
+	// Env: SABLIER_PROVIDER_KUBERNETES_LEADER_ELECTION_RETRY_PERIOD
+	// CLI: --provider.kubernetes.leader-election.retry-period
+	// Default: 2s
+	// Since: v1.20.0
+	RetryPeriod time.Duration
+}
+
+func (l LeaderElection) IsValid() error {
+	if !l.Enabled {
+		return nil
+	}
+	if l.LeaseName == "" {
+		return fmt.Errorf("provider.kubernetes.leader-election.lease-name must not be empty")
+	}
+	if l.RetryPeriod <= 0 || l.RenewDeadline <= l.RetryPeriod || l.LeaseDuration <= l.RenewDeadline {
+		return fmt.Errorf("provider.kubernetes.leader-election requires 0 < retry-period < renew-deadline < lease-duration")
+	}
+	return nil
 }
 
 type Podman struct {
@@ -287,6 +361,12 @@ func NewProviderConfig() Provider {
 			QPS:       5,
 			Burst:     10,
 			Delimiter: "_",
+			LeaderElection: LeaderElection{
+				LeaseName:     "sablier",
+				LeaseDuration: 15 * time.Second,
+				RenewDeadline: 10 * time.Second,
+				RetryPeriod:   2 * time.Second,
+			},
 		},
 		Podman: Podman{
 			Uri: "unix:///run/podman/podman.sock",
@@ -306,6 +386,12 @@ func NewProviderConfig() Provider {
 func (provider Provider) IsValid() error {
 	if provider.AutoStopExternallyStarted && provider.AutoWarmExternallyStarted {
 		return fmt.Errorf("provider.auto-stop-externally-started and provider.auto-warm-externally-started are mutually exclusive")
+	}
+	if provider.Kubernetes.LeaderElection.Enabled && provider.Name != "kubernetes" {
+		return fmt.Errorf("provider.kubernetes.leader-election.enabled requires the kubernetes provider")
+	}
+	if err := provider.Kubernetes.LeaderElection.IsValid(); err != nil {
+		return err
 	}
 	for _, p := range providers {
 		if p == provider.Name {

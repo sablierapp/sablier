@@ -43,6 +43,7 @@ type DynamicRequest struct {
 // @Failure      400  {object}  rfc7807.Problem  "Validation error"
 // @Failure      404  {object}  rfc7807.Problem  "Group or theme not found"
 // @Failure      500  {object}  rfc7807.Problem  "Internal error"
+// @Failure      503  {object}  rfc7807.Problem  "This replica is not the leader"
 // @Router       /api/strategies/dynamic [get]
 func StartDynamic(router *gin.RouterGroup, s *ServeStrategy) {
 	router.GET("/strategies/dynamic", func(c *gin.Context) {

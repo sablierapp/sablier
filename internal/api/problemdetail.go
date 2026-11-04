@@ -112,3 +112,12 @@ func ProblemRequestCancelled() rfc7807.Problem {
 		Detail: "the request was cancelled before the session became ready",
 	}
 }
+
+func ProblemNotLeader() rfc7807.Problem {
+	return rfc7807.Problem{
+		Type:   "https://sablierapp.dev/#/errors?id=not-leader",
+		Title:  "Not Leader",
+		Status: http.StatusServiceUnavailable,
+		Detail: "this replica is not the leader; route requests to the pod labelled sablierapp.dev/leader=true",
+	}
+}
