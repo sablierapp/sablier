@@ -55,4 +55,5 @@ func TestProblemGroupNotFound_DoesNotLeakGroups(t *testing.T) {
 	assert.Assert(t, !strings.Contains(string(body), "app-a"), "body: %s", body)
 	assert.Assert(t, !strings.Contains(string(body), "app-b"), "body: %s", body)
 	assert.Assert(t, strings.Contains(string(body), "app-typo"), "the requested group is the caller's own input: %s", body)
+	assert.Assert(t, strings.Contains(pb.Detail, "Check the Sablier logs"), "detail should point to the logs: %s", pb.Detail)
 }
