@@ -185,6 +185,7 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
+| [`--provider.kubernetes.report-pod-problems`](#opt-provider-kubernetes-report-pod-problems) | Report a pod stuck in a state waiting will not resolve (unschedulable, image pull or crash loop) as the error of a starting Deployment or StatefulSet. |
 | [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad ecs] |
 | [`--provider.nomad.address`](#opt-provider-nomad-address) | Nomad API address (e.g. http://nomad.service.consul:4646). |
 | [`--provider.nomad.namespace`](#opt-provider-nomad-namespace) | Nomad namespace that holds the managed jobs. |
@@ -452,6 +453,27 @@ SABLIER_PROVIDER_KUBERNETES_READY_ON_FIRST_REPLICA=false
 
 # Command-line flag
 --provider.kubernetes.ready-on-first-replica=false
+```
+
+### `--provider.kubernetes.report-pod-problems` {#opt-provider-kubernetes-report-pod-problems}
+
+Report a pod stuck in a state waiting will not resolve (unschedulable, image pull or crash loop) as the error of a starting Deployment or StatefulSet. Needs the list permission on pods
+
+{{< badge "boolean" >}} {{< badge content="Default: false" >}} {{< badge content="Since v1.20.0" link="https://github.com/sablierapp/sablier/releases/tag/v1.20.0" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    report-pod-problems: false
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_REPORT_POD_PROBLEMS=false
+
+# Command-line flag
+--provider.kubernetes.report-pod-problems=false
 ```
 
 ### `--provider.name` {#opt-provider-name}

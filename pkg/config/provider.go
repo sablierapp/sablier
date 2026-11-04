@@ -106,6 +106,22 @@ type Kubernetes struct {
 	// Default: false
 	// Since: v1.16.0
 	ReadyOnFirstReplica bool
+
+	// ReportPodProblems explains why a starting Deployment or StatefulSet does
+	// not become ready, when one of its pods is stuck in a state that waiting
+	// will not resolve: it cannot be scheduled, an image cannot be pulled, a
+	// container keeps crashing or cannot be created. The explanation (e.g.
+	// "CrashLoopBackOff: container app of pod web-0, 4 restarts: last exit
+	// Error (exit code 1)") is reported as the instance error, which the
+	// waiting page shows, while the instance stays "starting": blocking
+	// requests keep waiting, since such a state may still resolve on its own.
+	// It costs one pod list per inspection of a starting workload, and needs
+	// the "list" permission on pods.
+	// Env: SABLIER_PROVIDER_KUBERNETES_REPORT_POD_PROBLEMS
+	// CLI: --provider.kubernetes.report-pod-problems
+	// Default: false
+	// Since: v1.20.0
+	ReportPodProblems bool
 }
 
 type Podman struct {
