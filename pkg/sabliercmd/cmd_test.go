@@ -182,6 +182,8 @@ func TestPrecedence(t *testing.T) {
 			"--server.port", "3333",
 			"--server.base-path", "/cli/",
 			"--storage.file", "/tmp/cli.json",
+			"--storage.kubernetes.configmap", "cli-sessions",
+			"--storage.kubernetes.namespace", "cli",
 			"--sessions.default-duration", "3h",
 			"--sessions.expiration-interval", "3h",
 			"--logging.level", "info",

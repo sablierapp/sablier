@@ -11,6 +11,7 @@ a configurable web-server built for testing purposes.
 |---|---|
 | `values.yaml` | Helm values for the `sablier/sablier` chart |
 | `sablier.yaml` | Sablier without Helm: ServiceAccount, RBAC, Deployment and Service |
+| `configmap-storage.yaml` | Sessions persisted in a ConfigMap, applied on top of `sablier.yaml` |
 | `whoami.yaml` | A Deployment and its Service, the starting point for every other example |
 | `group.yaml` | One workload in two groups (annotation, because of the comma) |
 | `ready-after.yaml` | A settling delay after the pods are ready |

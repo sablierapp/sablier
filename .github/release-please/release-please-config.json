@@ -58,6 +58,10 @@
                 },
                 {
                     "type": "generic",
+                    "path": "examples/kubernetes/configmap-storage.yaml"
+                },
+                {
+                    "type": "generic",
                     "path": "examples/docker/compose.yml"
                 },
                 {

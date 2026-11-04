@@ -73,7 +73,10 @@ func Start(ctx context.Context, conf config.Config) error {
 	}
 
 	rec := buildRecorder(conf.Server.Metrics.Enabled)
-	store, save := setupStorage(ctx, logger, conf)
+	store, save, err := setupStorage(ctx, logger, conf)
+	if err != nil {
+		return fmt.Errorf("cannot setup storage: %w", err)
+	}
 
 	s := sablier.New(logger, store, provider)
 	s.WithMetrics(rec)
