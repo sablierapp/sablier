@@ -143,6 +143,23 @@ func TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume(t *testing.T
 	assert.Equal(t, `shared`, render(t, themes, "brand"))
 }
 
+// TestNewWithCustomThemesFromPath_AssetNextToConfigMapVolume: the assets of a
+// theme in a volume are read from the themes directory like any other, not
+// from "..data", which holds only the keys of the volume.
+func TestNewWithCustomThemesFromPath_AssetNextToConfigMapVolume(t *testing.T) {
+	dir := t.TempDir()
+	kubeletVolume(t, dir, map[string]string{
+		"brand.html": `<link rel="stylesheet" href="assets/s.css">`,
+	})
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "assets"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "assets", "s.css"), []byte(`body{color:red}`), 0o644))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, `<style>body{color:red}</style>`, render(t, themes, "brand"))
+}
+
 // TestNewWithCustomThemesFromPath_RefusesLinksOutside pins the reason symlinks
 // used to be refused altogether: a link out of the themes directory must not
 // let a theme inline a file from elsewhere on the host.

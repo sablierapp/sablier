@@ -149,7 +149,10 @@ func (t *Themes) parseAndBundleDir(f fs.FS, root, prefix string) error {
 			}
 		}
 		t.l.Info("theme found", slog.String("path", filePath))
-		content, err := bundleHTML(f, filePath)
+		// A theme of a volume is read through its name, not through "..data",
+		// so that its assets are found next to the volume as well.
+		name := path.Join(prefix, relativePath(root, filePath))
+		content, err := bundleHTML(f, name)
 		if errors.Is(err, fs.ErrNotExist) {
 			// The kubelet removes the files of a volume it updates, so a theme
 			// can go between reading its directory and reading the theme.
@@ -163,7 +166,6 @@ func (t *Themes) parseAndBundleDir(f fs.FS, root, prefix string) error {
 		}
 		// Relative paths are unique, so the only name a custom theme can already
 		// occupy is that of an embedded theme, which it deliberately replaces.
-		name := path.Join(prefix, relativePath(root, filePath))
 		if t.themes.Lookup(name) != nil {
 			t.l.Info("theme overrides an embedded theme", slog.String("path", filePath), slog.String("name", strings.TrimSuffix(name, ".html")))
 		}
