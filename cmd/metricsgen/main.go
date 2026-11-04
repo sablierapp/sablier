@@ -34,7 +34,13 @@ func (fakeActive) SnapshotActiveInstances() map[string]struct{} {
 type fakeSessions struct{}
 
 func (fakeSessions) SessionsSnapshot() []metrics.SessionEntry {
-	return []metrics.SessionEntry{{Instance: "instance", Group: "group", ExpiresAt: time.Unix(0, 0)}}
+	return []metrics.SessionEntry{{
+		Instance:       "instance",
+		Group:          "group",
+		ExpiresAt:      time.Unix(0, 0),
+		StartingSince:  time.Unix(0, 0),
+		TypicalStartup: time.Second,
+	}}
 }
 
 func main() {
@@ -45,6 +51,7 @@ func main() {
 	reg := rec.Registry().(*prometheus.Registry)
 	reg.MustRegister(metrics.NewGroupLockCollector(fakeGroups{}, fakeActive{}))
 	reg.MustRegister(metrics.NewSessionExpiryCollector(fakeSessions{}))
+	reg.MustRegister(metrics.NewSessionStartupCollector(fakeSessions{}))
 
 	// Exercise each recorder vector so its label names appear on gather.
 	rec.RecordSessionRequest("dynamic", "group")

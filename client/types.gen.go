@@ -233,9 +233,17 @@ type SablierInstanceInfo struct {
 
 	// ScaleConfig ScaleConfig configures resource-based scale mode for this instance.
 	// When present, Sablier throttles CPU/memory instead of stopping the container.
-	ScaleConfig *SablierScaleConfig      `json:"scaleConfig,omitempty"`
-	Status      *SablierInstanceStatus   `json:"status,omitempty"`
-	Swarm       *SablierSwarmServiceInfo `json:"swarm,omitempty"`
+	ScaleConfig *SablierScaleConfig `json:"scaleConfig,omitempty"`
+
+	// StartedAt StartedAt records when Sablier dispatched the start of the instance for
+	// its current session. It is kept across inspections, so that the time the
+	// instance takes to become ready can be measured and shown on the waiting
+	// page. It is nil when the instance was already ready when the session
+	// began, until an inspection finds it not ready. It is set internally by
+	// Sablier and is never populated by a provider.
+	StartedAt *string                  `json:"startedAt,omitempty"`
+	Status    *SablierInstanceStatus   `json:"status,omitempty"`
+	Swarm     *SablierSwarmServiceInfo `json:"swarm,omitempty"`
 }
 
 // SablierInstanceStatus defines model for sablier.InstanceStatus.

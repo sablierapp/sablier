@@ -140,3 +140,68 @@ func TestSessionExpiryCollector_NonDestructive(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionStartupCollector_ExposesStartsInProgress(t *testing.T) {
+	src := fakeSessionSource{entries: []metrics.SessionEntry{
+		// Starting, with a learned startup.
+		{Instance: "opencell", Group: "demo", ExpiresAt: time.Unix(1000000600, 0), StartingSince: time.Unix(1000000000, 0), TypicalStartup: 6 * time.Minute},
+		// Starting for the first time since Sablier started: nothing learned yet.
+		{Instance: "whoami", Group: "", ExpiresAt: time.Unix(1000000600, 0), StartingSince: time.Unix(1000000030, 0)},
+		// Ready: no start in progress.
+		{Instance: "nginx", Group: "", ExpiresAt: time.Unix(1000000600, 0)},
+	}}
+
+	c := metrics.NewSessionStartupCollector(src)
+
+	want := `
+# HELP sablier_instance_typical_startup_seconds Median time (seconds) the instance took to become ready over its last observed starts, learned in memory since Sablier started. Emitted alongside sablier_session_starting_since_timestamp_seconds, once one start of the instance has been observed.
+# TYPE sablier_instance_typical_startup_seconds gauge
+sablier_instance_typical_startup_seconds{group="demo",instance="opencell"} 360
+# HELP sablier_session_starting_since_timestamp_seconds Unix timestamp (seconds) at which Sablier started the instance for its current session. One series per session whose instance is not ready yet; it disappears once a request sees the instance ready. Derive how long the start has lasted with the expression: time() - value.
+# TYPE sablier_session_starting_since_timestamp_seconds gauge
+sablier_session_starting_since_timestamp_seconds{group="",instance="whoami"} 1000000030
+sablier_session_starting_since_timestamp_seconds{group="demo",instance="opencell"} 1000000000
+`
+
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want)); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
+	}
+
+	lints, err := testutil.CollectAndLint(c)
+	if err != nil {
+		t.Fatalf("CollectAndLint: %v", err)
+	}
+	if len(lints) > 0 {
+		t.Errorf("lint problems: %+v", lints)
+	}
+}
+
+// TestSessionStartupCollector_FromStore exercises the production path (store ->
+// Sablier.SessionsSnapshot -> collector): only sessions whose instance is not
+// ready yet expose when their start began.
+func TestSessionStartupCollector_FromStore(t *testing.T) {
+	ctx := context.Background()
+	st := inmemory.NewInMemory()
+	startedAt := time.Unix(1000000000, 0)
+	for _, info := range []sablier.InstanceInfo{
+		{Name: "starting", Status: sablier.InstanceStatusStarting, StartedAt: &startedAt},
+		{Name: "ready", Status: sablier.InstanceStatusReady, StartedAt: &startedAt},
+		{Name: "warm", Status: sablier.InstanceStatusReady},
+	} {
+		if err := st.Put(ctx, info, 5*time.Minute); err != nil {
+			t.Fatalf("seed store: %v", err)
+		}
+	}
+
+	s := sablier.New(slog.New(slog.NewTextHandler(io.Discard, nil)), st, nil)
+	c := metrics.NewSessionStartupCollector(s)
+
+	want := `
+# HELP sablier_session_starting_since_timestamp_seconds Unix timestamp (seconds) at which Sablier started the instance for its current session. One series per session whose instance is not ready yet; it disappears once a request sees the instance ready. Derive how long the start has lasted with the expression: time() - value.
+# TYPE sablier_session_starting_since_timestamp_seconds gauge
+sablier_session_starting_since_timestamp_seconds{group="",instance="starting"} 1000000000
+`
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want)); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
+	}
+}

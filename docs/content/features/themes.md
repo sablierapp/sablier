@@ -123,11 +123,30 @@ Themes are served using [Go Templates](https://pkg.go.dev/text/template).
 | `.SessionDuration`                            | The humanized session duration from a [time.Duration](https://pkg.go.dev/time#Duration)                             | `{{ .SessionDuration }}`                                                                 |
 | `.RefreshFrequency`                           | The refresh frequency for the page. See [The `<meta http-equiv="refresh" />` tag](#the-meta-http-equivrefresh--tag) | `<meta http-equiv="refresh" content="{{ .RefreshFrequency }}" />`                        |
 | `.Version`                                    | Sablier version as a string                                                                                         | `{{ .Version }}`                                                                         |
+| `.RenderedAt`                                 | The server time at which the page was rendered, a [time.Time](https://pkg.go.dev/time#Time)                         | `{{ .RenderedAt.Format "15:04" }}`                                                       |
 | `$RenderOptionsInstanceState.Name`            | The name of the instance loading                                                                                    | `{{- range $i, $instance := .InstanceStates }}{{ $instance.Name }}{{ end -}}`            |
 | `$RenderOptionsInstanceState.CurrentReplicas` | The number of current replicas of the instance loading                                                              | `{{- range $i, $instance := .InstanceStates }}{{ $instance.CurrentReplicas }}{{ end -}}` |
 | `$RenderOptionsInstanceState.DesiredReplicas` | The number of desired replicas of the instance loading                                                              | `{{- range $i, $instance := .InstanceStates }}{{ $instance.DesiredReplicas }}{{ end -}}` |
 | `$RenderOptionsInstanceState.Status`          | The status of the instance loading, `ready` or `not-ready`                                                          | `{{- range $i, $instance := .InstanceStates }}{{ $instance.Status }}{{ end -}}`          |
 | `$RenderOptionsInstanceState.Error`           | The error trigger by this instance which won't be able to load                                                      | `{{- range $i, $instance := .InstanceStates }}{{ $instance.Error }}{{ end -}}`           |
+| `$RenderOptionsInstanceState.StartedAt`       | When Sablier started the instance for the current session, zero when it was already running                        | `{{- range $i, $instance := .InstanceStates }}{{ $instance.StartedAt.Format "15:04" }}{{ end -}}` |
+| `$RenderOptionsInstanceState.TypicalStartup`  | The median time the instance took to become ready over its last starts, zero until one start was observed          | `{{- range $i, $instance := .InstanceStates }}{{ $instance.TypicalStartup }}{{ end -}}`  |
+
+### Startup timing
+
+Sablier remembers when it started each instance of the session (`StartedAt`) and learns how long the instance usually takes to become ready (`TypicalStartup`, the median of its last seven observed starts). A theme can tell the visitor how long the wait should last, and say so when a start takes longer than usual:
+
+```html
+{{- range .InstanceStates }}
+  {{- if and (not .StartedAt.IsZero) .TypicalStartup }}
+    <p data-elapsed="{{ ($.RenderedAt.Sub .StartedAt).Seconds }}" data-typical="{{ .TypicalStartup.Seconds }}">
+      Started {{ ($.RenderedAt.Sub .StartedAt).Round 1000000000 }} ago, usually ready in {{ .TypicalStartup.Round 1000000000 }}.
+    </p>
+  {{- end }}
+{{- end }}
+```
+
+Measure elapsed times against `.RenderedAt` rather than in the browser: the visitor's clock may be off. What Sablier learned is kept in memory, so `TypicalStartup` is zero again after a restart until each instance has started once.
 
 ### The `<meta http-equiv="refresh" />` tag
 
