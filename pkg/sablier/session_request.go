@@ -74,6 +74,7 @@ func (s *Sablier) RequestSessionGroup(ctx context.Context, group string, duratio
 
 	names, ok := s.groups.Get(group)
 	if !ok {
+		s.l.WarnContext(ctx, "group not found", slog.String("group", group), slog.Any("available_groups", s.groups.Keys()))
 		return nil, ErrGroupNotFound{
 			Group:           group,
 			AvailableGroups: s.groups.Keys(),
@@ -192,6 +193,7 @@ func (s *Sablier) RequestReadySessionGroup(ctx context.Context, group string, du
 
 	names, ok := s.groups.Get(group)
 	if !ok {
+		s.l.WarnContext(ctx, "group not found", slog.String("group", group), slog.Any("available_groups", s.groups.Keys()))
 		return nil, ErrGroupNotFound{
 			Group:           group,
 			AvailableGroups: s.groups.Keys(),

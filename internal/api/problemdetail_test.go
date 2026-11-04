@@ -41,3 +41,19 @@ func TestProblemTimeout_WithInstances(t *testing.T) {
 	assert.Assert(t, strings.Contains(string(b), `"instances"`), string(b))
 	assert.Assert(t, strings.Contains(string(b), `"nextcloud"`), string(b))
 }
+
+func TestProblemGroupNotFound_DoesNotLeakGroups(t *testing.T) {
+	pb := ProblemGroupNotFound(sablier.ErrGroupNotFound{
+		Group:           "app-typo",
+		AvailableGroups: []string{"app-a", "app-b"},
+	})
+	assert.Equal(t, pb.Status, http.StatusNotFound)
+
+	body, err := json.Marshal(pb)
+	assert.NilError(t, err)
+	assert.Assert(t, !strings.Contains(string(body), "availableGroups"), "body: %s", body)
+	assert.Assert(t, !strings.Contains(string(body), "app-a"), "body: %s", body)
+	assert.Assert(t, !strings.Contains(string(body), "app-b"), "body: %s", body)
+	assert.Assert(t, strings.Contains(string(body), "app-typo"), "the requested group is the caller's own input: %s", body)
+	assert.Assert(t, strings.Contains(pb.Detail, "Check the Sablier logs"), "detail should point to the logs: %s", pb.Detail)
+}
