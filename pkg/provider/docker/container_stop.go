@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/sablier"
 )
 
@@ -18,7 +20,8 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 	ctx, span := p.tracer.Start(ctx, "docker.instance.stop",
 		trace.WithAttributes(attribute.String("instance", name)))
 	defer func() {
-		if err != nil {
+		// provider.ErrNoop means nothing needed to change; it is not a failure.
+		if err != nil && !errors.Is(err, provider.ErrNoop) {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		}
@@ -51,7 +54,7 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 			attribute.String("operation", "scale_mode.noop"),
 			attribute.Int("idle_replicas", int(sc.Idle.Replicas)),
 		)
-		return nil
+		return provider.ErrNoop
 	}
 
 	if p.strategy == "pause" {
@@ -59,7 +62,7 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 		// containers that are already paused.
 		if spec.Container.State.Paused {
 			span.SetAttributes(attribute.String("operation", "noop.already_paused"))
-			return nil
+			return provider.ErrNoop
 		}
 		span.SetAttributes(attribute.String("operation", "pause"))
 		return p.dockerPause(ctx, name)

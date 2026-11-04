@@ -43,12 +43,27 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 	return waitGroup.Wait()
 }
 
+// stopInstance asks the provider to stop name. stopped is false when the
+// provider reported provider.ErrNoop, meaning there was nothing to stop; err is
+// nil in that case.
+func stopInstance(ctx context.Context, p Provider, name string) (stopped bool, err error) {
+	err = p.InstanceStop(ctx, name)
+	if errors.Is(err, provider.ErrNoop) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
 	return func() error {
-		err := s.provider.InstanceStop(ctx, name)
+		stopped, err := stopInstance(ctx, s.provider, name)
 		if err != nil {
 			s.l.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
 			return err
+		}
+		if !stopped {
+			s.l.DebugContext(ctx, "unregistered instance needs no stop", slog.String("instance", name))
+			return nil
 		}
 		s.metrics.RecordInstanceStop(name, "unregistered")
 		s.l.InfoContext(ctx, "stopped unregistered instance", slog.String("instance", name), slog.String("reason", "instance is enabled but not started by Sablier"))
@@ -134,9 +149,9 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 				continue
 			}
 			s.l.InfoContext(ctx, "externally started instance detected, stopping", slog.String("instance", info.Info.Name))
-			if err := s.provider.InstanceStop(ctx, info.Info.Name); err != nil {
+			if stopped, err := stopInstance(ctx, s.provider, info.Info.Name); err != nil {
 				s.l.ErrorContext(ctx, "failed to stop externally-started instance", slog.String("instance", info.Info.Name), slog.Any("error", err))
-			} else {
+			} else if stopped {
 				s.metrics.RecordInstanceStop(info.Info.Name, "externally-started")
 			}
 		case err, ok := <-errC:

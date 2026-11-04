@@ -388,7 +388,7 @@ func (s *Sablier) undoIfStoppedMeanwhile(ctx context.Context, name string, stopR
 	}
 	s.l.InfoContext(ctx, "stopping instance again after its start",
 		slog.String("instance", name), slog.String("reason", reason))
-	if err := s.provider.InstanceStop(ctx, name); err != nil {
+	if _, err := stopInstance(ctx, s.provider, name); err != nil {
 		s.l.ErrorContext(ctx, "cannot stop instance after its start",
 			slog.String("instance", name), slog.Any("error", err))
 	}

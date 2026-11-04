@@ -3,6 +3,7 @@ package sablier_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -71,6 +72,24 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	// Call the function under test
 	err := s.StopAllUnregisteredInstances(ctx)
 	assert.Error(t, err, "stop error")
+}
+
+// A provider that reports provider.ErrNoop did not stop anything (for example a
+// Docker scale-mode container with idle.replicas >= 1 and no idle resources).
+// The scan must not log or count a stop for it.
+func TestStopAllUnregisteredInstances_NoopStopIsNotCounted(t *testing.T) {
+	s, sessions, p, rec := setupSablierWithMetrics(t)
+	ctx := t.Context()
+
+	sessions.EXPECT().Get(ctx, "plex").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	p.EXPECT().InstanceList(ctx, provider.InstanceListOptions{All: false}).
+		Return([]sablier.InstanceConfiguration{{Name: "plex"}, {Name: "nginx"}}, nil)
+	p.EXPECT().InstanceStop(ctx, "plex").Return(fmt.Errorf("inspect: %w", provider.ErrNoop))
+	p.EXPECT().InstanceStop(ctx, "nginx").Return(nil)
+
+	assert.NilError(t, s.StopAllUnregisteredInstances(ctx))
+	assert.DeepEqual(t, rec.snapshot(), []string{"stop:nginx/unregistered"})
 }
 
 // --- WatchAndStopExternallyStarted tests ---

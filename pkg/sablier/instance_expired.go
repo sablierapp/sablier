@@ -44,7 +44,7 @@ func onInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 					return
 				}
 			}
-			err := provider.InstanceStop(ctx, key)
+			_, err := stopInstance(ctx, provider, key)
 			if err != nil {
 				logger.ErrorContext(ctx, "instance expired could not be stopped from provider", slog.String("instance", key), slog.Any("error", err))
 			}
