@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,11 +23,56 @@ func isThemeFile(filePath string, d fs.DirEntry) bool {
 
 // isKubeletDir reports whether the walked entry is one of the "..<timestamp>"
 // directories in which Kubernetes keeps the files of a ConfigMap, Secret or
-// projected volume. The volume links each of its files into that directory
-// through "..data", so walking it as well registered every theme a second time,
-// named after a timestamp that changes with every update of the volume.
-func isKubeletDir(filePath string, d fs.DirEntry) bool {
-	return d.IsDir() && filePath != "." && strings.HasPrefix(d.Name(), "..")
+// projected volume. Walking it registered every theme under a name that
+// changes with every update of the volume; the files are read through "..data"
+// instead (see kubeletVolumeData).
+func isKubeletDir(root, filePath string, d fs.DirEntry) bool {
+	return d.IsDir() && filePath != root && strings.HasPrefix(d.Name(), "..")
+}
+
+// kubeletVolumeData returns the "..data" directory of dir, and whether dir is
+// the root of a Kubernetes ConfigMap, Secret or projected volume. Such a volume
+// links every top-level entry through "..data", so a key mapped into a
+// sub-directory with items[].path is reached only through a link to a
+// directory, which fs.WalkDir does not follow. "..data" holds every key at its
+// path.
+//
+// The walk follows "..data", so it has to be the link the kubelet makes: one to
+// a sibling "..<timestamp>" directory that is not a link itself. Any other
+// "..data", such as a link to ".." or the plain directory of a volume copied
+// with "cp -rL", would make the walk loop or read the same theme twice.
+func kubeletVolumeData(f fs.FS, dir string) (string, bool) {
+	data := path.Join(dir, "..data")
+	target, err := fs.ReadLink(f, data)
+	if err != nil || target == ".." || !strings.HasPrefix(target, "..") || strings.ContainsAny(target, `/\`) {
+		return data, false
+	}
+	info, err := fs.Lstat(f, path.Join(dir, target))
+	return data, err == nil && info.IsDir()
+}
+
+// isKubeletKeyLink reports whether the link at filePath is one of the
+// "name -> ..data/name" links of a Kubernetes volume, whose theme is read
+// through "..data" already (see kubeletVolumeData). Any other link, even one
+// into "..data", is a theme of its own.
+func isKubeletKeyLink(f fs.FS, filePath string) bool {
+	if _, ok := kubeletVolumeData(f, path.Dir(filePath)); !ok {
+		return false
+	}
+	target, err := fs.ReadLink(f, filePath)
+	return err == nil && filepath.ToSlash(target) == "..data/"+path.Base(filePath)
+}
+
+// relativePath returns filePath, as fs.WalkDir reports it for a walk from root,
+// relative to root.
+func relativePath(root, filePath string) string {
+	if root == "." {
+		return filePath
+	}
+	if filePath == root {
+		return "."
+	}
+	return strings.TrimPrefix(filePath, root+"/")
 }
 
 // isLinkToFile reports whether the theme symlink at filePath resolves to a
@@ -72,23 +118,42 @@ func (t *Themes) ParseTemplatesFS(f fs.FS) error {
 // A theme is named after its path relative to the themes directory, without the
 // ".html" extension, so that "special/secret.html" is requested as
 // "special/secret". Naming themes after their base name instead let two files
-// in different sub-directories silently overwrite each other.
+// in different sub-directories silently overwrite each other. A theme in a
+// Kubernetes volume is named after its path in the volume (see
+// kubeletVolumeData).
 func (t *Themes) ParseAndBundleTemplatesFS(f fs.FS) error {
-	return fs.WalkDir(f, ".", func(filePath string, d fs.DirEntry, err error) error {
+	return t.parseAndBundleDir(f, ".", ".")
+}
+
+// parseAndBundleDir registers the themes below root, naming each after its
+// path relative to root, joined to prefix.
+func (t *Themes) parseAndBundleDir(f fs.FS, root, prefix string) error {
+	return fs.WalkDir(f, root, func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if isKubeletDir(filePath, d) {
+		if isKubeletDir(root, filePath, d) {
 			return fs.SkipDir
+		}
+		if d.IsDir() {
+			if data, ok := kubeletVolumeData(f, filePath); ok {
+				return t.parseAndBundleDir(f, data, path.Join(prefix, relativePath(root, filePath)))
+			}
+			return nil
 		}
 		if !isThemeFile(filePath, d) {
 			return nil
 		}
-		if d.Type()&fs.ModeSymlink != 0 && !t.isLinkToFile(f, filePath) {
-			return nil
+		if d.Type()&fs.ModeSymlink != 0 {
+			if isKubeletKeyLink(f, filePath) || !t.isLinkToFile(f, filePath) {
+				return nil
+			}
 		}
 		t.l.Info("theme found", slog.String("path", filePath))
-		content, err := bundleHTML(f, filePath)
+		// A theme of a volume is read through its name, not through "..data",
+		// so that its assets are found next to the volume as well.
+		name := path.Join(prefix, relativePath(root, filePath))
+		content, err := bundleHTML(f, name)
 		if errors.Is(err, fs.ErrNotExist) {
 			// The kubelet removes the files of a volume it updates, so a theme
 			// can go between reading its directory and reading the theme.
@@ -102,7 +167,6 @@ func (t *Themes) ParseAndBundleTemplatesFS(f fs.FS) error {
 		}
 		// Relative paths are unique, so the only name a custom theme can already
 		// occupy is that of an embedded theme, which it deliberately replaces.
-		name := path.Clean(filePath)
 		if t.themes.Lookup(name) != nil {
 			t.l.Info("theme overrides an embedded theme", slog.String("path", filePath), slog.String("name", strings.TrimSuffix(name, ".html")))
 		}

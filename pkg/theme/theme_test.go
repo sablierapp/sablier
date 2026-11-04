@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -24,18 +25,24 @@ func symlink(t *testing.T, target, link string) {
 
 // kubeletVolume lays out files in dir the way the kubelet mounts a ConfigMap
 // volume: the files live in a "..<timestamp>" directory, "..data" links to it,
-// and every key is a symlink through "..data".
+// and every top-level entry is a symlink through "..data". A key mapped to
+// "special/secret.html" with items[].path thus appears as a "special" link to
+// the directory "..data/special".
 func kubeletVolume(t *testing.T, dir string, files map[string]string) {
 	t.Helper()
 	const timestamped = "..2026_10_28_12_00_00.123456789"
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, timestamped), 0o755))
+	top := map[string]bool{}
 	for name, content := range files {
-		require.NoError(t, os.WriteFile(filepath.Join(dir, timestamped, name), []byte(content), 0o644))
+		file := filepath.Join(dir, timestamped, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+		require.NoError(t, os.WriteFile(file, []byte(content), 0o644))
+		top[strings.Split(name, "/")[0]] = true
 	}
 	// The target has to exist before the link is created: on Windows, that is
 	// how os.Symlink tells a directory link from a file link.
 	symlink(t, timestamped, filepath.Join(dir, "..data"))
-	for name := range files {
+	for name := range top {
 		symlink(t, filepath.Join("..data", name), filepath.Join(dir, name))
 	}
 }
@@ -68,6 +75,92 @@ func TestNewWithCustomThemesFromPath_ConfigMapVolume(t *testing.T) {
 	assert.Equal(t, []string{"brand", "ghost", "hacker-terminal", "matrix", "retro", "shuffle", "team/brand"}, themes.List())
 	assert.Equal(t, `<style>body{color:red}</style>`, render(t, themes, "brand"))
 	assert.Equal(t, `team`, render(t, themes, "team/brand"))
+}
+
+// TestNewWithCustomThemesFromPath_ConfigMapVolumeSubDirectory: a key mapped
+// into a sub-directory with items[].path is reached only through a link to a
+// directory, which the walk does not follow, so the theme was missing.
+func TestNewWithCustomThemesFromPath_ConfigMapVolumeSubDirectory(t *testing.T) {
+	dir := t.TempDir()
+	kubeletVolume(t, dir, map[string]string{
+		"special/secret.html": `<link rel="stylesheet" href="style.css">`,
+		"special/style.css":   `body{color:red}`,
+	})
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "team"), 0o755))
+	kubeletVolume(t, filepath.Join(dir, "team"), map[string]string{
+		"special/brand.html": `team`,
+	})
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"ghost", "hacker-terminal", "matrix", "retro", "shuffle", "special/secret", "team/special/brand"}, themes.List())
+	assert.Equal(t, `<style>body{color:red}</style>`, render(t, themes, "special/secret"))
+	assert.Equal(t, `team`, render(t, themes, "team/special/brand"))
+}
+
+// TestNewWithCustomThemesFromPath_DataNotFromKubelet: only the "..data" link
+// the kubelet makes is followed. A link back up the tree made the walk loop and
+// register thousands of themes, and the plain "..data" directory of a copied
+// volume registered every theme twice.
+func TestNewWithCustomThemesFromPath_DataNotFromKubelet(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.html"), []byte(`x`), 0o644))
+	for _, sub := range []string{"a", "b"} {
+		require.NoError(t, os.Mkdir(filepath.Join(dir, sub), 0o755))
+		symlink(t, "..", filepath.Join(dir, sub, "..data"))
+	}
+	// A link to ".." in two steps, through a sibling that looks like a
+	// timestamped directory.
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "c"), 0o755))
+	symlink(t, "..", filepath.Join(dir, "c", "..up"))
+	symlink(t, "..up", filepath.Join(dir, "c", "..data"))
+	// The layout "cp -rL" leaves of a volume.
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "copy", "..data"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "copy", "..data", "brand.html"), []byte(`copy`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "copy", "brand.html"), []byte(`copy`), 0o644))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"copy/brand", "ghost", "hacker-terminal", "matrix", "retro", "shuffle", "x"}, themes.List())
+}
+
+// TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume: only the
+// kubelet's own "name -> ..data/name" links are skipped as read already, not
+// every theme link of a volume directory, nor every link into "..data".
+func TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume(t *testing.T) {
+	dir := t.TempDir()
+	kubeletVolume(t, dir, map[string]string{
+		"brand.html":        `brand`,
+		"shared/brand.html": `shared`,
+	})
+	symlink(t, filepath.Join("shared", "brand.html"), filepath.Join(dir, "team.html"))
+	symlink(t, filepath.Join("..data", "brand.html"), filepath.Join(dir, "alias.html"))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"alias", "brand", "ghost", "hacker-terminal", "matrix", "retro", "shared/brand", "shuffle", "team"}, themes.List())
+	assert.Equal(t, `shared`, render(t, themes, "team"))
+	assert.Equal(t, `brand`, render(t, themes, "alias"))
+}
+
+// TestNewWithCustomThemesFromPath_AssetNextToConfigMapVolume: the assets of a
+// theme in a volume are read from the themes directory like any other, not
+// from "..data", which holds only the keys of the volume.
+func TestNewWithCustomThemesFromPath_AssetNextToConfigMapVolume(t *testing.T) {
+	dir := t.TempDir()
+	kubeletVolume(t, dir, map[string]string{
+		"brand.html": `<link rel="stylesheet" href="assets/s.css">`,
+	})
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "assets"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "assets", "s.css"), []byte(`body{color:red}`), 0o644))
+
+	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
+	require.NoError(t, err)
+
+	assert.Equal(t, `<style>body{color:red}</style>`, render(t, themes, "brand"))
 }
 
 // TestNewWithCustomThemesFromPath_RefusesLinksOutside pins the reason symlinks
