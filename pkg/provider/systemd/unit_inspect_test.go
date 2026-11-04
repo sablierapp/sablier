@@ -187,3 +187,12 @@ func TestSystemdProvider_InstanceInspect_UsesLabelCache(t *testing.T) {
 	assert.NilError(t, err)
 	assert.DeepEqual(t, info.Groups, []string{"team-c"})
 }
+
+func TestSystemdProvider_InstanceInspect_RejectsUnitOutsidePatterns(t *testing.T) {
+	m := newMockSystemd(t, []mockUnitConfig{{name: "db.service", active: true, fragmentPath: writeUnitFile(t, "[X-Sablier]\nEnable=true\n")}})
+	p := newProviderForTest(t, m, time.Second, nil)
+	p.unitPatterns = []string{"web-*.service"}
+
+	_, err := p.InstanceInspect(t.Context(), "db.service")
+	assert.ErrorContains(t, err, "does not match --provider.systemd.unit-patterns")
+}

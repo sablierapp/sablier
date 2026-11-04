@@ -65,6 +65,9 @@ func (p *Provider) infoFromUnit(unit Unit) sablier.InstanceInfo {
 }
 
 func (p *Provider) getUnit(ctx context.Context, name string) (Unit, error) {
+	if err := p.checkUnitPattern(name); err != nil {
+		return Unit{}, err
+	}
 	unitStatuses, err := p.Con.ListUnitsByNamesContext(ctx, []string{name})
 	if err != nil {
 		return Unit{}, err

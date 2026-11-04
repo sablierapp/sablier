@@ -192,6 +192,9 @@ func deviceProperties(profile sablier.ResourceProfile) []string {
 }
 
 func (p *Provider) scaleConfig(ctx context.Context, name string) (sablier.ScaleConfig, error) {
+	if err := p.checkUnitPattern(name); err != nil {
+		return sablier.ScaleConfig{}, err
+	}
 	labels, err := p.getLabels(ctx, name)
 	if err != nil {
 		return sablier.ScaleConfig{}, err

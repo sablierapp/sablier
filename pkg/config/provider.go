@@ -167,8 +167,9 @@ type Systemd struct {
 	// matching any of the given glob patterns (e.g. "podman-*.service").
 	// When non-empty it is applied as a server-side pre-filter on listing
 	// and as a filter on the event stream, which reduces the amount of unit
-	// files Sablier has to inspect. Units still need the X-Sablier section
-	// with Enable=true to be considered managed.
+	// files Sablier has to inspect. Requests naming a unit outside the
+	// patterns are refused. Units still need the X-Sablier section with
+	// Enable=true to be considered managed.
 	// Env: SABLIER_PROVIDER_SYSTEMD_UNIT_PATTERNS
 	// CLI: --provider.systemd.unit-patterns
 	// Default: []

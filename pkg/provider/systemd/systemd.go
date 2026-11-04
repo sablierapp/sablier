@@ -66,6 +66,15 @@ func (p *Provider) matchUnitPattern(name string) bool {
 	return false
 }
 
+// checkUnitPattern returns an error when name is outside the configured unit
+// patterns, so a request cannot reach a unit Sablier does not deal with.
+func (p *Provider) checkUnitPattern(name string) error {
+	if !p.matchUnitPattern(name) {
+		return fmt.Errorf("systemd unit %q does not match --provider.systemd.unit-patterns", name)
+	}
+	return nil
+}
+
 // getLabels returns the parsed [X-Sablier] labels for the named unit. It
 // fetches the unit's D-Bus properties for the fragment path and serves the
 // parsed labels through the label cache.
