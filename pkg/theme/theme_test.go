@@ -127,20 +127,23 @@ func TestNewWithCustomThemesFromPath_DataNotFromKubelet(t *testing.T) {
 }
 
 // TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume: only the
-// links into "..data" are skipped as read already, not every theme link of a
-// volume directory.
+// kubelet's own "name -> ..data/name" links are skipped as read already, not
+// every theme link of a volume directory, nor every link into "..data".
 func TestNewWithCustomThemesFromPath_ThemeLinkNextToConfigMapVolume(t *testing.T) {
 	dir := t.TempDir()
 	kubeletVolume(t, dir, map[string]string{
+		"brand.html":        `brand`,
 		"shared/brand.html": `shared`,
 	})
-	symlink(t, filepath.Join("shared", "brand.html"), filepath.Join(dir, "brand.html"))
+	symlink(t, filepath.Join("shared", "brand.html"), filepath.Join(dir, "team.html"))
+	symlink(t, filepath.Join("..data", "brand.html"), filepath.Join(dir, "alias.html"))
 
 	themes, err := theme.NewWithCustomThemesFromPath(dir, slogt.New(t))
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"brand", "ghost", "hacker-terminal", "matrix", "retro", "shared/brand", "shuffle"}, themes.List())
-	assert.Equal(t, `shared`, render(t, themes, "brand"))
+	assert.Equal(t, []string{"alias", "brand", "ghost", "hacker-terminal", "matrix", "retro", "shared/brand", "shuffle", "team"}, themes.List())
+	assert.Equal(t, `shared`, render(t, themes, "team"))
+	assert.Equal(t, `brand`, render(t, themes, "alias"))
 }
 
 // TestNewWithCustomThemesFromPath_AssetNextToConfigMapVolume: the assets of a
