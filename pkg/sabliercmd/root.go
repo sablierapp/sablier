@@ -146,6 +146,9 @@ It provides integrations with multiple reverse proxies and different loading str
 	startCmd.Flags().DurationVar(&conf.Strategy.Blocking.DefaultRefreshFrequency, "strategy.blocking.default-refresh-frequency", 5*time.Second, "Maximum interval between two instance status checks for blocking strategy")
 	_ = viper.BindPFlag("strategy.blocking.default-refresh-frequency", startCmd.Flags().Lookup("strategy.blocking.default-refresh-frequency"))
 
+	// webhooks.endpoints[N].url, webhooks.endpoints[N].events and webhooks.endpoints[N].headers.<Name>
+	acceptWebhookFlags(startCmd.Flags())
+
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(NewVersionCmd())
 
@@ -189,14 +192,15 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Bind the current command's flags to viper
 	bindFlags(cmd, v)
 
-	// Apply configuration sections that have no corresponding CLI flag.
-	// Fields bound to cobra flags are fully handled by bindFlags above (CLI >
-	// env > config file > default). Sections like Webhooks are config-file-only
-	// and must be unmarshalled directly from the local viper that read the file,
-	// because the global viper used in start.go only knows about pflag-bound keys.
-	if err := v.UnmarshalKey("webhooks", &conf.Webhooks); err != nil {
+	// Webhooks are a list, so they cannot be bound to fixed flags like the
+	// fields above. They must be read from the local viper that read the file,
+	// because the global viper used in start.go only knows about pflag-bound
+	// keys, then the indexed environment variables and flags are applied on top.
+	webhooks, err := loadWebhooks(cmd, v)
+	if err != nil {
 		return fmt.Errorf("failed to parse webhooks configuration: %w", err)
 	}
+	conf.Webhooks = webhooks
 
 	return nil
 }
