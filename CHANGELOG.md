@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.20.0](https://github.com/sablierapp/sablier/compare/v1.19.1...v1.20.0) (2026-11-05)
+
+
+### Features
+
+* **activity:** refresh sessions from container traffic with eBPF ([#1237](https://github.com/sablierapp/sablier/issues/1237)) ([ba3aa90](https://github.com/sablierapp/sablier/commit/ba3aa90a1d219a45284472456bcc38923e1fe0b0))
+* **tracing:** honour a path in the OTLP/HTTP endpoint ([#1248](https://github.com/sablierapp/sablier/issues/1248)) ([828b21d](https://github.com/sablierapp/sablier/commit/828b21d422eaa3e93c3f775520382a114deb0ed3)), closes [#1247](https://github.com/sablierapp/sablier/issues/1247)
+* **webhooks:** set endpoints with flags and environment variables ([#1287](https://github.com/sablierapp/sablier/issues/1287)) ([45898d3](https://github.com/sablierapp/sablier/commit/45898d37bdd9a7bbd27640bc182ae4e89d878b42)), closes [#1245](https://github.com/sablierapp/sablier/issues/1245)
+
+
+### Bug Fixes
+
+* **api:** stop listing registered groups in the group-not-found response ([#1277](https://github.com/sablierapp/sablier/issues/1277)) ([2ef247c](https://github.com/sablierapp/sablier/commit/2ef247c29e9d00f96544157301faa3d874207c0d))
+* **docker:** handle rename events so a group follows a recreated container ([#1142](https://github.com/sablierapp/sablier/issues/1142)) ([5612a93](https://github.com/sablierapp/sablier/commit/5612a9379f6a3a9526cf47276f8359db3b537aa5))
+* **kubernetes:** scale with a merge patch to avoid update conflicts ([#1239](https://github.com/sablierapp/sablier/issues/1239)) ([849f9de](https://github.com/sablierapp/sablier/commit/849f9ded7bc11856b86e0b13c02637ba51159b94))
+* **kubernetes:** skip the CNPG cluster list when the CRD is not installed ([#1270](https://github.com/sablierapp/sablier/issues/1270)) ([3565bb7](https://github.com/sablierapp/sablier/commit/3565bb7f33485846bc97fa030f0c2665c0341bdb))
+* **sablier:** restart instance whose start failed while its session is active ([#1240](https://github.com/sablierapp/sablier/issues/1240)) ([a246122](https://github.com/sablierapp/sablier/commit/a24612223edd77cc5a77f853e78706ddcde3117e))
+* **theme:** load custom themes from a Kubernetes ConfigMap volume ([#1242](https://github.com/sablierapp/sablier/issues/1242)) ([3b20676](https://github.com/sablierapp/sablier/commit/3b20676345c221ec512b7c44127ec536211f2b13))
+* **theme:** read the themes of a Kubernetes volume through ..data ([#1238](https://github.com/sablierapp/sablier/issues/1238)) ([ecd26f4](https://github.com/sablierapp/sablier/commit/ecd26f4949f348636be6941ddb78dfa989e76667))
+* **theme:** skip a custom theme that vanishes while loading ([#1274](https://github.com/sablierapp/sablier/issues/1274)) ([e4371c4](https://github.com/sablierapp/sablier/commit/e4371c433bdbdf84d180982792a8d36c49d080d4))
+* **webhook:** only fire for instances labelled sablier.enable=true ([#1254](https://github.com/sablierapp/sablier/issues/1254)) ([f0e8d8c](https://github.com/sablierapp/sablier/commit/f0e8d8c0284299b6efae0710ecd88ddb69868fe1)), closes [#1246](https://github.com/sablierapp/sablier/issues/1246)
+
+
+### Performance Improvements
+
+* **sablier:** seed anti-affinity registry from instance list ([#1236](https://github.com/sablierapp/sablier/issues/1236)) ([946a694](https://github.com/sablierapp/sablier/commit/946a694efc0907c14b3d492313f096b1e2f646f4))
+
+
+### Code Refactoring
+
+* **docker:** tidy rename handling and test it against a real daemon ([#1258](https://github.com/sablierapp/sablier/issues/1258)) ([8605831](https://github.com/sablierapp/sablier/commit/8605831d4b31548824b95c12ca250523ff9e1688))
+
+
+### Tests
+
+* **kubernetes:** give the k3s kubelet /dev/null as /dev/kmsg ([#1243](https://github.com/sablierapp/sablier/issues/1243)) ([e6b1399](https://github.com/sablierapp/sablier/commit/e6b1399b81ee66b7d360f2eadad9cad99bfff8f2))
+* **provider:** stop moby event streams before the test ends ([#1244](https://github.com/sablierapp/sablier/issues/1244)) ([8e7dc90](https://github.com/sablierapp/sablier/commit/8e7dc9062747e86d6ab4657546ba5646c852bec5))
+
 ## [1.19.1](https://github.com/sablierapp/sablier/compare/v1.19.0...v1.19.1) (2026-10-28)
 
 
