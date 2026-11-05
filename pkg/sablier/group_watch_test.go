@@ -493,9 +493,11 @@ func TestGroupWatch_EventDuringReconciliation(t *testing.T) {
 
 		// The startup reconciliation returns at once; the periodic one waits for
 		// release and then returns a snapshot taken before nginx was created.
+		entered := make(chan struct{})
 		release := make(chan struct{})
 		p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil)
 		p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(ctx context.Context) (map[string][]string, error) {
+			close(entered)
 			<-release
 			return map[string][]string{}, nil
 		})
@@ -506,9 +508,11 @@ func TestGroupWatch_EventDuringReconciliation(t *testing.T) {
 
 		startGroupWatch(t, s, ctx, cancel)
 
-		// Let the periodic reconciliation start and block.
-		time.Sleep(31 * time.Second)
-		synctest.Wait()
+		select {
+		case <-entered:
+		case <-time.After(31 * time.Second):
+			t.Fatal("periodic reconciliation did not start")
+		}
 
 		select {
 		case eventsC <- sablier.InstanceEvent{
@@ -524,6 +528,62 @@ func TestGroupWatch_EventDuringReconciliation(t *testing.T) {
 		synctest.Wait()
 
 		assert.Assert(t, containsInstance(s.Groups(), "web", "nginx"), "nginx should stay in group web after the older snapshot is applied")
+	})
+}
+
+// TestGroupWatch_AntiAffinityRecreatedDuringRebuild verifies that when the only
+// anti-affinity instance is recreated while the periodic rebuild lists
+// instances, its events are applied after the older list, so the index keeps it.
+func TestGroupWatch_AntiAffinityRecreatedDuringRebuild(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+		s.SyncInstanceAntiAffinity("x", []string{"web"})
+
+		ctx, cancel := context.WithCancel(t.Context())
+
+		eventsC := make(chan sablier.InstanceEvent) // unbuffered, like the providers
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: make(chan error, 1)})
+		p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil).AnyTimes()
+
+		// The periodic rebuild waits for release and then returns a list taken
+		// while x was being recreated, so it does not include x.
+		entered := make(chan struct{})
+		release := make(chan struct{})
+		p.EXPECT().InstanceList(gomock.Any(), provider.InstanceListOptions{All: true}).DoAndReturn(func(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+			close(entered)
+			<-release
+			return nil, nil
+		})
+		p.EXPECT().InstanceList(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ provider.InstanceListOptions) ([]sablier.InstanceConfiguration, error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}).AnyTimes()
+
+		startGroupWatch(t, s, ctx, cancel)
+
+		select {
+		case <-entered:
+		case <-time.After(31 * time.Second):
+			t.Fatal("periodic anti-affinity rebuild did not start")
+		}
+
+		for _, event := range []sablier.InstanceEvent{
+			{Type: provider.InstanceEventRemoved, Info: sablier.InstanceInfo{Name: "x"}},
+			{Type: provider.InstanceEventCreated, Info: sablier.InstanceInfo{Name: "x", AntiAffinity: []string{"web"}}},
+		} {
+			select {
+			case eventsC <- event:
+			case <-time.After(5 * time.Second):
+				t.Fatalf("%s event not read while the rebuild is in progress", event.Type)
+			}
+		}
+
+		close(release)
+		synctest.Wait()
+
+		assert.DeepEqual(t, s.RemoveInstanceAntiAffinity("x"), []string{"web"})
 	})
 }
 
