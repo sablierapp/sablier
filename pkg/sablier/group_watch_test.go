@@ -477,11 +477,10 @@ func TestGroupWatch_ReconciliationMultipleGroups(t *testing.T) {
 	})
 }
 
-// TestGroupWatch_ReadsEventsDuringReconciliation verifies that a periodic
-// reconciliation in progress does not stop the event stream from being read.
-// Providers send events from their watchers, which stay blocked until the
-// event is read.
-func TestGroupWatch_ReadsEventsDuringReconciliation(t *testing.T) {
+// TestGroupWatch_EventDuringReconciliation verifies that an event sent while a
+// periodic reconciliation is in progress is read without waiting for it, and is
+// applied after the snapshot it raced with, so the snapshot cannot overwrite it.
+func TestGroupWatch_EventDuringReconciliation(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s, _, p := setupSablier(t)
 
@@ -492,9 +491,14 @@ func TestGroupWatch_ReadsEventsDuringReconciliation(t *testing.T) {
 			Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
 		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: make(chan error, 1)})
 
-		// The startup reconciliation returns; the periodic one stays in
-		// InstanceGroups until the watcher stops.
+		// The startup reconciliation returns at once; the periodic one waits for
+		// release and then returns a snapshot taken before nginx was created.
+		release := make(chan struct{})
 		p.EXPECT().InstanceGroups(gomock.Any()).Return(map[string][]string{}, nil)
+		p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(ctx context.Context) (map[string][]string, error) {
+			<-release
+			return map[string][]string{}, nil
+		})
 		p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(ctx context.Context) (map[string][]string, error) {
 			<-ctx.Done()
 			return nil, ctx.Err()
@@ -516,7 +520,10 @@ func TestGroupWatch_ReadsEventsDuringReconciliation(t *testing.T) {
 		}
 		synctest.Wait()
 
-		assert.Assert(t, containsInstance(s.Groups(), "web", "nginx"), "nginx should be in group web after created event")
+		close(release)
+		synctest.Wait()
+
+		assert.Assert(t, containsInstance(s.Groups(), "web", "nginx"), "nginx should stay in group web after the older snapshot is applied")
 	})
 }
 

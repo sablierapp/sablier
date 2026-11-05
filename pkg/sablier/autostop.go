@@ -72,14 +72,14 @@ func (s *Sablier) isStartedByUs(ctx context.Context, name string) bool {
 	return err == nil
 }
 
-// scanPeriodically runs scan every interval until ctx is done.
-// WatchAndStopExternallyStarted, WatchAndWarmExternallyStarted and GroupWatch
-// run it apart from their event loop: a scan goes through the provider and can
+// scanPeriodically runs scan every ExternallyStartedScanInterval until ctx is
+// done. WatchAndStopExternallyStarted and WatchAndWarmExternallyStarted run it
+// apart from their event loop: a scan inspects instances one by one and can
 // take minutes on a large fleet, while the event stream must keep being read.
 // Providers send events from their watchers, which stay blocked until the
 // event is read.
-func (s *Sablier) scanPeriodically(ctx context.Context, interval time.Duration, scan func(context.Context) error, failure string) {
-	ticker := time.NewTicker(interval)
+func (s *Sablier) scanPeriodically(ctx context.Context, scan func(context.Context) error, failure string) {
+	ticker := time.NewTicker(s.ExternallyStartedScanInterval)
 	defer ticker.Stop()
 
 	for {
@@ -111,7 +111,7 @@ func (s *Sablier) WatchAndStopExternallyStarted(ctx context.Context) {
 	var scans sync.WaitGroup
 	defer scans.Wait()
 	scans.Go(func() {
-		s.scanPeriodically(ctx, s.ExternallyStartedScanInterval, s.StopAllUnregisteredInstances, "unregistered instance scan failed")
+		s.scanPeriodically(ctx, s.StopAllUnregisteredInstances, "unregistered instance scan failed")
 	})
 
 	for {

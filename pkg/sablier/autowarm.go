@@ -92,7 +92,7 @@ func (s *Sablier) WatchAndWarmExternallyStarted(ctx context.Context) {
 	var scans sync.WaitGroup
 	defer scans.Wait()
 	scans.Go(func() {
-		s.scanPeriodically(ctx, s.ExternallyStartedScanInterval, s.WarmAllUnregisteredInstances, "unregistered instance warm scan failed")
+		s.scanPeriodically(ctx, s.WarmAllUnregisteredInstances, "unregistered instance warm scan failed")
 	})
 
 	for {
