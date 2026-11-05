@@ -11,6 +11,7 @@ import (
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
 )
@@ -137,7 +138,8 @@ func TestDockerScaleMode_Stop_ReplicasOnly(t *testing.T) {
 	assert.NilError(t, err)
 
 	err = p.InstanceStop(t.Context(), result.ID)
-	assert.NilError(t, err)
+	// Nothing needed to change, so the provider reports ErrNoop.
+	assert.ErrorIs(t, err, provider.ErrNoop)
 
 	spec, err := c.client.ContainerInspect(ctx, result.ID, client.ContainerInspectOptions{})
 	assert.NilError(t, err)

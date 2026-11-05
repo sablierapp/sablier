@@ -1,5 +1,14 @@
 package provider
 
+import "errors"
+
+// ErrNoop is returned by a provider's InstanceStop when the instance needed no
+// change, for example a scale-mode container whose idle profile has
+// replicas >= 1 and no idle resources. Nothing was stopped. Callers that only
+// want the instance idle should treat it as success; callers that log or count
+// a stop should skip that.
+var ErrNoop = errors.New("nothing to do")
+
 type InstanceListOptions struct {
 	// All includes the stopped instances. If All is false, the provider must
 	// return only the running instances.
