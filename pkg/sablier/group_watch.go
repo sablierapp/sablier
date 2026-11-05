@@ -3,6 +3,7 @@ package sablier
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -26,7 +27,14 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 			provider.InstanceEventRemoved,
 		},
 	})
-	eventsC := stream.Events
+	// Providers send events with blocking sends, so the stream is read apart
+	// from the loop below, which stays the only writer of group state: an
+	// event is always applied after a snapshot it raced with.
+	var reader sync.WaitGroup
+	defer reader.Wait()
+	queued := make(chan InstanceEvent)
+	reader.Go(func() { queueEvents(ctx, stream.Events, queued) })
+	var eventsC <-chan InstanceEvent = queued
 	errC := stream.Err
 
 	ticker := time.NewTicker(30 * time.Second)
@@ -66,6 +74,33 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 				s.reconcileAntiAffinityRegistry(ctx)
 				s.reconcileAntiAffinity(ctx)
 			}
+		}
+	}
+}
+
+// queueEvents reads in until ctx is done and hands the events to out in order,
+// without ever making in wait for out. It closes out once in is closed and
+// every event was handed over.
+func queueEvents(ctx context.Context, in <-chan InstanceEvent, out chan<- InstanceEvent) {
+	defer close(out)
+	var queue []InstanceEvent
+	for in != nil || len(queue) > 0 {
+		var send chan<- InstanceEvent
+		var next InstanceEvent
+		if len(queue) > 0 {
+			send, next = out, queue[0]
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case event, ok := <-in:
+			if !ok {
+				in = nil
+				continue
+			}
+			queue = append(queue, event)
+		case send <- next:
+			queue = queue[1:]
 		}
 	}
 }
