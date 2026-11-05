@@ -3,8 +3,9 @@ package config
 // Webhooks holds the outbound webhook notification configuration.
 // Sablier fires an HTTP POST to every configured endpoint whenever an
 // instance transitions to "started" or "stopped".
-// Webhooks are configured via the YAML configuration file only;
-// there is no corresponding CLI flag or environment variable.
+// Endpoints are read from the configuration file, then overridden by indexed
+// environment variables (SABLIER_WEBHOOKS_ENDPOINTS_0_URL) and flags
+// (--webhooks.endpoints[0].url).
 type Webhooks struct {
 	// Endpoints is the list of HTTP targets to notify on instance lifecycle events.
 	Endpoints []WebhookEndpoint

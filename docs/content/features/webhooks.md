@@ -45,13 +45,31 @@ Multiple endpoints are supported. Each endpoint is evaluated independently so yo
 
 ### CLI / environment variables
 
-Webhook endpoints can also be set via command-line flags or environment variables using Viper's standard dotted-path mapping:
+Webhook endpoints can also be set with command-line flags or environment variables. Replace `0` with the endpoint index:
 
 | YAML key | CLI flag | Environment variable |
 |----------|----------|---------------------|
 | `webhooks.endpoints[0].url` | `--webhooks.endpoints[0].url` | `SABLIER_WEBHOOKS_ENDPOINTS_0_URL` |
+| `webhooks.endpoints[0].events` | `--webhooks.endpoints[0].events` | `SABLIER_WEBHOOKS_ENDPOINTS_0_EVENTS` |
+| `webhooks.endpoints[0].headers.<Name>` | `--webhooks.endpoints[0].headers.<Name>` | `SABLIER_WEBHOOKS_ENDPOINTS_0_HEADERS_<NAME>` |
 
-For multiple endpoints it is easiest to use the YAML configuration file.
+```bash
+# Environment variables
+SABLIER_WEBHOOKS_ENDPOINTS_0_URL=https://uptime.example.com/api/push/xxxxxxxx
+SABLIER_WEBHOOKS_ENDPOINTS_0_EVENTS=started,stopped
+SABLIER_WEBHOOKS_ENDPOINTS_0_HEADERS_AUTHORIZATION="Bearer <token>"
+
+# Command-line flags
+--webhooks.endpoints[0].url=https://uptime.example.com/api/push/xxxxxxxx
+--webhooks.endpoints[0].events=started,stopped
+--webhooks.endpoints[0].headers.Authorization="Bearer <token>"
+```
+
+- `events` takes a comma-separated list.
+- Environment variable names cannot contain `-`, so `_` in a header name becomes `-`: `SABLIER_WEBHOOKS_ENDPOINTS_0_HEADERS_X_API_KEY` sets the `X-Api-Key` header.
+- As with other options, a flag overrides an environment variable, which overrides the configuration file. This applies field by field to the endpoint at the same index, so you can keep an endpoint in the file and override only its URL or one header.
+- An index right after the last endpoint adds a new one. Indexes must not skip a number: setting endpoint `1` requires endpoint `0` to exist.
+- Every endpoint must end up with a `url`.
 
 ## Payload format
 
