@@ -7,6 +7,7 @@ import (
 
 	"github.com/moby/moby/client"
 	"github.com/neilotoole/slogt"
+	"github.com/sablierapp/sablier/pkg/provider"
 	"github.com/sablierapp/sablier/pkg/provider/docker"
 	"gotest.tools/v3/assert"
 )
@@ -118,7 +119,7 @@ func TestDockerClassicProvider_Pause(t *testing.T) {
 					return c.ID, nil
 				},
 			},
-			err: nil,
+			err: provider.ErrNoop,
 		},
 		{
 			name: "container pause as expected",
