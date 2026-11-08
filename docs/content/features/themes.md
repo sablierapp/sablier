@@ -127,12 +127,12 @@ Themes are served using [Go Templates](https://pkg.go.dev/text/template).
 | `$RenderOptionsInstanceState.DesiredReplicas` | The number of desired replicas of the instance loading                                                              | `{{- range $i, $instance := .InstanceStates }}{{ $instance.DesiredReplicas }}{{ end -}}` |
 | `$RenderOptionsInstanceState.Status`          | The status of the instance loading, `ready` or `not-ready`                                                          | `{{- range $i, $instance := .InstanceStates }}{{ $instance.Status }}{{ end -}}`          |
 | `$RenderOptionsInstanceState.Error`           | The error trigger by this instance which won't be able to load                                                      | `{{- range $i, $instance := .InstanceStates }}{{ $instance.Error }}{{ end -}}`           |
-| `$RenderOptionsInstanceState.StartedAt`       | When Sablier started the instance for the current session, zero when it was already running                        | `{{- range $i, $instance := .InstanceStates }}{{ $instance.StartedAt.Format "15:04" }}{{ end -}}` |
-| `$RenderOptionsInstanceState.TypicalStartup`  | The median time the instance took to become ready over its last starts, zero until one start was observed          | `{{- range $i, $instance := .InstanceStates }}{{ $instance.TypicalStartup }}{{ end -}}`  |
+| `$RenderOptionsInstanceState.StartedAt`       | When Sablier started the instance for the current session, zero once it is ready and when it was already running   | `{{- range $i, $instance := .InstanceStates }}{{ $instance.StartedAt.Format "15:04" }}{{ end -}}` |
+| `$RenderOptionsInstanceState.TypicalStartup`  | The median time the instance took to be served over its last starts, zero until three starts were observed          | `{{- range $i, $instance := .InstanceStates }}{{ $instance.TypicalStartup }}{{ end -}}`  |
 
 ### Startup timing
 
-Sablier remembers when it started each instance of the session (`StartedAt`) and learns how long the instance usually takes to become ready (`TypicalStartup`, the median of its last seven observed starts). A theme can tell the visitor how long the wait should last, and say so when a start takes longer than usual:
+Sablier remembers when it started each instance of the session (`StartedAt`) and learns how long the instance usually takes to be served (`TypicalStartup`, the median of its last seven observed starts, `sablier.ready-after` included). A theme can tell the visitor how long the wait should last, and say so when a start takes longer than usual:
 
 ```html
 {{- range .InstanceStates }}
@@ -144,7 +144,13 @@ Sablier remembers when it started each instance of the session (`StartedAt`) and
 {{- end }}
 ```
 
-Measure elapsed times against `.RenderedAt` rather than in the browser: the visitor's clock may be off. What Sablier learned is kept in memory, so `TypicalStartup` is zero again after a restart until each instance has started once.
+Measure elapsed times against `.RenderedAt` rather than in the browser: the visitor's clock may be off. `StartedAt` is zero once the instance is ready or completed.
+
+What Sablier learns has limits a theme should allow for:
+
+- **A start ends at the first request that sees the instance ready.** A page that keeps refreshing measures it to within its refresh frequency. When nobody checks the instance while it starts (a single request, a closed tab, a crawler), the start is measured when the next request comes, possibly long after the instance was ready. Each start counts once, however many requests see it complete, and `TypicalStartup` stays zero until three starts were observed, so that one late measure cannot set it alone; with few starts, one late measure can still move it.
+- **Some starts are not learned.** When Sablier did not dispatch the start itself (the instance was already running when the session began, or the session was recorded by a version that did not keep start times), `StartedAt` is the first check that found the instance not ready, and that start is not learned. In scale mode, the idle replicas report ready when the start is dispatched, so scale-mode wakes are not learned either.
+- **Memory only.** `TypicalStartup` is zero again after a restart until each instance has started three times. When several Sablier replicas share a store (Valkey), each learns its own value from the requests it serves, so the page can show different values between refreshes.
 
 ### The `<meta http-equiv="refresh" />` tag
 

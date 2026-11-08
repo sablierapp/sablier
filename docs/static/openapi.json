@@ -290,6 +290,10 @@
             "description": "StartedAt records when Sablier dispatched the start of the instance for\nits current session. It is kept across inspections, so that the time the\ninstance takes to become ready can be measured and shown on the waiting\npage. It is nil when the instance was already ready when the session\nbegan, until an inspection finds it not ready. It is set internally by\nSablier and is never populated by a provider.",
             "type": "string"
           },
+          "startedAtEstimated": {
+            "description": "StartedAtEstimated marks a StartedAt that Sablier did not stamp when it\ndispatched a start, but at the first inspection that found the instance\nnot ready (a session recorded before start times were kept, one that\nbegan with the instance running, or scale mode, where the idle replicas\nreport ready). The waiting page still counts from it, but the startup is\nnot learned: the real start time is unknown.",
+            "type": "boolean"
+          },
           "status": {
             "$ref": "#/components/schemas/sablier.InstanceStatus"
           },

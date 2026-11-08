@@ -10,6 +10,12 @@ import (
 // learn its typical startup duration. An odd count gives a true median.
 const startupSamples = 7
 
+// minStartupSamples is how many startups must be observed before a typical
+// duration is given. With fewer, one startup measured late (the first request
+// after the start came long after the instance was ready) would set the value
+// outright, or be averaged with a single real one.
+const minStartupSamples = 3
+
 // maxStartupStatsInstances bounds how many instances startupStats remembers, so
 // that short-lived instances (one per CI pipeline, for example) cannot grow it
 // forever. The instance observed least recently is forgotten first.
@@ -17,9 +23,9 @@ const maxStartupStatsInstances = 2048
 
 // startupStats learns how long each instance takes to become ready after
 // Sablier starts it: from the dispatch of the start to the first request that
-// sees the instance ready. The waiting page uses it to tell how long a start
-// usually takes. It is kept in memory only, and is learned again after a
-// restart.
+// sees the instance ready, plus the instance's ready-after delay. The waiting
+// page uses it to tell how long a start usually takes. It is kept in memory
+// only, and is learned again after a restart.
 type startupStats struct {
 	mu      sync.Mutex
 	entries map[string]*startupEntry
@@ -27,15 +33,20 @@ type startupStats struct {
 
 type startupEntry struct {
 	samples []time.Duration // most recent last, at most startupSamples
-	seen    time.Time
+	// lastStart is the start time of the last startup recorded, so that the
+	// requests that see the same start complete add one sample, not one each.
+	lastStart time.Time
+	seen      time.Time
 }
 
 func newStartupStats() *startupStats {
 	return &startupStats{entries: map[string]*startupEntry{}}
 }
 
-// observe records that name became ready d after its start.
-func (st *startupStats) observe(name string, d time.Duration, now time.Time) {
+// observe records that name, started at startedAt, became ready d after its
+// start. A start already recorded for name is ignored: several requests can see
+// the same start complete.
+func (st *startupStats) observe(name string, startedAt time.Time, d time.Duration, now time.Time) {
 	if st == nil || d <= 0 {
 		return
 	}
@@ -43,6 +54,9 @@ func (st *startupStats) observe(name string, d time.Duration, now time.Time) {
 	defer st.mu.Unlock()
 
 	e, ok := st.entries[name]
+	if ok && e.lastStart.Equal(startedAt) {
+		return
+	}
 	if !ok {
 		if len(st.entries) >= maxStartupStatsInstances {
 			st.evictOldestLocked()
@@ -54,6 +68,7 @@ func (st *startupStats) observe(name string, d time.Duration, now time.Time) {
 	if len(e.samples) > startupSamples {
 		e.samples = e.samples[len(e.samples)-startupSamples:]
 	}
+	e.lastStart = startedAt
 	e.seen = now
 }
 
@@ -69,8 +84,8 @@ func (st *startupStats) evictOldestLocked() {
 }
 
 // typical returns the median of the recent startup durations of name, or zero
-// when none has been observed. The median ignores the odd startup measured
-// long after the fact, when no request checked the instance while it started.
+// until minStartupSamples startups have been observed. The median ignores a
+// startup measured late once enough real ones are known, not before.
 func (st *startupStats) typical(name string) time.Duration {
 	if st == nil {
 		return 0
@@ -84,7 +99,7 @@ func (st *startupStats) typical(name string) time.Duration {
 	st.mu.Unlock()
 
 	n := len(samples)
-	if n == 0 {
+	if n < minStartupSamples {
 		return 0
 	}
 	slices.Sort(samples)

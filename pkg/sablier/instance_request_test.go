@@ -1039,6 +1039,7 @@ func TestInstanceRequest_ExistingSession_NoFailedStart_IsNotStartedAgain(t *test
 				if status != sablier.InstanceStatusCompleted {
 					checkedAt := time.Now()
 					stored.StartedAt = &checkedAt
+					stored.StartedAtEstimated = true
 				}
 				sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil)
 				provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(inspected, nil)
@@ -1098,7 +1099,84 @@ func TestRequestSession_LearnsHowLongTheInstanceTakesToStart(t *testing.T) {
 		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
 		session, err = manager.RequestSession(ctx, []string{"hub"}, time.Minute)
 		assert.NilError(t, err)
-		assert.Equal(t, session.Instances["hub"].TypicalStartup, 45*time.Second)
+		// One startup is not enough to tell what is typical.
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, time.Duration(0))
+
+		// Learned from the third wake: the median of 45 s, 40 s and 50 s.
+		time.Sleep(time.Hour)
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 40*time.Second, 0, 1), time.Duration(0))
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 50*time.Second, 0, 1), 45*time.Second)
+	})
+}
+
+// wakeHub runs one wake of "hub" through RequestSession: the start, then
+// seenBy checks, readyIn after the start, that all see it ready. Those checks
+// overlap: each read the session before any of them saved it as ready. It
+// returns the TypicalStartup given to the last check, and lets the session
+// expire before returning.
+func wakeHub(t *testing.T, manager *sablier.Sablier, sessions *storetest.MockStore, provider *providertest.MockProvider, readyIn, readyAfter time.Duration, seenBy int) time.Duration {
+	t.Helper()
+	ctx := t.Context()
+
+	stopped := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStopped, ReadyAfter: readyAfter}
+	startedAt := time.Now()
+	starting := stopped
+	starting.Status = sablier.InstanceStatusStarting
+	starting.StartedAt = &startedAt
+
+	provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(nil)
+	sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(stopped, nil)
+	sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+	_, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+	assert.NilError(t, err)
+	synctest.Wait()
+
+	time.Sleep(readyIn)
+	readyAt := time.Now()
+	ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady, ReadyAfter: readyAfter}
+	stored := ready
+	stored.StartedAt = &startedAt
+	stored.ReadyAt = &readyAt
+	var typical time.Duration
+	for range seenBy {
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		typical = session.Instances["hub"].TypicalStartup
+	}
+
+	time.Sleep(time.Hour)
+	return typical
+}
+
+// Several requests can see the same wake complete. Each one used to add a
+// sample: after three 40 s wakes, one 10 min wake seen by five overlapping
+// requests moved the typical startup to 10 min. A wake is learned once.
+func TestRequestSession_OverlappingChecks_LearnOneStartupPerWake(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+
+		for range 3 {
+			wakeHub(t, manager, sessions, provider, 40*time.Second, 0, 1)
+		}
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 10*time.Minute, 0, 5), 40*time.Second)
+	})
+}
+
+// The visitor waits for ready-after once the instance is ready: an instance
+// ready at 40 s with ready-after=60s is served after 100 s.
+func TestRequestSession_LearnedStartupIncludesReadyAfter(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+
+		var typical time.Duration
+		for range 3 {
+			typical = wakeHub(t, manager, sessions, provider, 40*time.Second, time.Minute, 1)
+		}
+		assert.Equal(t, typical, 100*time.Second)
 	})
 }
 
@@ -1136,17 +1214,25 @@ func TestInstanceRequest_AlreadyReadyInstance_IsNotStamped(t *testing.T) {
 }
 
 // A session recorded without a start time (by a Sablier that did not keep
-// them, or begun with the instance running) counts the wait from the first
-// check that finds the instance not ready, without learning a startup from it.
+// them, begun with the instance running, or a scale-mode wake) counts the wait
+// from the first check that finds the instance not ready, without learning a
+// startup from it: the stamp is saved as estimated, and the check that later
+// sees the instance ready skips it.
 func TestInstanceRequest_SessionWithoutStartTime_CountsFromFirstCheck(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		manager, sessions, provider := setupSablier(t)
 		ctx := t.Context()
 
+		// Learned: the median of 10 s, 40 s and 70 s.
+		for _, d := range []time.Duration{10 * time.Second, 40 * time.Second, 70 * time.Second} {
+			wakeHub(t, manager, sessions, provider, d, 0, 1)
+		}
+
 		legacy := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStarting}
 		checkedAt := time.Now()
 		stamped := legacy
 		stamped.StartedAt = &checkedAt
+		stamped.StartedAtEstimated = true
 		sessions.EXPECT().Get(ctx, "hub").Return(legacy, nil)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(legacy, nil)
 		sessions.EXPECT().Put(ctx, stamped, time.Minute).Return(nil)
@@ -1162,5 +1248,18 @@ func TestInstanceRequest_SessionWithoutStartTime_CountsFromFirstCheck(t *testing
 		info, err = manager.InstanceRequest(ctx, "hub", time.Minute)
 		assert.NilError(t, err)
 		assert.Equal(t, *info.StartedAt, checkedAt)
+
+		// Ready 5 s later: 65 s after the stamp, which is not a startup.
+		time.Sleep(5 * time.Second)
+		readyAt := time.Now()
+		ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		stored := ready
+		stored.StartedAt, stored.StartedAtEstimated, stored.ReadyAt = &checkedAt, true, &readyAt
+		sessions.EXPECT().Get(ctx, "hub").Return(stamped, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, 40*time.Second)
 	})
 }

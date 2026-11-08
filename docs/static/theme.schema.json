@@ -69,11 +69,11 @@
         "StartedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "When Sablier started the instance for the current session. Zero when the instance was already running or the time is unknown. {{ ($.RenderedAt.Sub .StartedAt).Seconds }} gives how long the start has lasted so far."
+          "description": "When Sablier started the instance for the current session. Zero once the instance is ready or completed"
         },
         "TypicalStartup": {
           "type": "integer",
-          "description": "Median time the instance took to become ready over its last observed starts as learned in memory since Sablier started. Zero until one start of the instance has been observed. {{ .TypicalStartup.Seconds }} gives it in seconds."
+          "description": "Median time the instance took to be served (ready-after included) over its last observed starts as learned in memory since Sablier started. Zero until three starts of the instance have been observed. {{ .TypicalStartup.Seconds }} gives it in seconds."
         },
         "Provider": {
           "type": "string",

@@ -25,8 +25,9 @@ type InstanceInfoWithError struct {
 	// Optional marks a best-effort instance, requested with the "optional:"
 	// name prefix. Its readiness and errors are ignored by SessionState.
 	Optional bool `json:"optional,omitempty"`
-	// TypicalStartup is the median time the instance took to become ready
-	// over its last observed starts. Zero until one start has been observed.
+	// TypicalStartup is the median time the instance took to be served
+	// (ready-after included) over its last observed starts. Zero until three
+	// starts have been observed.
 	TypicalStartup time.Duration `json:"typicalStartup,omitempty"`
 }
 

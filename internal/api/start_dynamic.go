@@ -178,8 +178,10 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		err = errors.New(instanceState.Message)
 	}
 
+	// The start time stays on the session once the instance is up: a theme
+	// must not show a ready instance as started hours ago.
 	var startedAt time.Time
-	if instanceState.StartedAt != nil {
+	if instanceState.StartedAt != nil && instanceState.Status != sablier.InstanceStatusReady && instanceState.Status != sablier.InstanceStatusCompleted {
 		startedAt = *instanceState.StartedAt
 	}
 

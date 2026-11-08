@@ -69,6 +69,13 @@ type InstanceInfo struct {
 	// began, until an inspection finds it not ready. It is set internally by
 	// Sablier and is never populated by a provider.
 	StartedAt *time.Time `json:"startedAt,omitempty"`
+	// StartedAtEstimated marks a StartedAt that Sablier did not stamp when it
+	// dispatched a start, but at the first inspection that found the instance
+	// not ready (a session recorded before start times were kept, one that
+	// began with the instance running, or scale mode, where the idle replicas
+	// report ready). The waiting page still counts from it, but the startup is
+	// not learned: the real start time is unknown.
+	StartedAtEstimated bool `json:"startedAtEstimated,omitempty"`
 
 	// RunningHours is a daily keep-warm window in local time, parsed from
 	// the sablier.running-hours label (format: HH:MM-HH:MM).
