@@ -26,8 +26,7 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 
 	unregistered := make([]string, 0)
 	for _, instance := range instances {
-		_, err = s.sessions.Get(ctx, instance.Name)
-		if errors.Is(err, store.ErrKeyNotFound) {
+		if s.isUnregistered(ctx, instance.Name) {
 			unregistered = append(unregistered, instance.Name)
 		}
 	}
@@ -45,6 +44,12 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 
 func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
 	return func() error {
+		// The list and the stops are separate steps: a request may have started
+		// the instance since the scan looked at it.
+		if !s.isUnregistered(ctx, name) {
+			s.l.DebugContext(ctx, "instance started by Sablier since the scan, skipping", slog.String("instance", name))
+			return nil
+		}
 		err := s.provider.InstanceStop(ctx, name)
 		if err != nil {
 			s.l.ErrorContext(ctx, "failed to stop instance", slog.String("instance", name), slog.Any("error", err))
@@ -56,16 +61,31 @@ func (s *Sablier) stopFunc(ctx context.Context, name string) func() error {
 	}
 }
 
+// isUnregistered returns true if Sablier has no trace of the instance: no
+// start in progress (pendingStarts) and no entry in the sessions store.
+// A store error other than "not found" is not enough to call it unregistered.
+func (s *Sablier) isUnregistered(ctx context.Context, name string) bool {
+	if s.isPendingStart(name) {
+		return false
+	}
+	_, err := s.sessions.Get(ctx, name)
+	return errors.Is(err, store.ErrKeyNotFound)
+}
+
+func (s *Sablier) isPendingStart(name string) bool {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	_, pending := s.pendingStarts[name]
+	return pending
+}
+
 // isStartedByUs returns true if the instance was initiated by Sablier:
 // either it has an in-progress start goroutine (pendingStarts) or it is
 // already registered in the sessions store.
 // Both checks are needed to cover all timing windows between when Sablier
 // triggers a start and when the session entry is written.
 func (s *Sablier) isStartedByUs(ctx context.Context, name string) bool {
-	s.pendingMu.Lock()
-	_, pending := s.pendingStarts[name]
-	s.pendingMu.Unlock()
-	if pending {
+	if s.isPendingStart(name) {
 		return true
 	}
 	_, err := s.sessions.Get(ctx, name)

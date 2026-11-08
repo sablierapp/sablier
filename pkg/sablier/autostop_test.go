@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
+	"github.com/sablierapp/sablier/pkg/provider/providertest"
 	"github.com/sablierapp/sablier/pkg/sablier"
 	"github.com/sablierapp/sablier/pkg/store"
+	"github.com/sablierapp/sablier/pkg/store/storetest"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/v3/assert"
 )
@@ -25,7 +27,7 @@ func TestStopAllUnregisteredInstances(t *testing.T) {
 		{Name: "instance2"},
 	}
 
-	sessions.EXPECT().Get(ctx, "instance1").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	sessions.EXPECT().Get(ctx, "instance1").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(2)
 	sessions.EXPECT().Get(ctx, "instance2").Return(sablier.InstanceInfo{
 		Name:   "instance2",
 		Status: sablier.InstanceStatusReady,
@@ -54,7 +56,7 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 		{Name: "instance2"},
 	}
 
-	sessions.EXPECT().Get(ctx, "instance1").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	sessions.EXPECT().Get(ctx, "instance1").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).Times(2)
 	sessions.EXPECT().Get(ctx, "instance2").Return(sablier.InstanceInfo{
 		Name:   "instance2",
 		Status: sablier.InstanceStatusReady,
@@ -71,6 +73,76 @@ func TestStopAllUnregisteredInstances_WithError(t *testing.T) {
 	// Call the function under test
 	err := s.StopAllUnregisteredInstances(ctx)
 	assert.Error(t, err, "stop error")
+}
+
+// startPendingSablierStart makes InstanceRequest leave a pending start for
+// name, with no session in the store: the start fails, and a failed start keeps
+// its pendingStarts entry until the next request.
+func startPendingSablierStart(t *testing.T, s *sablier.Sablier, sessions *storetest.MockStore, p *providertest.MockProvider, name string) {
+	t.Helper()
+	p.EXPECT().InstanceInspect(gomock.Any(), name).Return(sablier.InstanceInfo{
+		Name:    name,
+		Status:  sablier.InstanceStatusStopped,
+		Enabled: "true",
+	}, nil)
+	p.EXPECT().InstanceStart(gomock.Any(), name).Return(errors.New("start failed"))
+	sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	_, err := s.InstanceRequest(t.Context(), name, time.Minute)
+	assert.NilError(t, err)
+}
+
+// TestStopAllUnregisteredInstances_SkipsPendingSablierStart verifies that the
+// scan leaves alone an instance a request is starting: its start is in
+// pendingStarts but the session is not written yet.
+func TestStopAllUnregisteredInstances_SkipsPendingSablierStart(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		ctx := t.Context()
+
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
+		startPendingSablierStart(t, s, sessions, p, "nginx")
+		synctest.Wait()
+
+		p.EXPECT().InstanceList(ctx, provider.InstanceListOptions{All: false}).
+			Return([]sablier.InstanceConfiguration{{Name: "nginx"}}, nil)
+		// No InstanceStop expectation: any call fails the test.
+
+		assert.NilError(t, s.StopAllUnregisteredInstances(ctx))
+	})
+}
+
+// TestStopAllUnregisteredInstances_SkipsStartThatBeganAfterList verifies the
+// second check: a request starts the instance after the scan listed it as
+// unregistered but before the stop.
+func TestStopAllUnregisteredInstances_SkipsStartThatBeganAfterList(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, sessions, p := setupSablier(t)
+		ctx := t.Context()
+
+		p.EXPECT().InstanceList(ctx, provider.InstanceListOptions{All: false}).
+			Return([]sablier.InstanceConfiguration{{Name: "nginx"}}, nil)
+
+		p.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(sablier.InstanceInfo{
+			Name:    "nginx",
+			Status:  sablier.InstanceStatusStopped,
+			Enabled: "true",
+		}, nil)
+		p.EXPECT().InstanceStart(gomock.Any(), "nginx").Return(errors.New("start failed"))
+		sessions.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		// The scan's own lookup says "unregistered". Right after it, a request
+		// starts the instance, so the scan reaches the stop with a pending start.
+		sessions.EXPECT().Get(gomock.Any(), "nginx").DoAndReturn(
+			func(context.Context, string) (sablier.InstanceInfo, error) {
+				go func() { _, _ = s.InstanceRequest(ctx, "nginx", time.Minute) }()
+				synctest.Wait()
+				return sablier.InstanceInfo{}, store.ErrKeyNotFound
+			})
+		sessions.EXPECT().Get(gomock.Any(), "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound).AnyTimes()
+
+		// No InstanceStop expectation: any call fails the test.
+		assert.NilError(t, s.StopAllUnregisteredInstances(ctx))
+	})
 }
 
 // --- WatchAndStopExternallyStarted tests ---
