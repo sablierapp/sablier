@@ -59,6 +59,12 @@ The browser renders `my-theme.html` with:
 - Custom **dark-mode styles** bundled from `css/style.css`
 - A **live elapsed-time counter** in the tab title, driven by `js/app.js`
 - A table of instance states when `show_details=true`
+- The **startup timing**: "Started 6 s ago, usually ready in about 10 s", with a
+  progress bar, and a warning when a start takes more than twice as long as
+  usual. It comes from `.StartedAt`, `.TypicalStartup` and `.RenderedAt` (see
+  [Startup timing](https://sablierapp.dev/features/themes/#startup-timing)), needs
+  `show_details=true`, and shows the usual duration once Sablier has seen the
+  app start three times: let the session expire (1 minute) and wake it again.
 
 None of these assets are fetched separately — everything is embedded in the HTML
 that Sablier sends.

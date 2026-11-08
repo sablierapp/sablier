@@ -144,7 +144,7 @@ Sablier remembers when it started each instance of the session (`StartedAt`) and
 {{- end }}
 ```
 
-Measure elapsed times against `.RenderedAt` rather than in the browser: the visitor's clock may be off. `StartedAt` is zero once the instance is ready or completed.
+Measure elapsed times against `.RenderedAt` rather than in the browser: the visitor's clock may be off. `StartedAt` is zero once the instance is ready or completed. Templates have no arithmetic: to compare the two durations (a progress bar, a "longer than usual" message), render them as data attributes and let a script do it, as the theme of [`examples/custom-theme`](https://github.com/sablierapp/sablier/tree/main/examples/custom-theme) does. The startup timing is part of `.InstanceStates`, so it needs `show_details`.
 
 What Sablier learns has limits a theme should allow for:
 
