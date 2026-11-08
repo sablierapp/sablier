@@ -75,12 +75,6 @@ type SessionEntry struct {
 	Instance  string
 	Group     string
 	ExpiresAt time.Time
-	// StartingSince is when Sablier started the instance for this session,
-	// set only while the instance is not ready yet.
-	StartingSince time.Time
-	// TypicalStartup is the median duration of the instance's recent
-	// startups, zero when none has been observed. Set with StartingSince.
-	TypicalStartup time.Duration
 }
 
 // SessionSource enumerates the currently active sessions. Implementations must
@@ -124,62 +118,5 @@ func (c *SessionExpiryCollector) Collect(ch chan<- prometheus.Metric) {
 			float64(s.ExpiresAt.Unix()),
 			s.Instance, s.Group,
 		)
-	}
-}
-
-// SessionStartupCollector emits, for each session still waiting for its
-// instance to become ready, when the start began and how long the instance
-// usually takes to start. Together they tell a slow start from a stuck one.
-// Like SessionExpiryCollector, it reads the session source lazily at scrape
-// time and never renews a session.
-type SessionStartupCollector struct {
-	sessions SessionSource
-
-	startingSinceDesc  *prometheus.Desc
-	typicalStartupDesc *prometheus.Desc
-}
-
-// NewSessionStartupCollector wires a SessionSource into a Collector that can be
-// registered on the same registry as the rest of the metrics.
-func NewSessionStartupCollector(sessions SessionSource) *SessionStartupCollector {
-	return &SessionStartupCollector{
-		sessions: sessions,
-		startingSinceDesc: prometheus.NewDesc(
-			"sablier_session_starting_since_timestamp_seconds",
-			"Unix timestamp (seconds) at which Sablier started the instance for its current session. One series per session whose instance is not ready yet; it disappears once a request sees the instance ready. Derive how long the start has lasted with the expression: time() - value.",
-			[]string{"instance", "group"}, nil,
-		),
-		typicalStartupDesc: prometheus.NewDesc(
-			"sablier_instance_typical_startup_seconds",
-			"Median time (seconds) the instance took to become ready over its last observed starts, learned in memory since Sablier started. Emitted alongside sablier_session_starting_since_timestamp_seconds, once one start of the instance has been observed.",
-			[]string{"instance", "group"}, nil,
-		),
-	}
-}
-
-func (c *SessionStartupCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.startingSinceDesc
-	ch <- c.typicalStartupDesc
-}
-
-func (c *SessionStartupCollector) Collect(ch chan<- prometheus.Metric) {
-	for _, s := range c.sessions.SessionsSnapshot() {
-		if s.StartingSince.IsZero() {
-			continue
-		}
-		ch <- prometheus.MustNewConstMetric(
-			c.startingSinceDesc,
-			prometheus.GaugeValue,
-			float64(s.StartingSince.Unix()),
-			s.Instance, s.Group,
-		)
-		if s.TypicalStartup > 0 {
-			ch <- prometheus.MustNewConstMetric(
-				c.typicalStartupDesc,
-				prometheus.GaugeValue,
-				s.TypicalStartup.Seconds(),
-				s.Instance, s.Group,
-			)
-		}
 	}
 }

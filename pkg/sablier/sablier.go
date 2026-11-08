@@ -45,7 +45,7 @@ type Sablier struct {
 	depStarts map[string]*depStart
 
 	// startups learns how long each instance takes to become ready after a
-	// start, for the waiting page and the metrics.
+	// start, for the waiting page.
 	startups *startupStats
 
 	// BlockingRefreshFrequency is the maximum interval between two readiness
@@ -150,17 +150,11 @@ func (s *Sablier) SessionsSnapshot() []metrics.SessionEntry {
 		if len(info.Groups) > 0 {
 			group = info.Groups[0]
 		}
-		entry := metrics.SessionEntry{
+		out = append(out, metrics.SessionEntry{
 			Instance:  info.Name,
 			Group:     group,
 			ExpiresAt: expiresAt,
-		}
-		// A completed one-shot instance is not waited for anymore.
-		if info.StartedAt != nil && info.Status != InstanceStatusReady && info.Status != InstanceStatusCompleted {
-			entry.StartingSince = *info.StartedAt
-			entry.TypicalStartup = s.startups.typical(info.Name)
-		}
-		out = append(out, entry)
+		})
 	})
 	if err != nil {
 		// Enumeration failed partway through, so out only holds a subset of the
