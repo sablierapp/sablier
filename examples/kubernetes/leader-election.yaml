@@ -1,0 +1,85 @@
+# Two Sablier replicas in active/passive mode, applied on top of sablier.yaml:
+# kubectl apply -f sablier.yaml -f leader-election.yaml
+# region rbac
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sablier-leader-election
+  namespace: sablier
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "create", "update"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["patch"] # sets the sablierapp.dev/leader label on the leader's pod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sablier-leader-election
+  namespace: sablier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sablier-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: sablier
+    namespace: sablier
+# endregion
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sablier
+  namespace: sablier
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sablier
+  template:
+    metadata:
+      labels:
+        app: sablier
+    spec:
+      serviceAccountName: sablier
+      containers:
+        - name: sablier
+          image: sablierapp/sablier:1.19.1 # x-release-please-version
+          # region deployment
+          args:
+            - start
+            - --provider.name=kubernetes
+            - --provider.kubernetes.leader-election.enabled=true
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          # endregion
+          ports:
+            - containerPort: 10000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 10000
+---
+# region service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sablier
+  namespace: sablier
+spec:
+  selector:
+    app: sablier
+    sablierapp.dev/leader: "true" # only the leader receives traffic
+  ports:
+    - port: 10000
+# endregion

@@ -22,9 +22,11 @@ func registerRoutes(ctx context.Context, router *gin.Engine, serverConf config.S
 	}
 
 	APIv1 := base.Group("/api")
-	api.StartDynamic(APIv1, s)
-	api.StartBlocking(APIv1, s)
-	api.StartPoke(APIv1, s)
 	api.ListThemes(APIv1, s)
-	api.InstanceEvents(APIv1, s)
+	// Everything that touches sessions or workloads is served by the leader only.
+	leaderOnly := APIv1.Group("", api.RequireLeader(s))
+	api.StartDynamic(leaderOnly, s)
+	api.StartBlocking(leaderOnly, s)
+	api.StartPoke(leaderOnly, s)
+	api.InstanceEvents(leaderOnly, s)
 }

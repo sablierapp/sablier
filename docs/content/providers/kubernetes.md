@@ -241,8 +241,40 @@ A replica is ready when its pod passes its [readiness probe](https://kubernetes.
 
 A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
 
+### High availability {since="next"}
+
+Sablier keeps its sessions in memory, so a single replica is the default. To survive the loss of a node, run several replicas with leader election: they compete for a [Lease](https://kubernetes.io/docs/concepts/architecture/leases/), and only its holder manages workloads and serves the API. The leader [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) its own pod `sablierapp.dev/leader=true`; a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) that selects this label sends traffic to the leader only. Every replica stays ready, so rolling updates work as usual. A follower that receives a session request anyway returns `503`.
+
+| Option | Default | Description |
+|---|---|---|
+| [`--provider.kubernetes.leader-election.enabled`](/reference/cli/#opt-provider-kubernetes-leader-election-enabled) | `false` | Compete for the Lease; only the leader manages workloads. |
+| [`--provider.kubernetes.leader-election.lease-name`](/reference/cli/#opt-provider-kubernetes-leader-election-lease-name) | `sablier` | The Lease name. |
+| [`--provider.kubernetes.leader-election.lease-namespace`](/reference/cli/#opt-provider-kubernetes-leader-election-lease-namespace) | | The Lease namespace. Defaults to Sablier's own namespace. |
+| [`--provider.kubernetes.leader-election.lease-duration`](/reference/cli/#opt-provider-kubernetes-leader-election-lease-duration) | `15s` | How long followers wait after the last renewal before taking over. |
+| [`--provider.kubernetes.leader-election.renew-deadline`](/reference/cli/#opt-provider-kubernetes-leader-election-renew-deadline) | `10s` | How long the leader retries renewing before it gives up. |
+| [`--provider.kubernetes.leader-election.retry-period`](/reference/cli/#opt-provider-kubernetes-leader-election-retry-period) | `2s` | Interval between attempts to acquire or renew the Lease. |
+
+Grant the service account access to Leases, and to label pods, in Sablier's namespace:
+
+{{< example file="kubernetes/leader-election.yaml" region="rbac" >}}
+
+Run two replicas, and pass the pod name and namespace through the [downward API](https://kubernetes.io/docs/concepts/workloads/pods/downward-api/):
+
+{{< example file="kubernetes/leader-election.yaml" region="deployment" >}}
+
+Then select the leader in the Service:
+
+{{< example file="kubernetes/leader-election.yaml" region="service" >}}
+
+A leader that shuts down releases the Lease, so a rolling update hands over within a few seconds. After a crash, a follower takes over once the Lease expires, after `lease-duration`. A leader that cannot renew the Lease exits, and Kubernetes restarts it as a follower; each replica removes the label from its pod when it starts.
+
+The new leader does not inherit the sessions of the previous one. Instead of [scaling workloads to zero on startup](/reference/cli/#opt-provider-auto-stop-on-startup), it gives every running opted-in workload a session of the default duration, so a failover never stops a workload in use; workloads nobody requests stop when that session expires. A request that reaches the old leader while it drains can still start a workload after the new leader has taken over; enable [warming externally-started instances](/reference/cli/#opt-provider-auto-warm-externally-started) to have the new leader pick those up as well.
+
+Do not combine leader election with `--storage.file` on a volume shared by the replicas: only the last leader to exit writes the file.
+
 ### Limitations
 
+- Without [leader election](#high-availability), run a single replica: replicas do not share sessions.
 - Sablier must run as a [pod](https://kubernetes.io/docs/concepts/workloads/pods/) in the cluster it manages: it only uses [in-cluster credentials](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/).
 - [Block I/O throttling](/features/disk-io-limits/) is not available on Kubernetes.
 - CPU and memory throttling applies to the first container of the [pod template](https://kubernetes.io/docs/concepts/workloads/pods/#pod-templates) only, and restarts the pods.
