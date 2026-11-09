@@ -7,7 +7,11 @@
     }
   },
   "Storage": {
-    "File": "/tmp/cli.json"
+    "File": "/tmp/cli.json",
+    "Kubernetes": {
+      "ConfigMap": "cli-sessions",
+      "Namespace": "cli"
+    }
   },
   "Provider": {
     "Name": "cli",

@@ -878,6 +878,8 @@ SABLIER_SESSIONS_EXPIRATION_INTERVAL=20s
 | Option | Description |
 |--------|-------------|
 | [`--storage.file`](#opt-storage-file) | File path to save the state |
+| [`--storage.kubernetes.configmap`](#opt-storage-kubernetes-configmap) | Name of a Kubernetes ConfigMap to save the state in, created when missing |
+| [`--storage.kubernetes.namespace`](#opt-storage-kubernetes-namespace) | Namespace of the state ConfigMap, Sablier's own namespace when empty |
 
 ### `--storage.file` {#opt-storage-file}
 
@@ -897,6 +899,48 @@ SABLIER_STORAGE_FILE=<string>
 
 # Command-line flag
 --storage.file=<string>
+```
+
+### `--storage.kubernetes.configmap` {#opt-storage-kubernetes-configmap}
+
+Name of a Kubernetes ConfigMap to save the state in, created when missing
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+storage:
+  kubernetes:
+    configmap: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_STORAGE_KUBERNETES_CONFIGMAP=<string>
+
+# Command-line flag
+--storage.kubernetes.configmap=<string>
+```
+
+### `--storage.kubernetes.namespace` {#opt-storage-kubernetes-namespace}
+
+Namespace of the state ConfigMap, Sablier's own namespace when empty
+
+{{< badge "string" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+storage:
+  kubernetes:
+    namespace: <string>
+```
+
+```bash
+# Environment variable
+SABLIER_STORAGE_KUBERNETES_NAMESPACE=<string>
+
+# Command-line flag
+--storage.kubernetes.namespace=<string>
 ```
 
 ## Strategy {#category-strategy}

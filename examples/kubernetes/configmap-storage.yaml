@@ -1,0 +1,58 @@
+# Sessions persisted in a ConfigMap, applied on top of sablier.yaml:
+# kubectl apply -f sablier.yaml -f configmap-storage.yaml
+# region rbac
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sablier-storage
+  namespace: sablier
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sablier-storage
+  namespace: sablier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sablier-storage
+subjects:
+  - kind: ServiceAccount
+    name: sablier
+    namespace: sablier
+# endregion
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sablier
+  namespace: sablier
+spec:
+  selector:
+    matchLabels:
+      app: sablier
+  template:
+    metadata:
+      labels:
+        app: sablier
+    spec:
+      serviceAccountName: sablier
+      containers:
+        - name: sablier
+          image: sablierapp/sablier:1.19.1 # x-release-please-version
+          # region args
+          args:
+            - start
+            - --provider.name=kubernetes
+            - --storage.kubernetes.configmap=sablier-sessions
+          # endregion
+          ports:
+            - containerPort: 10000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 10000
