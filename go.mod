@@ -46,7 +46,7 @@ require (
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20260916154351-b853e4b620cd
 	golang.org/x/sync v0.25.0
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 	google.golang.org/grpc v1.85.0
 	gopkg.in/ini.v1 v1.67.3
 	gotest.tools/v3 v3.5.2
