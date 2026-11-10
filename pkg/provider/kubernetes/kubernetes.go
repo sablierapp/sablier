@@ -26,8 +26,14 @@ type Provider struct {
 	dynamic             dynamic.Interface
 	delimiter           string
 	readyOnFirstReplica bool
-	l                   *slog.Logger
-	tracer              trace.Tracer
+	// readyOnEndpoints keeps a Deployment or StatefulSet starting until the
+	// Services that select its pods route to them. See InstanceInspectReadiness.
+	readyOnEndpoints bool
+	// routingFallbackWarned is set once Sablier warned that it cannot check
+	// whether the Services route to the workloads.
+	routingFallbackWarned atomic.Bool
+	l                     *slog.Logger
+	tracer                trace.Tracer
 	// scaleFallbackWarned holds the kinds for which scale already warned that it
 	// fell back to the deprecated GET + UPDATE.
 	scaleFallbackWarned sync.Map
