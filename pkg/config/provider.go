@@ -106,7 +106,26 @@ type Kubernetes struct {
 	// Default: false
 	// Since: v1.16.0
 	ReadyOnFirstReplica bool
+
+	// Readiness selects the signal that reports a Deployment or StatefulSet ready.
+	// "replicas" relies on the ready replicas of the workload. "endpoints" also
+	// holds the waiting requests until every Service that selects the workload's
+	// pods lists them as ready endpoints in its EndpointSlices: a pod turns Ready
+	// before its Service routes to it, and a request released in between fails
+	// with a 502 or a 503. "endpoints" needs list on services, pods and
+	// endpointslices.discovery.k8s.io.
+	// Env: SABLIER_PROVIDER_KUBERNETES_READINESS
+	// CLI: --provider.kubernetes.readiness
+	// Default: "replicas"
+	// Since: NEXT_RELEASE
+	Readiness string
 }
+
+// Accepted values for Kubernetes.Readiness.
+const (
+	KubernetesReadinessReplicas  = "replicas"
+	KubernetesReadinessEndpoints = "endpoints"
+)
 
 type Podman struct {
 	// Uri is the address of the Podman API service.
@@ -279,6 +298,8 @@ type ECS struct {
 var providers = []string{"docker", "docker_swarm", "swarm", "kubernetes", "podman", "proxmox_lxc", "systemd", "nomad", "ecs"}
 var dockerStrategies = []string{"stop", "pause"}
 
+var kubernetesReadiness = []string{KubernetesReadinessReplicas, KubernetesReadinessEndpoints}
+
 func NewProviderConfig() Provider {
 	return Provider{
 		Name:              "docker",
@@ -287,6 +308,7 @@ func NewProviderConfig() Provider {
 			QPS:       5,
 			Burst:     10,
 			Delimiter: "_",
+			Readiness: KubernetesReadinessReplicas,
 		},
 		Podman: Podman{
 			Uri: "unix:///run/podman/podman.sock",
@@ -315,6 +337,11 @@ func (provider Provider) IsValid() error {
 					return err
 				}
 			}
+			if p == "kubernetes" {
+				if err := provider.Kubernetes.IsValid(); err != nil {
+					return err
+				}
+			}
 			// Validate Proxmox LXC-specific settings
 			if p == "proxmox_lxc" {
 				if err := provider.ProxmoxLXC.IsValid(); err != nil {
@@ -337,6 +364,14 @@ func (docker Docker) IsValid() error {
 		return nil
 	}
 	return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
+}
+
+func (k Kubernetes) IsValid() error {
+	// An unset value keeps the default, "replicas".
+	if k.Readiness == "" || slices.Contains(kubernetesReadiness, k.Readiness) {
+		return nil
+	}
+	return fmt.Errorf("unrecognized kubernetes readiness %s. readiness available: %v", k.Readiness, kubernetesReadiness)
 }
 
 func (p ProxmoxLXC) IsValid() error {
@@ -366,4 +401,9 @@ func GetProviders() []string {
 // GetDockerStrategies returns the accepted values for the Docker stop strategy.
 func GetDockerStrategies() []string {
 	return dockerStrategies
+}
+
+// GetKubernetesReadiness returns the accepted values for the Kubernetes readiness.
+func GetKubernetesReadiness() []string {
+	return kubernetesReadiness
 }

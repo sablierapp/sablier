@@ -53,6 +53,7 @@ func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Inter
 		slog.String("version", info.String()),
 		slog.Float64("config.qps", float64(config.QPS)),
 		slog.Int("config.burst", config.Burst),
+		slog.String("config.readiness", config.Readiness),
 	)
 
 	return &Provider{
@@ -60,6 +61,7 @@ func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Inter
 		dynamic:             dynamicClient,
 		delimiter:           config.Delimiter,
 		readyOnFirstReplica: config.ReadyOnFirstReplica,
+		readyOnEndpoints:    config.Readiness == providerConfig.KubernetesReadinessEndpoints,
 		l:                   logger,
 		tracer:              otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil

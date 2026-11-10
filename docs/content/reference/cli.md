@@ -184,6 +184,7 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.kubernetes.burst`](#opt-provider-kubernetes-burst) | Maximum burst for K8S API access client-side throttling |
 | [`--provider.kubernetes.delimiter`](#opt-provider-kubernetes-delimiter) | Delimiter used for namespace/resource type/name resolution. |
 | [`--provider.kubernetes.qps`](#opt-provider-kubernetes-qps) | QPS limit for K8S API access client-side throttling |
+| [`--provider.kubernetes.readiness`](#opt-provider-kubernetes-readiness) | Signal that reports a Deployment or StatefulSet ready: replicas (its ready replicas) or endpoints (also wait until its Services route to them) |
 | [`--provider.kubernetes.ready-on-first-replica`](#opt-provider-kubernetes-ready-on-first-replica) | Consider a Deployment or StatefulSet ready as soon as at least one replica is ready, instead of requiring all desired replicas |
 | [`--provider.name`](#opt-provider-name) | Provider to use to manage containers [docker docker_swarm swarm kubernetes podman proxmox_lxc systemd nomad ecs] |
 | [`--provider.nomad.address`](#opt-provider-nomad-address) | Nomad API address (e.g. http://nomad.service.consul:4646). |
@@ -431,6 +432,32 @@ SABLIER_PROVIDER_KUBERNETES_QPS=5
 
 # Command-line flag
 --provider.kubernetes.qps=5
+```
+
+### `--provider.kubernetes.readiness` {#opt-provider-kubernetes-readiness}
+
+Signal that reports a Deployment or StatefulSet ready: replicas (its ready replicas) or endpoints (also wait until its Services route to them)
+
+{{< badge "string" >}} {{< badge content="Default: replicas" >}} {{< badge content="Next release" >}}
+
+Accepted values:
+
+- `replicas`
+- `endpoints`
+
+```yaml
+# sablier.yaml
+provider:
+  kubernetes:
+    readiness: replicas
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_KUBERNETES_READINESS=replicas
+
+# Command-line flag
+--provider.kubernetes.readiness=replicas
 ```
 
 ### `--provider.kubernetes.ready-on-first-replica` {#opt-provider-kubernetes-ready-on-first-replica}

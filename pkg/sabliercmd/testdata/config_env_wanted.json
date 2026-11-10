@@ -20,7 +20,8 @@
       "QPS": 16,
       "Burst": 32,
       "Delimiter": "/",
-      "ReadyOnFirstReplica": true
+      "ReadyOnFirstReplica": true,
+      "Readiness": "endpoints"
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock.env"

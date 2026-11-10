@@ -63,6 +63,30 @@ func TestProvider_IsValid(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid kubernetes provider with endpoints readiness",
+			provider: Provider{
+				Name:       "kubernetes",
+				Kubernetes: Kubernetes{Readiness: "endpoints"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid kubernetes provider with replicas readiness",
+			provider: Provider{
+				Name:       "kubernetes",
+				Kubernetes: Kubernetes{Readiness: "replicas"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid kubernetes readiness",
+			provider: Provider{
+				Name:       "kubernetes",
+				Kubernetes: Kubernetes{Readiness: "pods"},
+			},
+			wantErr: fmt.Errorf("unrecognized kubernetes readiness pods. readiness available: [replicas endpoints]"),
+		},
+		{
 			name: "valid swarm provider",
 			provider: Provider{
 				Name: "swarm",
