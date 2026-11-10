@@ -48,6 +48,31 @@ h1 {
   line-height: 1.5;
 }
 
+.timing {
+  width: 100%;
+  color: #334155;
+  font-size: 0.875rem;
+}
+
+.timing .bar {
+  height: 6px;
+  margin-top: 0.5rem;
+  border-radius: 3px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.timing .bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #2563eb;
+  transition: width 1s linear;
+}
+
+.timing.late { color: #d97706; }
+.timing.late .bar span { background: #d97706; }
+
 .instances {
   list-style: none;
   width: 100%;

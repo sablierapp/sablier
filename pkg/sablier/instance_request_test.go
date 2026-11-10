@@ -42,6 +42,9 @@ func TestInstanceRequest_NewInstance_StartsAsync(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -113,6 +116,9 @@ func TestRequestSession_NewLabeledInstanceStartsWhenRejectUnlabeledRequestsEnabl
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -152,6 +158,9 @@ func TestInstanceRequest_NewInstance_ReturnsBeforeStartCompletes(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -195,6 +204,9 @@ func TestInstanceRequest_DuplicateCallsDoNotHammerProvider(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		// First call: store miss -> triggers requestStart
 		// Second call: store returns the not-ready state written by Put -> hits status != ready path
@@ -275,6 +287,9 @@ func TestInstanceRequest_SecondCallJoinsInFlightPendingStart(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		// Both calls return ErrKeyNotFound so requestStart is entered twice.
 		// The second must coalesce onto the in-flight goroutine without retrying.
@@ -358,6 +373,9 @@ func TestInstanceRequest_AsyncErrorSurfacedOnNotReadyPath(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		// First call: store miss -> requestStart
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
@@ -394,6 +412,9 @@ func TestInstanceRequest_RetryAfterErrorConsumed(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 		secondDone := make(chan struct{})
 
 		// The 1st and 3rd calls start the instance. The 2nd call only reads the store.
@@ -447,6 +468,9 @@ func TestInstanceRequest_SuccessfulStartCleansUpPendingEntry(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 		ready := sablier.InstanceInfo{Name: "nginx", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
 
 		// 1st call: store miss -> requestStart (goroutine succeeds)
@@ -498,6 +522,9 @@ func TestInstanceRequest_StartTimeoutSurfacesError(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -593,6 +620,9 @@ func TestInstanceRequest_NewInstance_RecordsStartMetrics_Success(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -632,6 +662,9 @@ func TestInstanceRequest_NewInstance_RecordsStartFailure(t *testing.T) {
 		}
 		notReady := stoppedInfo
 		notReady.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		notReady.StartedAt = &startedAt
 
 		sessions.EXPECT().Get(ctx, "nginx").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
 		provider.EXPECT().InstanceInspect(gomock.Any(), "nginx").Return(stoppedInfo, nil)
@@ -810,6 +843,12 @@ func TestInstanceRequest_StartFailedWithActiveSession_StartsAgainAfterBackoff(t 
 		}
 		starting := stoppedInfo
 		starting.Status = sablier.InstanceStatusStarting
+		// The bubble's clock does not move before the start is dispatched.
+		startedAt := time.Now()
+		starting.StartedAt = &startedAt
+		// An inspection keeps when the start was dispatched.
+		stoppedSince := stoppedInfo
+		stoppedSince.StartedAt = &startedAt
 		restarted := make(chan struct{})
 
 		gomock.InOrder(
@@ -838,7 +877,7 @@ func TestInstanceRequest_StartFailedWithActiveSession_StartsAgainAfterBackoff(t 
 		assert.ErrorContains(t, err, "instance start failed: the object has been modified")
 
 		// 3rd request, within the backoff: only inspected.
-		sessions.EXPECT().Put(ctx, stoppedInfo, time.Minute).Return(nil)
+		sessions.EXPECT().Put(ctx, stoppedSince, time.Minute).Return(nil)
 		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
 		assert.NilError(t, err)
 		assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStopped))
@@ -989,18 +1028,238 @@ func TestInstanceRequest_ExistingSession_NoFailedStart_IsNotStartedAgain(t *test
 		sablier.InstanceStatusCompleted,
 	} {
 		t.Run(string(status), func(t *testing.T) {
-			manager, sessions, provider := setupSablier(t)
-			ctx := t.Context()
+			synctest.Test(t, func(t *testing.T) {
+				manager, sessions, provider := setupSablier(t)
+				ctx := t.Context()
 
-			inspected := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: status}
-			sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil)
-			provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(inspected, nil)
-			sessions.EXPECT().Put(ctx, inspected, time.Minute).Return(nil)
-			// No InstanceStart expectation: the strict mock fails the test if it is called.
+				inspected := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: status}
+				// The session has no start time: the wait is counted from this
+				// check, unless the instance completed.
+				stored := inspected
+				if status != sablier.InstanceStatusCompleted {
+					checkedAt := time.Now()
+					stored.StartedAt = &checkedAt
+					stored.StartedAtEstimated = true
+				}
+				sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{Name: "hub", Status: sablier.InstanceStatusStarting}, nil)
+				provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(inspected, nil)
+				sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+				// No InstanceStart expectation: the strict mock fails the test if it is called.
 
-			info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
-			assert.NilError(t, err)
-			assert.Equal(t, info.Status, status)
+				info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+				assert.NilError(t, err)
+				assert.Equal(t, info.Status, status)
+			})
 		})
 	}
+}
+
+// Sablier stamps when it starts an instance, keeps that time across the status
+// checks of the session, and learns from it how long the instance takes to
+// become ready: the waiting page shows both.
+func TestRequestSession_LearnsHowLongTheInstanceTakesToStart(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		stopped := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStopped}
+		startedAt := time.Now()
+		starting := stopped
+		starting.Status = sablier.InstanceStatusStarting
+		starting.StartedAt = &startedAt
+
+		provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(nil)
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(stopped, nil)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, *session.Instances["hub"].Instance.StartedAt, startedAt)
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, time.Duration(0))
+		synctest.Wait()
+
+		// Still starting 20 s later: the inspection keeps when the start began.
+		time.Sleep(20 * time.Second)
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(starting, nil)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		session, err = manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, *session.Instances["hub"].Instance.StartedAt, startedAt)
+
+		// Ready 45 s after the start: learned.
+		time.Sleep(25 * time.Second)
+		readyAt := time.Now()
+		ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		stored := ready
+		stored.StartedAt = &startedAt
+		stored.ReadyAt = &readyAt
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err = manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		// One startup is not enough to tell what is typical.
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, time.Duration(0))
+
+		// Learned from the third wake: the median of 45 s, 40 s and 50 s.
+		time.Sleep(time.Hour)
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 40*time.Second, 0, 1), time.Duration(0))
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 50*time.Second, 0, 1), 45*time.Second)
+	})
+}
+
+// wakeHub runs one wake of "hub" through RequestSession: the start, then
+// seenBy checks, readyIn after the start, that all see it ready. Those checks
+// overlap: each read the session before any of them saved it as ready. It
+// returns the TypicalStartup given to the last check, and lets the session
+// expire before returning.
+func wakeHub(t *testing.T, manager *sablier.Sablier, sessions *storetest.MockStore, provider *providertest.MockProvider, readyIn, readyAfter time.Duration, seenBy int) time.Duration {
+	t.Helper()
+	ctx := t.Context()
+
+	stopped := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStopped, ReadyAfter: readyAfter}
+	startedAt := time.Now()
+	starting := stopped
+	starting.Status = sablier.InstanceStatusStarting
+	starting.StartedAt = &startedAt
+
+	provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(nil)
+	sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+	provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(stopped, nil)
+	sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+	_, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+	assert.NilError(t, err)
+	synctest.Wait()
+
+	time.Sleep(readyIn)
+	readyAt := time.Now()
+	ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady, ReadyAfter: readyAfter}
+	stored := ready
+	stored.StartedAt = &startedAt
+	stored.ReadyAt = &readyAt
+	var typical time.Duration
+	for range seenBy {
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		typical = session.Instances["hub"].TypicalStartup
+	}
+
+	time.Sleep(time.Hour)
+	return typical
+}
+
+// Several requests can see the same wake complete. Each one used to add a
+// sample: after three 40 s wakes, one 10 min wake seen by five overlapping
+// requests moved the typical startup to 10 min. A wake is learned once.
+func TestRequestSession_OverlappingChecks_LearnOneStartupPerWake(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+
+		for range 3 {
+			wakeHub(t, manager, sessions, provider, 40*time.Second, 0, 1)
+		}
+		assert.Equal(t, wakeHub(t, manager, sessions, provider, 10*time.Minute, 0, 5), 40*time.Second)
+	})
+}
+
+// The visitor waits for ready-after once the instance is ready: an instance
+// ready at 40 s with ready-after=60s is served after 100 s.
+func TestRequestSession_LearnedStartupIncludesReadyAfter(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+
+		var typical time.Duration
+		for range 3 {
+			typical = wakeHub(t, manager, sessions, provider, 40*time.Second, time.Minute, 1)
+		}
+		assert.Equal(t, typical, 100*time.Second)
+	})
+}
+
+// An instance already up when its session begins (started by hand, kept warm)
+// has no start to measure: the time between two requests is not a startup.
+func TestInstanceRequest_AlreadyReadyInstance_IsNotStamped(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		starting := ready
+		starting.Status = sablier.InstanceStatusStarting
+
+		provider.EXPECT().InstanceStart(gomock.Any(), "hub").Return(nil)
+		sessions.EXPECT().Get(ctx, "hub").Return(sablier.InstanceInfo{}, store.ErrKeyNotFound)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, starting, time.Minute).Return(nil)
+		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Assert(t, info.StartedAt == nil)
+		synctest.Wait()
+
+		time.Sleep(5 * time.Second)
+		readyAt := time.Now()
+		stored := ready
+		stored.ReadyAt = &readyAt
+		sessions.EXPECT().Get(ctx, "hub").Return(starting, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, time.Duration(0))
+	})
+}
+
+// A session recorded without a start time (by a Sablier that did not keep
+// them, begun with the instance running, or a scale-mode wake) counts the wait
+// from the first check that finds the instance not ready, without learning a
+// startup from it: the stamp is saved as estimated, and the check that later
+// sees the instance ready skips it.
+func TestInstanceRequest_SessionWithoutStartTime_CountsFromFirstCheck(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		manager, sessions, provider := setupSablier(t)
+		ctx := t.Context()
+
+		// Learned: the median of 10 s, 40 s and 70 s.
+		for _, d := range []time.Duration{10 * time.Second, 40 * time.Second, 70 * time.Second} {
+			wakeHub(t, manager, sessions, provider, d, 0, 1)
+		}
+
+		legacy := sablier.InstanceInfo{Name: "hub", DesiredReplicas: 1, Status: sablier.InstanceStatusStarting}
+		checkedAt := time.Now()
+		stamped := legacy
+		stamped.StartedAt = &checkedAt
+		stamped.StartedAtEstimated = true
+		sessions.EXPECT().Get(ctx, "hub").Return(legacy, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(legacy, nil)
+		sessions.EXPECT().Put(ctx, stamped, time.Minute).Return(nil)
+		info, err := manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, *info.StartedAt, checkedAt)
+
+		// Still starting a minute later: the stamp is kept, not renewed.
+		time.Sleep(time.Minute)
+		sessions.EXPECT().Get(ctx, "hub").Return(stamped, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(legacy, nil)
+		sessions.EXPECT().Put(ctx, stamped, time.Minute).Return(nil)
+		info, err = manager.InstanceRequest(ctx, "hub", time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, *info.StartedAt, checkedAt)
+
+		// Ready 5 s later: 65 s after the stamp, which is not a startup.
+		time.Sleep(5 * time.Second)
+		readyAt := time.Now()
+		ready := sablier.InstanceInfo{Name: "hub", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}
+		stored := ready
+		stored.StartedAt, stored.StartedAtEstimated, stored.ReadyAt = &checkedAt, true, &readyAt
+		sessions.EXPECT().Get(ctx, "hub").Return(stamped, nil)
+		provider.EXPECT().InstanceInspect(gomock.Any(), "hub").Return(ready, nil)
+		sessions.EXPECT().Put(ctx, stored, time.Minute).Return(nil)
+		session, err := manager.RequestSession(ctx, []string{"hub"}, time.Minute)
+		assert.NilError(t, err)
+		assert.Equal(t, session.Instances["hub"].TypicalStartup, 40*time.Second)
+	})
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/neilotoole/slogt"
 	"github.com/sablierapp/sablier/pkg/sablier"
@@ -112,6 +113,54 @@ func TestStartDynamic(t *testing.T) {
 		r := PerformRequest(app, "GET", "/api/strategies/dynamic?group=test")
 		assert.Equal(t, http.StatusInternalServerError, r.Code)
 		assert.Equal(t, rfc7807.JSONMediaType, r.Header().Get("Content-Type"))
+	})
+	t.Run("StartDynamicStartupTiming", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		// How long the start has lasted is measured against the server clock,
+		// next to how long the instance usually takes.
+		timingFS := fstest.MapFS{"timing.html": &fstest.MapFile{Data: []byte(
+			`{{ range .InstanceStates }}{{ .Name }}:{{ if not .StartedAt.IsZero }}{{ if ge ($.RenderedAt.Sub .StartedAt).Seconds 30.0 }}late{{ else }}early{{ end }}{{ else }}none{{ end }}/{{ .TypicalStartup.Seconds }};{{ end }}`,
+		)}}
+		th, err := theme.NewWithCustomThemes(timingFS, slogt.New(t))
+		assert.NilError(t, err)
+		strategy.Theme = th
+		StartDynamic(router, strategy)
+		startedAt := time.Now().Add(-time.Minute)
+		m.EXPECT().RequestSession(gomock.Any(), []string{"web", "db"}, gomock.Any()).Return(&sablier.SessionState{
+			Instances: map[string]sablier.InstanceInfoWithError{
+				"web": {
+					Instance:       sablier.InstanceInfo{Name: "web", DesiredReplicas: 1, Status: sablier.InstanceStatusStarting, StartedAt: &startedAt},
+					TypicalStartup: 90 * time.Second,
+				},
+				"db": {Instance: sablier.InstanceInfo{Name: "db", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady}},
+			},
+		}, nil)
+		r := PerformRequest(app, "GET", "/api/strategies/dynamic?names=web&names=db&theme=timing")
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Equal(t, r.Body.String(), "db:none/0;web:late/90;")
+	})
+	t.Run("StartDynamicStartupTimingReadyInstanceHasNoStartTime", func(t *testing.T) {
+		app, router, strategy, m := NewApiTest(t)
+		// The session keeps the start time once the instance is up: the page
+		// must not show a ready (or completed) instance as started hours ago.
+		timingFS := fstest.MapFS{"timing.html": &fstest.MapFile{Data: []byte(
+			`{{ range .InstanceStates }}{{ .Name }}:{{ if .StartedAt.IsZero }}none{{ else }}{{ ($.RenderedAt.Sub .StartedAt).Round 3600000000000 }}{{ end }};{{ end }}`,
+		)}}
+		th, err := theme.NewWithCustomThemes(timingFS, slogt.New(t))
+		assert.NilError(t, err)
+		strategy.Theme = th
+		StartDynamic(router, strategy)
+		startedAt := time.Now().Add(-3 * time.Hour)
+		m.EXPECT().RequestSession(gomock.Any(), []string{"web", "db", "job"}, gomock.Any()).Return(&sablier.SessionState{
+			Instances: map[string]sablier.InstanceInfoWithError{
+				"web": {Instance: sablier.InstanceInfo{Name: "web", DesiredReplicas: 1, Status: sablier.InstanceStatusStarting, StartedAt: &startedAt}},
+				"db":  {Instance: sablier.InstanceInfo{Name: "db", CurrentReplicas: 1, DesiredReplicas: 1, Status: sablier.InstanceStatusReady, StartedAt: &startedAt}},
+				"job": {Instance: sablier.InstanceInfo{Name: "job", Status: sablier.InstanceStatusCompleted, StartedAt: &startedAt}},
+			},
+		}, nil)
+		r := PerformRequest(app, "GET", "/api/strategies/dynamic?names=web&names=db&names=job&theme=timing")
+		assert.Equal(t, http.StatusOK, r.Code)
+		assert.Equal(t, r.Body.String(), "db:none;job:none;web:3h0m0s;")
 	})
 	t.Run("StartDynamicSessionNil", func(t *testing.T) {
 		app, router, strategy, m := NewApiTest(t)

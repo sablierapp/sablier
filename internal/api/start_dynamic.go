@@ -157,7 +157,9 @@ func sessionStateToRenderOptionsInstanceState(sessionState *sablier.SessionState
 			})
 			continue
 		}
-		instances = append(instances, instanceStateToRenderOptionsRequestState(v.Instance))
+		instance := instanceStateToRenderOptionsRequestState(v.Instance)
+		instance.TypicalStartup = v.TypicalStartup
+		instances = append(instances, instance)
 	}
 
 	sort.SliceStable(instances, func(i, j int) bool {
@@ -176,11 +178,19 @@ func instanceStateToRenderOptionsRequestState(instanceState sablier.InstanceInfo
 		err = errors.New(instanceState.Message)
 	}
 
+	// The start time stays on the session once the instance is up: a theme
+	// must not show a ready instance as started hours ago.
+	var startedAt time.Time
+	if instanceState.StartedAt != nil && instanceState.Status != sablier.InstanceStatusReady && instanceState.Status != sablier.InstanceStatusCompleted {
+		startedAt = *instanceState.StartedAt
+	}
+
 	return theme.Instance{
 		Name:            instanceState.Name,
 		Status:          string(instanceState.Status),
 		CurrentReplicas: instanceState.CurrentReplicas,
 		DesiredReplicas: instanceState.DesiredReplicas,
+		StartedAt:       startedAt,
 		Error:           err,
 		Provider:        instanceState.Provider,
 		Docker:          instanceState.Docker,

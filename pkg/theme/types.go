@@ -19,6 +19,8 @@ type Instance struct {
 	Error           error                           `json:",omitempty" jsonschema:"description=Error encountered while resolving the instance state if any"`
 	CurrentReplicas int32                           `jsonschema:"description=Current number of running replicas,example=0"`
 	DesiredReplicas int32                           `jsonschema:"description=Target number of replicas to reach before the session is considered ready,example=1"`
+	StartedAt       time.Time                       `json:",omitzero" jsonschema:"description=When Sablier started the instance for the current session. Zero once the instance is ready or completed, and when it was already running or the time is unknown. {{ ($.RenderedAt.Sub .StartedAt).Seconds }} gives how long the start has lasted so far."`
+	TypicalStartup  time.Duration                   `json:",omitempty" jsonschema:"description=Median time the instance took to be served (ready-after included) over its last observed starts as learned in memory since Sablier started. Zero until three starts of the instance have been observed. {{ .TypicalStartup.Seconds }} gives it in seconds."`
 	Provider        string                          `jsonschema:"description=Provider type (docker|swarm|kubernetes|podman|proxmox_lxc|systemd|nomad|ecs),example=docker"`
 	Docker          *sablier.DockerContainerInfo    `json:",omitempty" jsonschema:"description=Docker-specific container metadata (only set when Provider is docker). Fields are accessible in templates as .Docker.ID .Docker.Image .Docker.Labels"`
 	Swarm           *sablier.SwarmServiceInfo       `json:",omitempty" jsonschema:"description=Docker Swarm-specific service metadata (only set when Provider is swarm). Fields are accessible in templates as .Swarm.ID .Swarm.Image .Swarm.Labels"`
@@ -44,4 +46,5 @@ type TemplateData struct {
 	SessionDuration  string     `jsonschema:"description=Human-readable remaining session duration (e.g. '1 hour 30 minutes').,example=1 hour 30 minutes"`
 	RefreshFrequency string     `jsonschema:"description=Page auto-refresh interval in whole seconds as a string (e.g. '30').,example=5"`
 	Version          string     `jsonschema:"description=Current Sablier server version string (e.g. '1.8.0').,example=1.8.0"`
+	RenderedAt       time.Time  `jsonschema:"description=Server time at which the page was rendered. Measure elapsed times against it rather than against the visitor's clock (e.g. {{ ($.RenderedAt.Sub .StartedAt).Seconds }} within InstanceStates)."`
 }
