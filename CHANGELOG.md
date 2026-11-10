@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.21.0](https://github.com/sablierapp/sablier/compare/v1.20.0...v1.21.0) (2026-11-10)
+
+
+### Features
+
+* **kubernetes:** add --provider.kubernetes.readiness=endpoints ([#1303](https://github.com/sablierapp/sablier/issues/1303)) ([9912cd3](https://github.com/sablierapp/sablier/commit/9912cd3f140e707dea500f94cdcf48c06e534f99)), closes [#1273](https://github.com/sablierapp/sablier/issues/1273)
+* **kubernetes:** check whether the Services route to a workload ([#1305](https://github.com/sablierapp/sablier/issues/1305)) ([291c3a1](https://github.com/sablierapp/sablier/commit/291c3a12b66b34a4ac2e5a2ee276327c85417348))
+
+
+### Code Refactoring
+
+* **sablier:** let a provider report readiness for waiting requests ([#1304](https://github.com/sablierapp/sablier/issues/1304)) ([3feedd1](https://github.com/sablierapp/sablier/commit/3feedd12d619aae219f0a5280816a6f8e5581a89))
+
+
+### Tests
+
+* **kubernetes:** check endpoints readiness against a real cluster ([#1306](https://github.com/sablierapp/sablier/issues/1306)) ([d409b56](https://github.com/sablierapp/sablier/commit/d409b563a970b34c7938e76a6b2d5f16a20c97bc))
+
 ## [1.20.0](https://github.com/sablierapp/sablier/compare/v1.19.1...v1.20.0) (2026-11-08)
 
 
