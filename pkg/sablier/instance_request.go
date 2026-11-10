@@ -408,6 +408,16 @@ func (s *Sablier) instanceName(ctx context.Context, name string) string {
 	return name
 }
 
+// inspectReadiness inspects name to decide whether the requests waiting for it
+// may proceed: a ready status is stored in the session and not checked again.
+// See ReadinessInspector.
+func (s *Sablier) inspectReadiness(ctx context.Context, name string) (InstanceInfo, error) {
+	if r, ok := s.provider.(ReadinessInspector); ok {
+		return r.InstanceInspectReadiness(ctx, name)
+	}
+	return s.provider.InstanceInspect(ctx, name)
+}
+
 func (s *Sablier) InstanceRequest(ctx context.Context, name string, duration time.Duration) (InstanceInfo, error) {
 	return s.instanceRequest(ctx, name, duration, false)
 }
@@ -471,7 +481,7 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 			s.l.DebugContext(ctx, "request to check instance status received", slog.String("instance", name), slog.String("current_status", string(state.Status)))
 			inspectCtx, inspectSpan := s.tracer.Start(ctx, "sablier.instance.inspect",
 				trace.WithAttributes(attribute.String("instance", name)))
-			state, err = s.provider.InstanceInspect(inspectCtx, name)
+			state, err = s.inspectReadiness(inspectCtx, name)
 			inspectSpan.RecordError(err)
 			if err != nil {
 				inspectSpan.SetStatus(codes.Error, err.Error())

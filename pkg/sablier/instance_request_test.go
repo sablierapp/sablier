@@ -795,6 +795,36 @@ func TestInstanceRequest_ResolvesInstanceNameBeforeSessionLookup(t *testing.T) {
 	assert.Equal(t, info.Name, "web")
 }
 
+type readinessProvider struct {
+	*providertest.MockProvider
+	*providertest.MockReadinessInspector
+}
+
+// The status check that decides whether a waiting request may proceed uses
+// InstanceInspectReadiness when the provider implements it: a Kubernetes
+// workload whose pods are ready is not ready until its Services route to it.
+func TestInstanceRequest_ChecksReadinessWithReadinessInspector(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	p := providertest.NewMockProvider(ctrl)
+	r := providertest.NewMockReadinessInspector(ctrl)
+	sessions := storetest.NewMockStore(ctrl)
+	manager := sablier.New(slogt.New(t), sessions, readinessProvider{p, r})
+	ctx := t.Context()
+
+	starting := sablier.InstanceInfo{Name: "web", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStarting}
+	waiting := sablier.InstanceInfo{Name: "web", CurrentReplicas: 0, DesiredReplicas: 1, Status: sablier.InstanceStatusStarting,
+		Message: `waiting for service "web" to route to the workload: 0 of 1 pods routed`}
+	sessions.EXPECT().Get(ctx, "web").Return(starting, nil)
+	// No InstanceInspect call is expected: the mock fails the test if one happens.
+	r.EXPECT().InstanceInspectReadiness(gomock.Any(), "web").Return(waiting, nil)
+	sessions.EXPECT().Put(ctx, waiting, time.Minute).Return(nil)
+
+	info, err := manager.InstanceRequest(ctx, "web", time.Minute)
+	assert.NilError(t, err)
+	assert.Equal(t, info.Status, sablier.InstanceStatus(sablier.InstanceStatusStarting))
+	assert.Equal(t, info.Message, waiting.Message)
+}
+
 // A start that fails while the session is kept (e.g. a Kubernetes update
 // conflict) must not leave the instance stopped for the rest of the session.
 // The failure is surfaced once; once the backoff has elapsed, the next request

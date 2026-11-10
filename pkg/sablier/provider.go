@@ -60,6 +60,18 @@ type InstanceNameResolver interface {
 	InstanceName(ctx context.Context, name string) string
 }
 
+// ReadinessInspector is implemented by providers whose instances can report
+// ready before traffic reaches them, such as a Kubernetes workload whose pods
+// are ready before its Services route to them. Like InstanceNameResolver, it is
+// found by type assertion on the Provider.
+type ReadinessInspector interface {
+	// InstanceInspectReadiness is InstanceInspect, except that it reports the
+	// instance ready only once it receives traffic. Sablier calls it where it
+	// decides whether the requests waiting for an instance may proceed. Every
+	// other caller uses InstanceInspect, which stays cheaper.
+	InstanceInspectReadiness(ctx context.Context, name string) (InstanceInfo, error)
+}
+
 // ActivityTarget is what an ActivitySource needs to watch a running instance's
 // traffic on the local host.
 type ActivityTarget struct {
