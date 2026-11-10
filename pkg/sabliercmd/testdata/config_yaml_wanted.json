@@ -20,7 +20,8 @@
       "QPS": 64,
       "Burst": 128,
       "Delimiter": ".",
-      "ReadyOnFirstReplica": true
+      "ReadyOnFirstReplica": true,
+      "Readiness": "endpoints"
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock.yml"

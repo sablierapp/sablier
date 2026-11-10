@@ -20,7 +20,8 @@
       "QPS": 5,
       "Burst": 10,
       "Delimiter": "_",
-      "ReadyOnFirstReplica": false
+      "ReadyOnFirstReplica": false,
+      "Readiness": "replicas"
     },
     "Podman": {
       "Uri": "unix:///run/podman/podman.sock"

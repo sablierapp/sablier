@@ -25,6 +25,14 @@ rules:
   - apiGroups: ["redis.redis.opstreelabs.in"]
     resources: ["redis"]
     verbs: ["get", "patch"] # patch toggles skip-reconcile
+  # Uncomment with --provider.kubernetes.readiness=endpoints. Listing pods
+  # reads their specs, including inline environment values, in every namespace.
+  # - apiGroups: [""]
+  #   resources: ["services", "pods"]
+  #   verbs: ["list"]
+  # - apiGroups: ["discovery.k8s.io"]
+  #   resources: ["endpointslices"]
+  #   verbs: ["list"]
 # endregion
 ---
 apiVersion: rbac.authorization.k8s.io/v1

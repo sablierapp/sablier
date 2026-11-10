@@ -75,12 +75,13 @@ Sablier scales opted-in workloads to zero when it starts. A workload you deploy 
 |---|---|---|
 | [`--provider.kubernetes.delimiter`](/reference/cli/#opt-provider-kubernetes-delimiter) | `_` | The separator in [instance names](#instance-names). Prefer `.` or `/`; `_` is kept for backward compatibility. |
 | [`--provider.kubernetes.ready-on-first-replica`](/reference/cli/#opt-provider-kubernetes-ready-on-first-replica) | `false` | Report a workload ready as soon as one replica is ready, instead of all of them. Since v1.16.0. |
+| [`--provider.kubernetes.readiness`](/reference/cli/#opt-provider-kubernetes-readiness) | `replicas` | `endpoints` also waits until the workload's Services route to its pods. See [readiness](#readiness). |
 | [`--provider.kubernetes.qps`](/reference/cli/#opt-provider-kubernetes-qps) | `5` | Client-side limit of Kubernetes API requests per second. |
 | [`--provider.kubernetes.burst`](/reference/cli/#opt-provider-kubernetes-burst) | `10` | Requests allowed above that limit in a burst. |
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/).
 
-The Kubernetes client waits on the client side whenever Sablier sends more than `qps` requests per second for longer than `burst` allows. Sablier discovers and indexes workloads with a few list and watch requests, but some work still costs about one request per opted-in workload: scaling running workloads to zero when Sablier starts, warming workloads that were started outside Sablier, and checking workloads that have running hours. With many opted-in workloads, this can delay requests that arrive at the same time. If you manage more than a few dozen workloads, raise both values, for example `--provider.kubernetes.qps=50 --provider.kubernetes.burst=100`. The API server's own [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) still protects it.
+The Kubernetes client waits on the client side whenever Sablier sends more than `qps` requests per second for longer than `burst` allows. Sablier discovers and indexes workloads with a few list and watch requests, but some work still costs about one request per opted-in workload: scaling running workloads to zero when Sablier starts, warming workloads that were started outside Sablier, and checking workloads that have running hours. With [`--provider.kubernetes.readiness=endpoints`](#wait-for-the-service-to-route), each check of a waiting request also costs three list requests once the workload's replicas are ready, until its Services route to it. With many opted-in workloads, this can delay requests that arrive at the same time. If you manage more than a few dozen workloads, raise both values, for example `--provider.kubernetes.qps=50 --provider.kubernetes.burst=100`. The API server's own [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) still protects it.
 
 ### Workloads
 
@@ -240,6 +241,20 @@ Sablier reports a [Deployment](https://kubernetes.io/docs/concepts/workloads/con
 A replica is ready when its pod passes its [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes), so give your containers one.
 
 A CloudNativePG Cluster is **stopped** when its `cnpg.io/hibernation` [annotation](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) is `"on"`, **ready** when `status.readyInstances` reaches `spec.instances`, and **starting** otherwise.
+
+#### Wait for the Service to route {since="next"}
+
+A pod turns ready before its [Service](https://kubernetes.io/docs/concepts/services-networking/service/) routes to it. The [EndpointSlice](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/) controller first marks the pod's endpoint ready, then kube-proxy and your reverse proxy apply the change. A request that Sablier releases in between fails with a `502` or a `503`.
+
+With `--provider.kubernetes.readiness=endpoints`, a Deployment or StatefulSet whose replicas are ready stays **starting** until enough of its pods are routed: all desired replicas, or one with `--provider.kubernetes.ready-on-first-replica`. A pod is routed when it is ready and every Service that selects it lists it as a ready endpoint. A per-replica Service, such as one that selects `statefulset.kubernetes.io/pod-name`, counts too. The instance's message names the Service it waits for. A workload that no Service selects is reported from its replicas only. CloudNativePG Clusters are not affected.
+
+Sablier only checks this while requests wait for the workload. Other checks, such as running hours or the expiration of a session, report the workload from its replicas.
+
+This mode needs `list` on `services`, `pods` and `endpointslices` (`discovery.k8s.io`): uncomment the last rules of the [manifests](#install-sablier). The Helm chart does not grant them yet: bind an extra ClusterRole to the `sablier-<release>` service account. If Sablier cannot list them, it logs a warning once and reports workloads from their replicas. If a list fails for another reason, such as a timeout, the workload stays **starting** and Sablier checks again on the next request.
+
+{{< callout type="info" >}}
+The reverse proxy can still lag a little behind the EndpointSlice: kube-proxy programs a ClusterIP Service shortly after, and Traefik applies provider changes at most every `providersThrottleDuration` (2s by default). A retry on connection failure in the proxy, or a short [ready after](#ready-after) delay, covers the rest.
+{{< /callout >}}
 
 ### Limitations
 

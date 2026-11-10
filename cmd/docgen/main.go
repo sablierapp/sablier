@@ -48,10 +48,11 @@ var categoryOrder = []string{"General", "Activity", "Logging", "Provider", "Serv
 // sourced from the code where possible so the list never drifts.
 func enumValues() map[string][]string {
 	return map[string][]string{
-		"provider.name":            config.GetProviders(),
-		"provider.docker.strategy": config.GetDockerStrategies(),
-		"logging.level":            {"error", "warn", "info", "debug"},
-		"tracing.exporter-type":    {"otlphttp", "stdout"},
+		"provider.name":                 config.GetProviders(),
+		"provider.docker.strategy":      config.GetDockerStrategies(),
+		"provider.kubernetes.readiness": config.GetKubernetesReadiness(),
+		"logging.level":                 {"error", "warn", "info", "debug"},
+		"tracing.exporter-type":         {"otlphttp", "stdout"},
 	}
 }
 
