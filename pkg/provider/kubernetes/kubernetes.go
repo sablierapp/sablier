@@ -26,8 +26,11 @@ type Provider struct {
 	dynamic             dynamic.Interface
 	delimiter           string
 	readyOnFirstReplica bool
-	l                   *slog.Logger
-	tracer              trace.Tracer
+	// reportPodProblems makes the inspection of a starting Deployment or
+	// StatefulSet report a pod stuck in a state waiting will not resolve.
+	reportPodProblems bool
+	l                 *slog.Logger
+	tracer            trace.Tracer
 	// scaleFallbackWarned holds the kinds for which scale already warned that it
 	// fell back to the deprecated GET + UPDATE.
 	scaleFallbackWarned sync.Map
@@ -54,6 +57,7 @@ func New(ctx context.Context, client *k8s.Clientset, dynamicClient dynamic.Inter
 		dynamic:             dynamicClient,
 		delimiter:           config.Delimiter,
 		readyOnFirstReplica: config.ReadyOnFirstReplica,
+		reportPodProblems:   config.ReportPodProblems,
 		l:                   logger,
 		tracer:              otel.Tracer("github.com/sablierapp/sablier/pkg/provider/kubernetes"),
 	}, nil

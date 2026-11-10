@@ -6,6 +6,7 @@ provider:
     burst: 128
     delimiter: .
     ready-on-first-replica: true
+    report-pod-problems: true
   podman:
     uri: unix:///run/podman/podman.sock.yml
   systemd:
