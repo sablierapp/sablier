@@ -9,12 +9,18 @@ import (
 )
 
 func (p *Provider) StatefulSetInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
+	_, info, err := p.statefulSetInspect(ctx, config)
+	return info, err
+}
+
+// statefulSetInspect is StatefulSetInspect, and also returns the statefulset.
+func (p *Provider) statefulSetInspect(ctx context.Context, config ParsedName) (*appsv1.StatefulSet, sablier.InstanceInfo, error) {
 	ss, err := p.Client.AppsV1().StatefulSets(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
-		return sablier.InstanceInfo{}, err
+		return nil, sablier.InstanceInfo{}, err
 	}
 
-	return p.statefulSetInfo(ss, config), nil
+	return ss, p.statefulSetInfo(ss, config), nil
 }
 
 // statefulSetInfo converts ss into the InstanceInfo that StatefulSetInspect

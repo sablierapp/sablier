@@ -10,14 +10,20 @@ import (
 )
 
 func (p *Provider) DeploymentInspect(ctx context.Context, config ParsedName) (sablier.InstanceInfo, error) {
+	_, info, err := p.deploymentInspect(ctx, config)
+	return info, err
+}
+
+// deploymentInspect is DeploymentInspect, and also returns the deployment.
+func (p *Provider) deploymentInspect(ctx context.Context, config ParsedName) (*appsv1.Deployment, sablier.InstanceInfo, error) {
 	d, err := p.Client.AppsV1().Deployments(config.Namespace).Get(ctx, config.Name, metav1.GetOptions{})
 	if err != nil {
-		return sablier.InstanceInfo{}, fmt.Errorf("error getting deployment: %w", err)
+		return nil, sablier.InstanceInfo{}, fmt.Errorf("error getting deployment: %w", err)
 	}
 
 	p.l.DebugContext(ctx, "deployment inspected", "deployment", config.Name, "namespace", config.Namespace, "replicas", d.Status.Replicas, "readyReplicas", d.Status.ReadyReplicas, "availableReplicas", d.Status.AvailableReplicas)
 
-	return p.deploymentInfo(d, config), nil
+	return d, p.deploymentInfo(d, config), nil
 }
 
 // deploymentInfo converts d into the InstanceInfo that DeploymentInspect
