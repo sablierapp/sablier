@@ -183,6 +183,45 @@ func (mr *MockInstanceNameResolverMockRecorder) InstanceName(ctx, name any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceName", reflect.TypeOf((*MockInstanceNameResolver)(nil).InstanceName), ctx, name)
 }
 
+// MockReadinessInspector is a mock of ReadinessInspector interface.
+type MockReadinessInspector struct {
+	ctrl     *gomock.Controller
+	recorder *MockReadinessInspectorMockRecorder
+	isgomock struct{}
+}
+
+// MockReadinessInspectorMockRecorder is the mock recorder for MockReadinessInspector.
+type MockReadinessInspectorMockRecorder struct {
+	mock *MockReadinessInspector
+}
+
+// NewMockReadinessInspector creates a new mock instance.
+func NewMockReadinessInspector(ctrl *gomock.Controller) *MockReadinessInspector {
+	mock := &MockReadinessInspector{ctrl: ctrl}
+	mock.recorder = &MockReadinessInspectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockReadinessInspector) EXPECT() *MockReadinessInspectorMockRecorder {
+	return m.recorder
+}
+
+// InstanceInspectReadiness mocks base method.
+func (m *MockReadinessInspector) InstanceInspectReadiness(ctx context.Context, name string) (sablier.InstanceInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstanceInspectReadiness", ctx, name)
+	ret0, _ := ret[0].(sablier.InstanceInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstanceInspectReadiness indicates an expected call of InstanceInspectReadiness.
+func (mr *MockReadinessInspectorMockRecorder) InstanceInspectReadiness(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceInspectReadiness", reflect.TypeOf((*MockReadinessInspector)(nil).InstanceInspectReadiness), ctx, name)
+}
+
 // MockActivityHost is a mock of ActivityHost interface.
 type MockActivityHost struct {
 	ctrl     *gomock.Controller
