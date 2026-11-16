@@ -21,6 +21,19 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  {{- /*
+    Startup timing, on the server clock (see "Startup timing" in the themes docs):
+      $elapsed  seconds since the oldest start still in progress (.StartedAt is
+                zero once an instance is ready), -1 when unknown;
+      $typical  the longest .TypicalStartup of the instances in seconds, zero
+                until Sablier has seen each of them start three times.
+    Both need show_details=true, which fills .InstanceStates.
+  */ -}}
+  {{- $elapsed := -1.0 }}{{ $since := 0 }}{{ $typical := 0.0 }}{{ $usual := 0 }}
+  {{- range .InstanceStates }}
+    {{- if not .StartedAt.IsZero }}{{ $e := ($.RenderedAt.Sub .StartedAt).Seconds }}{{ if gt $e $elapsed }}{{ $elapsed = $e }}{{ $since = ($.RenderedAt.Sub .StartedAt).Round 1000000000 }}{{ end }}{{ end }}
+    {{- if gt .TypicalStartup.Seconds $typical }}{{ $typical = .TypicalStartup.Seconds }}{{ $usual = .TypicalStartup.Round 1000000000 }}{{ end }}
+  {{- end }}
   <div class="page">
     <img src="imgs/sablier-rotating-optimized.gif" alt="" class="spinner" aria-hidden="true">
 
@@ -29,6 +42,17 @@
       This page refreshes automatically. Your session expires after
       {{ .SessionDuration }} of inactivity.
     </p>
+
+    {{- if ge $elapsed 0.0 }}
+    <div class="timing" id="timing" data-elapsed="{{ $elapsed }}" data-typical="{{ $typical }}">
+      <p id="timing-text" aria-live="polite">
+        Started {{ $since }} ago{{ if gt $typical 0.0 }}, usually ready in about {{ $usual }}{{ end }}.
+      </p>
+      {{- if gt $typical 0.0 }}
+      <div class="bar" aria-hidden="true"><span id="timing-bar"></span></div>
+      {{- end }}
+    </div>
+    {{- end }}
 
     {{ if .InstanceStates }}
     <ul class="instances">
@@ -39,7 +63,7 @@
           {{- if .Error -}}
             {{ .Error }}
           {{- else -}}
-            {{ .Status }} ({{ .CurrentReplicas }}/{{ .DesiredReplicas }})
+            {{ .Status }} ({{ .CurrentReplicas }}/{{ .DesiredReplicas }}){{ if .TypicalStartup }} · usually {{ .TypicalStartup.Round 1000000000 }}{{ end }}
           {{- end -}}
         </span>
       </li>

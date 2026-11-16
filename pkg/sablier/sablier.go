@@ -44,6 +44,10 @@ type Sablier struct {
 	// group members that both depend on the same database) never start it twice.
 	depStarts map[string]*depStart
 
+	// startups learns how long each instance takes to become ready after a
+	// start, for the waiting page.
+	startups *startupStats
+
 	// BlockingRefreshFrequency is the maximum interval between two readiness
 	// checks of a blocking request. Defaults to 5 seconds.
 	BlockingRefreshFrequency time.Duration
@@ -92,6 +96,7 @@ func New(logger *slog.Logger, store Store, provider Provider) *Sablier {
 		pendingStarts:                 map[string]*pendingStart{},
 		failedStarts:                  map[string]*failedStart{},
 		depStarts:                     map[string]*depStart{},
+		startups:                      newStartupStats(),
 		l:                             logger,
 		metrics:                       metrics.Noop{},
 		tracer:                        otel.Tracer("github.com/sablierapp/sablier"),
