@@ -91,48 +91,4 @@ document.addEventListener('click', function (e) {
 });
 </script>
 
-{{- /*
-  Persist the sidebar sections' expanded/collapsed state across page loads.
-  Hextra re-derives which sections are open from the current page on every load;
-  this remembers the reader's manual toggles in localStorage and restores them on
-  refresh, while always keeping the section that contains the current page open.
-*/ -}}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  var KEY = 'sablier-sidebar-open';
-  var nav = document.querySelector('.hextra-sidebar-container ul[class*="max-md:hidden"]');
-  if (!nav) return;
-
-  // Collapsible sections are the <li> that wrap a children container.
-  function sections() {
-    return Array.prototype.filter.call(nav.querySelectorAll('li'), function (li) {
-      return li.querySelector(':scope > .hextra-sidebar-children');
-    });
-  }
-  function keyOf(li) {
-    var a = li.querySelector(':scope > .hextra-sidebar-item a[href], :scope > a[href]');
-    return a ? a.getAttribute('href') : null;
-  }
-  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-  function save() {
-    var map = load();
-    sections().forEach(function (li) { var k = keyOf(li); if (k) map[k] = li.classList.contains('open'); });
-    try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (e) {}
-  }
-
-  // Restore saved state, but never collapse the section holding the current page.
-  var saved = load();
-  sections().forEach(function (li) {
-    var k = keyOf(li);
-    if (!k || !Object.prototype.hasOwnProperty.call(saved, k)) return;
-    var hasActive = !!li.querySelector('.hextra-sidebar-item[data-active="true"]');
-    if (saved[k]) li.classList.add('open');
-    else if (!hasActive) li.classList.remove('open');
-  });
-
-  // Save whenever a section's "open" class changes (Hextra's own toggle).
-  var observer = new MutationObserver(save);
-  sections().forEach(function (li) { observer.observe(li, { attributes: true, attributeFilter: ['class'] }); });
-});
-</script>
 <script defer src="https://cloud.umami.is/script.js" data-website-id="d7d67c90-e2a3-42b3-8fd7-3bbfc1839277"></script>

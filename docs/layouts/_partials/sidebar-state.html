@@ -1,0 +1,83 @@
+{{- /*
+  Keeps the sidebar where the reader left it across page loads: which sections
+  are expanded (localStorage, survives visits) and how far it is scrolled
+  (sessionStorage, this tab only).
+
+  Every sidebar link is a full page load, so this state has to be put back
+  before the browser paints the new page. Waiting for DOMContentLoaded is too
+  late: that event waits for every deferred script (analytics, search, mermaid),
+  so the page would first paint with Hextra's defaults and then visibly snap.
+  This partial is therefore rendered immediately after the sidebar partial and
+  runs synchronously while the page is still being parsed.
+
+  Hextra's sidebar.js then calls scrollToActiveItem() on DOMContentLoaded, which
+  scrolls the active item to the top and would undo the restore. When we have
+  restored a position that keeps the active item in view, we swallow that one
+  scrollTo call; otherwise Hextra's own behaviour is left untouched.
+
+  Include it right after `partial "sidebar.html"` in every layout that renders
+  the docs sidebar (layouts/docs/single.html and layouts/docs/list.html).
+*/ -}}
+<script>
+(function () {
+  var OPEN_KEY = 'sablier-sidebar-open';
+  var SCROLL_KEY = 'sablier-sidebar-scroll';
+
+  var box = document.querySelector('aside.hextra-sidebar-container > .hextra-scrollbar');
+  var nav = box && box.querySelector('ul[class*="max-md:hidden"]');
+  if (!nav) return;
+
+  function read(store, key) { try { return store.getItem(key); } catch (e) { return null; } }
+  function write(store, key, value) { try { store.setItem(key, value); } catch (e) {} }
+
+  // Collapsible sections are the <li> that wrap a children container.
+  var sections = Array.prototype.filter.call(nav.querySelectorAll('li'), function (li) {
+    return li.querySelector(':scope > .hextra-sidebar-children');
+  });
+  function keyOf(li) {
+    var a = li.querySelector(':scope > .hextra-sidebar-item a[href], :scope > a[href]');
+    return a ? a.getAttribute('href') : null;
+  }
+  function loadOpen() { try { return JSON.parse(read(localStorage, OPEN_KEY)) || {}; } catch (e) { return {}; } }
+
+  // 1. Expanded sections. Never collapse the section holding the current page.
+  var saved = loadOpen();
+  sections.forEach(function (li) {
+    var k = keyOf(li);
+    if (!k || !Object.prototype.hasOwnProperty.call(saved, k)) return;
+    var open = saved[k] || !!li.querySelector('.hextra-sidebar-item[data-active="true"]');
+    li.classList.toggle('open', open);
+    var button = li.querySelector(':scope > .hextra-sidebar-item .hextra-sidebar-collapsible-button');
+    if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // 2. Scroll position, only for the desktop sidebar (the mobile menu is a
+  //    separate list in the same scroll box).
+  var top = parseInt(read(sessionStorage, SCROLL_KEY), 10);
+  if (!isNaN(top) && nav.getBoundingClientRect().height > 0) {
+    box.scrollTop = top;
+    var active = nav.querySelector('.hextra-sidebar-active-item');
+    var a = active && active.getBoundingClientRect();
+    var c = box.getBoundingClientRect();
+    if (!a || (a.top >= c.top && a.bottom <= c.bottom)) {
+      // 3. Swallow Hextra's scrollToActiveItem() for this page load only.
+      box.scrollTo = function () {};
+      document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () { delete box.scrollTo; }, 0);
+      });
+    }
+  }
+
+  // Save on the way out.
+  function saveOpen() {
+    var map = loadOpen();
+    sections.forEach(function (li) { var k = keyOf(li); if (k) map[k] = li.classList.contains('open'); });
+    write(localStorage, OPEN_KEY, JSON.stringify(map));
+  }
+  function saveScroll() { write(sessionStorage, SCROLL_KEY, String(box.scrollTop)); }
+  var observer = new MutationObserver(saveOpen);
+  sections.forEach(function (li) { observer.observe(li, { attributes: true, attributeFilter: ['class'] }); });
+  box.addEventListener('click', function (e) { if (e.target.closest('a[href]')) saveScroll(); }, true);
+  window.addEventListener('pagehide', saveScroll);
+})();
+</script>

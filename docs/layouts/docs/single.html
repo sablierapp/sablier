@@ -1,9 +1,11 @@
 {{- /* Overrides Hextra's docs/single.html (v0.12.3) to show a "Since" badge next to
-  the page title when the front matter sets `since`. Everything else is
+  the page title when the front matter sets `since`, and to render the
+  sidebar-state partial right after the sidebar. Everything else is
   unchanged from the theme; re-sync it when bumping Hextra. */ -}}
 {{ define "main" }}
   <div class='hx:mx-auto hx:flex hextra-max-page-width'>
     {{ partial "sidebar.html" (dict "context" .) }}
+    {{ partial "sidebar-state.html" . }}
     {{ partial "toc.html" . }}
     <article class="hx:w-full hx:break-words hx:flex hx:min-h-[calc(100vh-var(--navbar-height))] hx:min-w-0 hx:justify-center hx:pb-8 hx:pr-[calc(env(safe-area-inset-right)-1.5rem)]">
       <main id="content" class="hx:w-full hx:min-w-0 hextra-max-content-width hx:px-6 hx:pt-4 hx:md:px-12">
