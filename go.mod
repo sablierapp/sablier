@@ -48,7 +48,7 @@ require (
 	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.50.0
 	google.golang.org/grpc v1.85.0
-	gopkg.in/ini.v1 v1.67.3
+	gopkg.in/ini.v1 v1.68.0
 	gotest.tools/v3 v3.5.2
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
