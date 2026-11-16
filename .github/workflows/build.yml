@@ -87,7 +87,7 @@ jobs:
       run: cat test-report.json | go tool -modfile=tools.mod go-test-report
 
     - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+      uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
       # SONAR_TOKEN is not exposed to fork PRs, so the scan only runs for branches
       # pushed to this repo (pushes to main and same-repo PRs), never for forks.
       if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork }}
