@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.1](https://github.com/sablierapp/sablier/compare/v1.21.0...v1.21.1) (2026-11-16)
+
+
+### Documentation
+
+* keep the sidebar's scroll position and open sections across pages ([#1311](https://github.com/sablierapp/sablier/issues/1311)) ([6ae0382](https://github.com/sablierapp/sablier/commit/6ae03823d6cb9eb7039b2bbaf6deebdd886708e1))
+
 ## [1.21.0](https://github.com/sablierapp/sablier/compare/v1.20.0...v1.21.0) (2026-11-10)
 
 
