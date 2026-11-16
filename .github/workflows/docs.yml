@@ -28,6 +28,15 @@ defaults:
 
 jobs:
   build:
+    # Skip the push of a release-please release commit and let the `release`
+    # event deploy it instead. That push runs before release-please has created
+    # the vX.Y.Z tag, so it would build the previous release at the root. Both
+    # runs deploy the same commit, and GitHub Pages keys deployments by commit
+    # SHA, so the later `release` deployment is reported as successful but never
+    # replaces the stale one.
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'chore(main): release ')
     runs-on: ubuntu-latest
     # Least privilege: the build job only reads the repository.
     permissions:
