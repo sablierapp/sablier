@@ -98,6 +98,7 @@ Sablier stops opted-in containers when it starts. A container you start afterwar
 |---|---|---|
 | [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy) | `stop` | `stop` or `pause` idle containers. See [Pause instead of stop](#pause-instead-of-stop). Since v1.11.0. |
 | [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) | `false` | Report a one-shot container that exited `0` as completed. See [One-shot containers](#one-shot-containers). Deprecated: the default in v2. Since v1.15.0. |
+| [`--provider.docker.http-client-timeout`](/reference/cli/#opt-provider-docker-http-client-timeout) | `0s` | Timeout for every Docker daemon request, so a daemon call that never returns cannot freeze group discovery. The events stream is cut and re-opened at each interval. `0` disables it. Next release. |
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). Sablier connects to the daemon with the [Docker environment variables](#install-sablier). With [tracing](/features/tracing/) on, every Docker API call becomes a span, with no daemon configuration.
 

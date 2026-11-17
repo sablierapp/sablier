@@ -177,6 +177,7 @@ SABLIER_LOGGING_LEVEL=info
 | [`--provider.auto-stop-on-startup`](#opt-provider-auto-stop-on-startup) | Stop all sablier.enable=true instances running at startup that were not started by Sablier |
 | [`--provider.auto-warm-externally-started`](#opt-provider-auto-warm-externally-started) | Continuously create a default-duration session for instances with sablier.enable=true that are running but were not started by Sablier, instead of stopping them |
 | [`--provider.docker.honor-restart-policy`](#opt-provider-docker-honor-restart-policy) | Honor the container restart policy on successful exit: report "no"/"on-failure" containers as completed and exited "always"/"unless-stopped" containers as stopped. |
+| [`--provider.docker.http-client-timeout`](#opt-provider-docker-http-client-timeout) | Timeout for every request to the Docker daemon, including the events stream, which is then re-opened. |
 | [`--provider.docker.strategy`](#opt-provider-docker-strategy) | Strategy to use to stop docker containers (stop or pause) |
 | [`--provider.ecs.cluster`](#opt-provider-ecs-cluster) | ECS cluster name or ARN that holds the services to manage |
 | [`--provider.ecs.endpoint`](#opt-provider-ecs-endpoint) | ECS API endpoint URL override, for example for a local emulator |
@@ -280,6 +281,27 @@ SABLIER_PROVIDER_DOCKER_HONOR_RESTART_POLICY=false
 
 # Command-line flag
 --provider.docker.honor-restart-policy=false
+```
+
+### `--provider.docker.http-client-timeout` {#opt-provider-docker-http-client-timeout}
+
+Timeout for every request to the Docker daemon, including the events stream, which is then re-opened. 0 disables it.
+
+{{< badge "duration" >}} {{< badge content="Default: 0s" >}} {{< badge content="Next release" >}}
+
+```yaml
+# sablier.yaml
+provider:
+  docker:
+    http-client-timeout: 0s
+```
+
+```bash
+# Environment variable
+SABLIER_PROVIDER_DOCKER_HTTP_CLIENT_TIMEOUT=0s
+
+# Command-line flag
+--provider.docker.http-client-timeout=0s
 ```
 
 ### `--provider.docker.strategy` {#opt-provider-docker-strategy}

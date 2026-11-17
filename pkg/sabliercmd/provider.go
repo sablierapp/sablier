@@ -51,7 +51,7 @@ func setupProvider(ctx context.Context, logger *slog.Logger, config config.Provi
 		// variables (DOCKER_HOST, DOCKER_API_VERSION, DOCKER_CERT_PATH,
 		// DOCKER_TLS_VERIFY) through client.FromEnv. client.WithTraceProvider
 		// instruments all Docker API calls via the moby otelhttp transport wrapper.
-		cli, err := client.New(client.FromEnv, client.WithTraceProvider(otel.GetTracerProvider()))
+		cli, err := client.New(client.FromEnv, client.WithTraceProvider(otel.GetTracerProvider()), client.WithTimeout(config.Docker.HTTPClientTimeout))
 		if err != nil {
 			return nil, fmt.Errorf("cannot create docker client: %v", err)
 		}
