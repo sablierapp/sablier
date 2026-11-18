@@ -46,10 +46,16 @@ type mockNomad struct {
 	tokens          map[string]int             // X-Nomad-Token header -> count
 	listFail        bool
 	scaleFail       bool
-	streamFail      bool
-	streams         map[int]chan []byte
-	nextStream      int
-	streamOpens     atomic.Int32
+	// scaleDelay makes the scale endpoint behave like Nomad under load: it reads
+	// the job, waits, then applies the change only if the job did not change
+	// meanwhile (Nomad commits with an enforced job modify index).
+	scaleDelay       time.Duration
+	scaleInFlight    int
+	maxScaleInFlight int
+	streamFail       bool
+	streams          map[int]chan []byte
+	nextStream       int
+	streamOpens      atomic.Int32
 }
 
 func newMockNomad(t *testing.T) *mockNomad {
@@ -169,6 +175,32 @@ func (m *mockNomad) jobModifyIndex(jobID string) uint64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return *m.jobs[jobID].JobModifyIndex
+}
+
+// setScaleDelay slows the scale endpoint down, see mockNomad.scaleDelay.
+func (m *mockNomad) setScaleDelay(d time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.scaleDelay = d
+}
+
+// getMaxScaleInFlight returns the most scale requests that were waiting at once.
+func (m *mockNomad) getMaxScaleInFlight() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.maxScaleInFlight
+}
+
+// groupCount returns the current count of a task group.
+func (m *mockNomad) groupCount(jobID, group string) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, tg := range m.jobs[jobID].TaskGroups {
+		if *tg.Name == group {
+			return *tg.Count
+		}
+	}
+	return -1
 }
 
 func (m *mockNomad) getScaleCalls() []scaleCall {
@@ -371,8 +403,21 @@ func (m *mockNomad) handleJob(w http.ResponseWriter, r *http.Request, rest strin
 			http.Error(w, "nomad unavailable", http.StatusInternalServerError)
 			return
 		}
+		readIndex := *job.JobModifyIndex
+		if delay := m.scaleDelay; delay > 0 {
+			m.scaleInFlight++
+			m.maxScaleInFlight = max(m.maxScaleInFlight, m.scaleInFlight)
+			m.mu.Unlock()
+			time.Sleep(delay)
+			m.mu.Lock()
+			m.scaleInFlight--
+		}
 		if d := m.deployments[jobID]; d != nil && d.Status == api.DeploymentStatusRunning {
 			http.Error(w, "job scaling blocked due to active deployment", http.StatusBadRequest)
+			return
+		}
+		if readIndex != *job.JobModifyIndex {
+			http.Error(w, fmt.Sprintf("Enforcing job modify index %d: job exists with conflicting job modify index: %d", readIndex, *job.JobModifyIndex), http.StatusBadRequest)
 			return
 		}
 		group := req.Target["Group"]

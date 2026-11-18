@@ -23,6 +23,11 @@ func (p *Provider) InstanceStop(ctx context.Context, name string) (err error) {
 		span.End()
 	}()
 
+	// Read the job and scale it under the job's lock, so two task groups of one
+	// job never start from the same job version.
+	unlock := p.lockJob(name)
+	defer unlock()
+
 	job, tg, err := p.getGroup(ctx, name)
 	if err != nil {
 		return fmt.Errorf("cannot stop instance %q: %w", name, err)

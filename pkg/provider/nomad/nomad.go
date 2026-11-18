@@ -35,6 +35,9 @@ type Provider struct {
 	backoffMax time.Duration
 
 	jobs jobCache
+
+	// scaleLocks serializes the scale operations of one job, see jobLocks.
+	scaleLocks jobLocks
 }
 
 // New creates a new Nomad provider and verifies the connection. An empty
