@@ -68,6 +68,7 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
 	//nolint:staticcheck // Intentionally binding the deprecated transitional flag until it becomes the default in v2.
 	startCmd.Flags().BoolVar(&conf.Provider.Docker.HonorRestartPolicy, "provider.docker.honor-restart-policy", false, "Honor the container restart policy on successful exit: report \"no\"/\"on-failure\" containers as completed and exited \"always\"/\"unless-stopped\" containers as stopped. Deprecated: will become the default in v2.")
+	startCmd.Flags().DurationVar(&conf.Provider.Docker.HTTPClientTimeout, "provider.docker.http-client-timeout", 0, "Timeout for every request to the Docker daemon, including the events stream, which is then re-opened. 0 disables it.")
 	_ = viper.BindPFlag("provider.docker.honor-restart-policy", startCmd.Flags().Lookup("provider.docker.honor-restart-policy"))
 	startCmd.Flags().StringVar(&conf.Provider.ProxmoxLXC.URL, "provider.proxmox-lxc.url", "", "Proxmox VE API URL (e.g. https://proxmox:8006/api2/json)")
 	_ = viper.BindPFlag("provider.proxmox-lxc.url", startCmd.Flags().Lookup("provider.proxmox-lxc.url"))

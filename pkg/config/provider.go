@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 // Provider holds the provider configurations.
@@ -168,6 +169,16 @@ type Docker struct {
 	// Default: false
 	// Since: v1.15.0
 	HonorRestartPolicy bool
+
+	// HTTPClientTimeout bounds every request to the Docker daemon, including
+	// the long-lived events stream, which is then re-opened. A daemon call
+	// that never returns would otherwise freeze group discovery for good.
+	// 0 disables the timeout.
+	// Env: SABLIER_PROVIDER_DOCKER_HTTP_CLIENT_TIMEOUT
+	// CLI: --provider.docker.http-client-timeout
+	// Default: 0
+	// Since: NEXT_RELEASE
+	HTTPClientTimeout time.Duration
 }
 
 // Systemd holds the systemd provider configuration.

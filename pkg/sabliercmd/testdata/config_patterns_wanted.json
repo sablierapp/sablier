@@ -28,7 +28,8 @@
     },
     "Docker": {
       "Strategy": "stop",
-      "HonorRestartPolicy": false
+      "HonorRestartPolicy": false,
+      "HTTPClientTimeout": 0
     },
     "ProxmoxLXC": {
       "URL": "",
