@@ -328,7 +328,14 @@ func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingSta
 
 	go func() {
 		defer cancel()
-		defer close(ps.done)
+		stopRequested := false
+		defer func() {
+			close(ps.done)
+			if stopRequested {
+				// After done is closed, so a request can no longer join this start.
+				s.forgetUndoneSession(context.WithoutCancel(startCtx), name)
+			}
+		}()
 		startedAt := time.Now()
 		startCtx, startSpan := s.tracer.Start(startCtx, "sablier.instance.start",
 			trace.WithAttributes(attribute.String("instance", name)))
@@ -340,7 +347,7 @@ func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingSta
 			s.metrics.RecordInstanceStartFailure(name)
 			s.l.ErrorContext(startCtx, "async instance start failed", slog.String("instance", name), slog.Any("error", err))
 			s.pendingMu.Lock()
-			stopRequested := ps.stopRequested
+			stopRequested = ps.stopRequested
 			// A start the instance was stopped during is not retried.
 			if !stopRequested {
 				fs, ok := s.failedStarts[name]
@@ -364,7 +371,7 @@ func (s *Sablier) dispatchStart(ctx context.Context, name string, ps *pendingSta
 				delete(s.pendingStarts, name)
 			}
 			delete(s.failedStarts, name)
-			stopRequested := ps.stopRequested
+			stopRequested = ps.stopRequested
 			s.pendingMu.Unlock()
 			s.undoIfStoppedMeanwhile(startCtx, name, stopRequested)
 		}
@@ -390,6 +397,19 @@ func (s *Sablier) undoIfStoppedMeanwhile(ctx context.Context, name string, stopR
 		slog.String("instance", name), slog.String("reason", reason))
 	if err := s.provider.InstanceStop(ctx, name); err != nil {
 		s.l.ErrorContext(ctx, "cannot stop instance after its start",
+			slog.String("instance", name), slog.Any("error", err))
+	}
+}
+
+// forgetUndoneSession deletes the session of an instance whose start was undone
+// because it was stopped on purpose while starting. Suppressions and stop events
+// delete the session themselves, but an expiration races with the request that
+// found the session expired: that request writes a new session while its start
+// is undone. Left in place, later requests would only inspect the stopped
+// instance and extend the session, never starting it again.
+func (s *Sablier) forgetUndoneSession(ctx context.Context, name string) {
+	if err := s.sessions.Delete(ctx, name); err != nil {
+		s.l.ErrorContext(ctx, "cannot delete the session of an undone start",
 			slog.String("instance", name), slog.Any("error", err))
 	}
 }

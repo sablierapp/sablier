@@ -862,6 +862,42 @@ func TestFirstStart_StoppedDuringStart_StopsAgain(t *testing.T) {
 	})
 }
 
+// A request that finds its session expired starts the instance again, while the
+// expiration's callback (run asynchronously by the store) marks that start as
+// stopped on purpose. The start is undone once it lands; the session the
+// request wrote must go with it, or later requests only inspect the stopped
+// instance and keep extending the session.
+func TestFirstStart_ExpiredWhileStarting_NextRequestStartsAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, st, p := setupAntiAffinity(t)
+		ctx := context.Background()
+		started := make(chan struct{})
+		release := make(chan struct{})
+		p.onStart = func(string) {
+			close(started)
+			<-release
+		}
+
+		_, err := s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		<-started
+		s.OnInstanceExpired(ctx)("hub")
+		close(release)
+		synctest.Wait()
+
+		_, err = st.Get(ctx, "hub")
+		assert.ErrorIs(t, err, store.ErrKeyNotFound, "an undone start must not leave its session")
+
+		p.mu.Lock()
+		p.onStart = nil
+		p.mu.Unlock()
+		_, err = s.instanceRequest(ctx, "hub", time.Minute, false)
+		assert.NilError(t, err)
+		synctest.Wait()
+		assert.DeepEqual(t, p.snapshotStarted(), []string{"hub", "hub"})
+	})
+}
+
 // Review on #1240: a first start (not only a retry) can land after a
 // suppression already stopped the instance. The suppression does not look at
 // it again, so the start stops it again once it lands.
