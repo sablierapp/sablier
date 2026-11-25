@@ -22,19 +22,6 @@ type Event struct {
 	Instance SablierInstanceInfo
 }
 
-// StatusError is returned when Sablier answers with something other than the
-// expected response, such as a validation problem.
-type StatusError struct {
-	Response *Response
-}
-
-func (e *StatusError) Error() string {
-	if p := e.Response.Problem(); p != nil && p.Detail != nil {
-		return fmt.Sprintf("sablier answered %d: %s", e.Response.StatusCode, *p.Detail)
-	}
-	return fmt.Sprintf("sablier answered %d", e.Response.StatusCode)
-}
-
 // EventStream reads instance lifecycle events from Sablier. Call Next to
 // read events and Close when done. It is not safe for concurrent use.
 type EventStream struct {
@@ -47,21 +34,21 @@ type EventStream struct {
 // it. A timeout on the HTTP client set with WithHTTPClient also ends it, so
 // use a client without one for long-lived subscriptions.
 //
-// When Sablier answers with an error, Events returns a *StatusError.
-func (c *Client) Events(ctx context.Context, params StreamInstanceEventsParams) (*EventStream, error) {
-	resp, err := c.do(ctx, pathStreamInstanceEvents, params, http.Header{"Accept": {"text/event-stream"}})
+// When Sablier answers with an error, Events returns an *ErrorResponse.
+func (c *Client) Events(ctx context.Context, params StreamInstanceEventsParams) (*EventStream, *Response, error) {
+	httpResp, err := c.do(ctx, pathStreamInstanceEvents, params, http.Header{"Accept": {"text/event-stream"}})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		defer func() { _ = resp.Body.Close() }()
-		r, err := readResponse(resp)
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		resp, body, err := readResponse(httpResp)
 		if err != nil {
-			return nil, err
+			return nil, resp, err
 		}
-		return nil, &StatusError{Response: r}
+		return nil, resp, checkResponse(resp, body)
 	}
-	return &EventStream{body: resp.Body, reader: bufio.NewReader(resp.Body)}, nil
+	stream := &EventStream{body: httpResp.Body, reader: bufio.NewReader(httpResp.Body)}
+	return stream, &Response{Response: httpResp}, nil
 }
 
 // Next blocks until the next event. It returns io.EOF when Sablier ends the

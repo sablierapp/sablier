@@ -1,11 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -29,8 +29,6 @@ const (
 	pathStartBlocking = "/api/strategies/blocking"
 	pathStartPoke     = "/api/strategies/poke"
 )
-
-const problemMediaType = "application/problem+json"
 
 // Client calls the Sablier API. It is safe for concurrent use.
 type Client struct {
@@ -78,13 +76,11 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	return c, nil
 }
 
-// Response is Sablier's answer to a strategy call. Any HTTP response,
-// including 4xx and 5xx, is a Response: callers decide whether to forward it.
+// Response is Sablier's HTTP response. Its body has already been read, and
+// Body reads it again from the start, so callers can forward it as is. The
+// exception is the response to Events, whose Body is the event stream.
 type Response struct {
-	StatusCode int
-	Header     http.Header
-	// Body is the waiting page for the dynamic strategy, and JSON otherwise.
-	Body []byte
+	*http.Response
 }
 
 // Ready reports whether Sablier says the session is ready. Error responses
@@ -93,57 +89,51 @@ func (r *Response) Ready() bool {
 	return r.Header.Get(SessionStatusHeader) == SessionStatusReady
 }
 
-// Session decodes the session returned by the blocking and poke strategies.
-func (r *Response) Session() (*ApiSessionResponse, error) {
-	if r.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("sablier answered %d, not a session", r.StatusCode)
-	}
-	var session ApiSessionResponse
-	if err := json.Unmarshal(r.Body, &session); err != nil {
-		return nil, fmt.Errorf("decode session: %w", err)
-	}
-	return &session, nil
-}
-
-// Problem decodes the RFC 7807 problem detail of an error response. It
-// returns nil when the response is not a problem.
-func (r *Response) Problem() *Rfc7807Problem {
-	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mediaType != problemMediaType {
-		return nil
-	}
-	var problem Rfc7807Problem
-	if err := json.Unmarshal(r.Body, &problem); err != nil {
-		return nil
-	}
-	return &problem
-}
-
 // StartDynamic requests a session and returns the themed waiting page.
-func (c *Client) StartDynamic(ctx context.Context, params StartDynamicParams) (*Response, error) {
-	return c.get(ctx, pathStartDynamic, params)
+func (c *Client) StartDynamic(ctx context.Context, params StartDynamicParams) ([]byte, *Response, error) {
+	resp, body, err := c.get(ctx, pathStartDynamic, params)
+	if err != nil {
+		return nil, resp, err
+	}
+	return body, resp, nil
 }
 
 // StartBlocking requests a session and waits until it is ready or the
 // timeout elapses.
-func (c *Client) StartBlocking(ctx context.Context, params StartBlockingParams) (*Response, error) {
-	return c.get(ctx, pathStartBlocking, params)
+func (c *Client) StartBlocking(ctx context.Context, params StartBlockingParams) (*ApiSessionResponse, *Response, error) {
+	return c.getSession(ctx, pathStartBlocking, params)
 }
 
 // StartPoke requests a session and returns its status without waiting.
-func (c *Client) StartPoke(ctx context.Context, params StartPokeParams) (*Response, error) {
-	return c.get(ctx, pathStartPoke, params)
+func (c *Client) StartPoke(ctx context.Context, params StartPokeParams) (*ApiSessionResponse, *Response, error) {
+	return c.getSession(ctx, pathStartPoke, params)
 }
 
-// get calls a strategy endpoint. The error is only for failures to get an
-// HTTP response: transport errors, cancellation, or an unreadable body.
-func (c *Client) get(ctx context.Context, path string, params any) (*Response, error) {
-	resp, err := c.do(ctx, path, params, nil)
+// getSession calls an endpoint that answers with a session.
+func (c *Client) getSession(ctx context.Context, path string, params any) (*ApiSessionResponse, *Response, error) {
+	resp, body, err := c.get(ctx, path, params)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	return readResponse(resp)
+	var session ApiSessionResponse
+	if err := json.Unmarshal(body, &session); err != nil {
+		return nil, resp, fmt.Errorf("decode session: %w", err)
+	}
+	return &session, resp, nil
+}
+
+// get calls an endpoint and reads its body. The Response is nil only when
+// Sablier could not be reached; a non-2xx answer is an *ErrorResponse.
+func (c *Client) get(ctx context.Context, path string, params any) (*Response, []byte, error) {
+	httpResp, err := c.do(ctx, path, params, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	resp, body, err := readResponse(httpResp)
+	if err != nil {
+		return resp, nil, err
+	}
+	return resp, body, checkResponse(resp, body)
 }
 
 // do sends a GET request to an endpoint and returns the unread response.
@@ -163,13 +153,17 @@ func (c *Client) do(ctx context.Context, path string, params any, header http.He
 	return c.httpClient.Do(req)
 }
 
-// readResponse reads resp into a Response. It does not close resp.Body.
-func readResponse(resp *http.Response) (*Response, error) {
-	body, err := io.ReadAll(resp.Body)
+// readResponse reads and closes the body of httpResp, then makes Body read
+// the same bytes again.
+func readResponse(httpResp *http.Response) (*Response, []byte, error) {
+	body, err := io.ReadAll(httpResp.Body)
+	_ = httpResp.Body.Close()
+	httpResp.Body = io.NopCloser(bytes.NewReader(body))
+	resp := &Response{Response: httpResp}
 	if err != nil {
-		return nil, fmt.Errorf("read sablier response: %w", err)
+		return resp, nil, fmt.Errorf("read sablier response: %w", err)
 	}
-	return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: body}, nil
+	return resp, body, nil
 }
 
 // encodeQuery turns a generated *Params struct into query parameters, named
@@ -186,7 +180,10 @@ func encodeQuery(params any) url.Values {
 		if name == "" || field.IsNil() {
 			continue
 		}
-		switch value := field.Elem(); value.Kind() {
+		// Not `switch value := field.Elem(); value.Kind()`: Yaegi, which
+		// Traefik runs plugins with, matches no case in that form.
+		value := field.Elem()
+		switch value.Kind() {
 		case reflect.String:
 			q.Add(name, value.String())
 		case reflect.Bool:

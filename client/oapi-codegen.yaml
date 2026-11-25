@@ -4,3 +4,9 @@
 package: client
 generate:
   models: true
+output-options:
+  # rfc7807.Problem allows extension members, so its generated type gets
+  # custom JSON methods that crash Yaegi, the interpreter Traefik runs plugins
+  # with. problem.go has a hand-written Problem instead.
+  exclude-schemas:
+    - rfc7807.Problem

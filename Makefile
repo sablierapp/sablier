@@ -71,8 +71,10 @@ test: test-client
 	go test ./...
 
 # client/ is a separate module, so `go test ./...` from the root skips it.
+# client/yaegitest checks it runs under Yaegi, the interpreter of Traefik plugins.
 test-client:
 	cd client && go test ./...
+	cd client/yaegitest && go test ./...
 
 lint:
 	golangci-lint run

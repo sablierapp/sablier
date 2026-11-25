@@ -2,9 +2,12 @@ package client_test
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/sablierapp/sablier/client"
@@ -48,7 +51,7 @@ func TestStartBlocking(t *testing.T) {
 	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady,
 		`{"session":{"status":"ready","instances":[{"instance":{"name":"web","status":"ready","currentReplicas":1,"desiredReplicas":1}}]}}`)
 
-	resp, err := c.StartBlocking(context.Background(), client.StartBlockingParams{
+	session, resp, err := c.StartBlocking(context.Background(), client.StartBlockingParams{
 		Names:           &[]string{"web", "db"},
 		SessionDuration: ptr("1m"),
 		Timeout:         ptr("30s"),
@@ -67,10 +70,6 @@ func TestStartBlocking(t *testing.T) {
 	if !resp.Ready() {
 		t.Error("Ready() = false, want true")
 	}
-	session, err := resp.Session()
-	if err != nil {
-		t.Fatal(err)
-	}
 	if got := *session.Session.Status; got != "ready" {
 		t.Errorf("session status = %q, want ready", got)
 	}
@@ -82,7 +81,7 @@ func TestStartBlocking(t *testing.T) {
 func TestStartDynamic(t *testing.T) {
 	c, got := sablier(t, http.StatusOK, "text/html", client.SessionStatusNotReady, "<html>waiting</html>")
 
-	resp, err := c.StartDynamic(context.Background(), client.StartDynamicParams{
+	page, resp, err := c.StartDynamic(context.Background(), client.StartDynamicParams{
 		Group:            ptr("demo"),
 		DisplayName:      ptr("My app"),
 		ShowDetails:      ptr(true),
@@ -112,8 +111,11 @@ func TestStartDynamic(t *testing.T) {
 	if resp.StatusCode != http.StatusOK || resp.Header.Get("Content-Type") != "text/html" {
 		t.Errorf("status = %d, content type = %q, want 200 text/html", resp.StatusCode, resp.Header.Get("Content-Type"))
 	}
-	if got := string(resp.Body); got != "<html>waiting</html>" {
-		t.Errorf("body = %q, want the waiting page", got)
+	if got := string(page); got != "<html>waiting</html>" {
+		t.Errorf("page = %q, want the waiting page", got)
+	}
+	if body, _ := io.ReadAll(resp.Body); string(body) != "<html>waiting</html>" {
+		t.Errorf("resp.Body = %q, want the waiting page to be readable again", body)
 	}
 }
 
@@ -121,7 +123,7 @@ func TestStartPoke(t *testing.T) {
 	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusNotReady,
 		`{"session":{"status":"not-ready","instances":[]}}`)
 
-	resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
+	session, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,10 +133,6 @@ func TestStartPoke(t *testing.T) {
 	}
 	if got.query.Encode() != "group=demo" {
 		t.Errorf("query = %s, want group=demo", got.query.Encode())
-	}
-	session, err := resp.Session()
-	if err != nil {
-		t.Fatal(err)
 	}
 	if got := *session.Session.Status; got != "not-ready" {
 		t.Errorf("session status = %q, want not-ready", got)
@@ -146,7 +144,7 @@ func TestUnsetParamsAreOmitted(t *testing.T) {
 	// session_duration= would be bound as 0 and override the default.
 	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady, `{"session":{}}`)
 
-	if _, err := c.StartBlocking(context.Background(), client.StartBlockingParams{Group: ptr("demo")}); err != nil {
+	if _, _, err := c.StartBlocking(context.Background(), client.StartBlockingParams{Group: ptr("demo")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -155,46 +153,63 @@ func TestUnsetParamsAreOmitted(t *testing.T) {
 	}
 }
 
-func TestProblem(t *testing.T) {
-	c, _ := sablier(t, http.StatusNotFound, "application/problem+json", "",
-		`{"type":"https://sablierapp.dev/#/errors?id=group-not-found","title":"Group not found","status":404,"detail":"The group you requested does not exist.","instance":"/api/strategies/blocking?group=nope","availableGroups":["demo"]}`)
+func TestErrorResponse(t *testing.T) {
+	const body = `{"type":"https://sablierapp.dev/#/errors?id=group-not-found","title":"Group not found","status":404,"detail":"The group you requested does not exist.","instance":"/api/strategies/blocking?group=nope","availableGroups":["demo"]}`
+	c, _ := sablier(t, http.StatusNotFound, "application/problem+json", "", body)
 
-	resp, err := c.StartBlocking(context.Background(), client.StartBlockingParams{Group: ptr("nope")})
-	if err != nil {
-		t.Fatalf("an HTTP error response must not be a Go error, got %v", err)
+	session, resp, err := c.StartBlocking(context.Background(), client.StartBlockingParams{Group: ptr("nope")})
+
+	var errResp *client.ErrorResponse
+	if !errors.As(err, &errResp) {
+		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
-
+	if session != nil {
+		t.Errorf("session = %+v, want nil for an error response", session)
+	}
+	if resp == nil || errResp.Response != resp {
+		t.Fatal("the error must carry the returned Response")
+	}
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", resp.StatusCode)
 	}
 	if resp.Ready() {
 		t.Error("Ready() = true, want false for an error response")
 	}
-	problem := resp.Problem()
+	if got, _ := io.ReadAll(resp.Body); string(got) != body {
+		t.Errorf("resp.Body = %q, want the problem as Sablier sent it", got)
+	}
+	problem := errResp.Problem
 	if problem == nil {
-		t.Fatalf("Problem() = nil, body: %s", resp.Body)
+		t.Fatal("Problem = nil, want the decoded problem")
 	}
-	if got := *problem.Title; got != "Group not found" {
-		t.Errorf("title = %q, want Group not found", got)
+	if problem.Title != "Group not found" || problem.Status != http.StatusNotFound {
+		t.Errorf("problem = %+v, want Group not found 404", problem)
 	}
-	if got := problem.AdditionalProperties["availableGroups"]; got == nil {
-		t.Error("availableGroups extension member was dropped")
+	if got := string(problem.Extensions["availableGroups"]); got != `["demo"]` {
+		t.Errorf("availableGroups extension member = %q, want [\"demo\"]", got)
 	}
-	if _, err := resp.Session(); err == nil {
-		t.Error("Session() on an error response returned no error")
+	if _, ok := problem.Extensions["title"]; ok {
+		t.Error("standard members must not be repeated in Extensions")
+	}
+	if want := "sablier answered 404: The group you requested does not exist."; err.Error() != want {
+		t.Errorf("err = %q, want %q", err.Error(), want)
 	}
 }
 
-func TestProblemIsNilOnSuccess(t *testing.T) {
-	c, _ := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady, `{"session":{}}`)
+func TestErrorResponseWithoutProblem(t *testing.T) {
+	c, _ := sablier(t, http.StatusBadGateway, "text/plain", "", "bad gateway")
 
-	resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
-	if err != nil {
-		t.Fatal(err)
+	_, resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
+
+	var errResp *client.ErrorResponse
+	if !errors.As(err, &errResp) {
+		t.Fatalf("err = %v, want a *client.ErrorResponse", err)
 	}
-
-	if p := resp.Problem(); p != nil {
-		t.Errorf("Problem() = %+v, want nil", p)
+	if errResp.Problem != nil {
+		t.Errorf("Problem = %+v, want nil for a body that is not a problem", errResp.Problem)
+	}
+	if resp.StatusCode != http.StatusBadGateway || err.Error() != "sablier answered 502" {
+		t.Errorf("got %d %q, want 502 sablier answered 502", resp.StatusCode, err.Error())
 	}
 }
 
@@ -202,7 +217,7 @@ func TestUserAgent(t *testing.T) {
 	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady, `{"session":{}}`,
 		client.WithUserAgent("sablier-caddy-plugin/1.0.0"))
 
-	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+	if _, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,7 +229,7 @@ func TestUserAgent(t *testing.T) {
 func TestDefaultUserAgentHasVersion(t *testing.T) {
 	c, got := sablier(t, http.StatusOK, "application/json", client.SessionStatusReady, `{"session":{}}`)
 
-	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+	if _, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -228,6 +243,7 @@ func TestBasePath(t *testing.T) {
 	var path string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path = r.URL.Path
+		_, _ = w.Write([]byte(`{"session":{}}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -235,7 +251,7 @@ func TestBasePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+	if _, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -252,8 +268,12 @@ func TestTransportError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err == nil {
+	_, resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
+	if err == nil {
 		t.Error("expected an error when Sablier is unreachable")
+	}
+	if resp != nil {
+		t.Errorf("resp = %+v, want nil when Sablier is unreachable", resp)
 	}
 }
 
@@ -274,14 +294,14 @@ func TestWithHTTPClient(t *testing.T) {
 	var called bool
 	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		called = true
-		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: http.NoBody}, nil
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"session":{}}`))}, nil
 	})}
 
 	c, err := client.New("http://sablier:10000", client.WithHTTPClient(httpClient))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
+	if _, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -291,17 +311,31 @@ func TestWithHTTPClient(t *testing.T) {
 }
 
 func TestMalformedBodies(t *testing.T) {
-	c, _ := sablier(t, http.StatusOK, "application/problem+json", "", `not json`)
+	t.Run("session", func(t *testing.T) {
+		c, _ := sablier(t, http.StatusOK, "application/json", "", `not json`)
 
-	resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
-	if err != nil {
-		t.Fatal(err)
-	}
+		session, resp, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
 
-	if _, err := resp.Session(); err == nil {
-		t.Error("Session() on a malformed body returned no error")
-	}
-	if p := resp.Problem(); p != nil {
-		t.Errorf("Problem() on a malformed body = %+v, want nil", p)
-	}
+		var errResp *client.ErrorResponse
+		if err == nil || errors.As(err, &errResp) {
+			t.Errorf("err = %v, want a decode error", err)
+		}
+		if session != nil || resp == nil {
+			t.Errorf("got session %+v and resp %v, want no session and the response", session, resp)
+		}
+	})
+
+	t.Run("problem", func(t *testing.T) {
+		c, _ := sablier(t, http.StatusBadRequest, "application/problem+json", "", `not json`)
+
+		_, _, err := c.StartPoke(context.Background(), client.StartPokeParams{Group: ptr("demo")})
+
+		var errResp *client.ErrorResponse
+		if !errors.As(err, &errResp) {
+			t.Fatalf("err = %v, want a *client.ErrorResponse", err)
+		}
+		if errResp.Problem != nil {
+			t.Errorf("Problem = %+v, want nil for a malformed problem", errResp.Problem)
+		}
+	})
 }
