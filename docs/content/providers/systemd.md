@@ -114,11 +114,11 @@ Sablier stops opted-in units that are active when it starts. A unit you start af
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/).
 
-`unit-patterns` narrows which units Sablier lists and watches:
+`unit-patterns` narrows which units Sablier deals with:
 
 - **A matching unit still needs `Enable=true`.** Patterns do not opt units in.
 - **Patterns make listing cheaper.** systemd filters the units, so Sablier reads fewer unit files.
-- **Patterns do not filter requests by [instance name](#instance-names).** A request for a unit outside the patterns still starts it if it has `Enable=true`.
+- **Requests for a unit outside the patterns are refused,** even by [instance name](#instance-names) and with `Enable=true`.
 
 ### Workloads
 
