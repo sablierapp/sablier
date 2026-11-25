@@ -56,7 +56,7 @@ jobs:
           fetch-depth: 0 # needed for .Lastmod / .GitInfo and for build.sh to read every release tag
           fetch-tags: true # build.sh derives the versioned docs (/vX.Y/) from tags
       - name: Setup Go (required to fetch the Hextra Hugo module)
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache-dependency-path: |
