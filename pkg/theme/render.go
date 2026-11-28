@@ -3,6 +3,7 @@ package theme
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/sablierapp/sablier/pkg/version"
 
@@ -34,6 +35,7 @@ func (t *Themes) Render(name string, opts Options, writer io.Writer) error {
 		SessionDuration:  durations.Humanize(opts.SessionDuration),
 		RefreshFrequency: fmt.Sprintf("%d", seconds),
 		Version:          version.Version,
+		RenderedAt:       time.Now(),
 	}
 
 	tpl := t.themes.Lookup(fmt.Sprintf("%s.html", name))
