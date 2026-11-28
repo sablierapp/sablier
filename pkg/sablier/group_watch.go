@@ -3,6 +3,7 @@ package sablier
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/sablierapp/sablier/pkg/provider"
@@ -29,11 +30,20 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 	eventsC := stream.Events
 	errC := stream.Err
 
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
 	// Initial reconciliation so current state matches provider labels.
+	// It runs before the first event is handled.
 	s.reconcileGroups(ctx, "startup")
+
+	// Periodic reconciliation runs apart from the event loop: it goes through
+	// the provider and can take a long time on a large fleet, while the event
+	// stream must keep being read (providers send events from their watchers,
+	// which stay blocked until the event is read). A single goroutine runs it,
+	// so two reconciliations never overlap.
+	var reconciles sync.WaitGroup
+	defer reconciles.Wait()
+	reconciles.Go(func() {
+		s.reconcileGroupsPeriodically(ctx)
+	})
 
 	for {
 		select {
@@ -57,7 +67,22 @@ func (s *Sablier) GroupWatch(ctx context.Context) {
 			s.l.ErrorContext(ctx, "group event stream permanently lost; relying on reconciliation ticker", slog.Any("error", err))
 			errC = nil
 			eventsC = nil
+		}
+	}
+}
 
+// reconcileGroupsPeriodically resyncs groups with the provider every 30
+// seconds until ctx is done, as a safety net for missed events. The registries
+// it updates are guarded by their own locks, so it can run next to
+// handleGroupEvent.
+func (s *Sablier) reconcileGroupsPeriodically(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
 		case <-ticker.C:
 			s.reconcileGroups(ctx, "reconciliation")
 			// Once anti-affinity is in use, keep its index fresh (a safety net for
