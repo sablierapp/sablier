@@ -154,6 +154,54 @@ func TestGroupWatch_ReconciliationUpdatesGroups(t *testing.T) {
 	})
 }
 
+// TestGroupWatch_ReadsEventsDuringReconciliation verifies that a periodic
+// reconciliation in progress does not stop the event stream from being read.
+// Providers send events from their watchers, which stay blocked until the
+// event is read.
+func TestGroupWatch_ReadsEventsDuringReconciliation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _, p := setupSablier(t)
+
+		ctx, cancel := context.WithCancel(t.Context())
+
+		eventsC := make(chan sablier.InstanceEvent) // unbuffered, like the providers
+		p.EXPECT().InstanceEvents(gomock.Any(), provider.InstanceEventsOptions{
+			Types: []provider.InstanceEventType{provider.InstanceEventCreated, provider.InstanceEventUpdated, provider.InstanceEventRemoved},
+		}).Return(sablier.InstanceEventStream{Events: eventsC, Err: make(chan error, 1)})
+
+		// The startup call returns at once; the periodic one stays in the
+		// provider until the watcher stops.
+		calls := 0
+		p.EXPECT().InstanceGroups(gomock.Any()).DoAndReturn(func(ctx context.Context) (map[string][]string, error) {
+			calls++
+			if calls == 1 {
+				return map[string][]string{}, nil
+			}
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}).AnyTimes()
+
+		startGroupWatch(t, s, ctx, cancel)
+
+		// Let the 30 second ticker fire and the reconciliation block.
+		time.Sleep(31 * time.Second)
+		synctest.Wait()
+		assert.Equal(t, calls, 2, "periodic reconciliation should be in progress")
+
+		select {
+		case eventsC <- sablier.InstanceEvent{
+			Type: provider.InstanceEventCreated,
+			Info: sablier.InstanceInfo{Name: "nginx", Groups: []string{"web"}},
+		}:
+		case <-time.After(5 * time.Second):
+			t.Fatal("event not read while a reconciliation is in progress")
+		}
+		synctest.Wait()
+
+		assert.Assert(t, containsInstance(s.Groups(), "web", "nginx"), "nginx should be in group web after created event")
+	})
+}
+
 func TestGroupWatch_EventStreamClosed_FallsBackToReconciliation(t *testing.T) {
 	s, _, p := setupSablier(t)
 
