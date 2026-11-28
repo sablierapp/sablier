@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20260910221047-72bd1d107f23
 	github.com/invopop/jsonschema v0.14.0
 	github.com/lmittmann/tint v1.2.1
-	github.com/luthermonson/go-proxmox v0.10.0
+	github.com/luthermonson/go-proxmox v0.12.0
 	github.com/moby/moby/api v1.57.0
 	github.com/moby/moby/client v0.6.3
 	github.com/neilotoole/slogt v1.1.0
