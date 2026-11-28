@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.22.0](https://github.com/sablierapp/sablier/compare/v1.21.1...v1.22.0) (2026-11-28)
+
+
+### Features
+
+* **docker:** add an HTTP client timeout for Docker daemon calls ([#1319](https://github.com/sablierapp/sablier/issues/1319)) ([d828ea8](https://github.com/sablierapp/sablier/commit/d828ea8a872d3ce678b6c4bf59f9ba18f01bdea6))
+
+
+### Bug Fixes
+
+* **nomad:** scale the task groups of one job one at a time ([#1310](https://github.com/sablierapp/sablier/issues/1310)) ([2b32a6c](https://github.com/sablierapp/sablier/commit/2b32a6c74316c168fd75d1ae26b1bba2c4fba156))
+* **sablier:** keep reading group events while a reconciliation runs ([#1336](https://github.com/sablierapp/sablier/issues/1336)) ([541bc7c](https://github.com/sablierapp/sablier/commit/541bc7ce1352bc3b2473a0b85360e1f1211ef685))
+
 ## [1.21.1](https://github.com/sablierapp/sablier/compare/v1.21.0...v1.21.1) (2026-11-16)
 
 
